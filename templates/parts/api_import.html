@@ -1,0 +1,413 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block title %}API Import - Parts Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .api-import-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .source-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .source-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+    }
+    
+    .source-card.selected {
+        border-color: #007bff;
+        background-color: #f8f9fa;
+    }
+    
+    .source-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .source-details h5 {
+        margin: 0 0 5px 0;
+        color: #333;
+    }
+    
+    .source-details p {
+        margin: 0;
+        color: #666;
+        font-size: 0.9em;
+    }
+    
+    .source-status {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+    
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    
+    .status-active {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-inactive {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .last-sync {
+        font-size: 0.8em;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .import-controls {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    .progress-container {
+        display: none;
+        margin-top: 15px;
+    }
+    
+    .results-container {
+        display: none;
+        margin-top: 20px;
+    }
+    
+    .result-card {
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+    }
+    
+    .result-success {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    
+    .result-error {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    
+    .result-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 10px;
+        background: white;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+    }
+    
+    .stat-number {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #007bff;
+    }
+    
+    .stat-label {
+        font-size: 0.9em;
+        color: #666;
+    }
+    
+    .btn-import {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        border: none;
+        padding: 12px 30px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-import:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+    }
+    
+    .btn-import:disabled {
+        background: #6c757d;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    .error-list {
+        max-height: 200px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+        margin-top: 10px;
+    }
+    
+    .error-item {
+        padding: 5px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 0.9em;
+    }
+    
+    .error-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="api-import-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-cloud-download-alt"></i> API Import</h2>
+        <a href="{% url 'parts:dealer_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-plug"></i> Select Integration Source</h5>
+        </div>
+        <div class="card-body">
+            {% if integration_sources %}
+                <div id="sources-container">
+                    {% for source in integration_sources %}
+                        <div class="source-card" data-source-id="{{ source.id }}" onclick="selectSource({{ source.id }})">
+                            <div class="source-info">
+                                <div class="source-details">
+                                    <h5>{{ source.name }}</h5>
+                                    <p>{{ source.api_url }}</p>
+                                    <p><strong>Auth:</strong> {{ source.get_auth_type_display }}</p>
+                                </div>
+                                <div class="source-status">
+                                    <span class="status-badge {% if source.is_active %}status-active{% else %}status-inactive{% endif %}">
+                                        {% if source.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                    {% if source.last_sync %}
+                                        <div class="last-sync">
+                                            Last sync: {{ source.last_sync|date:"M d, Y H:i" }}
+                                        </div>
+                                    {% else %}
+                                        <div class="last-sync">Never synced</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="import-controls">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6>Import Settings</h6>
+                            <p class="text-muted mb-0">Select a source above to begin import</p>
+                        </div>
+                        <button id="import-btn" class="btn btn-primary btn-import" onclick="startImport()" disabled>
+                            <i class="fas fa-download"></i> Start Import
+                        </button>
+                    </div>
+                    
+                    <div class="progress-container" id="progress-container">
+                        <h6>Import in Progress...</h6>
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 100%"></div>
+                        </div>
+                        <p class="text-muted mt-2">Fetching data from API and processing parts...</p>
+                    </div>
+                </div>
+                
+                <div class="results-container" id="results-container">
+                    <h6>Import Results</h6>
+                    <div id="results-content"></div>
+                </div>
+                
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-plug fa-3x text-muted mb-3"></i>
+                    <h5>No Integration Sources</h5>
+                    <p class="text-muted">You haven't configured any API integration sources yet.</p>
+                    <a href="{% url 'parts:integration_source_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Integration Source
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedSourceId = null;
+
+function selectSource(sourceId) {
+    // Remove previous selection
+    document.querySelectorAll('.source-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Select new source
+    document.querySelector(`[data-source-id="${sourceId}"]`).classList.add('selected');
+    selectedSourceId = sourceId;
+    
+    // Enable import button
+    document.getElementById('import-btn').disabled = false;
+}
+
+function startImport() {
+    if (!selectedSourceId) {
+        alert('Please select an integration source first.');
+        return;
+    }
+    
+    // Show progress
+    document.getElementById('progress-container').style.display = 'block';
+    document.getElementById('results-container').style.display = 'none';
+    document.getElementById('import-btn').disabled = true;
+    
+    // Make API request
+    fetch(`/parts/api/import/${selectedSourceId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Hide progress
+        document.getElementById('progress-container').style.display = 'none';
+        
+        // Show results
+        displayResults(data);
+        
+        // Re-enable import button
+        document.getElementById('import-btn').disabled = false;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        
+        // Hide progress
+        document.getElementById('progress-container').style.display = 'none';
+        
+        // Show error
+        displayResults({
+            success: false,
+            error: 'Network error occurred. Please try again.'
+        });
+        
+        // Re-enable import button
+        document.getElementById('import-btn').disabled = false;
+    });
+}
+
+function displayResults(data) {
+    const container = document.getElementById('results-container');
+    const content = document.getElementById('results-content');
+    
+    if (data.success) {
+        const results = data.results;
+        content.innerHTML = `
+            <div class="result-card result-success">
+                <h6><i class="fas fa-check-circle"></i> Import Completed Successfully</h6>
+                <p>${data.message}</p>
+            </div>
+            
+            <div class="result-stats">
+                <div class="stat-item">
+                    <div class="stat-number">${results.success_count}</div>
+                    <div class="stat-label">Created</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${results.updated_parts ? results.updated_parts.length : 0}</div>
+                    <div class="stat-label">Updated</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${results.skipped_count || 0}</div>
+                    <div class="stat-label">Skipped</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">${results.error_count}</div>
+                    <div class="stat-label">Errors</div>
+                </div>
+            </div>
+            
+            ${results.created_parts && results.created_parts.length > 0 ? `
+                <div class="mt-3">
+                    <h6>Created Parts:</h6>
+                    <div class="error-list">
+                        ${results.created_parts.map(part => `<div class="error-item">${part}</div>`).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${results.errors && results.errors.length > 0 ? `
+                <div class="mt-3">
+                    <h6>Errors:</h6>
+                    <div class="error-list">
+                        ${results.errors.map(error => `<div class="error-item">${error}</div>`).join('')}
+                    </div>
+                </div>
+            ` : ''}
+        `;
+    } else {
+        content.innerHTML = `
+            <div class="result-card result-error">
+                <h6><i class="fas fa-exclamation-circle"></i> Import Failed</h6>
+                <p>${data.error || 'An unknown error occurred.'}</p>
+            </div>
+        `;
+    }
+    
+    container.style.display = 'block';
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

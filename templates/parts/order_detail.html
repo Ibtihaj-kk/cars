@@ -1,0 +1,465 @@
+{% extends 'frontend/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - CarPortal{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/parts.css' %}">
+<style>
+.order-detail-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.order-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+.order-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.order-status {
+    padding: 8px 20px;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(255,255,255,0.2);
+}
+
+.order-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.meta-item {
+    text-align: center;
+}
+
+.meta-label {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-bottom: 5px;
+}
+
+.meta-value {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.order-items-section,
+.order-summary-section,
+.shipping-section,
+.status-section {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.order-item {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.order-item:last-child {
+    border-bottom: none;
+}
+
+.item-image {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+}
+
+.item-details {
+    flex: 1;
+}
+
+.item-name {
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.item-meta {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 3px;
+}
+
+.item-pricing {
+    text-align: right;
+    min-width: 120px;
+}
+
+.item-price {
+    font-weight: bold;
+    color: #28a745;
+    font-size: 1.1rem;
+}
+
+.item-quantity {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #2c3e50;
+}
+
+.summary-label {
+    color: #666;
+}
+
+.summary-value {
+    font-weight: 500;
+}
+
+.shipping-info {
+    line-height: 1.6;
+}
+
+.shipping-info strong {
+    color: #2c3e50;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.status-timeline {
+    position: relative;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 0;
+    position: relative;
+}
+
+.status-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 50px;
+    width: 2px;
+    height: 30px;
+    background: #ddd;
+}
+
+.status-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.status-icon.completed {
+    background: #28a745;
+}
+
+.status-icon.current {
+    background: #007bff;
+}
+
+.status-content {
+    flex: 1;
+}
+
+.status-title {
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 3px;
+}
+
+.status-date {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.back-button {
+    background: #6c757d;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.back-button:hover {
+    background: #5a6268;
+    color: white;
+    text-decoration: none;
+}
+
+@media (max-width: 768px) {
+    .order-detail-container {
+        padding: 10px;
+    }
+    
+    .content-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .order-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .order-meta {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .order-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .item-pricing {
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="order-detail-container">
+    <!-- Order Header -->
+    <div class="order-header">
+        <div class="order-title">
+            <h1><i class="fas fa-receipt"></i> {{ title }}</h1>
+            <div class="order-status">{{ order.get_status_display }}</div>
+        </div>
+        
+        <div class="order-meta">
+            <div class="meta-item">
+                <div class="meta-label">Order Date</div>
+                <div class="meta-value">{{ order.created_at|date:"M d, Y" }}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Total Amount</div>
+                <div class="meta-value">${{ order.total_amount|floatformat:2 }}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Items</div>
+                <div class="meta-value">{{ order_items.count }} item{{ order_items.count|pluralize }}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Payment Method</div>
+                <div class="meta-value">{{ order.get_payment_method_display|default:"Not specified" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Grid -->
+    <div class="content-grid">
+        <!-- Left Column -->
+        <div>
+            <!-- Order Items -->
+            <div class="order-items-section">
+                <h2 class="section-title">
+                    <i class="fas fa-shopping-cart"></i>
+                    Order Items
+                </h2>
+                
+                {% for item in order_items %}
+                <div class="order-item">
+                    {% if item.part.image %}
+                        <img src="{{ item.part.image.url }}" alt="{{ item.part.name }}" class="item-image">
+                    {% else %}
+                        <div class="item-image" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-cog" style="color: #ccc; font-size: 1.5rem;"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="item-details">
+                        <div class="item-name">{{ item.part.name }}</div>
+                        <div class="item-meta">Part Number: {{ item.part.part_number }}</div>
+                        <div class="item-meta">Brand: {{ item.part.brand.name }}</div>
+                        <div class="item-meta">Category: {{ item.part.category.name }}</div>
+                    </div>
+                    
+                    <div class="item-pricing">
+                        <div class="item-price">${{ item.price|floatformat:2 }}</div>
+                        <div class="item-quantity">Qty: {{ item.quantity }}</div>
+                        <div class="item-quantity">Total: ${{ item.total_price|floatformat:2 }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Shipping Information -->
+            {% if order.shipping_address %}
+            <div class="shipping-section">
+                <h2 class="section-title">
+                    <i class="fas fa-truck"></i>
+                    Shipping Information
+                </h2>
+                
+                <div class="shipping-info">
+                    <strong>Shipping Address:</strong>
+                    {{ order.shipping_address.full_name }}<br>
+                    {{ order.shipping_address.address_line_1 }}<br>
+                    {% if order.shipping_address.address_line_2 %}
+                        {{ order.shipping_address.address_line_2 }}<br>
+                    {% endif %}
+                    {{ order.shipping_address.city }}, {{ order.shipping_address.state }} {{ order.shipping_address.postal_code }}<br>
+                    {{ order.shipping_address.country }}
+                    
+                    {% if order.shipping_address.phone %}
+                        <br><br><strong>Phone:</strong> {{ order.shipping_address.phone }}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column -->
+        <div>
+            <!-- Order Summary -->
+            <div class="order-summary-section">
+                <h2 class="section-title">
+                    <i class="fas fa-calculator"></i>
+                    Order Summary
+                </h2>
+                
+                <div class="summary-row">
+                    <span class="summary-label">Subtotal:</span>
+                    <span class="summary-value">${{ order.subtotal|floatformat:2 }}</span>
+                </div>
+                
+                {% if order.tax_amount %}
+                <div class="summary-row">
+                    <span class="summary-label">Tax:</span>
+                    <span class="summary-value">${{ order.tax_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                
+                {% if order.shipping_cost %}
+                <div class="summary-row">
+                    <span class="summary-label">Shipping:</span>
+                    <span class="summary-value">${{ order.shipping_cost|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                
+                {% if order.discount_amount %}
+                <div class="summary-row">
+                    <span class="summary-label">Discount:</span>
+                    <span class="summary-value">-${{ order.discount_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="summary-row">
+                    <span class="summary-label">Total:</span>
+                    <span class="summary-value">${{ order.total_amount|floatformat:2 }}</span>
+                </div>
+            </div>
+
+            <!-- Order Status Timeline -->
+            <div class="status-section">
+                <h2 class="section-title">
+                    <i class="fas fa-history"></i>
+                    Order Status
+                </h2>
+                
+                <div class="status-timeline">
+                    {% for status in status_history %}
+                    <div class="status-item">
+                        <div class="status-icon {% if forloop.first %}current{% elif status.created_at %}completed{% endif %}">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="status-content">
+                            <div class="status-title">{{ status.get_status_display|default:status.status|title }}</div>
+                            <div class="status-date">{{ status.created_at|date:"M d, Y g:i A" }}</div>
+                            {% if status.notes %}
+                                <div class="status-notes">{{ status.notes }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="status-item">
+                        <div class="status-icon current">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="status-content">
+                            <div class="status-title">{{ order.get_status_display }}</div>
+                            <div class="status-date">{{ order.created_at|date:"M d, Y g:i A" }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="{% url 'parts:my_orders' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to My Orders
+        </a>
+    </div>
+</div>
+{% endblock %}

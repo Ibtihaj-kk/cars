@@ -1,0 +1,180 @@
+<!-- User Parts Grid Partial - Shows only user-visible fields -->
+<div class="parts-grid" id="user-parts-grid">
+    {% if parts %}
+        <div class="row">
+            {% for part in parts %}
+                <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="part-card">
+                        <div class="part-card-header">
+                            <h5 class="part-number">{{ part.parts_number }}</h5>
+                            {% if part.is_featured %}
+                                <span class="badge bg-warning">Featured</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="part-card-body">
+                            <!-- Material Description (User-visible) -->
+                            <h6 class="part-title">{{ part.material_description|default:"No description" }}</h6>
+                            {% if part.material_description_ar %}
+                                <p class="part-title-ar text-muted">{{ part.material_description_ar }}</p>
+                            {% endif %}
+                            
+                            <!-- Manufacturer Information (User-visible) -->
+                            <div class="part-info">
+                                {% if part.manufacturer_part_number %}
+                                    <small class="text-muted">
+                                        <strong>Mfg Part:</strong> {{ part.manufacturer_part_number }}
+                                    </small><br>
+                                {% endif %}
+                                {% if part.manufacturer_oem_number %}
+                                    <small class="text-muted">
+                                        <strong>OEM:</strong> {{ part.manufacturer_oem_number }}
+                                    </small><br>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Dimensions (User-visible) -->
+                            <div class="part-dimensions">
+                                {% if part.length or part.width or part.height %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-ruler-combined"></i>
+                                        {% if part.length %}L: {{ part.length }}{% if part.dimension_uom %}{{ part.dimension_uom }}{% endif %}{% endif %}
+                                        {% if part.width %} × W: {{ part.width }}{% if part.dimension_uom %}{{ part.dimension_uom }}{% endif %}{% endif %}
+                                        {% if part.height %} × H: {{ part.height }}{% if part.dimension_uom %}{{ part.dimension_uom }}{% endif %}{% endif %}
+                                    </small><br>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Weight (User-visible) -->
+                            {% if part.net_weight %}
+                                <small class="text-muted">
+                                    <i class="fas fa-weight"></i>
+                                    Weight: {{ part.net_weight }}{% if part.weight_uom %} {{ part.weight_uom }}{% endif %}
+                                </small><br>
+                            {% endif %}
+                            
+                            <!-- Category and Brand (User-visible) -->
+                            <div class="part-meta">
+                                {% if part.category %}
+                                    <span class="badge bg-secondary">{{ part.category.name }}</span>
+                                {% endif %}
+                                {% if part.brand %}
+                                    <span class="badge bg-info">{{ part.brand.name }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="part-card-footer">
+                            <!-- Price (User-visible) -->
+                            <div class="part-price">
+                                <span class="price-current">
+                                    {% if part.price %}
+                                        ${{ part.price|floatformat:2 }}
+                                    {% else %}
+                                        <span class="text-muted">Price on request</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            <!-- Stock Status (User-visible, simplified) -->
+                            <div class="stock-status">
+                                {% if part.inventory.stock > 0 %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check"></i> In Stock
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times"></i> Out of Stock
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="part-actions">
+                                <a href="{% url 'parts:part_detail' part.pk %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> View Details
+                                </a>
+                                {% if part.inventory.stock > 0 %}
+                                    <button class="btn btn-primary btn-sm" 
+                                            hx-post="{% url 'parts:add_to_cart' part.id %}"
+                                            hx-target="#cart-count"
+                                            hx-swap="innerHTML">
+                                        <i class="fas fa-cart-plus"></i> Add to Cart
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if is_paginated %}
+            <nav aria-label="Parts pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" 
+                               hx-get="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}"
+                               hx-target="#parts-results"
+                               hx-push-url="true">
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   hx-get="?page={{ num }}&{{ request.GET.urlencode }}"
+                                   hx-target="#parts-results"
+                                   hx-push-url="true">
+                                    {{ num }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               hx-get="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}"
+                               hx-target="#parts-results"
+                               hx-push-url="true">
+                                Next <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="no-results">
+            <div class="text-center py-5">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No parts found</h4>
+                <p class="text-muted">Try adjusting your search criteria or filters.</p>
+                <button class="btn btn-outline-primary" id="clear-all-filters">
+                    <i class="fas fa-times"></i> Clear All Filters
+                </button>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Results Summary -->
+<div class="results-summary mt-3">
+    <small class="text-muted">
+        {% if is_paginated %}
+            Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} parts
+        {% else %}
+            {{ parts|length }} part{{ parts|length|pluralize }} found
+        {% endif %}
+    </small>
+</div>

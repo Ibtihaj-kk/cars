@@ -1,0 +1,338 @@
+{% load math_filters %}
+<!-- Admin Parts Grid Partial - Shows all fields with global management -->
+<div class="parts-admin-table-container" id="admin-parts-grid">
+    {% if parts %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>
+                            <a href="?sort={% if request.GET.sort == 'parts_number' %}-{% endif %}parts_number&{{ request.GET.urlencode }}"
+                               hx-get="?sort={% if request.GET.sort == 'parts_number' %}-{% endif %}parts_number&{{ request.GET.urlencode }}"
+                               hx-target="#parts-results"
+                               hx-push-url="true">
+                                Part Number
+                                {% if request.GET.sort == 'parts_number' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% elif request.GET.sort == '-parts_number' %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% else %}
+                                    <i class="fas fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>Description</th>
+                        <th>
+                            <a href="?sort={% if request.GET.sort == 'dealer_name' %}-{% endif %}dealer_name&{{ request.GET.urlencode }}"
+                               hx-get="?sort={% if request.GET.sort == 'dealer_name' %}-{% endif %}dealer_name&{{ request.GET.urlencode }}"
+                               hx-target="#parts-results"
+                               hx-push-url="true">
+                                Dealer
+                                {% if request.GET.sort == 'dealer_name' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% elif request.GET.sort == '-dealer_name' %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% else %}
+                                    <i class="fas fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>Category/Brand</th>
+                        <th>
+                            <a href="?sort={% if request.GET.sort == 'price' %}-{% endif %}price&{{ request.GET.urlencode }}"
+                               hx-get="?sort={% if request.GET.sort == 'price' %}-{% endif %}price&{{ request.GET.urlencode }}"
+                               hx-target="#parts-results"
+                               hx-push-url="true">
+                                Price/Cost
+                                {% if request.GET.sort == 'price' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% elif request.GET.sort == '-price' %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% else %}
+                                    <i class="fas fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort={% if request.GET.sort == 'stock_level' %}-{% endif %}stock_level&{{ request.GET.urlencode }}"
+                               hx-get="?sort={% if request.GET.sort == 'stock_level' %}-{% endif %}stock_level&{{ request.GET.urlencode }}"
+                               hx-target="#parts-results"
+                               hx-push-url="true">
+                                Inventory
+                                {% if request.GET.sort == 'stock_level' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% elif request.GET.sort == '-stock_level' %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% else %}
+                                    <i class="fas fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>Material Details</th>
+                        <th>Performance</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in parts %}
+                        <tr class="{% if not part.is_active %}table-secondary{% endif %}">
+                            <td>
+                                <strong>{{ part.parts_number }}</strong>
+                                {% if part.manufacturer_part_number %}
+                                    <br><small class="text-muted">Mfg: {{ part.manufacturer_part_number }}</small>
+                                {% endif %}
+                                {% if part.manufacturer_oem_number %}
+                                    <br><small class="text-muted">OEM: {{ part.manufacturer_oem_number }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="part-description">
+                                    {{ part.material_description|default:"No description"|truncatechars:40 }}
+                                    {% if part.material_description_ar %}
+                                        <br><small class="text-muted">{{ part.material_description_ar|truncatechars:30 }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if part.dealer %}
+                                    <span class="badge bg-primary">{{ part.dealer.username }}</span>
+                                    {% if part.dealer.first_name or part.dealer.last_name %}
+                                        <br><small class="text-muted">{{ part.dealer.first_name }} {{ part.dealer.last_name }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">System</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if part.category %}
+                                    <span class="badge bg-secondary">{{ part.category.name }}</span><br>
+                                {% endif %}
+                                {% if part.brand %}
+                                    <span class="badge bg-info">{{ part.brand.name }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="price-info">
+                                    <strong class="text-success">
+                                        {% if part.price %}
+                                            ${{ part.price|floatformat:2 }}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </strong>
+                                    {% if part.moving_average_price %}
+                                        <br><small class="text-muted">Cost: ${{ part.moving_average_price|floatformat:2 }}</small>
+                                        {% if part.price and part.moving_average_price %}
+                                            {% widthratio part.price|add:0|subtract:part.moving_average_price part.price 100 as margin %}
+                                            <br><small class="{% if margin > 30 %}text-success{% elif margin > 15 %}text-warning{% else %}text-danger{% endif %}">
+                                                {{ margin|floatformat:1 }}% margin
+                                            </small>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="inventory-info">
+                                    <strong class="{% if part.stock_level <= part.reorder_level %}text-danger{% elif part.stock_level <= part.reorder_level|multiply:2 %}text-warning{% else %}text-success{% endif %}">
+                                        {{ part.stock_level|default:0 }}
+                                    </strong>
+                                    {% if part.reorder_level %}
+                                        <br><small class="text-muted">Min: {{ part.reorder_level }}</small>
+                                    {% endif %}
+                                    {% if part.safety_stock %}
+                                        <br><small class="text-muted">Safety: {{ part.safety_stock }}</small>
+                                    {% endif %}
+                                    {% if part.maximum_stock %}
+                                        <br><small class="text-muted">Max: {{ part.maximum_stock }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {% if part.material_type %}
+                                        Type: {{ part.material_type|truncatechars:12 }}<br>
+                                    {% endif %}
+                                    {% if part.valuation_class %}
+                                        Class: {{ part.valuation_class }}<br>
+                                    {% endif %}
+                                    {% if part.plant %}
+                                        Plant: {{ part.plant }}<br>
+                                    {% endif %}
+                                    {% if part.abc_indicator %}
+                                        ABC: {{ part.abc_indicator }}
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {% if part.total_sales %}
+                                        Sales: ${{ part.total_sales|floatformat:0 }}<br>
+                                    {% endif %}
+                                    {% if part.total_quantity_sold %}
+                                        Qty: {{ part.total_quantity_sold }}<br>
+                                    {% endif %}
+                                    {% if part.last_sale_date %}
+                                        Last: {{ part.last_sale_date|date:"M d" }}
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <div class="status-badges">
+                                    {% if part.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                    
+                                    {% if part.is_featured %}
+                                        <br><span class="badge bg-warning">Featured</span>
+                                    {% endif %}
+                                    
+                                    {% if part.stock_level <= part.reorder_level %}
+                                        <br><span class="badge bg-danger">Low Stock</span>
+                                    {% endif %}
+                                    
+                                    {% if part.abc_indicator == 'A' %}
+                                        <br><span class="badge bg-success">High Value</span>
+                                    {% elif part.abc_indicator == 'C' %}
+                                        <br><span class="badge bg-info">Low Value</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="btn-group-vertical btn-group-sm">
+                                    <a href="{% url 'parts:part_detail' part.pk %}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'parts:part_update' part.pk %}" 
+                                       class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'parts:inventory_update' part.pk %}" 
+                                       class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-boxes"></i>
+                                    </a>
+                                    {% if not part.is_active %}
+                                        <button class="btn btn-outline-success btn-sm"
+                                                hx-post="{% url 'parts:part_activate' part.pk %}"
+                                                hx-target="#parts-results"
+                                                hx-confirm="Activate this part?">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    {% else %}
+                                        <button class="btn btn-outline-warning btn-sm"
+                                                hx-post="{% url 'parts:part_deactivate' part.pk %}"
+                                                hx-target="#parts-results"
+                                                hx-confirm="Deactivate this part?">
+                                            <i class="fas fa-pause"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if is_paginated %}
+            <nav aria-label="Parts pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" 
+                               hx-get="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}"
+                               hx-target="#parts-results"
+                               hx-push-url="true">
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   hx-get="?page={{ num }}&{{ request.GET.urlencode }}"
+                                   hx-target="#parts-results"
+                                   hx-push-url="true">
+                                    {{ num }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               hx-get="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}"
+                               hx-target="#parts-results"
+                               hx-push-url="true">
+                                Next <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="no-results">
+            <div class="text-center py-5">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No parts found</h4>
+                <p class="text-muted">Try adjusting your search criteria or filters.</p>
+                <button class="btn btn-outline-primary" id="clear-all-filters">
+                    <i class="fas fa-times"></i> Clear All Filters
+                </button>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Advanced Results Summary for Admins -->
+<div class="results-summary mt-3">
+    <div class="row">
+        <div class="col-md-4">
+            <small class="text-muted">
+                {% if is_paginated %}
+                    Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} parts
+                {% else %}
+                    {{ parts|length }} part{{ parts|length|pluralize }} found
+                {% endif %}
+            </small>
+        </div>
+        <div class="col-md-8 text-end">
+            <small class="text-muted">
+                <!-- Advanced stats for admins -->
+                {% if parts %}
+                    {% regroup parts by is_active as active_groups %}
+                    {% for group in active_groups %}
+                        {% if group.grouper %}
+                            <span class="badge bg-success">{{ group.list|length }} Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ group.list|length }} Inactive</span>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% regroup parts by abc_indicator as abc_groups %}
+                    {% for group in abc_groups %}
+                        {% if group.grouper == 'A' %}
+                            <span class="badge bg-danger">{{ group.list|length }} High Value</span>
+                        {% elif group.grouper == 'B' %}
+                            <span class="badge bg-warning">{{ group.list|length }} Medium Value</span>
+                        {% elif group.grouper == 'C' %}
+                            <span class="badge bg-info">{{ group.list|length }} Low Value</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </small>
+        </div>
+    </div>
+</div>

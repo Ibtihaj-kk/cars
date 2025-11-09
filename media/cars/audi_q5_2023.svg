@@ -1,0 +1,39 @@
+<svg width="800" height="400" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="400" fill="#f0f0f0"/>
+  
+  <!-- Car Body (Compact SUV) -->
+  <ellipse cx="400" cy="295" rx="285" ry="68" fill="#2c3e50"/>
+  <rect x="145" y="165" width="510" height="130" rx="24" fill="#34495e"/>
+  <rect x="175" y="145" width="450" height="95" rx="20" fill="#fff"/>
+  
+  <!-- Windows -->
+  <rect x="195" y="155" width="105" height="75" rx="12" fill="#87ceeb"/>
+  <rect x="320" y="155" width="160" height="75" rx="12" fill="#87ceeb"/>
+  <rect x="500" y="155" width="105" height="75" rx="12" fill="#87ceeb"/>
+  
+  <!-- Wheels -->
+  <circle cx="245" cy="295" r="48" fill="#2c3e50"/>
+  <circle cx="245" cy="295" r="30" fill="#34495e"/>
+  <circle cx="555" cy="295" r="48" fill="#2c3e50"/>
+  <circle cx="555" cy="295" r="30" fill="#34495e"/>
+  
+  <!-- Headlights -->
+  <ellipse cx="130" cy="200" rx="19" ry="29" fill="#fff"/>
+  <ellipse cx="670" cy="200" rx="19" ry="29" fill="#fff"/>
+  
+  <!-- Audi Grille -->
+  <ellipse cx="110" cy="200" rx="15" ry="25" fill="#333"/>
+  <rect x="102" y="190" width="16" height="20" fill="#c0c0c0"/>
+  
+  <!-- Audi Logo -->
+  <g transform="translate(400, 110)">
+    <circle cx="-20" cy="0" r="12" fill="none" stroke="#333" stroke-width="3"/>
+    <circle cx="-7" cy="0" r="12" fill="none" stroke="#333" stroke-width="3"/>
+    <circle cx="7" cy="0" r="12" fill="none" stroke="#333" stroke-width="3"/>
+    <circle cx="20" cy="0" r="12" fill="none" stroke="#333" stroke-width="3"/>
+  </g>
+  
+  <!-- Model Text -->
+  <text x="400" y="365" text-anchor="middle" font-family="Arial" font-size="25" font-weight="bold" fill="#2c3e50">Audi Q5 2023</text>
+</svg>

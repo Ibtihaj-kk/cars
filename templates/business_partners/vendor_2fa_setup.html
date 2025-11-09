@@ -1,0 +1,403 @@
+{% extends 'business_partners/vendor_registration_base.html' %}
+
+{% block title %}Setup Two-Factor Authentication - Cars Portal{% endblock %}
+
+{% block content %}
+<div class="vendor-auth-container">
+    <div class="vendor-auth-card">
+        <div class="vendor-auth-header">
+            <div class="vendor-auth-logo">
+                <img src="/static/img/carsportal-logo.png" alt="Cars Portal" class="img-fluid">
+            </div>
+            <h2>Setup Two-Factor Authentication</h2>
+            <p>Secure your account with 2FA</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="setup-instructions mb-4">
+            <h5>Step 1: Install Authenticator App</h5>
+            <p class="text-muted">Download and install an authenticator app on your mobile device:</p>
+            <div class="app-links">
+                <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2" 
+                   target="_blank" class="btn btn-outline-primary btn-sm me-2">
+                    <i class="fab fa-google-play me-1"></i>Google Play
+                </a>
+                <a href="https://apps.apple.com/us/app/google-authenticator/id388497605" 
+                   target="_blank" class="btn btn-outline-primary btn-sm me-2">
+                    <i class="fab fa-app-store-ios me-1"></i>App Store
+                </a>
+                <a href="https://authy.com/download/" 
+                   target="_blank" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-mobile-alt me-1"></i>Authy
+                </a>
+            </div>
+        </div>
+
+        <div class="qr-code-section mb-4">
+            <h5>Step 2: Scan QR Code</h5>
+            <p class="text-muted">Open your authenticator app and scan this QR code:</p>
+            <div class="qr-code-container text-center mb-3">
+                <img src="{{ qr_code }}" alt="QR Code" class="qr-code">
+            </div>
+            <p class="text-muted small">Can't scan? Enter this code manually: <code>{{ secret }}</code></p>
+        </div>
+
+        <form method="post" class="vendor-auth-form">
+            {% csrf_token %}
+            
+            <div class="verification-step mb-4">
+                <h5>Step 3: Verify Setup</h5>
+                <p class="text-muted">Enter the 6-digit code from your authenticator app:</p>
+                
+                <div class="form-group mb-3">
+                    <label for="token" class="form-label">
+                        Verification Code <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" 
+                           class="form-control text-center" 
+                           id="token" 
+                           name="token" 
+                           placeholder="000000"
+                           required
+                           maxlength="6"
+                           pattern="[0-9]{6}"
+                           inputmode="numeric"
+                           autocomplete="off">
+                    <small class="form-text text-muted">Codes refresh every 30 seconds</small>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block mb-3">
+                <i class="fas fa-shield-alt me-2"></i>Enable 2FA
+            </button>
+
+            <div class="auth-links text-center">
+                <p class="mb-2">
+                    <a href="{% url 'business_partners:vendor_profile_settings' %}" class="text-decoration-none">
+                        <i class="fas fa-arrow-left me-1"></i>Cancel setup
+                    </a>
+                </p>
+                <p class="mb-0">
+                    Need help? 
+                    <a href="mailto:vendors@carsportal.com" class="text-decoration-none">
+                        Contact support
+                    </a>
+                </p>
+            </div>
+        </form>
+
+        <div class="security-benefits mt-4">
+            <div class="card border-0 bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-shield-alt me-2"></i>Why use 2FA?
+                    </h6>
+                    <ul class="small mb-0">
+                        <li>Protects your account even if your password is compromised</li>
+                        <li>Prevents unauthorized access to your vendor dashboard</li>
+                        <li>Secures your business and customer data</li>
+                        <li>Required for accessing sensitive vendor features</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="vendor-auth-support">
+        <p class="text-muted small">
+            Need help? Contact our vendor support team at 
+            <a href="mailto:vendors@carsportal.com">vendors@carsportal.com</a>
+        </p>
+    </div>
+</div>
+
+<style>
+.vendor-auth-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+}
+
+.vendor-auth-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    padding: 40px;
+    width: 100%;
+    max-width: 450px;
+    margin-bottom: 20px;
+}
+
+.vendor-auth-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.vendor-auth-logo {
+    margin-bottom: 20px;
+}
+
+.vendor-auth-logo img {
+    height: 50px;
+    width: auto;
+}
+
+.vendor-auth-header h2 {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.vendor-auth-header p {
+    color: #666;
+    font-size: 14px;
+}
+
+.setup-instructions h5,
+.qr-code-section h5,
+.verification-step h5 {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.app-links {
+    margin-top: 15px;
+}
+
+.app-links .btn {
+    margin-bottom: 5px;
+}
+
+.qr-code-container {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 15px;
+    margin: 15px 0;
+}
+
+.qr-code {
+    max-width: 200px;
+    height: auto;
+}
+
+.vendor-auth-form .form-group {
+    margin-bottom: 20px;
+}
+
+.vendor-auth-form .form-label {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.vendor-auth-form .form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 12px 15px;
+    font-size: 18px;
+    text-align: center;
+    letter-spacing: 4px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.vendor-auth-form .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.vendor-auth-form .btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.vendor-auth-form .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.auth-links a {
+    color: #667eea;
+    font-weight: 500;
+}
+
+.auth-links a:hover {
+    color: #764ba2;
+}
+
+.security-benefits .card {
+    border-radius: 10px;
+}
+
+.security-benefits .card-title {
+    color: #495057;
+    font-weight: 600;
+}
+
+.security-benefits ul {
+    padding-left: 20px;
+}
+
+.security-benefits li {
+    margin-bottom: 5px;
+}
+
+.vendor-auth-support {
+    text-align: center;
+    max-width: 450px;
+}
+
+.vendor-auth-support a {
+    color: #ffffff;
+    font-weight: 500;
+}
+
+.vendor-auth-support a:hover {
+    color: #f8f9fa;
+}
+
+/* Responsive design */
+@media (max-width: 576px) {
+    .vendor-auth-card {
+        padding: 30px 20px;
+        margin: 10px;
+    }
+    
+    .vendor-auth-header h2 {
+        font-size: 24px;
+    }
+    
+    .vendor-auth-header p {
+        font-size: 13px;
+    }
+    
+    .app-links .btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .qr-code {
+        max-width: 150px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .vendor-auth-card {
+        background: #2d3748;
+        color: #e2e8f0;
+    }
+    
+    .vendor-auth-header h2,
+    .setup-instructions h5,
+    .qr-code-section h5,
+    .verification-step h5 {
+        color: #e2e8f0;
+    }
+    
+    .vendor-auth-header p,
+    .setup-instructions p,
+    .qr-code-section p,
+    .verification-step p {
+        color: #a0aec0;
+    }
+    
+    .vendor-auth-form .form-label {
+        color: #e2e8f0;
+    }
+    
+    .vendor-auth-form .form-control {
+        background-color: #374151;
+        border-color: #4b5563;
+        color: #e2e8f0;
+    }
+    
+    .vendor-auth-form .form-control:focus {
+        border-color: #667eea;
+        background-color: #374151;
+    }
+    
+    .security-benefits .card {
+        background-color: #374151;
+        color: #e2e8f0;
+    }
+    
+    .security-benefits .card-title {
+        color: #e2e8f0;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus on the token input
+    const tokenInput = document.getElementById('token');
+    if (tokenInput) {
+        tokenInput.focus();
+    }
+    
+    // Auto-submit on 6 digits
+    tokenInput.addEventListener('input', function() {
+        if (this.value.length === 6) {
+            this.form.submit();
+        }
+    });
+    
+    // Auto-dismiss alerts after 5 seconds
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 5000);
+    });
+    
+    // Form validation enhancement
+    const form = document.querySelector('.vendor-auth-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const token = document.getElementById('token');
+            
+            let isValid = true;
+            
+            if (!token.value.trim() || token.value.length !== 6) {
+                token.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                token.classList.remove('is-invalid');
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+            }
+        });
+        
+        // Real-time validation
+        tokenInput.addEventListener('input', function() {
+            if (this.value.length === 6) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

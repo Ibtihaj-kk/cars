@@ -1,0 +1,740 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block title %}Bulk Update Parts - {{ vendor_profile.business_partner.company_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .bulk-header {
+        background: linear-gradient(135deg, #fd7e14, #e55a4e);
+        color: white;
+        padding: 20px 0;
+        margin-bottom: 30px;
+    }
+    
+    .bulk-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 30px;
+        margin-bottom: 20px;
+    }
+    
+    .update-section {
+        border-left: 4px solid #fd7e14;
+        padding-left: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .update-section h5 {
+        color: #fd7e14;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    
+    .parts-table {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .parts-table th {
+        background: #f8f9fa;
+        border: none;
+        font-weight: 600;
+        color: #495057;
+        padding: 15px 10px;
+    }
+    
+    .parts-table td {
+        border: none;
+        padding: 10px;
+        vertical-align: middle;
+    }
+    
+    .parts-table tbody tr {
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .parts-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .update-controls {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .update-type-selector {
+        margin-bottom: 20px;
+    }
+    
+    .update-type-selector .btn {
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .update-fields {
+        display: none;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        border: 2px solid #fd7e14;
+    }
+    
+    .update-fields.active {
+        display: block;
+    }
+    
+    .progress-container {
+        margin-top: 20px;
+        display: none;
+    }
+    
+    .selected-count {
+        background: #fd7e14;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        margin-left: 10px;
+    }
+    
+    .part-checkbox {
+        transform: scale(1.2);
+    }
+    
+    .bulk-actions {
+        background: #e9ecef;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: none;
+    }
+    
+    .bulk-actions.show {
+        display: block;
+    }
+    
+    .currency-input {
+        position: relative;
+    }
+    
+    .currency-input::before {
+        content: "$";
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        z-index: 10;
+    }
+    
+    .currency-input input {
+        padding-left: 25px;
+    }
+    
+    .percentage-input {
+        position: relative;
+    }
+    
+    .percentage-input::after {
+        content: "%";
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        z-index: 10;
+    }
+    
+    .percentage-input input {
+        padding-right: 25px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="bulk-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h3 mb-0">Bulk Update Parts</h1>
+                <p class="mb-0">Update multiple parts simultaneously with advanced controls</p>
+            </div>
+            <div class="col-md-4 text-md-right">
+                <a href="{% url 'business_partners:vendor_parts_list' %}" class="btn btn-outline-light">
+                    <i class="fas fa-arrow-left"></i> Back to Parts
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Update Controls -->
+    <div class="update-controls">
+        <div class="row">
+            <div class="col-md-8">
+                <h5>Select Update Type</h5>
+                <div class="update-type-selector">
+                    <button type="button" class="btn btn-outline-primary" data-update-type="price">
+                        <i class="fas fa-dollar-sign"></i> Price Update
+                    </button>
+                    <button type="button" class="btn btn-outline-success" data-update-type="inventory">
+                        <i class="fas fa-boxes"></i> Inventory Update
+                    </button>
+                    <button type="button" class="btn btn-outline-info" data-update-type="status">
+                        <i class="fas fa-toggle-on"></i> Status Update
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" data-update-type="category">
+                        <i class="fas fa-tags"></i> Category Update
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4 text-right">
+                <div class="selected-count" id="selectedCount" style="display: none;">
+                    0 parts selected
+                </div>
+            </div>
+        </div>
+        
+        <!-- Price Update Fields -->
+        <div class="update-fields" id="priceFields">
+            <h6>Price Update Options</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Update Method</label>
+                        <select class="form-control" id="priceMethod">
+                            <option value="set">Set Fixed Price</option>
+                            <option value="increase">Increase by Amount</option>
+                            <option value="decrease">Decrease by Amount</option>
+                            <option value="increase_percent">Increase by Percentage</option>
+                            <option value="decrease_percent">Decrease by Percentage</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Amount/Percentage</label>
+                        <div class="currency-input" id="priceAmountContainer">
+                            <input type="number" class="form-control" id="priceAmount" step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="button" class="btn btn-primary btn-block" onclick="applyPriceUpdate()">
+                            <i class="fas fa-dollar-sign"></i> Apply Price Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Inventory Update Fields -->
+        <div class="update-fields" id="inventoryFields">
+            <h6>Inventory Update Options</h6>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>Update Method</label>
+                        <select class="form-control" id="inventoryMethod">
+                            <option value="set">Set Quantity</option>
+                            <option value="add">Add to Quantity</option>
+                            <option value="subtract">Subtract from Quantity</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <input type="number" class="form-control" id="inventoryQuantity" min="0">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>Safety Stock</label>
+                        <input type="number" class="form-control" id="safetyStock" min="0">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="button" class="btn btn-success btn-block" onclick="applyInventoryUpdate()">
+                            <i class="fas fa-boxes"></i> Apply Inventory Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status Update Fields -->
+        <div class="update-fields" id="statusFields">
+            <h6>Status Update Options</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="updateActive">
+                            <label class="form-check-label" for="updateActive">
+                                Update Active Status
+                            </label>
+                        </div>
+                        <select class="form-control mt-2" id="activeStatus" disabled>
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="updateFeatured">
+                            <label class="form-check-label" for="updateFeatured">
+                                Update Featured Status
+                            </label>
+                        </div>
+                        <select class="form-control mt-2" id="featuredStatus" disabled>
+                            <option value="true">Featured</option>
+                            <option value="false">Not Featured</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="button" class="btn btn-info btn-block" onclick="applyStatusUpdate()">
+                            <i class="fas fa-toggle-on"></i> Apply Status Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Category Update Fields -->
+        <div class="update-fields" id="categoryFields">
+            <h6>Category Update Options</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>New Category</label>
+                        <select class="form-control" id="newCategory">
+                            <option value="">Select Category</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>New Brand</label>
+                        <select class="form-control" id="newBrand">
+                            <option value="">Select Brand</option>
+                            {% for brand in brands %}
+                            <option value="{{ brand.id }}">{{ brand.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="button" class="btn btn-warning btn-block" onclick="applyCategoryUpdate()">
+                            <i class="fas fa-tags"></i> Apply Category Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bulk Actions Bar -->
+    <div class="bulk-actions" id="bulkActions">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <strong>Bulk Actions:</strong>
+                <button type="button" class="btn btn-sm btn-outline-primary ml-2" onclick="selectAll()">
+                    <i class="fas fa-check-square"></i> Select All
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary ml-2" onclick="deselectAll()">
+                    <i class="fas fa-square"></i> Deselect All
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger ml-2" onclick="bulkDelete()">
+                    <i class="fas fa-trash"></i> Delete Selected
+                </button>
+            </div>
+            <div class="col-md-4 text-right">
+                <span id="bulkSelectedCount">0 parts selected</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Progress Bar -->
+    <div class="progress-container" id="progressContainer">
+        <div class="progress">
+            <div class="progress-bar" role="progressbar" style="width: 0%" id="updateProgress">
+                <span id="progressText">0%</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Parts Table -->
+    <div class="bulk-card">
+        <div class="table-responsive">
+            <table class="table parts-table" id="partsTable">
+                <thead>
+                    <tr>
+                        <th width="50">
+                            <input type="checkbox" class="part-checkbox" id="selectAllCheckbox">
+                        </th>
+                        <th width="80">Image</th>
+                        <th>Part Number</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Brand</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in parts %}
+                    <tr data-part-id="{{ part.id }}">
+                        <td>
+                            <input type="checkbox" class="part-checkbox part-select" value="{{ part.id }}">
+                        </td>
+                        <td>
+                            {% if part.image %}
+                            <img src="{{ part.image.url }}" alt="{{ part.material_description }}" 
+                                 style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                            {% else %}
+                            <div style="width: 50px; height: 50px; background: #f8f9fa; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-image text-muted"></i>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ part.parts_number }}</strong>
+                        </td>
+                        <td>
+                            {{ part.material_description|truncatechars:50 }}
+                        </td>
+                        <td>
+                            {% if part.category %}
+                            <span class="badge badge-secondary">{{ part.category.name }}</span>
+                            {% else %}
+                            <span class="text-muted">No category</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if part.brand %}
+                            <span class="badge badge-info">{{ part.brand.name }}</span>
+                            {% else %}
+                            <span class="text-muted">No brand</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="price-value" data-price="{{ part.price }}">${{ part.price|floatformat:2 }}</span>
+                        </td>
+                        <td>
+                            <span class="stock-value" data-stock="{{ part.quantity }}">{{ part.quantity }}</span>
+                        </td>
+                        <td>
+                            <span class="badge {% if part.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+                                {% if part.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                            {% if part.is_featured %}
+                            <span class="badge badge-warning ml-1">Featured</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            No parts found. <a href="{% url 'business_partners:vendor_part_create' %}">Add your first part</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Update type selector
+    $('.update-type-selector .btn').click(function() {
+        var updateType = $(this).data('update-type');
+        
+        // Update button states
+        $('.update-type-selector .btn').removeClass('btn-primary btn-success btn-info btn-warning')
+            .addClass('btn-outline-primary btn-outline-success btn-outline-info btn-outline-warning');
+        $(this).removeClass('btn-outline-primary btn-outline-success btn-outline-info btn-outline-warning')
+            .addClass('btn-' + getButtonClass(updateType));
+        
+        // Show/hide update fields
+        $('.update-fields').removeClass('active');
+        $('#' + updateType + 'Fields').addClass('active');
+    });
+    
+    function getButtonClass(type) {
+        switch(type) {
+            case 'price': return 'primary';
+            case 'inventory': return 'success';
+            case 'status': return 'info';
+            case 'category': return 'warning';
+            default: return 'primary';
+        }
+    }
+    
+    // Price method change
+    $('#priceMethod').change(function() {
+        var method = $(this).val();
+        var container = $('#priceAmountContainer');
+        
+        if (method.includes('percent')) {
+            container.removeClass('currency-input').addClass('percentage-input');
+        } else {
+            container.removeClass('percentage-input').addClass('currency-input');
+        }
+    });
+    
+    // Status update checkboxes
+    $('#updateActive').change(function() {
+        $('#activeStatus').prop('disabled', !$(this).is(':checked'));
+    });
+    
+    $('#updateFeatured').change(function() {
+        $('#featuredStatus').prop('disabled', !$(this).is(':checked'));
+    });
+    
+    // Part selection
+    $('.part-select').change(function() {
+        updateSelectionCount();
+        toggleBulkActions();
+    });
+    
+    $('#selectAllCheckbox').change(function() {
+        var isChecked = $(this).is(':checked');
+        $('.part-select').prop('checked', isChecked);
+        updateSelectionCount();
+        toggleBulkActions();
+    });
+    
+    function updateSelectionCount() {
+        var selectedCount = $('.part-select:checked').length;
+        $('#selectedCount, #bulkSelectedCount').text(selectedCount + ' parts selected');
+        
+        if (selectedCount > 0) {
+            $('#selectedCount').show();
+        } else {
+            $('#selectedCount').hide();
+        }
+    }
+    
+    function toggleBulkActions() {
+        var selectedCount = $('.part-select:checked').length;
+        if (selectedCount > 0) {
+            $('#bulkActions').addClass('show');
+        } else {
+            $('#bulkActions').removeClass('show');
+        }
+    }
+});
+
+// Bulk update functions
+function selectAll() {
+    $('.part-select').prop('checked', true);
+    $('#selectAllCheckbox').prop('checked', true);
+    updateSelectionCount();
+    toggleBulkActions();
+}
+
+function deselectAll() {
+    $('.part-select').prop('checked', false);
+    $('#selectAllCheckbox').prop('checked', false);
+    updateSelectionCount();
+    toggleBulkActions();
+}
+
+function getSelectedPartIds() {
+    var selectedIds = [];
+    $('.part-select:checked').each(function() {
+        selectedIds.push($(this).val());
+    });
+    return selectedIds;
+}
+
+function applyPriceUpdate() {
+    var selectedIds = getSelectedPartIds();
+    if (selectedIds.length === 0) {
+        alert('Please select at least one part to update.');
+        return;
+    }
+    
+    var method = $('#priceMethod').val();
+    var amount = parseFloat($('#priceAmount').val());
+    
+    if (!amount || amount < 0) {
+        alert('Please enter a valid amount.');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to update prices for ' + selectedIds.length + ' parts?')) {
+        performBulkUpdate('price', {
+            method: method,
+            amount: amount,
+            part_ids: selectedIds
+        });
+    }
+}
+
+function applyInventoryUpdate() {
+    var selectedIds = getSelectedPartIds();
+    if (selectedIds.length === 0) {
+        alert('Please select at least one part to update.');
+        return;
+    }
+    
+    var method = $('#inventoryMethod').val();
+    var quantity = parseInt($('#inventoryQuantity').val());
+    var safetyStock = parseInt($('#safetyStock').val());
+    
+    if (quantity === undefined || quantity < 0) {
+        alert('Please enter a valid quantity.');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to update inventory for ' + selectedIds.length + ' parts?')) {
+        performBulkUpdate('inventory', {
+            method: method,
+            quantity: quantity,
+            safety_stock: safetyStock,
+            part_ids: selectedIds
+        });
+    }
+}
+
+function applyStatusUpdate() {
+    var selectedIds = getSelectedPartIds();
+    if (selectedIds.length === 0) {
+        alert('Please select at least one part to update.');
+        return;
+    }
+    
+    var updateData = {
+        part_ids: selectedIds
+    };
+    
+    if ($('#updateActive').is(':checked')) {
+        updateData.is_active = $('#activeStatus').val() === 'true';
+    }
+    
+    if ($('#updateFeatured').is(':checked')) {
+        updateData.is_featured = $('#featuredStatus').val() === 'true';
+    }
+    
+    if (!updateData.hasOwnProperty('is_active') && !updateData.hasOwnProperty('is_featured')) {
+        alert('Please select at least one status field to update.');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to update status for ' + selectedIds.length + ' parts?')) {
+        performBulkUpdate('status', updateData);
+    }
+}
+
+function applyCategoryUpdate() {
+    var selectedIds = getSelectedPartIds();
+    if (selectedIds.length === 0) {
+        alert('Please select at least one part to update.');
+        return;
+    }
+    
+    var categoryId = $('#newCategory').val();
+    var brandId = $('#newBrand').val();
+    
+    if (!categoryId && !brandId) {
+        alert('Please select at least one field to update.');
+        return;
+    }
+    
+    var updateData = {
+        part_ids: selectedIds
+    };
+    
+    if (categoryId) updateData.category_id = categoryId;
+    if (brandId) updateData.brand_id = brandId;
+    
+    if (confirm('Are you sure you want to update category/brand for ' + selectedIds.length + ' parts?')) {
+        performBulkUpdate('category', updateData);
+    }
+}
+
+function performBulkUpdate(updateType, data) {
+    $('#progressContainer').show();
+    $('#updateProgress').css('width', '0%').find('#progressText').text('0%');
+    
+    $.ajax({
+        url: '{% url "business_partners:vendor_bulk_update" %}',
+        method: 'POST',
+        data: {
+            update_type: updateType,
+            update_data: JSON.stringify(data),
+            csrfmiddlewaretoken: '{{ csrf_token }}'
+        },
+        success: function(response) {
+            if (response.success) {
+                // Simulate progress
+                var progress = 0;
+                var interval = setInterval(function() {
+                    progress += 10;
+                    $('#updateProgress').css('width', progress + '%').find('#progressText').text(progress + '%');
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        setTimeout(function() {
+                            $('#progressContainer').hide();
+                            alert('Bulk update completed successfully!');
+                            location.reload();
+                        }, 500);
+                    }
+                }, 100);
+            } else {
+                $('#progressContainer').hide();
+                alert('Error: ' + response.message);
+            }
+        },
+        error: function() {
+            $('#progressContainer').hide();
+            alert('An error occurred while updating parts.');
+        }
+    });
+}
+
+function bulkDelete() {
+    var selectedIds = getSelectedPartIds();
+    if (selectedIds.length === 0) {
+        alert('Please select at least one part to delete.');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to delete ' + selectedIds.length + ' parts? This action cannot be undone.')) {
+        performBulkUpdate('delete', {
+            part_ids: selectedIds
+        });
+    }
+}
+</script>
+{% endblock %}

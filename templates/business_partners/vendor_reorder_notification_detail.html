@@ -1,0 +1,607 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reorder Notification - {{ notification.part.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notification-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .priority-indicator {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: bold;
+        margin: 0 auto 1rem;
+    }
+    
+    .priority-critical {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .priority-high {
+        background: #fd7e14;
+        color: white;
+    }
+    
+    .priority-medium {
+        background: #ffc107;
+        color: #212529;
+    }
+    
+    .priority-low {
+        background: #28a745;
+        color: white;
+    }
+    
+    .info-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .info-value {
+        color: #212529;
+    }
+    
+    .action-buttons {
+        position: sticky;
+        top: 20px;
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0.5rem;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #007bff;
+    }
+    
+    .timeline-item::after {
+        content: '';
+        position: absolute;
+        left: 4px;
+        top: 1rem;
+        width: 2px;
+        height: calc(100% + 1rem);
+        background: #dee2e6;
+    }
+    
+    .timeline-item:last-child::after {
+        display: none;
+    }
+    
+    .stock-gauge {
+        position: relative;
+        width: 200px;
+        height: 100px;
+        margin: 0 auto;
+    }
+    
+    .gauge-bg {
+        width: 100%;
+        height: 50px;
+        background: #e9ecef;
+        border-radius: 100px 100px 0 0;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .gauge-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #dc3545 0%, #ffc107 50%, #28a745 100%);
+        border-radius: 100px 100px 0 0;
+        transition: width 0.3s ease;
+    }
+    
+    .gauge-needle {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 2px;
+        height: 50px;
+        background: #212529;
+        transform-origin: bottom;
+        transition: transform 0.3s ease;
+    }
+    
+    .gauge-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Navigation -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'vendor_dashboard' %}">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'vendor_reorder_notifications' %}">Reorder Notifications</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ notification.part.name }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Notification Header -->
+            <div class="notification-header">
+                <div class="row align-items-center">
+                    <div class="col-md-3 text-center">
+                        <div class="priority-indicator priority-{{ notification.priority }}">
+                            {% if notification.priority == 'critical' %}
+                                <i class="fas fa-exclamation-triangle"></i>
+                            {% elif notification.priority == 'high' %}
+                                <i class="fas fa-exclamation"></i>
+                            {% elif notification.priority == 'medium' %}
+                                <i class="fas fa-info"></i>
+                            {% else %}
+                                <i class="fas fa-check"></i>
+                            {% endif %}
+                        </div>
+                        <h6 class="mb-0">{{ notification.get_priority_display }} Priority</h6>
+                    </div>
+                    <div class="col-md-9">
+                        <h2 class="mb-2">{{ notification.part.name }}</h2>
+                        <p class="mb-1">Part Number: {{ notification.part.part_number }}</p>
+                        <p class="mb-0">Status: 
+                            <span class="badge 
+                                {% if notification.status == 'pending' %}bg-warning
+                                {% elif notification.status == 'acknowledged' %}bg-info
+                                {% elif notification.status == 'ordered' %}bg-primary
+                                {% elif notification.status == 'completed' %}bg-success
+                                {% else %}bg-secondary{% endif %}">
+                                {{ notification.get_status_display }}
+                            </span>
+                            {% if notification.is_overdue %}
+                                <span class="badge bg-danger ms-1">OVERDUE</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notification Message -->
+            {% if notification.message %}
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>Notification Message</h6>
+                    <p class="mb-0">{{ notification.message }}</p>
+                </div>
+            {% endif %}
+            
+            <!-- Stock Information -->
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-boxes me-2"></i>
+                    Stock Information
+                </h5>
+                
+                {% if inventory %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <span class="info-label">Current Stock:</span>
+                                <span class="info-value">
+                                    <strong class="{% if notification.current_stock == 0 %}text-danger{% elif notification.current_stock <= notification.reorder_level %}text-warning{% else %}text-success{% endif %}">
+                                        {{ notification.current_stock }}
+                                    </strong>
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Reorder Level:</span>
+                                <span class="info-value">{{ notification.reorder_level }}</span>
+                            </div>
+                            {% if notification.safety_stock %}
+                                <div class="info-item">
+                                    <span class="info-label">Safety Stock:</span>
+                                    <span class="info-value">{{ notification.safety_stock }}</span>
+                                </div>
+                            {% endif %}
+                            <div class="info-item">
+                                <span class="info-label">Suggested Quantity:</span>
+                                <span class="info-value">
+                                    <strong class="text-primary">{{ notification.suggested_quantity }}</strong>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {% if inventory.max_stock_level %}
+                                <div class="info-item">
+                                    <span class="info-label">Max Stock Level:</span>
+                                    <span class="info-value">{{ inventory.max_stock_level }}</span>
+                                </div>
+                            {% endif %}
+                            <div class="info-item">
+                                <span class="info-label">Stock Status:</span>
+                                <span class="info-value">
+                                    {% if notification.current_stock == 0 %}
+                                        <span class="badge bg-danger">Out of Stock</span>
+                                    {% elif notification.safety_stock and notification.current_stock < notification.safety_stock %}
+                                        <span class="badge bg-warning">Below Safety Stock</span>
+                                    {% elif notification.current_stock <= notification.reorder_level %}
+                                        <span class="badge bg-info">Low Stock</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Normal</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Urgency Score:</span>
+                                <span class="info-value">
+                                    <strong>{{ notification.urgency_score }}</strong>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No inventory information available for this part.
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Part Information -->
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-cog me-2"></i>
+                    Part Details
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        {% if notification.part.category %}
+                            <div class="info-item">
+                                <span class="info-label">Category:</span>
+                                <span class="info-value">{{ notification.part.category.name }}</span>
+                            </div>
+                        {% endif %}
+                        {% if notification.part.brand %}
+                            <div class="info-item">
+                                <span class="info-label">Brand:</span>
+                                <span class="info-value">{{ notification.part.brand.name }}</span>
+                            </div>
+                        {% endif %}
+                        {% if notification.part.price %}
+                            <div class="info-item">
+                                <span class="info-label">Price:</span>
+                                <span class="info-value">${{ notification.part.price }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <span class="info-label">Active:</span>
+                            <span class="info-value">
+                                {% if notification.part.is_active %}
+                                    <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                    <span class="badge bg-danger">No</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Featured:</span>
+                            <span class="info-value">
+                                {% if notification.part.is_featured %}
+                                    <span class="badge bg-primary">Yes</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notification Timeline -->
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-history me-2"></i>
+                    Notification Timeline
+                </h5>
+                <div class="timeline-item">
+                    <strong>Created</strong>
+                    <small class="text-muted d-block">{{ notification.created_at|date:"M d, Y H:i" }}</small>
+                    <p class="mb-0">Notification generated due to low stock levels.</p>
+                </div>
+                
+                {% if notification.acknowledged_at %}
+                    <div class="timeline-item">
+                        <strong>Acknowledged</strong>
+                        <small class="text-muted d-block">
+                            {{ notification.acknowledged_at|date:"M d, Y H:i" }}
+                            {% if notification.acknowledged_by %}
+                                by {{ notification.acknowledged_by.get_full_name|default:notification.acknowledged_by.username }}
+                            {% endif %}
+                        </small>
+                        <p class="mb-0">Notification acknowledged and under review.</p>
+                    </div>
+                {% endif %}
+                
+                {% if notification.order_placed_at %}
+                    <div class="timeline-item">
+                        <strong>Order Placed</strong>
+                        <small class="text-muted d-block">{{ notification.order_placed_at|date:"M d, Y H:i" }}</small>
+                        {% if notification.order_reference %}
+                            <p class="mb-0">Order Reference: <strong>{{ notification.order_reference }}</strong></p>
+                        {% endif %}
+                        {% if notification.expected_delivery %}
+                            <p class="mb-0">Expected Delivery: <strong>{{ notification.expected_delivery|date:"M d, Y" }}</strong></p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Recent Notifications for this Part -->
+            {% if recent_notifications %}
+                <div class="info-card">
+                    <h5 class="mb-3">
+                        <i class="fas fa-bell me-2"></i>
+                        Recent Notifications for this Part
+                    </h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th>Stock Level</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for recent in recent_notifications %}
+                                    <tr>
+                                        <td>{{ recent.created_at|date:"M d, Y" }}</td>
+                                        <td>
+                                            <span class="badge badge-sm 
+                                                {% if recent.priority == 'critical' %}bg-danger
+                                                {% elif recent.priority == 'high' %}bg-warning
+                                                {% elif recent.priority == 'medium' %}bg-info
+                                                {% else %}bg-success{% endif %}">
+                                                {{ recent.get_priority_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-sm 
+                                                {% if recent.status == 'pending' %}bg-warning
+                                                {% elif recent.status == 'acknowledged' %}bg-info
+                                                {% elif recent.status == 'ordered' %}bg-primary
+                                                {% elif recent.status == 'completed' %}bg-success
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ recent.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ recent.current_stock }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Action Sidebar -->
+        <div class="col-lg-4">
+            <div class="action-buttons">
+                <h5 class="mb-3">
+                    <i class="fas fa-tasks me-2"></i>
+                    Actions
+                </h5>
+                
+                {% if notification.status == 'pending' %}
+                    <button type="button" class="btn btn-success w-100 mb-2" 
+                            onclick="acknowledgeNotification()">
+                        <i class="fas fa-check me-2"></i>
+                        Acknowledge Notification
+                    </button>
+                {% endif %}
+                
+                {% if notification.status in 'pending,acknowledged' %}
+                    <button type="button" class="btn btn-primary w-100 mb-2" 
+                            onclick="markOrderedModal()">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Mark as Ordered
+                    </button>
+                    
+                    <button type="button" class="btn btn-warning w-100 mb-2" 
+                            onclick="dismissNotification()">
+                        <i class="fas fa-times me-2"></i>
+                        Dismiss Notification
+                    </button>
+                {% endif %}
+                
+                {% if notification.status == 'ordered' %}
+                    <button type="button" class="btn btn-success w-100 mb-2" 
+                            onclick="completeNotification()">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Mark as Completed
+                    </button>
+                {% endif %}
+                
+                <hr>
+                
+                <a href="{% url 'vendor_part_detail' notification.part.id %}" 
+                   class="btn btn-outline-info w-100 mb-2">
+                    <i class="fas fa-eye me-2"></i>
+                    View Part Details
+                </a>
+                
+                <a href="{% url 'vendor_part_edit' notification.part.id %}" 
+                   class="btn btn-outline-secondary w-100 mb-2">
+                    <i class="fas fa-edit me-2"></i>
+                    Edit Part
+                </a>
+                
+                <a href="{% url 'vendor_reorder_notifications' %}" 
+                   class="btn btn-outline-primary w-100">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Back to Notifications
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mark Ordered Modal -->
+<div class="modal fade" id="markOrderedModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Mark as Ordered</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="markOrderedForm">
+                    <div class="mb-3">
+                        <label for="orderReference" class="form-label">Order Reference (Optional)</label>
+                        <input type="text" class="form-control" id="orderReference" 
+                               placeholder="Enter order number or reference">
+                    </div>
+                    <div class="mb-3">
+                        <label for="expectedDelivery" class="form-label">Expected Delivery (Optional)</label>
+                        <input type="date" class="form-control" id="expectedDelivery">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmMarkOrdered()">Mark as Ordered</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function acknowledgeNotification() {
+    performAction('acknowledge');
+}
+
+function dismissNotification() {
+    if (confirm('Are you sure you want to dismiss this notification?')) {
+        performAction('dismiss');
+    }
+}
+
+function completeNotification() {
+    if (confirm('Are you sure you want to mark this notification as completed?')) {
+        performAction('complete');
+    }
+}
+
+function markOrderedModal() {
+    const modal = new bootstrap.Modal(document.getElementById('markOrderedModal'));
+    modal.show();
+}
+
+function confirmMarkOrdered() {
+    const orderReference = document.getElementById('orderReference').value;
+    const expectedDelivery = document.getElementById('expectedDelivery').value;
+    
+    const formData = new FormData();
+    formData.append('action', 'mark_ordered');
+    formData.append('order_reference', orderReference);
+    formData.append('expected_delivery', expectedDelivery);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch('{% url "vendor_reorder_notification_action" notification.id %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+    
+    bootstrap.Modal.getInstance(document.getElementById('markOrderedModal')).hide();
+}
+
+function performAction(action) {
+    const formData = new FormData();
+    formData.append('action', action);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch('{% url "vendor_reorder_notification_action" notification.id %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+}
+</script>
+{% endblock %}

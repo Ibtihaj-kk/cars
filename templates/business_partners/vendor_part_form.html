@@ -1,0 +1,460 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if form.instance.pk %}Edit Part{% else %}Add New Part{% endif %} - Vendor Dashboard
+{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'business_partners/css/vehicle-variant-widget.css' %}">
+    <link rel="stylesheet" href="{% static 'business_partners/css/inventory-validator.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+    <style>
+        .form-section {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #007bff;
+        }
+        
+        .section-header i {
+            margin-right: 0.5rem;
+            color: #007bff;
+        }
+        
+        .section-title {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-row {
+            margin-bottom: 1rem;
+        }
+        
+        .required-field label::after {
+            content: " *";
+            color: #dc3545;
+        }
+        
+        .profit-analysis {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .compatibility-summary {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #e7f3ff;
+            border-radius: 6px;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-cog"></i>
+                        {% if form.instance.pk %}Edit Part: {{ form.instance.name }}{% else %}Add New Part{% endif %}
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="vendor-part-form">
+                        {% csrf_token %}
+                        
+                        <!-- Basic Information Section -->
+                        <div class="form-section" data-section="basic">
+                            <div class="section-header">
+                                <i class="fas fa-info-circle"></i>
+                                <h5 class="section-title">Basic Information</h5>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group required-field">
+                                        <label for="{{ form.parts_number.id_for_label }}">Part Number</label>
+                                        {{ form.parts_number }}
+                                        {% if form.parts_number.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.parts_number.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-group required-field">
+                                        <label for="{{ form.name.id_for_label }}">Part Name</label>
+                                        {{ form.name }}
+                                        {% if form.name.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.name.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="{{ form.description.id_for_label }}">Description</label>
+                                        {{ form.description }}
+                                        {% if form.description.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.description.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="{{ form.brand.id_for_label }}">Brand</label>
+                                        {{ form.brand }}
+                                        {% if form.brand.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.brand.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="{{ form.category.id_for_label }}">Category</label>
+                                        {{ form.category }}
+                                        {% if form.category.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.category.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="{{ form.condition.id_for_label }}">Condition</label>
+                                        {{ form.condition }}
+                                        {% if form.condition.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.condition.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Vehicle Compatibility Section -->
+                        <div class="form-section" data-section="compatibility">
+                            <div class="section-header">
+                                <i class="fas fa-car"></i>
+                                <h5 class="section-title">Vehicle Compatibility</h5>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="{{ form.vehicle_variants.id_for_label }}">Compatible Vehicles</label>
+                                        {{ form.vehicle_variants }}
+                                        {% if form.vehicle_variants.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.vehicle_variants.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                        <small class="form-text text-muted">
+                                            Search and select all vehicle variants this part is compatible with.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Compatibility Summary (populated by JavaScript) -->
+                            <div id="compatibility-summary" class="compatibility-summary" style="display: none;">
+                                <h6><i class="fas fa-check-circle text-success"></i> Compatibility Summary</h6>
+                                <div id="compatibility-details"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pricing Section -->
+                        <div class="form-section" data-section="pricing">
+                            <div class="section-header">
+                                <i class="fas fa-dollar-sign"></i>
+                                <h5 class="section-title">Pricing & Profit Analysis</h5>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="{{ form.cost_price.id_for_label }}">Cost Price</label>
+                                        {{ form.cost_price }}
+                                        {% if form.cost_price.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.cost_price.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group required-field">
+                                        <label for="{{ form.price.id_for_label }}">Selling Price</label>
+                                        {{ form.price }}
+                                        {% if form.price.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.price.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="{{ form.standard_price.id_for_label }}">Standard Price</label>
+                                        {{ form.standard_price }}
+                                        {% if form.standard_price.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.standard_price.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Profit Analysis (populated by JavaScript) -->
+                            <div id="profit-analysis" class="profit-analysis" style="display: none;">
+                                <h6><i class="fas fa-chart-line"></i> Profit Analysis</h6>
+                                <div id="profit-details"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Inventory Management Section -->
+                        <div class="form-section" data-section="inventory">
+                            <div class="section-header">
+                                <i class="fas fa-boxes"></i>
+                                <h5 class="section-title">Inventory Management</h5>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-group required-field">
+                                        <label for="{{ form.quantity.id_for_label }}">Current Quantity</label>
+                                        {{ form.quantity }}
+                                        {% if form.quantity.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.quantity.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="{{ form.safety_stock.id_for_label }}">Safety Stock</label>
+                                        {{ form.safety_stock }}
+                                        {% if form.safety_stock.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.safety_stock.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="{{ form.reorder_point.id_for_label }}">Reorder Point</label>
+                                        {{ form.reorder_point }}
+                                        {% if form.reorder_point.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.reorder_point.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="{{ form.inventory_threshold.id_for_label }}">Alert Threshold</label>
+                                        {{ form.inventory_threshold }}
+                                        {% if form.inventory_threshold.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.inventory_threshold.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Inventory Alerts (populated by JavaScript) -->
+                            <div id="inventory-alerts"></div>
+                            
+                            <!-- Inventory Metrics (populated by JavaScript) -->
+                            <div id="inventory-metrics"></div>
+                        </div>
+                        
+                        <!-- Status Section -->
+                        <div class="form-section" data-section="status">
+                            <div class="section-header">
+                                <i class="fas fa-toggle-on"></i>
+                                <h5 class="section-title">Status & Visibility</h5>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <div class="form-check">
+                                            {{ form.is_active }}
+                                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                                Active
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <div class="form-check">
+                                            {{ form.is_featured }}
+                                            <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">
+                                                Featured
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="{{ form.slug.id_for_label }}">URL Slug</label>
+                                        {{ form.slug }}
+                                        {% if form.slug.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.slug.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Form Actions -->
+                        <div class="form-actions">
+                            <div class="row">
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-save"></i>
+                                        {% if form.instance.pk %}Update Part{% else %}Create Part{% endif %}
+                                    </button>
+                                    
+                                    <a href="{% url 'business_partners:vendor_parts_list' %}" class="btn btn-secondary btn-lg ml-2">
+                                        <i class="fas fa-times"></i>
+                                        Cancel
+                                    </a>
+                                    
+                                    {% if form.instance.pk %}
+                                        <a href="{% url 'business_partners:vendor_part_detail' form.instance.pk %}" class="btn btn-info btn-lg ml-2">
+                                            <i class="fas fa-eye"></i>
+                                            View Part
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="{% static 'business_partners/js/vehicle-variant-widget.js' %}"></script>
+    <script src="{% static 'business_partners/js/profit-calculator.js' %}"></script>
+    <script src="{% static 'business_partners/js/inventory-validator.js' %}"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize all widgets
+            if (typeof initializeVehicleVariantWidgets === 'function') {
+                initializeVehicleVariantWidgets();
+            }
+            
+            if (typeof initializeProfitCalculators === 'function') {
+                initializeProfitCalculators();
+            }
+            
+            if (typeof initializeInventoryValidators === 'function') {
+                initializeInventoryValidators();
+            }
+            
+            // Form validation
+            const form = document.getElementById('vendor-part-form');
+            form.addEventListener('submit', function(e) {
+                let isValid = true;
+                
+                // Check required fields
+                const requiredFields = form.querySelectorAll('[required]');
+                requiredFields.forEach(function(field) {
+                    if (!field.value.trim()) {
+                        field.classList.add('is-invalid');
+                        isValid = false;
+                    } else {
+                        field.classList.remove('is-invalid');
+                    }
+                });
+                
+                if (!isValid) {
+                    e.preventDefault();
+                    alert('Please fill in all required fields.');
+                    return false;
+                }
+            });
+            
+            // Auto-generate slug from name
+            const nameField = document.getElementById('id_name');
+            const slugField = document.getElementById('id_slug');
+            
+            if (nameField && slugField && !slugField.value) {
+                nameField.addEventListener('input', function() {
+                    const slug = this.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/^-+|-+$/g, '');
+                    slugField.value = slug;
+                });
+            }
+        });
+    </script>
+{% endblock %}

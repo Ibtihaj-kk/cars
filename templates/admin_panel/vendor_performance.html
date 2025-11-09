@@ -1,0 +1,261 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block page_title %}Vendor Performance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-chart-line"></i> Vendor Performance Analytics</h2>
+        <div>
+            <a href="{% url 'admin_panel:vendor_management' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Vendors
+            </a>
+            <a href="{% url 'admin_panel:vendor_approval_queue' %}" class="btn btn-warning">
+                <i class="fas fa-clock"></i> Approval Queue
+            </a>
+        </div>
+    </div>
+
+    <!-- Performance Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card primary">
+                <div class="icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="content">
+                    <h3>{{ total_vendors }}</h3>
+                    <p>Total Vendors</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card success">
+                <div class="icon">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="content">
+                    <h3>{{ avg_rating|floatformat:1 }}</h3>
+                    <p>Average Rating</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card warning">
+                <div class="icon">
+                    <i class="fas fa-list"></i>
+                </div>
+                <div class="content">
+                    <h3>{{ total_listings }}</h3>
+                    <p>Total Listings</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card info">
+                <div class="icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <div class="content">
+                    <h3>{{ total_reviews }}</h3>
+                    <p>Total Reviews</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Charts Row -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h5 class="mb-3"><i class="fas fa-chart-line"></i> Monthly Performance Trends</h5>
+                <canvas id="performanceTrendChart" height="200"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h5 class="mb-3"><i class="fas fa-trophy"></i> Top Performers</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Vendor</th>
+                                <th>Score</th>
+                                <th>Rating</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vendor in top_performers %}
+                            <tr>
+                                <td><span class="badge bg-warning">{{ forloop.counter }}</span></td>
+                                <td>
+                                    <strong>{{ vendor.business_name|default:vendor.user.get_full_name }}</strong>
+                                    <br><small class="text-muted">{{ vendor.partner_type }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ vendor.performance_score }}/100</span>
+                                </td>
+                                <td>
+                                    <div class="rating-stars">
+                                        {% for i in "12345" %}
+                                            <i class="fas fa-star {% if vendor.avg_rating >= i|add:0 %}text-warning{% else %}text-muted{% endif %}"></i>
+                                        {% endfor %}
+                                        <small class="text-muted">({{ vendor.avg_rating|floatformat:1 }})</small>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vendor Performance Table -->
+    <div class="table-container">
+        <div class="table-header">
+            <h5 class="mb-0"><i class="fas fa-table"></i> Vendor Performance Details</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Vendor</th>
+                        <th>Type</th>
+                        <th>Performance Score</th>
+                        <th>Rating</th>
+                        <th>Listings</th>
+                        <th>Active</th>
+                        <th>Views</th>
+                        <th>Leads</th>
+                        <th>Conversion Rate</th>
+                        <th>Response Rate</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vendor in vendors %}
+                    <tr>
+                        <td>
+                            <strong>{{ vendor.business_name|default:vendor.user.get_full_name }}</strong>
+                            <br><small class="text-muted">{{ vendor.user.email }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ vendor.partner_type|title }}</span>
+                        </td>
+                        <td>
+                            <span class="badge 
+                                {% if vendor.performance_score >= 80 %}bg-success
+                                {% elif vendor.performance_score >= 60 %}bg-warning
+                                {% else %}bg-danger{% endif %}">
+                                {{ vendor.performance_score }}/100
+                            </span>
+                        </td>
+                        <td>
+                            <div class="rating-stars">
+                                {% for i in "12345" %}
+                                    <i class="fas fa-star {% if vendor.avg_rating >= i|add:0 %}text-warning{% else %}text-muted{% endif %}"></i>
+                                {% endfor %}
+                                <small class="text-muted">({{ vendor.avg_rating|floatformat:1 }})</small>
+                            </div>
+                        </td>
+                        <td><span class="badge bg-info">{{ vendor.total_listings }}</span></td>
+                        <td><span class="badge bg-success">{{ vendor.active_listings }}</span></td>
+                        <td>{{ vendor.total_views|default:0|intcomma }}</td>
+                        <td>{{ vendor.total_leads|default:0 }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if vendor.conversion_rate >= 5 %}bg-success
+                                {% elif vendor.conversion_rate >= 2 %}bg-warning
+                                {% else %}bg-danger{% endif %}">
+                                {{ vendor.conversion_rate }}%
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">{{ vendor.response_rate }}%</span>
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_panel:vendor_detail' vendor.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-warning" onclick="sendMessage({{ vendor.id }})">
+                                <i class="fas fa-envelope"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.rating-stars {
+    color: #ffc107;
+}
+.rating-stars i {
+    font-size: 0.9rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Performance Trend Chart
+const ctx = document.getElementById('performanceTrendChart').getContext('2d');
+const monthlyData = {{ monthly_performance|safe }};
+
+const performanceChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: monthlyData.map(item => item.month),
+        datasets: [{
+            label: 'New Listings',
+            data: monthlyData.map(item => item.new_listings),
+            borderColor: '#3498db',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            tension: 0.4
+        }, {
+            label: 'Total Views',
+            data: monthlyData.map(item => item.total_views),
+            borderColor: '#e74c3c',
+            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+            tension: 0.4
+        }, {
+            label: 'New Leads',
+            data: monthlyData.map(item => item.new_leads),
+            borderColor: '#27ae60',
+            backgroundColor: 'rgba(39, 174, 96, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top',
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+function sendMessage(vendorId) {
+    // Placeholder for messaging functionality
+    alert('Messaging functionality will be implemented soon!');
+}
+</script>
+{% endblock %}

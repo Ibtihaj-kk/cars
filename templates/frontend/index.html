@@ -1,0 +1,275 @@
+{% extends 'frontend/base.html' %}
+{% load static %}
+
+{% block title %}Cars Portal - Find Your Perfect Car{% endblock %}
+
+
+{% block content %}
+    <!-- Filter Tabs Section -->
+    <div class="homepage-filters">
+      
+
+    <!-- Car Listings Section -->
+    <div class="main-container">
+      <!-- Left Sidebar -->
+      <aside class="left-sidebar">
+        <div class="sidebar-header">
+          <h2>10,730 VEHICLES FOUND</h2>
+          <div class="sidebar-tabs">
+            <button class="sidebar-tab-btn active" data-tab="filters">FILTERS</button>
+            <button class="sidebar-tab-btn" data-tab="search">SEARCH</button>
+          </div>
+        </div>
+
+        <!-- Filters Tab Content -->
+        <div id="filters-tab" class="sidebar-tab-content active">
+          <div class="filters-container">
+            <details class="filter-section">
+              <summary>Distance <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <div class="slider-container">
+                  <input type="range" min="0" max="100" value="50" class="slider" id="distanceSlider">
+                  <div class="range-labels">
+                    <span>0 mi</span>
+                    <span id="distanceValue">50 mi</span>
+                    <span>100+ mi</span>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Vehicle Status <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> New</label>
+                <label><input type="checkbox"> Used</label>
+                <label><input type="checkbox"> Certified Pre-Owned</label>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Price <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <div class="price-inputs">
+                  <input type="text" placeholder="Min" class="price-input" id="minPrice">
+                  <input type="text" placeholder="Max" class="price-input" id="maxPrice">
+                </div>
+                <div class="slider-container">
+                  <input type="range" min="0" max="200000" value="100000" class="slider" id="priceSlider">
+                  <div class="range-labels">
+                    <span>$0</span>
+                    <span id="priceValue">$100,000</span>
+                    <span>$200k+</span>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Make <span class="arrow">▲</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> Acura (1)</label>
+                <label><input type="checkbox"> Audi (58)</label>
+                <label><input type="checkbox"> Rolls Royce (10)</label>
+                <label><input type="checkbox"> Range Rover (6)</label>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Body Type <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> SUV</label>
+                <label><input type="checkbox"> Sedan</label>
+                <label><input type="checkbox"> Coupe</label>
+                <label><input type="checkbox"> Convertible</label>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Year <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <div class="slider-container">
+                  <input type="range" min="2000" max="2024" value="2020" class="slider" id="yearSlider">
+                  <div class="range-labels">
+                    <span>2000</span>
+                    <span id="yearValue">2020</span>
+                    <span>2024</span>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Features <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> Leather Seats</label>
+                <label><input type="checkbox"> Sunroof</label>
+                <label><input type="checkbox"> Navigation</label>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Payment <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> Cash</label>
+                <label><input type="checkbox"> Finance</label>
+                <label><input type="checkbox"> Lease</label>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Drive Train <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> AWD</label>
+                <label><input type="checkbox"> FWD</label>
+                <label><input type="checkbox"> RWD</label>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Color <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> Black</label>
+                <label><input type="checkbox"> White</label>
+                <label><input type="checkbox"> Silver</label>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Mileage <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <div class="slider-container">
+                  <input type="range" min="0" max="100000" value="50000" class="slider" id="mileageSlider">
+                  <div class="range-labels">
+                    <span>0 mi</span>
+                    <span id="mileageValue">50k mi</span>
+                    <span>100k+ mi</span>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Fuel Type <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> Gasoline</label>
+                <label><input type="checkbox"> Electric</label>
+                <label><input type="checkbox"> Hybrid</label>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Transmission <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> Automatic</label>
+                <label><input type="checkbox"> Manual</label>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Passenger Capacity <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> 2 Seats</label>
+                <label><input type="checkbox"> 4 Seats</label>
+                <label><input type="checkbox"> 5 Seats</label>
+                <label><input type="checkbox"> 7+ Seats</label>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Fuel Economy <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <div class="slider-container">
+                  <input type="range" min="10" max="50" value="25" class="slider" id="fuelEconomySlider">
+                  <div class="range-labels">
+                    <span>10 MPG</span>
+                    <span id="fuelEconomyValue">25 MPG</span>
+                    <span>50+ MPG</span>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Engine <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> 4 Cylinder</label>
+                <label><input type="checkbox"> 6 Cylinder</label>
+                <label><input type="checkbox"> 8 Cylinder</label>
+                <label><input type="checkbox"> Electric Motor</label>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Condition <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> Excellent</label>
+                <label><input type="checkbox"> Good</label>
+                <label><input type="checkbox"> Fair</label>
+                <label><input type="checkbox"> Needs Work</label>
+              </div>
+            </details>
+
+            <details class="filter-section">
+              <summary>Seller Type <span class="arrow">▼</span></summary>
+              <div class="filter-content">
+                <label><input type="checkbox"> Dealer</label>
+                <label><input type="checkbox"> Private Party</label>
+                <label><input type="checkbox"> Certified Dealer</label>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- Search Tab Content -->
+        <div id="search-tab" class="sidebar-tab-content">
+          <div class="search-container">
+            <div class="tab-logo">
+              <img src="{% static 'images/logos/cars-portal-logo.png' %}" alt="CarsPortal Logo">
+            </div>
+            <div class="search-form">
+              <input type="text" placeholder="Search All Vehicles" class="search-input">
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <div class="content-header">
+          <button class="arrow-btn"><i class="fa-solid fa-angle-left"></i></button>
+          <button class="sort-btn">SORT</button>
+        </div>
+
+        <div class="car-grid" id="carGrid">
+          <!-- Dynamic car listings will be loaded here by JavaScript -->
+          <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Loading vehicles...</p>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination">
+          <button class="page-btn prev-btn" id="prevBtn">
+            <ion-icon name="chevron-back-outline"></ion-icon>
+            Previous
+          </button>
+          <div class="page-numbers" id="pageNumbers">
+            <!-- Dynamic page numbers will be generated here -->
+          </div>
+          <button class="page-btn next-btn" id="nextBtn">
+            Next
+            <ion-icon name="chevron-forward-outline"></ion-icon>
+          </button>
+        </div>
+      </main>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/script.js' %}"></script>
+<script src="{% static 'js/dynamic-filters.js' %}"></script>
+<script src="{% static 'js/car-grid.js' %}"></script>
+<script src="{% static 'js/live-search.js' %}"></script>
+{% endblock %}

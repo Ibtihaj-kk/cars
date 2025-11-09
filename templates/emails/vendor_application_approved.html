@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Application Approved - Cars Portal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #28a745;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #f8f9fa;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .welcome-box {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .vendor-details {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .next-steps {
+            background-color: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        .btn-secondary {
+            background-color: #007bff;
+        }
+        .success-icon {
+            font-size: 48px;
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="success-icon">✅</div>
+        <h1>Congratulations! Application Approved</h1>
+        <p>Welcome to the Cars Portal Vendor Network</p>
+    </div>
+    
+    <div class="content">
+        <div class="welcome-box">
+            <h2>🎉 Welcome to Cars Portal!</h2>
+            <p>Your vendor application has been <strong>approved</strong>. You are now an official Cars Portal vendor partner!</p>
+        </div>
+        
+        <h2>Dear {{ application.contact_person_name|default:application.user.get_full_name }},</h2>
+        
+        <p>We are excited to inform you that your vendor application for <strong>{{ application.company_name }}</strong> has been approved by our review team.</p>
+        
+        <div class="vendor-details">
+            <h3>📋 Your Vendor Details</h3>
+            <p><strong>Application ID:</strong> {{ application.application_id }}</p>
+            <p><strong>Company Name:</strong> {{ application.company_name }}</p>
+            <p><strong>Business Partner ID:</strong> {{ vendor_profile.business_partner.bp_number }}</p>
+            <p><strong>Vendor Status:</strong> <span style="color: #28a745; font-weight: bold;">Active</span></p>
+            <p><strong>Approved On:</strong> {{ application.updated_at|date:"F d, Y \a\t g:i A" }}</p>
+            {% if application.reviewed_by %}
+            <p><strong>Reviewed By:</strong> {{ application.reviewed_by.get_full_name }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="next-steps">
+            <h3>🚀 Getting Started</h3>
+            <p>Now that you're approved, here's what you can do:</p>
+            <ol>
+                <li><strong>Access Your Dashboard:</strong> Log in to your vendor dashboard to manage your parts and inventory</li>
+                <li><strong>Add Your Parts:</strong> Start uploading your automotive parts catalog</li>
+                <li><strong>Set Up Inventory:</strong> Configure your stock levels and pricing</li>
+                <li><strong>Manage Orders:</strong> Track and fulfill customer orders</li>
+                <li><strong>View Analytics:</strong> Monitor your sales performance and metrics</li>
+            </ol>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{ dashboard_url }}" class="btn">Access Vendor Dashboard</a>
+            <a href="{{ parts_url }}" class="btn btn-secondary">Add Your Parts</a>
+        </div>
+        
+        <div style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p><strong>📚 Resources & Support</strong></p>
+            <ul>
+                <li><strong>Vendor Guide:</strong> <a href="{{ vendor_guide_url }}">Download our comprehensive vendor guide</a></li>
+                <li><strong>API Documentation:</strong> <a href="{{ api_docs_url }}">Integrate with our systems</a></li>
+                <li><strong>Support Portal:</strong> <a href="{{ support_url }}">Access help articles and tutorials</a></li>
+            </ul>
+        </div>
+        
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p><strong>📞 Vendor Support</strong></p>
+            <p>Our dedicated vendor support team is here to help you succeed:</p>
+            <ul>
+                <li>Email: vendors@carsportal.com</li>
+                <li>Phone: +966 11 123 4567</li>
+                <li>Business Hours: Sunday - Thursday, 9:00 AM - 6:00 PM</li>
+                <li>Dedicated Account Manager: We'll assign you a dedicated account manager within 24 hours</li>
+            </ul>
+        </div>
+        
+        <p>We look forward to a successful partnership and helping you grow your business with Cars Portal!</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from Cars Portal Vendor Management System.</p>
+        <p>&copy; {{ current_year }} Cars Portal. All rights reserved.</p>
+    </div>
+</body>
+</html>

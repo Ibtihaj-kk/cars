@@ -1,0 +1,324 @@
+/**
+ * Vendor Dashboard Mobile Responsive CSS
+ * Comprehensive responsive design for vendor order management
+ */
+
+/* Mobile Menu Toggle */
+.mobile-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #2c3e50;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.mobile-menu-toggle:hover {
+    background: #f8f9fa;
+}
+
+/* Base responsive structure */
+.vendor-dashboard-layout {
+    display: flex;
+    min-height: 100vh;
+    background: #f8f9fa;
+}
+
+.vendor-sidebar {
+    width: 280px;
+    background: #2c3e50;
+    color: white;
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.vendor-main-content {
+    flex: 1;
+    margin-left: 280px;
+    transition: all 0.3s ease;
+}
+
+/* Mobile Responsive Breakpoints */
+@media (max-width: 992px) {
+    /* Show mobile menu toggle */
+    .mobile-menu-toggle {
+        display: block;
+    }
+    
+    /* Sidebar mobile behavior */
+    .vendor-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .vendor-sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    
+    /* Main content full width */
+    .vendor-main-content {
+        margin-left: 0;
+    }
+    
+    /* Statistics cards responsive */
+    .stats-card {
+        margin-bottom: 20px;
+        padding: 20px;
+    }
+    
+    .stats-card-value {
+        font-size: 1.5rem;
+    }
+    
+    /* Table responsive wrapper */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .vendor-table {
+        min-width: 600px;
+        font-size: 14px;
+    }
+    
+    .vendor-table th,
+    .vendor-table td {
+        padding: 10px 15px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Content padding reduction */
+    .vendor-content {
+        padding: 15px;
+    }
+    
+    /* Card header responsive */
+    .vendor-card-header {
+        padding: 15px 20px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    /* Button sizing */
+    .vendor-btn {
+        padding: 8px 16px;
+        font-size: 13px;
+        min-height: 40px;
+    }
+    
+    /* Status badges */
+    .status-badge {
+        padding: 4px 8px;
+        font-size: 0.7rem;
+    }
+    
+    /* Form controls */
+    .vendor-form-control {
+        padding: 10px 12px;
+        font-size: 13px;
+        min-height: 40px;
+    }
+    
+    /* Top bar responsive */
+    .vendor-top-bar {
+        padding: 10px 15px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .vendor-breadcrumb {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 576px) {
+    /* Minimal padding for small screens */
+    .vendor-content {
+        padding: 10px;
+    }
+    
+    /* Card padding reduction */
+    .vendor-card-header,
+    .vendor-card-body {
+        padding: 15px;
+    }
+    
+    /* Statistics cards */
+    .stats-card {
+        padding: 15px;
+    }
+    
+    .stats-card-icon {
+        font-size: 2rem;
+    }
+    
+    .stats-card-value {
+        font-size: 1.25rem;
+    }
+    
+    /* Table font size */
+    .vendor-table {
+        font-size: 12px;
+        min-width: 500px;
+    }
+    
+    .vendor-table th,
+    .vendor-table td {
+        padding: 8px 10px;
+    }
+    
+    /* Hide less important columns on mobile */
+    .vendor-table th:nth-child(3),
+    .vendor-table td:nth-child(3) {
+        display: none;
+    }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+    .vendor-nav-link {
+        padding: 15px 20px;
+        min-height: 44px;
+    }
+    
+    .vendor-btn {
+        padding: 12px 20px;
+        min-height: 44px;
+    }
+    
+    .vendor-form-control {
+        padding: 12px 15px;
+        min-height: 44px;
+    }
+    
+    .status-badge {
+        padding: 6px 10px;
+    }
+    
+    .mobile-menu-toggle {
+        padding: 12px;
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .vendor-table th {
+        font-weight: 600;
+    }
+    
+    .stats-card-label {
+        font-weight: 500;
+    }
+    
+    .vendor-btn {
+        font-weight: 600;
+    }
+}
+
+/* Landscape mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .vendor-sidebar {
+        overflow-y: auto;
+    }
+    
+    .vendor-content {
+        padding: 10px;
+    }
+}
+
+/* Print styles */
+@media print {
+    .vendor-sidebar,
+    .vendor-top-bar,
+    .mobile-menu-toggle {
+        display: none !important;
+    }
+    
+    .vendor-main-content {
+        margin-left: 0 !important;
+    }
+    
+    .vendor-content {
+        padding: 0 !important;
+    }
+    
+    .vendor-card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        break-inside: avoid;
+    }
+    
+    .vendor-table {
+        font-size: 10pt;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .vendor-card {
+        background: #2d2d2d;
+        color: #ffffff;
+    }
+    
+    .vendor-top-bar {
+        background: #2d2d2d;
+        color: #ffffff;
+    }
+    
+    .vendor-table {
+        background: #2d2d2d;
+        color: #ffffff;
+    }
+    
+    .vendor-table th {
+        background: #3d3d3d;
+        color: #ffffff;
+    }
+    
+    .vendor-form-control {
+        background: #3d3d3d;
+        border-color: #555;
+        color: #ffffff;
+    }
+    
+    .vendor-form-control:focus {
+        border-color: #3498db;
+    }
+}
+
+/* Loading states */
+.vendor-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.vendor-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

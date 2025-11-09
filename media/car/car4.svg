@@ -1,0 +1,36 @@
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="carGradient4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B4513;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A0522D;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="400" height="300" fill="#f8f9fa"/>
+  
+  <!-- Car Body -->
+  <ellipse cx="200" cy="180" rx="120" ry="35" fill="url(#carGradient4)"/>
+  <rect x="80" y="145" width="240" height="35" rx="15" fill="url(#carGradient4)"/>
+  <rect x="100" y="125" width="200" height="20" rx="10" fill="url(#carGradient4)"/>
+  
+  <!-- Windows -->
+  <rect x="110" y="130" width="70" height="15" rx="5" fill="#87CEEB" opacity="0.8"/>
+  <rect x="220" y="130" width="70" height="15" rx="5" fill="#87CEEB" opacity="0.8"/>
+  
+  <!-- Wheels -->
+  <circle cx="130" cy="200" r="25" fill="#2F4F4F"/>
+  <circle cx="130" cy="200" r="15" fill="#696969"/>
+  <circle cx="270" cy="200" r="25" fill="#2F4F4F"/>
+  <circle cx="270" cy="200" r="15" fill="#696969"/>
+  
+  <!-- Headlights -->
+  <ellipse cx="85" cy="160" rx="8" ry="12" fill="#FFFFE0"/>
+  <ellipse cx="315" cy="160" rx="8" ry="12" fill="#FFFFE0"/>
+  
+  <!-- Grille -->
+  <rect x="75" y="155" width="15" height="10" rx="2" fill="#2F4F4F"/>
+  
+  <!-- Text -->
+  <text x="200" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#8B4513">Brown Sedan</text>
+</svg>

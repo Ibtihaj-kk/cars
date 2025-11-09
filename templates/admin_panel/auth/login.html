@@ -1,0 +1,211 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title %}Admin Login - Cars Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .login-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        width: 100%;
+        max-width: 400px;
+    }
+    
+    .login-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .login-header h2 {
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+    
+    .login-header p {
+        color: #666;
+        margin: 0;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-control {
+        border-radius: 8px;
+        border: 2px solid #e1e5e9;
+        padding: 0.75rem 1rem;
+        transition: border-color 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-login {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        color: white;
+        font-weight: 600;
+        width: 100%;
+        transition: transform 0.2s ease;
+    }
+    
+    .btn-login:hover {
+        transform: translateY(-2px);
+        color: white;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .forgot-password {
+        text-align: center;
+        margin-top: 1rem;
+    }
+    
+    .forgot-password a {
+        color: #667eea;
+        text-decoration: none;
+    }
+    
+    .forgot-password a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <h2><i class="fas fa-shield-alt text-primary"></i> Admin Login</h2>
+            <p>Secure access to Cars Portal Admin Panel</p>
+        </div>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        {% if form.errors %}
+            <div class="alert alert-danger" role="alert">
+                <strong>Login Failed:</strong>
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <form method="post" action="{% url 'admin_panel:login' %}">
+            {% csrf_token %}
+            
+            {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+            
+            <div class="form-group">
+                <label for="id_email" class="form-label">
+                    <i class="fas fa-envelope"></i> Email
+                </label>
+                <input type="email" 
+                       class="form-control" 
+                       id="id_email" 
+                       name="email" 
+                       value="{{ form.email.value|default:'' }}"
+                       required 
+                       autocomplete="email"
+                       placeholder="Enter your email">
+            </div>
+            
+            <div class="form-group">
+                <label for="id_password" class="form-label">
+                    <i class="fas fa-lock"></i> Password
+                </label>
+                <input type="password" 
+                       class="form-control" 
+                       id="id_password" 
+                       name="password" 
+                       required 
+                       autocomplete="current-password"
+                       placeholder="Enter your password">
+            </div>
+            
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                    <label class="form-check-label" for="remember_me">
+                        Remember me for 30 days
+                    </label>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-login">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+        </form>
+        
+        <div class="forgot-password">
+            <a href="/admin/password_reset/">
+                <i class="fas fa-key"></i> Forgot your password?
+            </a>
+        </div>
+        
+        <div class="text-center mt-3">
+            <small class="text-muted">
+                <i class="fas fa-info-circle"></i> 
+                Secure admin access with enhanced protection
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Focus on email field
+    document.getElementById('id_email').focus();
+    
+    // Add loading state to form submission
+    const form = document.querySelector('form');
+    const submitBtn = document.querySelector('.btn-login');
+    
+    form.addEventListener('submit', function() {
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing In...';
+        submitBtn.disabled = true;
+    });
+    
+    // Auto-dismiss alerts after 5 seconds
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(function(alert) {
+        setTimeout(function() {
+            if (alert.querySelector('.btn-close')) {
+                alert.querySelector('.btn-close').click();
+            }
+        }, 5000);
+    });
+});
+</script>
+{% endblock %}

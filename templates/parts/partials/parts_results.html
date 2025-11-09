@@ -1,0 +1,131 @@
+{% load static %}
+
+<!-- Parts Results Section -->
+<div class="row">
+    {% for part in parts %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="part-card">
+                <div class="part-image">
+                    {% if part.image %}
+                        <img src="{{ part.image.url }}" alt="{{ part.name }}" class="img-fluid">
+                    {% else %}
+                        <img src="{% static 'images/no-image.png' %}" alt="No Image" class="img-fluid">
+                    {% endif %}
+                    {% if part.is_featured %}
+                        <span class="featured-badge">Featured</span>
+                    {% endif %}
+                    {% if part.quantity <= 10 %}
+                        <span class="stock-badge low-stock">Low Stock</span>
+                    {% elif part.quantity > 50 %}
+                        <span class="stock-badge in-stock">In Stock</span>
+                    {% endif %}
+                </div>
+                <div class="part-info">
+                    <h5 class="part-name">
+                        <a href="{% url 'parts:part_detail' part.id %}">{{ part.name }}</a>
+                    </h5>
+                    <p class="part-category">{{ part.category.name }}</p>
+                    <p class="part-brand">{{ part.brand.name }}</p>
+                    
+                    <!-- Vendor Information Badge -->
+                    {% if part.vendor %}
+                        <div class="vendor-info">
+                            <span class="vendor-badge">
+                                <i class="fas fa-store"></i>
+                                Sold by 
+                                <a href="{% url 'business_partners:vendor_store' part.vendor.slug %}" class="vendor-link">
+                                    {{ part.vendor.name }}
+                                </a>
+                                {% if part.vendor.vendor_profile %}
+                                    <div class="vendor-rating">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= part.vendor.vendor_profile.vendor_rating|floatformat:0 %}
+                                                <i class="fas fa-star text-warning"></i>
+                                            {% else %}
+                                                <i class="far fa-star text-muted"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                        <span class="vendor-rating-text">({{ part.vendor.vendor_profile.vendor_rating|floatformat:1 }})</span>
+                                    </div>
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="part-rating">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= part.average_rating|floatformat:0 %}
+                                <i class="fas fa-star text-warning"></i>
+                            {% else %}
+                                <i class="far fa-star text-muted"></i>
+                            {% endif %}
+                        {% endfor %}
+                        <span class="rating-count">({{ part.review_count }})</span>
+                    </div>
+                    <div class="part-price">
+                        {% if part.sale_price and part.sale_price < part.price %}
+                            <span class="original-price">${{ part.price }}</span>
+                            <span class="sale-price">${{ part.sale_price }}</span>
+                        {% else %}
+                            <span class="current-price">${{ part.price }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="part-actions">
+                        <button class="btn btn-primary btn-sm" onclick="addToCart({{ part.id }})">
+                            <i class="fas fa-cart-plus"></i> Add to Cart
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="buyNow({{ part.id }})">
+                            <i class="fas fa-bolt"></i> Buy Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <div class="no-parts">
+                <i class="fas fa-search fa-3x mb-3"></i>
+                <h4>No Parts Found</h4>
+                <p>Try adjusting your search criteria or filters.</p>
+                <a href="{% url 'parts:part_list' %}" class="btn btn-primary">View All Parts</a>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if parts.has_other_pages %}
+    <div class="pagination-wrapper">
+        <nav aria-label="Parts pagination">
+            <ul class="pagination justify-content-center">
+                {% if parts.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ parts.previous_page_number }}">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% for num in parts.paginator.page_range %}
+                    {% if parts.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > parts.number|add:'-3' and num < parts.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if parts.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ parts.next_page_number }}">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+{% endif %}

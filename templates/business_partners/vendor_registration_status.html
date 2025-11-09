@@ -1,0 +1,223 @@
+{% extends 'business_partners/vendor_registration_base.html' %}
+{% load static %}
+
+{% block title %}Application Status - Cars Portal Vendor Portal{% endblock %}
+
+{% block content %}
+<!-- Messages Section -->
+{% if messages %}
+    <div class="messages-container-modern">
+        {% for message in messages %}
+            <div class="alert alert-modern alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="background: linear-gradient(135deg, {% if message.tags == 'success' %}#d4edda{% elif message.tags == 'error' %}#f8d7da{% elif message.tags == 'warning' %}#fff3cd{% else %}#d1ecf1{% endif %}, {% if message.tags == 'success' %}#c3e6cb{% elif message.tags == 'error' %}#f5c6cb{% elif message.tags == 'warning' %}#ffeaa7{% else %}#bee5eb{% endif %}); border: 1px solid {% if message.tags == 'success' %}#28a745{% elif message.tags == 'error' %}#dc3545{% elif message.tags == 'warning' %}#ffc107{% else %}#17a2b8{% endif %}; border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem;">
+                <div class="alert-icon" style="font-size: 1.5rem;">
+                    {% if message.tags == 'success' %}
+                        <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                    {% elif message.tags == 'error' %}
+                        <i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i>
+                    {% elif message.tags == 'warning' %}
+                        <i class="fas fa-exclamation-circle" style="color: #ffc107;"></i>
+                    {% else %}
+                        <i class="fas fa-info-circle" style="color: #17a2b8;"></i>
+                    {% endif %}
+                </div>
+                <div class="alert-content" style="flex: 1; color: {% if message.tags == 'success' %}#155724{% elif message.tags == 'error' %}#721c24{% elif message.tags == 'warning' %}#856404{% else %}#0c5460{% endif %}; font-weight: 500;">
+                    {{ message }}
+                </div>
+                <button type="button" class="alert-close" data-bs-dismiss="alert" aria-label="Close" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.7; transition: opacity 0.3s ease;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+<div class="vendor-registration-container" style="max-width: 1200px; margin: 125px auto 0; padding: 2rem 1rem;">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-modern" style="background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); overflow: hidden;">
+                <div class="card-header-modern" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white; padding: 2rem; text-align: center;">
+                    <h3 style="margin: 0; font-size: 1.8rem; font-weight: 600;">Vendor Application Status</h3>
+                </div>
+                <div class="card-body-modern" style="padding: 2.5rem;">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    {% if current_application %}
+                        <div class="application-status-modern" style="margin-bottom: 2rem; padding: 2rem; background: #f8f9fa; border-radius: 12px; border-left: 4px solid var(--primary-color);">
+                            <h4 style="color: var(--text-dark); font-size: 1.4rem; font-weight: 600; margin-bottom: 1.5rem;">
+                                <i class="fas fa-file-alt" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+                                Current Application: {{ current_application.application_id }}
+                            </h4>
+                            <div class="status-badge-modern" style="margin-bottom: 1.5rem;">
+                                {% if current_application.status == 'submitted' %}
+                                    <span class="badge-modern badge-warning-modern" style="background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-clock"></i>
+                                        Under Review
+                                    </span>
+                                {% elif current_application.status == 'approved' %}
+                                    <span class="badge-modern badge-success-modern" style="background: linear-gradient(135deg, #28a745, #1e7e34); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-check"></i>
+                                        Approved
+                                    </span>
+                                {% elif current_application.status == 'rejected' %}
+                                    <span class="badge-modern badge-danger-modern" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-times"></i>
+                                        Rejected
+                                    </span>
+                                {% elif current_application.status == 'requires_changes' %}
+                                    <span class="badge-modern badge-info-modern" style="background: linear-gradient(135deg, #17a2b8, #138496); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-edit"></i>
+                                        Requires Changes
+                                    </span>
+                                {% else %}
+                                    <span class="badge-modern badge-secondary-modern" style="background: linear-gradient(135deg, #6c757d, #5a6268); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fas fa-question"></i>
+                                        {{ current_application.get_status_display }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="progress-modern" style="margin-bottom: 1.5rem; background: #e9ecef; border-radius: 10px; height: 12px; overflow: hidden;">
+                                <div class="progress-bar-modern" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); height: 100%; border-radius: 10px; transition: width 0.3s ease; width: {{ current_application.get_completion_percentage }}%;">
+                                    <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.8rem; font-weight: 600;">{{ current_application.get_completion_percentage }}% Complete</span>
+                                </div>
+                            </div>
+                            
+                            <div class="application-details-modern" style="background: white; padding: 1.5rem; border-radius: 8px; border: 1px solid #e9ecef;">
+                                <div class="detail-row-modern" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #f0f0f0;">
+                                    <span style="color: var(--text-light); font-weight: 500;">Company:</span>
+                                    <span style="color: var(--text-dark); font-weight: 600;">{{ current_application.company_name }}</span>
+                                </div>
+                                <div class="detail-row-modern" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #f0f0f0;">
+                                    <span style="color: var(--text-light); font-weight: 500;">Submitted:</span>
+                                    <span style="color: var(--text-dark); font-weight: 600;">{{ current_application.created_at|date:"F d, Y" }}</span>
+                                </div>
+                                <div class="detail-row-modern" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="color: var(--text-light); font-weight: 500;">Status:</span>
+                                    <span style="color: var(--text-dark); font-weight: 600;">{{ current_application.get_status_display }}</span>
+                                </div>
+                                
+                                {% if current_application.review_notes %}
+                                    <div class="review-notes-modern" style="margin-top: 1.5rem; padding: 1rem; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                                        <strong style="color: #856404; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                            <i class="fas fa-sticky-note"></i>
+                                            Review Notes:
+                                        </strong>
+                                        <p style="color: #856404; margin: 0; line-height: 1.5;">{{ current_application.review_notes }}</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if current_application.status in 'draft|business_details_completed|contact_info_completed|bank_details_completed|requires_changes' %}
+                            <div class="action-buttons-modern" style="margin-top: 2rem; text-align: center;">
+                                <a href="{% url 'business_partners:vendor_registration_step1' %}" class="btn btn-primary-modern" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white; padding: 1rem 2rem; border-radius: 25px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);">
+                                    <i class="fas fa-arrow-right"></i>
+                                    Continue Application
+                                </a>
+                            </div>
+                        {% elif current_application.status == 'submitted' %}
+                            <div class="alert alert-info-modern" style="background: linear-gradient(135deg, #d1ecf1, #bee5eb); border: 1px solid #17a2b8; border-radius: 12px; padding: 1.5rem; margin-top: 2rem; display: flex; align-items: center; gap: 1rem;">
+                                <i class="fas fa-info-circle" style="color: #0c5460; font-size: 1.5rem;"></i>
+                                <div style="color: #0c5460; font-weight: 500;">
+                                    Your application is currently under review. We'll notify you once the review is complete.
+                                </div>
+                            </div>
+                        {% elif current_application.status == 'rejected' %}
+                            <div class="alert alert-danger-modern" style="background: linear-gradient(135deg, #f8d7da, #f5c6cb); border: 1px solid #dc3545; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;">
+                                <i class="fas fa-exclamation-triangle" style="color: #721c24; font-size: 1.5rem;"></i>
+                                <div style="color: #721c24; font-weight: 500;">
+                                    Your application was rejected. You can submit a new application.
+                                </div>
+                            </div>
+                            <div class="action-buttons-modern" style="text-align: center;">
+                                <a href="{% url 'business_partners:vendor_registration_step1' %}" class="btn btn-primary-modern" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white; padding: 1rem 2rem; border-radius: 25px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);">
+                                    <i class="fas fa-plus"></i>
+                                    Start New Application
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="no-application-modern text-center" style="padding: 3rem; background: #f8f9fa; border-radius: 12px; border: 2px dashed #dee2e6;">
+                            <i class="fas fa-file-alt fa-3x text-muted mb-3" style="color: #6c757d !important;"></i>
+                            <h4 style="color: var(--text-dark); font-weight: 600; margin-bottom: 1rem;">No Active Applications</h4>
+                            <p style="color: var(--text-light); margin-bottom: 2rem;">You don't have any active vendor applications.</p>
+                            <a href="{% url 'business_partners:vendor_registration_step1' %}" class="btn btn-primary-modern" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)); color: white; padding: 1rem 2rem; border-radius: 25px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);">
+                                <i class="fas fa-play"></i>
+                                Start Application
+                            </a>
+                        </div>
+                    {% endif %}
+                    
+                    {% if applications|length > 1 %}
+                        <hr class="my-4" style="border: none; height: 2px; background: linear-gradient(90deg, transparent, var(--primary-color), transparent); margin: 3rem 0;">
+                        <h5 style="color: var(--text-dark); font-size: 1.3rem; font-weight: 600; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-history" style="color: var(--primary-color);"></i>
+                            Previous Applications
+                        </h5>
+                        <div class="table-responsive-modern" style="background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); overflow: hidden;">
+                            <table class="table-modern" style="width: 100%; border-collapse: collapse;">
+                                <thead style="background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+                                    <tr>
+                                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: var(--text-dark); border-bottom: 2px solid #dee2e6;">Application ID</th>
+                                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: var(--text-dark); border-bottom: 2px solid #dee2e6;">Company</th>
+                                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: var(--text-dark); border-bottom: 2px solid #dee2e6;">Status</th>
+                                        <th style="padding: 1rem; text-align: left; font-weight: 600; color: var(--text-dark); border-bottom: 2px solid #dee2e6;">Submitted</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for application in applications %}
+                                        {% if application != current_application %}
+                                            <tr style="border-bottom: 1px solid #f0f0f0; transition: background-color 0.3s ease;">
+                                                <td style="padding: 1rem; color: var(--text-dark); font-weight: 500;">{{ application.application_id }}</td>
+                                                <td style="padding: 1rem; color: var(--text-dark);">{{ application.company_name }}</td>
+                                                <td style="padding: 1rem;">
+                                                    <span class="badge-table-modern" style="{% if application.status == 'approved' %}background: linear-gradient(135deg, #28a745, #1e7e34); color: white;{% elif application.status == 'rejected' %}background: linear-gradient(135deg, #dc3545, #c82333); color: white;{% else %}background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529;{% endif %} padding: 0.4rem 0.8rem; border-radius: 15px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                                        {% if application.status == 'approved' %}
+                                                            <i class="fas fa-check"></i>
+                                                        {% elif application.status == 'rejected' %}
+                                                            <i class="fas fa-times"></i>
+                                                        {% else %}
+                                                            <i class="fas fa-clock"></i>
+                                                        {% endif %}
+                                                        {{ application.get_status_display }}
+                                                    </span>
+                                                </td>
+                                                <td style="padding: 1rem; color: var(--text-light);">{{ application.created_at|date:"F d, Y" }}</td>
+                                            </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert-dismissible');
+        alerts.forEach(function(alert) {
+            // Simple fade out and remove
+            alert.style.opacity = '0';
+            alert.style.transition = 'opacity 0.5s ease';
+            setTimeout(function() {
+                if (alert.parentNode) {
+                    alert.parentNode.removeChild(alert);
+                }
+            }, 500);
+        });
+    }, 5000);
+</script>
+{% endblock %}

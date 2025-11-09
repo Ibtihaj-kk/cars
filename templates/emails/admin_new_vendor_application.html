@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Vendor Application - {{ company_name }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #007bff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f8f9fa;
+            padding: 30px;
+            border-radius: 0 0 5px 5px;
+        }
+        .info-box {
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+            border-radius: 5px;
+        }
+        .info-row {
+            margin: 10px 0;
+        }
+        .label {
+            font-weight: bold;
+            color: #495057;
+        }
+        .value {
+            color: #212529;
+        }
+        .action-button {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+            font-weight: bold;
+        }
+        .action-button:hover {
+            background-color: #218838;
+        }
+        .urgent {
+            background-color: #dc3545;
+        }
+        .urgent:hover {
+            background-color: #c82333;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            font-size: 14px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏢 New Vendor Application</h1>
+        <p>A new vendor has submitted an application for review</p>
+    </div>
+    
+    <div class="content">
+        <div class="info-box">
+            <h2>Application Details</h2>
+            
+            <div class="info-row">
+                <span class="label">Application ID:</span>
+                <span class="value">{{ application_id }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Company Name:</span>
+                <span class="value">{{ company_name }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Business Type:</span>
+                <span class="value">{{ business_type }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Applicant Email:</span>
+                <span class="value">{{ applicant_email }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Submission Date:</span>
+                <span class="value">{{ submission_date|date:"F d, Y \a\t g:i A" }}</span>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{ review_url }}" class="action-button urgent">Review Application Now</a>
+        </div>
+        
+        <div class="info-box">
+            <h3>Next Steps</h3>
+            <ul>
+                <li>Review the complete application details</li>
+                <li>Verify business information and documentation</li>
+                <li>Check bank details and contact information</li>
+                <li>Approve, reject, or request changes</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Cars Portal Admin Team</strong></p>
+            <p>This is an automated notification. Please do not reply to this email.</p>
+            <p>For support, contact: <a href="mailto:admin@carsportal.com">admin@carsportal.com</a></p>
+        </div>
+    </div>
+</body>
+</html>

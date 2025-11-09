@@ -1,0 +1,537 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reorder Notifications - {{ vendor_profile.business_partner.company_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notification-card {
+        border-left: 4px solid #dee2e6;
+        transition: all 0.3s ease;
+    }
+    
+    .notification-card.priority-critical {
+        border-left-color: #dc3545;
+        background-color: #fff5f5;
+    }
+    
+    .notification-card.priority-high {
+        border-left-color: #fd7e14;
+        background-color: #fff8f0;
+    }
+    
+    .notification-card.priority-medium {
+        border-left-color: #ffc107;
+        background-color: #fffbf0;
+    }
+    
+    .notification-card.priority-low {
+        border-left-color: #28a745;
+        background-color: #f8fff8;
+    }
+    
+    .notification-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .priority-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-badge {
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-item {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .filter-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .bulk-actions {
+        background: #e9ecef;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: none;
+    }
+    
+    .bulk-actions.show {
+        display: block;
+    }
+    
+    .urgency-indicator {
+        width: 8px;
+        height: 100%;
+        position: absolute;
+        left: 0;
+        top: 0;
+        border-radius: 4px 0 0 4px;
+    }
+    
+    .overdue-indicator {
+        background: #dc3545;
+        color: white;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 3px;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-bell text-warning me-2"></i>
+                    Reorder Notifications
+                </h1>
+                <div>
+                    <a href="{% url 'vendor_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Statistics Cards -->
+            <div class="stats-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Notification Overview
+                </h5>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-number">{{ stats.total }}</span>
+                        <span class="stat-label">Total</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{ stats.pending }}</span>
+                        <span class="stat-label">Pending</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{ stats.critical }}</span>
+                        <span class="stat-label">Critical</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{ stats.overdue }}</span>
+                        <span class="stat-label">Overdue</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{ stats.acknowledged }}</span>
+                        <span class="stat-label">Acknowledged</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">{{ stats.ordered }}</span>
+                        <span class="stat-label">Ordered</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Filters -->
+            <div class="filter-section">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="status" class="form-label">Status</label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="priority" class="form-label">Priority</label>
+                        <select name="priority" id="priority" class="form-select">
+                            <option value="all" {% if priority_filter == 'all' %}selected{% endif %}>All Priorities</option>
+                            {% for value, label in priority_choices %}
+                                <option value="{{ value }}" {% if priority_filter == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-filter me-1"></i> Filter
+                        </button>
+                        <a href="{% url 'vendor_reorder_notifications' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i> Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Bulk Actions -->
+            <div class="bulk-actions" id="bulkActions">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span id="selectedCount">0 notifications selected</span>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-success me-2" onclick="bulkAction('acknowledge')">
+                            <i class="fas fa-check me-1"></i> Acknowledge Selected
+                        </button>
+                        <button type="button" class="btn btn-sm btn-warning me-2" onclick="bulkAction('dismiss')">
+                            <i class="fas fa-times me-1"></i> Dismiss Selected
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="clearSelection()">
+                            <i class="fas fa-ban me-1"></i> Clear Selection
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notifications List -->
+            {% if notifications %}
+                <div class="row">
+                    {% for notification in notifications %}
+                        <div class="col-12 mb-3">
+                            <div class="card notification-card priority-{{ notification.priority }}" data-notification-id="{{ notification.id }}">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-1">
+                                            <input type="checkbox" class="form-check-input notification-checkbox" 
+                                                   value="{{ notification.id }}" onchange="updateBulkActions()">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <h6 class="mb-1">
+                                                <a href="{% url 'vendor_reorder_notification_detail' notification.id %}" 
+                                                   class="text-decoration-none">
+                                                    {{ notification.part.name }}
+                                                </a>
+                                            </h6>
+                                            <small class="text-muted">{{ notification.part.part_number }}</small>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <span class="badge priority-badge 
+                                                {% if notification.priority == 'critical' %}bg-danger
+                                                {% elif notification.priority == 'high' %}bg-warning
+                                                {% elif notification.priority == 'medium' %}bg-info
+                                                {% else %}bg-success{% endif %}">
+                                                {{ notification.get_priority_display }}
+                                            </span>
+                                            {% if notification.is_overdue %}
+                                                <span class="overdue-indicator ms-1">OVERDUE</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <span class="badge status-badge 
+                                                {% if notification.status == 'pending' %}bg-warning
+                                                {% elif notification.status == 'acknowledged' %}bg-info
+                                                {% elif notification.status == 'ordered' %}bg-primary
+                                                {% elif notification.status == 'completed' %}bg-success
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ notification.get_status_display }}
+                                            </span>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <small class="text-muted">
+                                                Stock: <strong>{{ notification.current_stock }}</strong><br>
+                                                Suggested: <strong>{{ notification.suggested_quantity }}</strong>
+                                            </small>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="btn-group btn-group-sm">
+                                                {% if notification.status == 'pending' %}
+                                                    <button type="button" class="btn btn-outline-success" 
+                                                            onclick="acknowledgeNotification({{ notification.id }})">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                {% endif %}
+                                                {% if notification.status in 'pending,acknowledged' %}
+                                                    <button type="button" class="btn btn-outline-primary" 
+                                                            onclick="markOrderedModal({{ notification.id }})">
+                                                        <i class="fas fa-shopping-cart"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-warning" 
+                                                            onclick="dismissNotification({{ notification.id }})">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                {% endif %}
+                                                <a href="{% url 'vendor_reorder_notification_detail' notification.id %}" 
+                                                   class="btn btn-outline-info">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-12">
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                Created: {{ notification.created_at|date:"M d, Y H:i" }}
+                                                {% if notification.acknowledged_at %}
+                                                    | Acknowledged: {{ notification.acknowledged_at|date:"M d, Y H:i" }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    {% if notification.message %}
+                                        <div class="row mt-2">
+                                            <div class="col-12">
+                                                <div class="alert alert-light py-2 mb-0">
+                                                    <small>{{ notification.message }}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if notifications.has_other_pages %}
+                    <nav aria-label="Notifications pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if notifications.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ notifications.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for num in notifications.paginator.page_range %}
+                                {% if notifications.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > notifications.number|add:'-3' and num < notifications.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if notifications.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ notifications.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if priority_filter %}&priority={{ priority_filter }}{% endif %}">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Notifications Found</h4>
+                    <p class="text-muted">
+                        {% if status_filter != 'all' or priority_filter != 'all' %}
+                            No notifications match your current filters.
+                        {% else %}
+                            You don't have any reorder notifications at the moment.
+                        {% endif %}
+                    </p>
+                    {% if status_filter != 'all' or priority_filter != 'all' %}
+                        <a href="{% url 'vendor_reorder_notifications' %}" class="btn btn-primary">
+                            <i class="fas fa-times me-1"></i> Clear Filters
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Mark Ordered Modal -->
+<div class="modal fade" id="markOrderedModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Mark as Ordered</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="markOrderedForm">
+                    <div class="mb-3">
+                        <label for="orderReference" class="form-label">Order Reference (Optional)</label>
+                        <input type="text" class="form-control" id="orderReference" 
+                               placeholder="Enter order number or reference">
+                    </div>
+                    <div class="mb-3">
+                        <label for="expectedDelivery" class="form-label">Expected Delivery (Optional)</label>
+                        <input type="date" class="form-control" id="expectedDelivery">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmMarkOrdered()">Mark as Ordered</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentNotificationId = null;
+
+function updateBulkActions() {
+    const checkboxes = document.querySelectorAll('.notification-checkbox:checked');
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    if (checkboxes.length > 0) {
+        bulkActions.classList.add('show');
+        selectedCount.textContent = `${checkboxes.length} notification${checkboxes.length > 1 ? 's' : ''} selected`;
+    } else {
+        bulkActions.classList.remove('show');
+    }
+}
+
+function clearSelection() {
+    document.querySelectorAll('.notification-checkbox').forEach(cb => cb.checked = false);
+    updateBulkActions();
+}
+
+function acknowledgeNotification(notificationId) {
+    performAction(notificationId, 'acknowledge');
+}
+
+function dismissNotification(notificationId) {
+    if (confirm('Are you sure you want to dismiss this notification?')) {
+        performAction(notificationId, 'dismiss');
+    }
+}
+
+function markOrderedModal(notificationId) {
+    currentNotificationId = notificationId;
+    const modal = new bootstrap.Modal(document.getElementById('markOrderedModal'));
+    modal.show();
+}
+
+function confirmMarkOrdered() {
+    const orderReference = document.getElementById('orderReference').value;
+    const expectedDelivery = document.getElementById('expectedDelivery').value;
+    
+    const formData = new FormData();
+    formData.append('action', 'mark_ordered');
+    formData.append('order_reference', orderReference);
+    formData.append('expected_delivery', expectedDelivery);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch(`{% url 'vendor_reorder_notification_action' 0 %}`.replace('0', currentNotificationId), {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+    
+    bootstrap.Modal.getInstance(document.getElementById('markOrderedModal')).hide();
+}
+
+function performAction(notificationId, action) {
+    const formData = new FormData();
+    formData.append('action', action);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch(`{% url 'vendor_reorder_notification_action' 0 %}`.replace('0', notificationId), {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+}
+
+function bulkAction(action) {
+    const checkboxes = document.querySelectorAll('.notification-checkbox:checked');
+    const notificationIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (notificationIds.length === 0) {
+        alert('Please select at least one notification.');
+        return;
+    }
+    
+    if (action === 'dismiss' && !confirm(`Are you sure you want to dismiss ${notificationIds.length} notification(s)?`)) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', action);
+    notificationIds.forEach(id => formData.append('notification_ids', id));
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch('{% url "vendor_bulk_reorder_action" %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+}
+</script>
+{% endblock %}

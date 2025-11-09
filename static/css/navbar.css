@@ -1,0 +1,1603 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  text-decoration: none;
+}
+
+body {
+  font-family: "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  background-color: #f8f9fa;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ================================
+   MOBILE MENU TOGGLE BUTTON
+   ================================ */
+.mobile-menu-toggle {
+  display: none;
+  position: fixed;
+  top: 12px;
+  right: 15px;
+  z-index: 2001;
+  width: 40px;
+  height: 40px;
+  background: #4d78bc;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.mobile-menu-toggle span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: white;
+  border-radius: 1px;
+  transition: all 0.3s ease;
+}
+
+.mobile-menu-toggle.active span:nth-child(1) {
+  transform: rotate(45deg) translate(6px, 6px);
+}
+
+.mobile-menu-toggle.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.mobile-menu-toggle.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(6px, -6px);
+}
+
+/* ================================
+   MOBILE MENU OVERLAY
+   ================================ */
+.mobile-menu-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 2000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.mobile-menu-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mobile-menu-content {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 280px;
+  height: 100%;
+  background: white;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+}
+
+.mobile-menu-overlay.active .mobile-menu-content {
+  transform: translateX(0);
+}
+
+/* Mobile Menu Header */
+.mobile-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.mobile-logo img {
+  display: flex;
+  align-items: center;
+  padding-top: 4px;
+  width: 150px;
+  height: 25px;
+  object-fit: contain;
+}
+
+.mobile-menu-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #666;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.mobile-menu-close:hover {
+  background: #e9ecef;
+  color: #333;
+}
+
+/* Mobile Menu Items */
+.mobile-menu-items {
+  padding: 10px 0;
+}
+
+.mobile-menu-item {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.mobile-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 15px 20px;
+  color: #333;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.mobile-menu-link:hover {
+  background: #f8f9fa;
+  color: #4d78bc;
+}
+
+.mobile-menu-link i {
+  width: 20px;
+  text-align: center;
+  color: #4d78bc;
+}
+
+/* Sell My Car Mobile Style */
+.sell-car-mobile {
+  color: #28a745 !important;
+}
+
+.free-badge {
+  background: #28a745;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+/* Mobile Auth Links */
+.mobile-auth-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 20px;
+}
+
+.mobile-auth-link {
+  color: #4d78bc;
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.mobile-auth-divider {
+  color: #ccc;
+  font-size: 16px;
+}
+
+/* Mobile Dropdown */
+.mobile-dropdown-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  color: #333;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-dropdown-trigger:hover span {
+  background: #f8f9fa;
+  color: #4d78bc;
+}
+
+.mobile-dropdown-trigger span {
+    color: #333;
+}
+
+.mobile-dropdown-trigger i {
+  font-size: 14px;
+  transition: transform 0.3s ease;
+}
+
+.mobile-dropdown-trigger.active i {
+  transform: rotate(180deg);
+}
+
+.mobile-dropdown-content {
+  max-height: 0;
+  overflow: hidden;
+  background: #f8f9fa;
+  transition: max-height 0.3s ease;
+}
+
+.mobile-dropdown-content.active {
+  max-height: 300px;
+}
+
+.mobile-dropdown-link {
+  display: block;
+  padding: 12px 40px;
+  color: #666;
+  font-size: 14px;
+  border-bottom: 1px solid #e9ecef;
+  transition: all 0.2s ease;
+}
+
+.mobile-dropdown-link:hover {
+  background: white;
+  color: #4d78bc;
+}
+
+.mobile-dropdown-link:last-child {
+  border-bottom: none;
+}
+
+/* ================================
+   TOP HEADER (DESKTOP & MOBILE)
+   ================================ */
+.navbar-top-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 60px;
+  height: 60px;
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+  position: fixed;
+  top: 0;
+  z-index: 1000;
+}
+
+.navbar-logo img {
+  width: 200px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.navbar-right-info {
+  color: #000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navbar-right-info .navbar-phone-info {
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.navbar-right-info .navbar-divider {
+  font-size: 16px;
+  font-weight: bold;
+  color: #999;
+}
+
+.navbar-right-info .navbar-login-link {
+  font-size: 16px;
+  text-decoration: none;
+  color: #000;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.navbar-right-info i {
+  font-size: 14px;
+}
+
+.navbar-right-info .navbar-phone-info:hover {
+  color: #4d78bc;
+  cursor: pointer;
+}
+
+.navbar-right-info .navbar-login-link:hover {
+  color: #4d78bc;
+  cursor: pointer;
+}
+
+.navbar-cart ion-icon {
+  margin-top: 5px;
+  width: 19px;
+  height: 19px;
+  color: #333;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.navbar-cart:hover ion-icon {
+  color: #4d78bc;
+}
+
+/* Sell My Car Button */
+.sell-car-button {
+  background-color: #29d846;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.sell-car-button:hover {
+  background-color: #51bf64;
+}
+
+/* User Profile Dropdown Styles */
+.navbar-user-profile-dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.navbar-profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.navbar-profile-icon {
+  width: 25px;
+  height: 25px;
+  background-color: #e5e5e5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 14px;
+}
+
+.navbar-profile-icon i {
+  font-size: 12px;
+}
+
+.navbar-dropdown-arrow {
+  font-size: 12px;
+  color: #666;
+  transition: transform 0.2s ease;
+}
+
+.navbar-user-profile-dropdown:hover .navbar-dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.navbar-dropdown-menu {
+  position: absolute;
+  top: 140%;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 12px 16px;
+  margin-top: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  z-index: 3000;
+}
+
+.navbar-user-profile-dropdown:hover .navbar-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.navbar-dropdown-link {
+  color: #007bff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: text-decoration 0.2s ease;
+}
+
+.navbar-dropdown-link:hover {
+  text-decoration: underline;
+}
+
+.navbar-dropdown-divider {
+  color: #ccc;
+  margin: 0 8px;
+  font-size: 14px;
+}
+
+/* ================================
+   MAIN NAVBAR (DESKTOP ONLY)
+   ================================ */
+.navbar {
+  background: #4d78bc;
+  height: 65px;
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  z-index: 999;
+}
+
+.navbar .container {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  width: 100%;
+  justify-content: center;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  position: relative;
+  transition: all 0.3s ease;
+  padding: 20px 0;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: 16px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: white;
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+/* NEW Dropdown Styles */
+.new-dropdown {
+  position: relative;
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  margin-top: 15px;
+  transition: opacity 0.1s ease-in-out, visibility 0.1s ease-in-out;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 9999;
+  width: 800px;
+  display: flex;
+  height: 500px;
+  overflow: hidden;
+}
+
+.dropdown-content.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+
+
+/* Left Panel Styles */
+.left-panel {
+  background: #f8f9fa;
+  width: 250px;
+  padding: 24px 0;
+  border-radius: 12px 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.nav-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.tab-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  color: #666;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.tab-link:hover,
+.tab-link.active {
+  background: white;
+  color: #4d78bc;
+  border-left-color: #4d78bc;
+}
+
+.tab-link i {
+  font-size: 16px;
+  width: 18px;
+}
+
+.sell-car-link {
+  padding: 12px 24px;
+  margin: 16px 4px 0 4px;
+  color: #28a745;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.sell-car-link:hover {
+  text-decoration: none;
+}
+
+/* Center Panel Styles */
+.center-panel {
+  flex: 1;
+  padding: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-content {
+  display: none;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.content-section {
+  margin-bottom: 32px;
+}
+
+.content-section.full-width {
+  width: 100%;
+  height: 100%;
+}
+
+.content-section h3 {
+  color: #aaa;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  letter-spacing: 0.5px;
+}
+
+/* Content Sections Row for Browse Guide and Search Cars */
+.content-sections-row {
+  display: flex;
+  gap: 32px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.content-sections-row .content-section {
+  flex: 1;
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+/* Body Styles Grid - Fixed Layout */
+.body-styles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.style-item {
+  display: flex;
+  flex-direction: column;
+  align-items: right;
+  gap: 5px;
+  padding: 5px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background: white;
+  border: 1px solid #e9ecef;
+  position: relative;
+}
+
+.style-item:hover {
+  background: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.style-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 6px;
+  flex-shrink: 0;
+  margin-left: 67px;
+}
+
+.style-icon i {
+  font-size: 16px;
+  color: #666;
+}
+
+.style-item span {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Brands Grid - Fixed Layout */
+.brand-gridss {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.brand-item {
+  display: flex;
+  flex-direction: column;
+  /* align-items: flex-end; */
+  gap: 0px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background: white;
+  border: 1px solid #e9ecef;
+}
+
+.brand-item:hover {
+  background: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.brand-logo-img img {
+  width: 35px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.brand-item span {
+  display: flex;
+  justify-content: flex-start;
+  font-size: 11px;
+  font-weight: 500;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Price Brands Grid */
+/* FIXED: Price Brands Grid */
+.price-brands-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.price-brand-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background: white;
+  border: 1px solid #e9ecef;
+  position: relative;
+}
+
+.price-brand-item:hover {
+  background: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.price-brand-item span {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #333;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Right Panel - App Promotion */
+.right-panel {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  width: 200px;
+  height: 267px;
+  padding: 16px;
+  border-radius: 12px;
+  position: relative;
+}
+
+.app-promotion {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.new-badge {
+  background: #4d78bc;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 12px;
+  width: fit-content;
+}
+
+.app-promotion h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.app-name {
+  color: #4d78bc;
+}
+
+.app-promotion p {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+  margin-bottom: 20px;
+}
+
+.app-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.app-store-btn,
+.google-play-btn {
+  background: #000;
+  color: white;
+  border: none;
+  padding: 10px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s ease;
+}
+
+.app-store-btn:hover,
+.google-play-btn:hover {
+  background: #333;
+}
+
+.app-illustration {
+  position: absolute;
+  bottom: 100px;
+  right: 3px;
+  font-size: 60px;
+  color: #4d78bc;
+  opacity: 0.3;
+}
+
+/* Comparison Grid */
+.comparison-items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.comparison-item {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #e9ecef;
+  transition: all 0.2s ease;
+}
+
+.comparison-item:hover {
+  background: white;
+  border-color: #4d78bc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.car-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.car-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+}
+
+.car-icon {
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e9ecef;
+}
+
+.car-icon i {
+  font-size: 20px;
+  color: #666;
+}
+
+.vs-badge {
+  background: #4d78bc;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.car-names {
+  display: flex;
+  justify-content: space-between;
+  gap: 0px;
+  text-align: left;
+}
+
+.car-detail h4 {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.car-detail p {
+  font-size: 9px;
+  color: #666;
+}
+
+.compare-btn {
+  width: 100%;
+  background: #4d78bc;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  align-self: center;
+}
+
+.compare-btn:hover {
+  background: #3a5f99;
+}
+
+/* FIXED: Comparison Tools (matching other grids) */
+.comparison-tools {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.tool-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background: white;
+  border: 1px solid #e9ecef;
+  position: relative;
+}
+
+.tool-item:hover {
+  background: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tool-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.tool-icon i {
+  font-size: 16px;
+  color: #666;
+}
+
+.tool-item span {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #333;
+  max-width: 80px;
+}
+
+/* Popular Cars List */
+/* FIXED: Popular Cars List */
+.popular-cars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.popular-car-item {
+  width: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid #e9ecef;
+  background: white;
+}
+
+.popular-car-item:hover {
+  background: #f8f9fa;
+  border-color: #4d78bc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.popular-car-item span {
+  font-size: 12px;
+  font-weight: bold;
+  color: #333;
+}
+
+.popular-car-item .car-icon {
+  width: 32px;
+  height: 32px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.popular-car-item .car-icon i {
+  font-size: 16px;
+  color: #666;
+}
+
+/* Dictionary Items */
+/* FIXED: Dictionary Items */
+.dictionary-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.dictionary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background: white;
+}
+
+.dictionary-item:hover {
+  background: #f8f9fa;
+  border-color: #4d78bc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dictionary-item span {
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+}
+
+.dictionary-item .feature-icon {
+  width: 32px;
+  height: 32px;
+  background: #f8f9fa;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dictionary-item .feature-icon i {
+  font-size: 16px;
+  color: #666;
+}
+
+/* See All Link */
+.see-all-link {
+  color: #4d78bc;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s ease;
+}
+
+.see-all-link:hover {
+  color: #2c5aa0;
+}
+
+.see-all-link i {
+  font-size: 11px;
+}
+
+/* Footer Styles - Fixed background image issue */
+.footer {
+  position: relative;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  overflow: hidden;
+}
+
+/* Fixed Background Image - Contained within footer */
+.footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("//images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.3;
+  z-index: -1;
+}
+
+/* Social Icons Section */
+.social-section {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 10;
+}
+
+.social-container {
+  max-width: 1167px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.social-icons {
+  display: flex;
+  flex-wrap: wrap;
+  /* justify-content: center; */
+}
+
+.social-icon {
+  width: 193px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  text-decoration: none;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.social-icon:last-child {
+  border-right: none;
+}
+
+.social-icon svg {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  fill: currentColor;
+}
+
+/* Social Media Hover Colors */
+.social-icon.facebook:hover {
+  background-color: #1877f2;
+  color: white;
+}
+
+.social-icon.twitter:hover {
+  background-color: #000000;
+  color: white;
+}
+
+.social-icon.dribbble:hover {
+  background-color: #ea4c89;
+  color: white;
+}
+
+.social-icon.pinterest:hover {
+  background-color: #bd081c;
+  color: white;
+}
+
+.social-icon.linkedin:hover {
+  background-color: #0a66c2;
+  color: white;
+}
+
+.social-icon.whatsapp:hover {
+  background-color: #25d366;
+  color: white;
+}
+
+/* Main Footer Content */
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  position: relative;
+  z-index: 10;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 40px;
+}
+
+.footer-column h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: white;
+  letter-spacing: 1px;
+  position: relative;
+  display: inline-block;
+}
+
+.footer-column h3::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 40px;
+  height: 2px;
+  background-color: #4d78bc;
+}
+
+/* Company Info Column */
+.company-info p {
+  font-size: 13px;
+  color: #ccc;
+  margin-bottom: 24px;
+  line-height: 1.7;
+}
+
+.contact-info {
+  list-style: none;
+}
+
+.contact-info li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #ccc;
+}
+
+.contact-info svg {
+  width: 18px;
+  height: 18px;
+  margin-right: 12px;
+  fill: #4a90e2;
+  flex-shrink: 0;
+}
+
+/* Useful Links */
+.useful-links ul {
+  list-style: none;
+}
+
+.useful-links li {
+  margin-bottom: 12px;
+}
+
+.useful-links a {
+  font-size: 13px;
+  color: #ccc;
+  text-decoration: none;
+  transition: color 0.3s ease;
+  display: flex;
+  align-items: center;
+}
+
+.useful-links a:hover {
+  color: #4a90e2;
+}
+
+.useful-links a::before {
+  content: "▸";
+  margin-right: 8px;
+  color: #4a90e2;
+}
+
+/* Recent Posts */
+.recent-posts .post-item {
+  display: flex;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.post-image {
+  width: 60px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.post-content h4 {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.post-content h4:hover {
+  color: #4a90e2;
+}
+
+.post-date {
+  display: flex;
+  align-items: center;
+  color: #999;
+  font-size: 12px;
+}
+
+.post-date svg {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  fill: currentColor;
+}
+
+/* Newsletter */
+.newsletter p {
+  font-size: 13px;
+  color: #ccc;
+  margin-bottom: 24px;
+  line-height: 1.7;
+}
+
+.newsletter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.newsletter-input {
+  padding: 12px 16px;
+  background: transparent;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: white;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.newsletter-input:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+.newsletter-input::placeholder {
+  color: #999;
+}
+
+.newsletter-btn {
+  padding: 12px 24px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.newsletter-btn:hover {
+  background: #357abd;
+}
+
+/* Footer Bottom */
+.footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 10;
+}
+
+.footer-bottom-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.copyright {
+  color: #999;
+  font-size: 14px;
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+  margin-top: 12px;
+}
+
+.footer-links a {
+  color: #999;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.3s ease;
+}
+
+.footer-links a:hover {
+  color: white;
+}
+
+/* RESPONSIVE MEDIA QUERIES */
+
+/* Tablet Styles */
+@media (max-width: 1024px) {
+  .navbar-top-header {
+    padding: 0 30px;
+  }
+
+  .navbar-logo img {
+    width: 160px;
+    height: 32px;
+  }
+
+  .dropdown-content {
+    width: 700px;
+  }
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+  /* Show Mobile Menu Toggle */
+  .mobile-menu-toggle {
+    display: flex;
+  }
+
+  /* Show Mobile Menu Overlay */
+  .mobile-menu-overlay {
+    display: block;
+  }
+
+  .navbar-top-header {
+    padding: 0 60px 0 20px;
+  }
+
+  .navbar-logo img {
+    width: 140px;
+    height: 28px;
+  }
+
+  .navbar-right-info {
+    display: none;
+  }
+
+  .navbar {
+    display: none;
+  }
+
+  .content-area {
+    margin-top: 60px;
+  }
+}
+
+/* Small Mobile Styles */
+@media (max-width: 480px) {
+  .mobile-menu-content {
+    width: 100%;
+  }
+
+  .navbar-top-header {
+    padding: 0 50px 0 15px;
+  }
+
+  .navbar-logo img {
+    margin-left: 10px;
+        width: 130px;
+        height: 49px;
+  }
+
+  .mobile-menu-toggle {
+    width: 35px;
+    height: 35px;
+    right: 20px;
+    top: 12px;
+  }
+
+  .mobile-menu-toggle span {
+    width: 18px;
+  }
+}
+
+/* Extra Small Mobile */
+@media (max-width: 360px) {
+  .navbar-logo img {
+    width: 100px;
+    height: 20px;
+  }
+
+  .mobile-menu-toggle {
+    width: 32px;
+    height: 32px;
+    right: 8px;
+    top: 14px;
+  }
+
+  .mobile-menu-toggle span {
+    width: 16px;
+  }
+}
+
+/* ================================
+   VENDOR DROPDOWN STYLES
+   ================================ */
+.vendor-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.vendor-dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: white;
+  min-width: 180px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1000;
+  border-radius: 4px;
+  top: 100%;
+  left: 0;
+  margin-top: 5px;
+  border: 1px solid #e0e0e0;
+}
+
+.vendor-dropdown:hover .vendor-dropdown-content {
+  display: block;
+}
+
+.vendor-dropdown-link {
+  color: #333;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.vendor-dropdown-link:hover {
+  background-color: #f8f9fa;
+  color: #4d78bc;
+}

@@ -1,0 +1,960 @@
+{% extends 'frontend/base.html' %}
+{% load static %}
+{% load math_filters %}
+
+{% block title %}{{ car.year }} {{ car.make }} {{ car.model }} - Car Details{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/car-details.css' %}" />
+{% endblock %}
+
+{% block content %} 
+
+  <!-- Main Content -->
+    <div class="car-detail-main-container">
+      <!-- Car Details Content -->
+      <div class="car-detail-content-wrapper">
+        <!-- Left Column - Image Gallery -->
+        <div class="car-detail-gallery-section">
+          <div class="car-detail-main-image-container">
+            <img 
+              id="carDetailMainImage" 
+              src="{% if car.images.first %}{{ car.images.first.image.url }}{% else %}//images.pexels.com/photos/337909/pexels-photo-337909.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop{% endif %}" 
+              alt="{{ car.year }} {{ car.make }} {{ car.model }} Main Image"
+            />
+            <div class="car-detail-image-overlay">
+              <button class="car-detail-prev-img"><i class="fa-solid fa-chevron-left"></i></button>
+              <button class="car-detail-next-img"><i class="fa-solid fa-chevron-right"></i></button>
+              <div class="car-detail-image-counter">
+                <span id="carDetailCurrentImageNum">1</span> / <span id="carDetailTotalImages">{{ car.images.count|default:8 }}</span>
+              </div>
+            </div>
+            <button class="car-detail-fullscreen-btn"><i class="fa-solid fa-expand"></i></button>
+          </div>
+          
+          <div class="car-detail-thumbnail-gallery">
+            <div class="car-detail-thumbnail-track" id="carDetailThumbnailTrack">
+              {% for image in car.images.all %}
+              <img src="{{ image.image.url }}" alt="Thumbnail {{ forloop.counter }}" class="car-detail-thumbnail {% if forloop.first %}car-detail-active{% endif %}">
+              {% empty %}
+              <!-- Fallback images if no car images exist -->
+              <img src="//images.pexels.com/photos/337909/pexels-photo-337909.jpeg?auto=compress&cs=tinysrgb&w=120&h=90&fit=crop" alt="Thumbnail 1" class="car-detail-thumbnail car-detail-active">
+              <img src="//images.pexels.com/photos/1592384/pexels-photo-1592384.jpeg?auto=compress&cs=tinysrgb&w=120&h=90&fit=crop" alt="Thumbnail 2" class="car-detail-thumbnail">
+              <img src="//images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg?auto=compress&cs=tinysrgb&w=120&h=90&fit=crop" alt="Thumbnail 3" class="car-detail-thumbnail">
+              <img src="//images.pexels.com/photos/1719648/pexels-photo-1719648.jpeg?auto=compress&cs=tinysrgb&w=120&h=90&fit=crop" alt="Thumbnail 4" class="car-detail-thumbnail">
+              <img src="//images.pexels.com/photos/2365572/pexels-photo-2365572.jpeg?auto=compress&cs=tinysrgb&w=120&h=90&fit=crop" alt="Thumbnail 5" class="car-detail-thumbnail">
+              <img src="//images.pexels.com/photos/116675/pexels-photo-116675.jpeg?auto=compress&cs=tinysrgb&w=120&h=90&fit=crop" alt="Thumbnail 6" class="car-detail-thumbnail">
+              <img src="//images.pexels.com/photos/1545743/pexels-photo-1545743.jpeg?auto=compress&cs=tinysrgb&w=120&h=90&fit=crop" alt="Thumbnail 7" class="car-detail-thumbnail">
+              <img src="//images.pexels.com/photos/3752169/pexels-photo-3752169.jpeg?auto=compress&cs=tinysrgb&w=120&h=90&fit=crop" alt="Thumbnail 8" class="car-detail-thumbnail">
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="car-detail-media-actions">
+            <button class="car-detail-media-btn car-detail-video-btn">
+              <ion-icon name="play-circle-outline"></ion-icon>
+              <span>Watch Video Tour</span>
+            </button>
+            <button class="car-detail-media-btn car-detail-vr-btn">
+              <i class="fa-solid fa-vr-cardboard"></i>
+              <span>360° View</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Column - Car Information -->
+        <div class="car-detail-info-section">
+          <div class="car-detail-header">
+            <div class="car-detail-status-badges">
+              {% if car.is_luxury %}
+              <span class="car-detail-status-badge car-detail-luxury">LUXURY PICK</span>
+              {% endif %}
+              {% if car.is_certified %}
+              <span class="car-detail-status-badge car-detail-certified">CERTIFIED</span>
+              {% endif %}
+              {% if car.condition == 'new' %}
+              <span class="car-detail-status-badge car-detail-new">NEW</span>
+              {% endif %}
+            </div>
+            <h1 class="car-detail-title">{{ car.year }} {{ car.make }} {{ car.model }} {% if car.trim %}{{ car.trim }}{% endif %}</h1>
+            <div class="car-detail-basic-info">
+              <span class="car-detail-mileage"><i class="fa-solid fa-road"></i> {{ car.mileage|floatformat:0|default:"0" }} miles</span>
+              <span class="car-detail-location"><i class="fa-solid fa-map-marker-alt"></i> {{ car.location|default:"Location TBD" }}</span>
+              <span class="car-detail-stock"><i class="fa-solid fa-hashtag"></i> Stock #{{ car.stock_number|default:"TBD" }}</span>
+            </div>
+          </div>
+
+          <div class="car-detail-pricing-section">
+            <div class="car-detail-price-main">
+              <span class="car-detail-current-price">${{ car.price|floatformat:0 }}</span>
+              {% if car.original_price and car.original_price > car.price %}
+              <span class="car-detail-original-price">${{ car.original_price|floatformat:0 }}</span>
+              {% endif %}
+            </div>
+            {% if car.original_price and car.original_price > car.price %}
+            <div class="car-detail-savings-info">
+              <span class="car-detail-savings">You Save ${{ car.original_price|subtract:car.price|floatformat:0 }}</span>
+              <span class="car-detail-market-price">Below Market Price</span>
+            </div>
+            {% endif %}
+            <div class="car-detail-monthly-payment">
+              <span>Est. Payment: <strong>${{ car.estimated_monthly_payment|default:"1,285" }}/mo</strong></span>
+              <a href="#" class="car-detail-calculate-payment">Calculate Payment</a>
+            </div>
+          </div>
+
+          <div class="car-detail-key-features">
+            <h3>Key Features</h3>
+            <div class="car-detail-features-grid">
+              {% if car.transmission %}
+              <div class="car-detail-feature-item">
+                <i class="fa-solid fa-cogs"></i>
+                <span>{{ car.transmission|title }} Transmission</span>
+              </div>
+              {% endif %}
+              {% if car.fuel_type %}
+              <div class="car-detail-feature-item">
+                <i class="fa-solid fa-gas-pump"></i>
+                <span>{{ car.fuel_type|title }}</span>
+              </div>
+              {% endif %}
+              {% if car.exterior_color %}
+              <div class="car-detail-feature-item">
+                <i class="fa-solid fa-palette"></i>
+                <span>{{ car.exterior_color|title }}</span>
+              </div>
+              {% endif %}
+              {% if car.seating_capacity %}
+              <div class="car-detail-feature-item">
+                <i class="fa-solid fa-chair"></i>
+                <span>{{ car.seating_capacity }}-Seater</span>
+              </div>
+              {% endif %}
+              {% if car.drivetrain %}
+              <div class="car-detail-feature-item">
+                <i class="fa-solid fa-snowflake"></i>
+                <span>{{ car.drivetrain|title }}</span>
+              </div>
+              {% endif %}
+              {% if car.safety_rating %}
+              <div class="car-detail-feature-item">
+                <i class="fa-solid fa-shield-alt"></i>
+                <span>{{ car.safety_rating }} Safety Rating</span>
+              </div>
+              {% endif %}
+              
+              <!-- Fallback features if no specific features are available -->
+              {% if not car.transmission and not car.fuel_type and not car.exterior_color %}
+              <div class="car-detail-feature-item">
+                <i class="fa-solid fa-cogs"></i>
+                <span>Automatic Transmission</span>
+              </div>
+              <div class="car-detail-feature-item">
+                <i class="fa-solid fa-gas-pump"></i>
+                <span>Premium Gasoline</span>
+              </div>
+              <div class="car-detail-feature-item">
+                <i class="fa-solid fa-palette"></i>
+                <span>Jet Black</span>
+              </div>
+              <div class="car-detail-feature-item">
+                <i class="fa-solid fa-chair"></i>
+                <span>7-Seater</span>
+              </div>
+              <div class="car-detail-feature-item">
+                <i class="fa-solid fa-snowflake"></i>
+                <span>All Wheel Drive</span>
+              </div>
+              <div class="car-detail-feature-item">
+                <i class="fa-solid fa-shield-alt"></i>
+                <span>Safety Features</span>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="car-detail-action-buttons">
+            <button class="car-detail-primary-btn car-detail-test-drive-btn">
+              <i class="fa-solid fa-calendar-check"></i>
+              Schedule Test Drive
+            </button>
+            <button class="car-detail-secondary-btn car-detail-contact-seller-btn">
+              <i class="fa-solid fa-phone"></i>
+              Contact Seller
+            </button>
+            <div class="car-detail-quick-actions">
+              <button class="car-detail-quick-btn car-detail-save-btn">
+                <i class="ri-save-3-line"></i>
+                <span>Save</span>
+              </button>
+              <button class="car-detail-quick-btn car-detail-compare-btn">
+                <ion-icon name="git-compare-outline"></ion-icon>
+                <span>Compare</span>
+              </button>
+              <button class="car-detail-quick-btn car-detail-share-btn">
+                <i class="fa-solid fa-share-alt"></i>
+                <span>Share</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="car-detail-dealer-info">
+            <div class="car-detail-dealer-card">
+              <div class="car-detail-dealer-header">
+                <img src="{% if car.dealer.logo %}{{ car.dealer.logo.url }}{% else %}//images.pexels.com/photos/1592384/pexels-photo-1592384.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop{% endif %}" alt="Dealer Logo" class="car-detail-dealer-logo">
+                <div class="car-detail-dealer-details">
+                  <h4>{{ car.dealer.name|default:"Premium Auto Gallery" }}</h4>
+                  <div class="car-detail-dealer-rating">
+                    <div class="car-detail-stars">
+                      {% if car.dealer.rating %}
+                        {% for i in "12345" %}
+                          {% if forloop.counter <= car.dealer.rating %}★{% else %}☆{% endif %}
+                        {% endfor %}
+                      {% else %}
+                        ★★★★★
+                      {% endif %}
+                    </div>
+                    <span>{{ car.dealer.rating|default:"4.8" }} ({{ car.dealer.review_count|default:"324" }} reviews)</span>
+                  </div>
+                </div>
+              </div>
+              <div class="car-detail-dealer-contact">
+                <p><i class="fa-solid fa-map-marker-alt"></i> {{ car.dealer.address|default:"8920 Wilshire Blvd, Beverly Hills, CA 90211" }}</p>
+                <p><i class="fa-solid fa-phone"></i> {{ car.dealer.phone|default:"(310) 555-0123" }}</p>
+                <p><i class="fa-solid fa-clock"></i> {{ car.dealer.hours|default:"Open until 9:00 PM" }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Specifications Section -->
+      <div class="car-detail-specs-section">
+        <div class="car-detail-specs-tabs">
+          <button class="car-detail-spec-tab-btn car-detail-active" data-tab="overview">Overview</button>
+          <button class="car-detail-spec-tab-btn" data-tab="specifications">Specifications</button>
+          <button class="car-detail-spec-tab-btn" data-tab="features">Features & Options</button>
+          <button class="car-detail-spec-tab-btn" data-tab="history">Vehicle History</button>
+          <button class="car-detail-spec-tab-btn" data-tab="financing">Financing</button>
+        </div>
+
+        <div class="car-detail-specs-content">
+          <!-- Overview Tab -->
+          <div id="carDetailOverview" class="car-detail-spec-tab-content car-detail-active">
+            <div class="car-detail-overview-grid">
+              <div class="car-detail-overview-card">
+                <h4>Vehicle Details</h4>
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Year:</span>
+                  <span class="car-detail-value">{{ car.year|default:"N/A" }}</span>
+                </div>
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Make:</span>
+                  <span class="car-detail-value">{{ car.make.name|default:"N/A" }}</span>
+                </div>
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Model:</span>
+                  <span class="car-detail-value">{{ car.model.name|default:"N/A" }}</span>
+                </div>
+                {% if car.trim %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Trim:</span>
+                  <span class="car-detail-value">{{ car.trim }}</span>
+                </div>
+                {% endif %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Body Style:</span>
+                  <span class="car-detail-value">{{ car.body_type.name|default:"N/A" }}</span>
+                </div>
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Mileage:</span>
+                  <span class="car-detail-value">{% if car.mileage %}{{ car.mileage|floatformat:0 }} miles{% elif car.kilometers %}{{ car.kilometers|floatformat:0 }} km{% else %}N/A{% endif %}</span>
+                </div>
+                {% if car.condition %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Condition:</span>
+                  <span class="car-detail-value">{{ car.get_condition_display }}</span>
+                </div>
+                {% endif %}
+              </div>
+
+              <div class="car-detail-overview-card">
+                <h4>Engine & Performance</h4>
+                {% if car.engine_type or car.engine_size %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Engine:</span>
+                  <span class="car-detail-value">{% if car.engine_size %}{{ car.engine_size }}L{% endif %}{% if car.engine_type %} {{ car.engine_type }}{% endif %}{% if not car.engine_size and not car.engine_type %}N/A{% endif %}</span>
+                </div>
+                {% endif %}
+                {% if car.horsepower %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Horsepower:</span>
+                  <span class="car-detail-value">{{ car.horsepower }} hp</span>
+                </div>
+                {% endif %}
+                {% if car.torque %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Torque:</span>
+                  <span class="car-detail-value">{{ car.torque }} lb-ft</span>
+                </div>
+                {% endif %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Transmission:</span>
+                  <span class="car-detail-value">{{ car.transmission.name|default:"N/A" }}</span>
+                </div>
+                {% if car.drivetrain %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Drivetrain:</span>
+                  <span class="car-detail-value">{{ car.get_drivetrain_display }}</span>
+                </div>
+                {% endif %}
+                {% if car.fuel_economy_city or car.fuel_economy_highway %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Fuel Economy:</span>
+                  <span class="car-detail-value">{% if car.fuel_economy_city %}{{ car.fuel_economy_city }} City{% endif %}{% if car.fuel_economy_city and car.fuel_economy_highway %} / {% endif %}{% if car.fuel_economy_highway %}{{ car.fuel_economy_highway }} Hwy{% endif %} MPG</span>
+                </div>
+                {% endif %}
+              </div>
+
+              <div class="car-detail-overview-card">
+                <h4>Exterior</h4>
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Exterior Color:</span>
+                  <span class="car-detail-value">{{ car.exterior_color|default:"N/A" }}</span>
+                </div>
+                {% if car.doors %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Doors:</span>
+                  <span class="car-detail-value">{{ car.doors }}-Door</span>
+                </div>
+                {% endif %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Fuel Type:</span>
+                  <span class="car-detail-value">{{ car.fuel_type.name|default:"N/A" }}</span>
+                </div>
+                {% if car.additional_features %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Features:</span>
+                  <span class="car-detail-value">{{ car.additional_features|truncatewords:10 }}</span>
+                </div>
+                {% endif %}
+              </div>
+
+              <div class="car-detail-overview-card">
+                <h4>Interior</h4>
+                {% if car.interior_color %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Interior Color:</span>
+                  <span class="car-detail-value">{{ car.interior_color }}</span>
+                </div>
+                {% endif %}
+                {% if car.seating_capacity %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Seating:</span>
+                  <span class="car-detail-value">{{ car.seating_capacity }}-Passenger</span>
+                </div>
+                {% endif %}
+                {% if car.safety_rating %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">Safety Rating:</span>
+                  <span class="car-detail-value">{{ car.safety_rating }}/5 Stars</span>
+                </div>
+                {% endif %}
+                {% if car.vin %}
+                <div class="car-detail-detail-row">
+                  <span class="car-detail-label">VIN:</span>
+                  <span class="car-detail-value">{{ car.vin }}</span>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Specifications Tab -->
+          <div id="carDetailSpecifications" class="car-detail-spec-tab-content">
+            <div class="car-detail-specifications-grid">
+              <!-- Engine Specifications -->
+              <div class="car-detail-spec-category">
+                <h4>Engine</h4>
+                <div class="car-detail-spec-list">
+                  {% if car.engine_type %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Type:</span>
+                    <span class="car-detail-spec-value">{{ car.engine_type }}</span>
+                  </div>
+                  {% endif %}
+                  {% if car.engine_size %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Displacement:</span>
+                    <span class="car-detail-spec-value">{{ car.engine_size }}L</span>
+                  </div>
+                  {% endif %}
+                  {% if car.horsepower %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Power:</span>
+                    <span class="car-detail-spec-value">{{ car.horsepower }} hp</span>
+                  </div>
+                  {% endif %}
+                  {% if car.torque %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Torque:</span>
+                    <span class="car-detail-spec-value">{{ car.torque }} lb-ft</span>
+                  </div>
+                  {% endif %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Fuel Type:</span>
+                    <span class="car-detail-spec-value">{{ car.fuel_type.name }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Performance Specifications -->
+              <div class="car-detail-spec-category">
+                <h4>Performance</h4>
+                <div class="car-detail-spec-list">
+                  {% if car.acceleration_0_60 %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">0-60 mph:</span>
+                    <span class="car-detail-spec-value">{{ car.acceleration_0_60 }} seconds</span>
+                  </div>
+                  {% endif %}
+                  {% if car.top_speed %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Top Speed:</span>
+                    <span class="car-detail-spec-value">{{ car.top_speed }} mph</span>
+                  </div>
+                  {% endif %}
+                  {% if car.towing_capacity %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Towing Capacity:</span>
+                    <span class="car-detail-spec-value">{{ car.towing_capacity }} lbs</span>
+                  </div>
+                  {% endif %}
+                  {% if car.curb_weight %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Curb Weight:</span>
+                    <span class="car-detail-spec-value">{{ car.curb_weight }} lbs</span>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Transmission & Drivetrain -->
+              <div class="car-detail-spec-category">
+                <h4>Transmission & Drivetrain</h4>
+                <div class="car-detail-spec-list">
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Transmission:</span>
+                    <span class="car-detail-spec-value">{{ car.transmission.name }}</span>
+                  </div>
+                  {% if car.drivetrain %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Drivetrain:</span>
+                    <span class="car-detail-spec-value">
+                      {% if car.drivetrain == 'fwd' %}Front-Wheel Drive
+                      {% elif car.drivetrain == 'rwd' %}Rear-Wheel Drive
+                      {% elif car.drivetrain == 'awd' %}All-Wheel Drive
+                      {% elif car.drivetrain == '4wd' %}4-Wheel Drive
+                      {% else %}{{ car.drivetrain }}
+                      {% endif %}
+                    </span>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Dimensions & Capacity -->
+              <div class="car-detail-spec-category">
+                <h4>Dimensions & Capacity</h4>
+                <div class="car-detail-spec-list">
+                  {% if car.seating_capacity %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Seating Capacity:</span>
+                    <span class="car-detail-spec-value">{{ car.seating_capacity }} seats</span>
+                  </div>
+                  {% endif %}
+                  {% if car.doors %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Doors:</span>
+                    <span class="car-detail-spec-value">{{ car.doors }}</span>
+                  </div>
+                  {% endif %}
+                  {% if car.body_type %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Body Type:</span>
+                    <span class="car-detail-spec-value">{{ car.body_type.name }}</span>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Fuel Economy -->
+              {% if car.fuel_economy_city or car.fuel_economy_highway %}
+              <div class="car-detail-spec-category">
+                <h4>Fuel Economy</h4>
+                <div class="car-detail-spec-list">
+                  {% if car.fuel_economy_city %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">City MPG:</span>
+                    <span class="car-detail-spec-value">{{ car.fuel_economy_city }} mpg</span>
+                  </div>
+                  {% endif %}
+                  {% if car.fuel_economy_highway %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Highway MPG:</span>
+                    <span class="car-detail-spec-value">{{ car.fuel_economy_highway }} mpg</span>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- Safety & Other -->
+              <div class="car-detail-spec-category">
+                <h4>Additional Information</h4>
+                <div class="car-detail-spec-list">
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Condition:</span>
+                    <span class="car-detail-spec-value">{{ car.get_condition_display }}</span>
+                  </div>
+                  {% if car.safety_rating %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Safety Rating:</span>
+                    <span class="car-detail-spec-value">{{ car.safety_rating }}/5 stars</span>
+                  </div>
+                  {% endif %}
+                  {% if car.vin %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">VIN:</span>
+                    <span class="car-detail-spec-value">{{ car.vin }}</span>
+                  </div>
+                  {% endif %}
+                  {% if car.stock_number %}
+                  <div class="car-detail-spec-item">
+                    <span class="car-detail-spec-label">Stock Number:</span>
+                    <span class="car-detail-spec-value">{{ car.stock_number }}</span>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Features Tab -->
+          <div id="carDetailFeatures" class="car-detail-spec-tab-content">
+            <div class="car-detail-features-categories">
+              {% if car.additional_features %}
+              <div class="car-detail-feature-category">
+                <h4>Vehicle Features</h4>
+                <div class="car-detail-feature-list">
+                  {% for feature in car.additional_features|split:'\n' %}
+                    {% if feature.strip %}
+                    <div class="car-detail-feature-list-item">✓ {{ feature.strip }}</div>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              </div>
+              {% else %}
+              <!-- Default features when no additional_features are specified -->
+              <div class="car-detail-feature-category">
+                <h4>Standard Features</h4>
+                <div class="car-detail-feature-list">
+                  <div class="car-detail-feature-list-item">✓ Air Conditioning</div>
+                  <div class="car-detail-feature-list-item">✓ Power Steering</div>
+                  <div class="car-detail-feature-list-item">✓ Power Windows</div>
+                  <div class="car-detail-feature-list-item">✓ Central Locking</div>
+                  {% if car.is_luxury %}
+                  <div class="car-detail-feature-list-item">✓ Luxury Interior</div>
+                  <div class="car-detail-feature-list-item">✓ Premium Sound System</div>
+                  {% endif %}
+                  {% if car.is_certified %}
+                  <div class="car-detail-feature-list-item">✓ Certified Pre-Owned</div>
+                  <div class="car-detail-feature-list-item">✓ Extended Warranty</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="car-detail-feature-category">
+                <h4>Safety & Security</h4>
+                <div class="car-detail-feature-list">
+                  <div class="car-detail-feature-list-item">✓ Anti-lock Braking System (ABS)</div>
+                  <div class="car-detail-feature-list-item">✓ Electronic Stability Control</div>
+                  <div class="car-detail-feature-list-item">✓ Multiple Airbags</div>
+                  <div class="car-detail-feature-list-item">✓ Immobilizer</div>
+                  {% if car.safety_rating %}
+                  <div class="car-detail-feature-list-item">✓ {{ car.safety_rating }}/5 Star Safety Rating</div>
+                  {% endif %}
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- Warranty Information -->
+              {% if car.warranty_information %}
+              <div class="car-detail-feature-category">
+                <h4>Warranty Information</h4>
+                <div class="car-detail-feature-list">
+                  <div class="car-detail-feature-list-item">{{ car.warranty_information }}</div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Vehicle History Tab -->
+          <div id="carDetailHistory" class="car-detail-spec-tab-content">
+            <div class="car-detail-history-content">
+              <div class="car-detail-history-card">
+                <h4>Vehicle Information</h4>
+                <div class="car-detail-history-badges">
+                  {% if car.condition == 'new' %}
+                  <span class="car-detail-badge car-detail-clean">Brand New</span>
+                  {% else %}
+                  <span class="car-detail-badge car-detail-clean">{{ car.get_condition_display }}</span>
+                  {% endif %}
+                  {% if car.is_certified %}
+                  <span class="car-detail-badge car-detail-verified">Certified Pre-Owned</span>
+                  {% endif %}
+                  {% if car.is_luxury %}
+                  <span class="car-detail-badge car-detail-luxury">Luxury Vehicle</span>
+                  {% endif %}
+                  {% if car.kilometers < 50000 %}
+                  <span class="car-detail-badge car-detail-low-mileage">Low Mileage</span>
+                  {% endif %}
+                </div>
+                
+                <div class="car-detail-history-info">
+                  <div class="car-detail-info-section">
+                    <h5>Vehicle Details</h5>
+                    <div class="car-detail-info-grid">
+                      <div class="car-detail-info-item">
+                        <span class="car-detail-info-label">Year:</span>
+                        <span class="car-detail-info-value">{{ car.year }}</span>
+                      </div>
+                      <div class="car-detail-info-item">
+                        <span class="car-detail-info-label">Mileage:</span>
+                        <span class="car-detail-info-value">{{ car.kilometers|floatformat:0 }} km</span>
+                      </div>
+                      {% if car.vin %}
+                      <div class="car-detail-info-item">
+                        <span class="car-detail-info-label">VIN:</span>
+                        <span class="car-detail-info-value">{{ car.vin }}</span>
+                      </div>
+                      {% endif %}
+                      <div class="car-detail-info-item">
+                        <span class="car-detail-info-label">Location:</span>
+                        <span class="car-detail-info-value">{{ car.location_city }}, {{ car.location_country }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {% if car.seller_notes %}
+                  <div class="car-detail-info-section">
+                    <h5>Seller Notes</h5>
+                    <div class="car-detail-seller-notes">
+                      <p>{{ car.seller_notes|linebreaks }}</p>
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  {% if car.warranty_information %}
+                  <div class="car-detail-info-section">
+                    <h5>Warranty Information</h5>
+                    <div class="car-detail-warranty-info">
+                      <p>{{ car.warranty_information|linebreaks }}</p>
+                    </div>
+                  </div>
+                  {% endif %}
+                </div>
+
+                <div class="car-detail-contact-seller">
+                  <p>For detailed vehicle history report, please contact the seller.</p>
+                  <button class="car-detail-contact-seller-btn" onclick="document.getElementById('carDetailContactForm').scrollIntoView()">Contact Seller</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Financing Tab -->
+          <div id="carDetailFinancing" class="car-detail-spec-tab-content">
+            <div class="car-detail-financing-content">
+              <div class="car-detail-financing-calculator">
+                <h4>Loan Calculator</h4>
+                <form class="car-detail-calculator-form">
+                  <div class="car-detail-calc-row">
+                    <div class="car-detail-calc-field">
+                      <label for="carDetailVehiclePrice">Vehicle Price</label>
+                      <input type="text" id="carDetailVehiclePrice" value="${{ car.price|floatformat:0 }}" readonly>
+                    </div>
+                    <div class="car-detail-calc-field">
+                      <label for="carDetailDownPayment">Down Payment</label>
+                      <input type="number" id="carDetailDownPayment" placeholder="10000" min="0" max="{{ car.price }}">
+                    </div>
+                  </div>
+                  <div class="car-detail-calc-row">
+                    <div class="car-detail-calc-field">
+                      <label for="carDetailLoanTerm">Loan Term</label>
+                      <select id="carDetailLoanTerm">
+                        <option value="12">12 months</option>
+                        <option value="24">24 months</option>
+                        <option value="36">36 months</option>
+                        <option value="48">48 months</option>
+                        <option value="60" selected>60 months</option>
+                        <option value="72">72 months</option>
+                        <option value="84">84 months</option>
+                      </select>
+                    </div>
+                    <div class="car-detail-calc-field">
+                      <label for="carDetailInterestRate">Interest Rate (%)</label>
+                      <input type="number" id="carDetailInterestRate" placeholder="3.9" min="0" max="30" step="0.1">
+                    </div>
+                  </div>
+                  <button type="button" class="car-detail-calculate-btn" onclick="calculateLoanPayment()">Calculate Payment</button>
+                </form>
+                
+                <div class="car-detail-payment-result" id="carDetailPaymentResult" style="display: none;">
+                  <div class="car-detail-result-item">
+                    <span class="car-detail-result-label">Estimated Monthly Payment:</span>
+                    <span class="car-detail-result-value" id="carDetailMonthlyPayment">-</span>
+                  </div>
+                  <div class="car-detail-result-item">
+                    <span class="car-detail-result-label">Total Interest:</span>
+                    <span class="car-detail-result-value" id="carDetailTotalInterest">-</span>
+                  </div>
+                  <div class="car-detail-result-item">
+                    <span class="car-detail-result-label">Total Amount:</span>
+                    <span class="car-detail-result-value" id="carDetailTotalAmount">-</span>
+                  </div>
+                </div>
+
+                <div class="car-detail-financing-info">
+                  <h5>Financing Information</h5>
+                  <div class="car-detail-financing-details">
+                    <p><strong>Vehicle Price:</strong> ${{ car.price|floatformat:0 }}</p>
+                    {% if car.condition == 'new' %}
+                    <p><strong>Financing Available:</strong> New car financing rates starting from 2.9% APR</p>
+                    {% else %}
+                    <p><strong>Financing Available:</strong> Used car financing rates starting from 3.9% APR</p>
+                    {% endif %}
+                    <p><strong>Trade-in Accepted:</strong> Yes, we accept trade-ins</p>
+                    <p><strong>Extended Warranty:</strong> Available for additional peace of mind</p>
+                  </div>
+                  <div class="car-detail-financing-contact">
+                    <p>For personalized financing options and pre-approval, contact our finance team.</p>
+                    <button class="car-detail-contact-finance-btn" onclick="document.getElementById('carDetailContactForm').scrollIntoView()">Get Pre-Approved</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Similar Vehicles Section -->
+      <div class="car-detail-similar-vehicles-section">
+        <h3>Similar Vehicles You Might Like</h3>
+        <div class="car-detail-similar-cars-grid" id="carDetailSimilarCarsGrid">
+          <!-- Similar cars will be generated by JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for Test Drive Scheduling -->
+    <div id="carDetailTestDriveModal" class="car-detail-modal">
+      <div class="car-detail-modal-content">
+        <div class="car-detail-modal-header">
+          <h3>Schedule Test Drive - {{ car.year }} {{ car.make.name }} {{ car.model.name }}</h3>
+          <button class="car-detail-close-modal">&times;</button>
+        </div>
+        <div class="car-detail-modal-body">
+          <!-- Car Information Summary -->
+          <div class="car-detail-test-drive-car-info">
+            <div class="car-detail-car-summary">
+              <h4>Vehicle Details</h4>
+              <p><strong>{{ car.year }} {{ car.make.name }} {{ car.model.name }}{% if car.trim %} {{ car.trim }}{% endif %}</strong></p>
+              <p>Price: ${{ car.price|floatformat:0 }}</p>
+              {% if car.mileage %}
+                <p>Mileage: {{ car.mileage|floatformat:0 }} miles</p>
+              {% elif car.kilometers %}
+                <p>Mileage: {{ car.kilometers|floatformat:0 }} km</p>
+              {% endif %}
+              {% if car.location %}
+                <p>Location: {{ car.location }}</p>
+              {% endif %}
+            </div>
+          </div>
+          
+          <form class="car-detail-test-drive-form" method="post" action="{% url 'schedule_test_drive' %}">
+            {% csrf_token %}
+            <input type="hidden" name="vehicle_id" value="{{ car.id }}">
+            <input type="hidden" name="vehicle_title" value="{{ car.year }} {{ car.make.name }} {{ car.model.name }}">
+            
+            <div class="car-detail-form-row">
+              <div class="car-detail-form-field">
+                <label for="carDetailFirstName">First Name *</label>
+                <input type="text" id="carDetailFirstName" name="first_name" required>
+              </div>
+              <div class="car-detail-form-field">
+                <label for="carDetailLastName">Last Name *</label>
+                <input type="text" id="carDetailLastName" name="last_name" required>
+              </div>
+            </div>
+            <div class="car-detail-form-row">
+              <div class="car-detail-form-field">
+                <label for="carDetailEmail">Email *</label>
+                <input type="email" id="carDetailEmail" name="email" required>
+              </div>
+              <div class="car-detail-form-field">
+                <label for="carDetailPhone">Phone *</label>
+                <input type="tel" id="carDetailPhone" name="phone" required>
+              </div>
+            </div>
+            <div class="car-detail-form-row">
+              <div class="car-detail-form-field">
+                <label for="carDetailPreferredDate">Preferred Date *</label>
+                <input type="date" id="carDetailPreferredDate" name="preferred_date" required min="{{ today|date:'Y-m-d' }}">
+              </div>
+              <div class="car-detail-form-field">
+                <label for="carDetailPreferredTime">Preferred Time *</label>
+                <select id="carDetailPreferredTime" name="preferred_time" required>
+                  <option value="">Select Time</option>
+                  <option value="9:00 AM">9:00 AM</option>
+                  <option value="10:00 AM">10:00 AM</option>
+                  <option value="11:00 AM">11:00 AM</option>
+                  <option value="12:00 PM">12:00 PM</option>
+                  <option value="1:00 PM">1:00 PM</option>
+                  <option value="2:00 PM">2:00 PM</option>
+                  <option value="3:00 PM">3:00 PM</option>
+                  <option value="4:00 PM">4:00 PM</option>
+                  <option value="5:00 PM">5:00 PM</option>
+                </select>
+              </div>
+            </div>
+            <div class="car-detail-form-field">
+              <label for="carDetailComments">Comments</label>
+              <textarea id="carDetailComments" name="comments" rows="3" placeholder="Any specific requests or questions about the {{ car.year }} {{ car.make.name }} {{ car.model.name }}..."></textarea>
+            </div>
+            <div class="car-detail-form-actions">
+              <button type="button" class="car-detail-cancel-btn">Cancel</button>
+              <button type="submit" class="car-detail-confirm-btn">Schedule Test Drive</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Pass car data to JavaScript for dynamic functionality
+  const carDetailData = {
+    images: [
+      {% for image in car.images.all %}
+        "{{ image.image.url }}"{% if not forloop.last %},{% endif %}
+      {% empty %}
+        "//images.pexels.com/photos/337909/pexels-photo-337909.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+        "//images.pexels.com/photos/1592384/pexels-photo-1592384.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+        "//images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+        "//images.pexels.com/photos/1719648/pexels-photo-1719648.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+        "//images.pexels.com/photos/2365572/pexels-photo-2365572.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+        "//images.pexels.com/photos/116675/pexels-photo-116675.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+        "//images.pexels.com/photos/1545743/pexels-photo-1545743.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+        "//images.pexels.com/photos/3752169/pexels-photo-3752169.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop"
+      {% endfor %}
+    ],
+    car: {
+      id: {{ car.id|default:"null" }},
+      title: "{{ car.year|default_if_none:"" }} {{ car.make.name|default_if_none:"" }} {{ car.model.name|default_if_none:"" }}",
+      price: {{ car.price|default:"0" }},
+      year: {{ car.year|default:"null" }},
+      make: "{{ car.make.name|default_if_none:"" }}",
+      model: "{{ car.model.name|default_if_none:"" }}"
+    }
+  };
+
+  // Pass similar cars data to JavaScript
+  const similarCarData = [
+    {% for similar_car in similar_cars %}
+      {
+        id: {{ similar_car.id }},
+        title: "{{ similar_car.year|default_if_none:"" }} {{ similar_car.make.name|default_if_none:"" }} {{ similar_car.model.name|default_if_none:"" }}",
+        model: "{{ similar_car.trim|default_if_none:"" }}",
+        price: "${{ similar_car.price|floatformat:0 }}",
+        mileage: "{% if similar_car.mileage %}{{ similar_car.mileage|floatformat:0 }} miles{% elif similar_car.kilometers %}{{ similar_car.kilometers|floatformat:0 }} km{% else %}N/A{% endif %}",
+        location: "{{ similar_car.location|default_if_none:"" }}",
+        image: "{% if similar_car.images.first %}{{ similar_car.images.first.image.url }}{% else %}//images.pexels.com/photos/337909/pexels-photo-337909.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop{% endif %}",
+        slug: "{{ similar_car.slug }}"
+      }{% if not forloop.last %},{% endif %}
+    {% empty %}
+      {
+        id: 0,
+        title: "No Similar Vehicles",
+        model: "Available",
+        price: "N/A",
+        mileage: "N/A",
+        location: "N/A",
+        image: "//images.pexels.com/photos/337909/pexels-photo-337909.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop",
+        slug: ""
+      }
+    {% endfor %}
+  ];
+
+  // Loan Calculator Function
+  function calculateLoanPayment() {
+    const vehiclePriceStr = document.getElementById('carDetailVehiclePrice').value;
+    const vehiclePrice = parseFloat(vehiclePriceStr.replace(/[$,]/g, ''));
+    const downPayment = parseFloat(document.getElementById('carDetailDownPayment').value) || 0;
+    const loanTerm = parseInt(document.getElementById('carDetailLoanTerm').value);
+    const interestRate = parseFloat(document.getElementById('carDetailInterestRate').value) || 0;
+
+    if (!vehiclePrice || vehiclePrice <= 0) {
+      alert('Please enter a valid vehicle price.');
+      return;
+    }
+
+    if (downPayment >= vehiclePrice) {
+      alert('Down payment cannot be greater than or equal to vehicle price.');
+      return;
+    }
+
+    if (interestRate < 0 || interestRate > 30) {
+      alert('Please enter a valid interest rate between 0% and 30%.');
+      return;
+    }
+
+    const loanAmount = vehiclePrice - downPayment;
+    
+    if (loanAmount <= 0) {
+      document.getElementById('carDetailMonthlyPayment').textContent = '$0';
+      document.getElementById('carDetailTotalInterest').textContent = '$0';
+      document.getElementById('carDetailTotalAmount').textContent = '$' + vehiclePrice.toLocaleString();
+      document.getElementById('carDetailPaymentResult').style.display = 'block';
+      return;
+    }
+
+    const monthlyRate = interestRate / 100 / 12;
+    let monthlyPayment, totalInterest, totalAmount;
+
+    if (monthlyRate === 0) {
+      // No interest case
+      monthlyPayment = loanAmount / loanTerm;
+      totalInterest = 0;
+      totalAmount = vehiclePrice;
+    } else {
+      // Calculate monthly payment using loan formula
+      monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, loanTerm)) / 
+                      (Math.pow(1 + monthlyRate, loanTerm) - 1);
+      totalAmount = (monthlyPayment * loanTerm) + downPayment;
+      totalInterest = totalAmount - vehiclePrice;
+    }
+
+    // Display results
+    document.getElementById('carDetailMonthlyPayment').textContent = '$' + monthlyPayment.toFixed(0);
+    document.getElementById('carDetailTotalInterest').textContent = '$' + totalInterest.toFixed(0);
+    document.getElementById('carDetailTotalAmount').textContent = '$' + totalAmount.toFixed(0);
+    document.getElementById('carDetailPaymentResult').style.display = 'block';
+  }
+</script>
+
+<script src="{% static 'js/car-details.js' %}"></script>
+{% endblock %}

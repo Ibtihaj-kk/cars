@@ -1,0 +1,1864 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css"
+    />
+    <link
+      href="//cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css"
+      rel="stylesheet"
+    />
+    <link rel="preconnect" href="//fonts.googleapis.com" />
+    <link rel="preconnect" href="//fonts.gstatic.com" crossorigin />
+    <link
+      href="//fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      type="module"
+      src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"
+    ></script>
+    <script
+      nomodule
+      src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"
+    ></script>
+
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
+    <title>{% block title %}Car Portal Homepage{% endblock %}</title>
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body>
+    <!-- Header Section -->
+    
+    <!-- Mobile Menu Toggle (Only visible on mobile) -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <!-- Top Header -->
+    <div class="navbar-top-header">
+      <div class="navbar-logo">
+        <a href="{% url 'home' %}">
+          <img
+            src="{% static 'images/logos/cars-portal-logo.png ' %}"
+            alt="Cars Portal Logo"
+          />
+        </a>
+      </div>
+      <div class="navbar-right-info">
+        <span class="navbar-phone-info">
+          <i class="fa-solid fa-phone"></i>
+          <span class="navbar-phone-number">888-227-7253</span>
+        </span>
+        <span class="navbar-divider">|</span>
+        <a href="/selling.html" class="sell-car-button">Sell My Car</a>
+        <a href="{% url 'parts:cart_view' %}" class="navbar-cart"><ion-icon name="cart"></ion-icon></a>
+
+        <!-- User Profile Dropdown  -->
+        <div class="navbar-user-profile-dropdown">
+          <div class="navbar-profile-trigger">
+            <div class="navbar-profile-icon">
+              <i class="fa-solid fa-user"></i>
+            </div>
+            <i class="fa-solid fa-chevron-down navbar-dropdown-arrow"></i>
+          </div>
+          <div class="navbar-dropdown-menu">
+            {% if user.is_authenticated %}
+              <!-- Authenticated user menu -->
+              <a href="{% url 'parts:my_orders' %}" class="navbar-dropdown-link">My Orders</a>
+              {% if user.role == 'SELLER' or user.role == 'ADMIN' or user.is_staff or user.is_superuser %}
+                <span class="navbar-dropdown-divider">|</span>
+                <a href="{% url 'parts:my_inventory' %}" class="navbar-dropdown-link">My Inventory</a>
+              {% endif %}
+              <span class="navbar-dropdown-divider">|</span>
+              <a href="#" class="navbar-dropdown-link">Profile</a>
+              <span class="navbar-dropdown-divider">|</span>
+              <a href="#" class="navbar-dropdown-link">Logout</a>
+            {% else %}
+              <!-- Guest user menu -->
+              <a href="{% url 'business_partners:vendor_login' %}" class="navbar-dropdown-link">Login</a>
+              <span class="navbar-dropdown-divider">|</span>
+              <a href="{% url 'business_partners:vendor_registration_start' %}" class="navbar-dropdown-link">Register</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay">
+      <div class="mobile-menu-content">
+        <div class="mobile-menu-header">
+          <div class="mobile-logo">
+            <a href="{% url 'home' %}">
+          <img
+            src="{% static 'images/logos/cars-portal-logo.png' %}"
+            alt="Cars Portal Logo"
+          />
+        </a>
+          </div>
+          <button class="mobile-menu-close" id="mobileMenuClose">
+            <!-- <i class="fa-solid fa-times"></i> -->
+          </button>
+        </div>
+        
+        <div class="mobile-menu-items">
+          <!-- Phone Number -->
+          <div class="mobile-menu-item">
+            <a href="tel:888-227-7253" class="mobile-menu-link">
+              <i class="fa-solid fa-phone"></i>
+              <span>888-227-7253</span>
+            </a>
+          </div>
+
+          <!-- Sell My Car -->
+          <div class="mobile-menu-item">
+            <a href="./selling.html" class="mobile-menu-link sell-car-mobile">
+              <i class="fa-solid fa-dollar-sign"></i>
+              <span>Sell My Car</span>
+              <span class="free-badge">FREE</span>
+            </a>
+          </div>
+
+          <!-- Login / Register -->
+          <div class="mobile-menu-item">
+            <div class="mobile-auth-links">
+              <a href="{% url 'business_partners:vendor_login' %}" class="mobile-auth-link">Login</a>
+              <span class="mobile-auth-divider">|</span>
+              <a href="{% url 'business_partners:vendor_registration_start' %}" class="mobile-auth-link">Register</a>
+            </div>
+          </div>
+
+
+          <!-- NEW Dropdown -->
+          <div class="mobile-menu-item">
+            <div class="mobile-dropdown-trigger" data-dropdown="new">
+              <a href="./newsection.html"><span>New</span></a>
+              <i class="fa-solid fa-chevron-down"></i>
+            </div>
+            <div class="mobile-dropdown-content" id="mobile-new-dropdown">
+              <a href="/menu-drop-down/browse-new-car-guide/browse.html" class="mobile-dropdown-link">Browse New Car Guide</a>
+              <a href="/menu-drop-down/search-new-car/search.html" class="mobile-dropdown-link">Search New Cars</a>
+              <a href="/menu-drop-down/compare-new-car/compare.html" class="mobile-dropdown-link">Compare New Cars</a>
+              <a href="/menu-drop-down/car-price/prices.html" class="mobile-dropdown-link">Car Prices</a>
+              <a href="/menu-drop-down/car-dictionary/car-definitions.html" class="mobile-dropdown-link">Car Dictionary</a>
+            </div>
+          </div>
+
+          <!-- USED Dropdown -->
+          <div class="mobile-menu-item">
+            <div class="mobile-dropdown-trigger" data-dropdown="used">
+              <a href="./used-cars.html"><span>Used</span></a>
+              <i class="fa-solid fa-chevron-down"></i>
+            </div>
+            <div class="mobile-dropdown-content" id="mobile-used-dropdown">
+              <a href="/used-tab-down/search-used-cars/used-search.html" class="mobile-dropdown-link">Search Used Cars</a>
+              <a href="/used-tab-down/search-used-cars/browse-used.html" class="mobile-dropdown-link">Browse Used Cars</a>
+              <a href="/used-tab-down/search-used-cars/used-certified.html" class="mobile-dropdown-link">Search Certified Pre Owned Used Cars</a>
+              <a href="/used-tab-down/search-used-cars/used-owned.html" class="mobile-dropdown-link">Browse Certified Pre Owned Used Cars</a>
+              <a href="/used-tab-down/search-used-cars/used-location.html" class="mobile-dropdown-link">Used Cars by Location</a>
+            </div>
+          </div>
+
+          <!-- Other Menu Items -->
+          <div class="mobile-menu-item">
+            <a href="{% url 'parts:part_list' %}" class="mobile-menu-link">
+              <span>Parts</span>
+            </a>
+          </div>
+          <div class="mobile-menu-item">
+            <a href="/services.html" class="mobile-menu-link">
+              <span>Services</span>
+            </a>
+          </div>
+          <div class="mobile-menu-item">
+            <a href="/financing.html" class="mobile-menu-link">
+              <span>Financing</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navbar (Hidden on mobile, shown through hamburger menu) -->
+    <nav class="navbar">
+      <div class="container">
+        <div class="nav-links">
+          
+
+          <!-- NEW Dropdown -->
+          <div
+            class="new-dropdown"
+            onmouseenter="showDropdown()"
+            onmouseleave="hideDropdown()">
+
+            <a href="/newsection.html" class="nav-link">NEW</a>
+
+            <!-- Dropdown Content -->
+            <div class="dropdown-content" id="dropdown-content">
+              <!-- Left Panel - Navigation Tabs -->
+              <div class="left-panel">
+                <div class="nav-tabs">
+                  <a
+                    href="/menu-drop-down/browse-new-car-guide/browse.html"
+                    class="tab-link active"
+                    data-tab="browse-guide"
+                  >
+                    <i class="fas fa-book"></i>
+                    Browse New Car Guide
+                  </a>
+                  <a
+                    href="/menu-drop-down/search-new-car/search.html"
+                    class="tab-link"
+                    data-tab="search-cars"
+                  >
+                    <i class="fas fa-search"></i>
+                    Search New Cars
+                  </a>
+                  <a
+                    href="/menu-drop-down/compare-new-car/compare.html"
+                    class="tab-link"
+                    data-tab="compare-cars"
+                  >
+                    <i class="fas fa-balance-scale"></i>
+                    Compare New Cars
+                  </a>
+                  <a
+                    href="/menu-drop-down/car-price/prices.html"
+                    class="tab-link"
+                    data-tab="car-prices"
+                  >
+                    <i class="fas fa-tag"></i>
+                    Car Prices
+                  </a>
+                  <a
+                    href="/menu-drop-down/popular-new-car/popular.html"
+                    class="tab-link"
+                    data-tab="popular-cars"
+                  >
+                    <i class="fas fa-star"></i>
+                    Popular New Cars
+                  </a>
+                  <a
+                    href="/menu-drop-down/car-dictionary/car-definitions.html"
+                    class="tab-link"
+                    data-tab="car-dictionary"
+                  >
+                    <i class="fas fa-book-open"></i>
+                    Car Dictionary
+                  </a>
+                </div>
+                <a href="#" class="sell-car-link">
+                  Looking to sell your car?
+                </a>
+              </div>
+
+              <!-- Center Panel - Content -->
+              <div class="center-panel">
+                <!-- Browse New Car Guide Content -->
+                <div id="browse-guide-content" class="tab-content active">
+                  <div class="content-sections-row">
+                    <div class="content-section">
+                      <h3>Browse Cars by Body Style</h3>
+                      <div class="body-styles-grid">
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/sedan.html">
+                          <div class="style-item">
+                          <span>Sedan</span>
+                          <div class="style-icon">
+                            <i class="fas fa-car"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/hatchback.html">
+                          <div class="style-item">
+                          <span>Hatchback</span>
+                          <div class="style-icon">
+                            <i class="fas fa-car"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodyStyle/convertible.html">
+                          <div class="style-item">
+                            <span>Convertible</span>
+                            <div class="style-icon">
+                              <i class="fas fa-car-side"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/van.html">
+                          <div class="style-item">
+                            <span>Van</span>
+                            <div class="style-icon">
+                              <i class="fas fa-shuttle-van"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/suv.html">
+                          <div class="style-item">
+                            <span>SUV</span>
+                            <div class="style-icon">
+                              <i class="fas fa-truck-pickup"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/coupe.html">
+                          <div class="style-item">
+                            <span>Coupe</span>
+                            <div class="style-icon">
+                              <i class="fas fa-car-side"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/pickup-truck.html">
+                          <div class="style-item">
+                            <span>Pickup Truck</span>
+                            <div class="style-icon">
+                              <i class="fas fa-truck"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/wagon.html">
+                          <div class="style-item">
+                            <span>Wagon</span>
+                            <div class="style-icon">
+                              <i class="fas fa-car"></i>
+                            </div>
+                          </div>
+                        </a>
+                      </div>
+                      <a href="#" class="see-all-link">
+                        See all Body Styles <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+
+                    <div class="content-section">
+                      <h3>Browse Cars by Brand</h3>
+                      <div class="brand-gridss">
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/toyota.html"
+                        >
+                          <div class="brand-item">
+                            <span>Toyota</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/toyota-logos-brands-10.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/nissan.html"
+                        >
+                          <div class="brand-item">
+                            <span>Nissan</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/pngwing.com.png' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/hyundai.html"
+                        >
+                          <div class="brand-item">
+                            <span>Hyundai</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/hyundai-logo-white.jpg ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/mercedes.html"
+                        >
+                          <div class="brand-item">
+                            <span>Mercedes</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/Mercedes-Benz-Logo.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/kia.html"
+                        >
+                          <div class="brand-item">
+                            <span>Kia</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/Kia-Logo.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/mitsubishi.html"
+                        >
+                          <div class="brand-item">
+                            <span>Mitsubishi</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/Mitsubishi-emblem-1024x768.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/bmw.html"
+                        >
+                          <div class="brand-item">
+                            <span>BMW</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/BMW-Logo.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/chevrolet.html">
+                          <div class="brand-item">
+                            <span>Chevrolet</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/Chevrolet-Logo-2010.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/ford.html">
+                          <div class="brand-item">
+                          <span>Ford</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="{% static 'images/cars/Ford-Logo-1965-present.png ' %}"
+                                alt=""
+                              />
+                            </div>
+                          </div>
+                         </div>
+                        </a>
+                        <a href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/honda.html">
+                          <div class="brand-item">
+                             <span>Honda</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img src="{% static 'images/cars/wp3351340.png ' %}" alt="" />
+                            </div>
+                          </div>
+                          </div>
+                         </div>
+                        </a>
+                      <a href="#" class="see-all-link">
+                        See all Brands <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Search New Cars Content -->
+                <div id="search-cars-content" class="tab-content">
+                  <div class="content-sections-row">
+                    <div class="content-section">
+                      <h3>Browse Cars by Body Style</h3>
+                      <div class="body-styles-grid">
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/sedan.html">
+                          <div class="style-item">
+                          <span>Sedan</span>
+                          <div class="style-icon">
+                            <i class="fas fa-car"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/hatchback.html">
+                          <div class="style-item">
+                          <span>Hatchback</span>
+                          <div class="style-icon">
+                            <i class="fas fa-car"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/convertible.html">
+                          <div class="style-item">
+                            <span>Convertible</span>
+                            <div class="style-icon">
+                              <i class="fas fa-car-side"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/van.html">
+                          <div class="style-item">
+                            <span>Van</span>
+                            <div class="style-icon">
+                              <i class="fas fa-shuttle-van"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/suv.html">
+                          <div class="style-item">
+                            <span>SUV</span>
+                            <div class="style-icon">
+                              <i class="fas fa-truck-pickup"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/coupe.html">
+                          <div class="style-item">
+                            <span>Coupe</span>
+                            <div class="style-icon">
+                              <i class="fas fa-car-side"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/pickup-truck.html">
+                          <div class="style-item">
+                            <span>Pickup Truck</span>
+                            <div class="style-icon">
+                              <i class="fas fa-truck"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/wagon.html">
+                          <div class="style-item">
+                            <span>Wagon</span>
+                            <div class="style-icon">
+                              <i class="fas fa-car"></i>
+                            </div>
+                          </div>
+                        </a>
+                      </div>
+                      <a href="#" class="see-all-link">
+                        See all Body Styles <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+
+                    <div class="content-section">
+                      <h3>Browse Cars by Brand</h3>
+                      <div class="brand-gridss">
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/toyota.html"
+                        >
+                          <div class="brand-item">
+                            <span>Toyota</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/toyota-logos-brands-10.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/nissan.html"
+                        >
+                          <div class="brand-item">
+                            <span>Nissan</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/pngwing.com.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/hyundai.html"
+                        >
+                          <div class="brand-item">
+                            <span>Hyundai</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/hyundai-logo-white.jpg ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/mercedes.html"
+                        >
+                          <div class="brand-item">
+                            <span>Mercedes</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/Mercedes-Benz-Logo.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/kia.html"
+                        >
+                          <div class="brand-item">
+                            <span>Kia</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/Kia-Logo.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/mitsubishi.html"
+                        >
+                          <div class="brand-item">
+                            <span>Mitsubishi</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/Mitsubishi-emblem-1024x768.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/bmw.html"
+                        >
+                          <div class="brand-item">
+                            <span>BMW</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/BMW-Logo.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/chevrolet.html">
+                          <div class="brand-item">
+                            <span>Chevrolet</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/Chevrolet-Logo-2010.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/ford.html">
+                          <div class="brand-item">
+                          <span>Ford</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="{% static 'images/cars/Ford-Logo-1965-present.png ' %}"
+                                alt=""
+                              />
+                            </div>
+                          </div>
+                         </div>
+                        </a>
+                        <a href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/honda.html">
+                          <div class="brand-item">
+                            <span>Honda</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/wp3351340.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                      </div>
+                      <a href="#" class="see-all-link">
+                        See all Brands <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Compare New Cars Content -->
+                <div id="compare-cars-content" class="tab-content">
+                  <div class="content-sections-row">
+                    <div class="content-section">
+                      <h3>Popular New Cars Comparison</h3>
+                      <div class="comparison-items">
+                        <a href="/menu-drop-down/compare-new-car/popular-car-compare/audi.html">
+                          <div class="comparison-item">
+                          <div class="car-comparison">
+                            <div class="car-icons">
+                              <div class="car-icon">
+                                <i class="fas fa-car"></i>
+                              </div>
+                              <div class="vs-badge">VS</div>
+                              <div class="car-icon">
+                                <i class="fas fa-car"></i>
+                              </div>
+                            </div>
+                            <div class="car-names">
+                              <div class="car-detail">
+                                <h4>Audi Q7 2025</h4>
+                                <p>From AED 295,000</p>
+                              </div>
+                              <div class="car-detail">
+                                <h4>
+                                  Mercedes-Benz<br />
+                                  GLE-Class 2025
+                                </h4>
+                                <p>From AED 495,900</p>
+                              </div>
+                            </div>
+                            <button class="compare-btn">Compare</button>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/compare-new-car/popular-car-compare/rover-range.html">
+                          <div class="comparison-item">
+                          <div class="car-comparison">
+                            <div class="car-icons">
+                              <div class="car-icon">
+                                <i class="fas fa-car"></i>
+                              </div>
+                              <div class="vs-badge">VS</div>
+                              <div class="car-icon">
+                                <i class="fas fa-car"></i>
+                              </div>
+                            </div>
+                            <div class="car-names">
+                              <div class="car-detail">
+                                <h4>
+                                  Land Rover Range Rover<br />
+                                  Rover Sports 2025
+                                </h4>
+                                <p>From AED 475,610</p>
+                              </div>
+                              <div class="car-detail">
+                                <h4>BMW X5 2025</h4>
+                                <p>From AED 450,000</p>
+                              </div>
+                            </div>
+                            <button class="compare-btn">Compare</button>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/compare-new-car/popular-car-compare/volkswagen.html">
+                          <div class="comparison-item">
+                          <div class="car-comparison">
+                            <div class="car-icons">
+                              <div class="car-icon">
+                                <i class="fas fa-car"></i>
+                              </div>
+                              <div class="vs-badge">VS</div>
+                              <div class="car-icon">
+                                <i class="fas fa-car"></i>
+                              </div>
+                            </div>
+                            <div class="car-names">
+                              <div class="car-detail">
+                                <h4>
+                                  Volkswagen Tiguan<br />
+                                  2025
+                                </h4>
+                                <p>From AED 113,900</p>
+                              </div>
+                              <div class="car-detail">
+                                <h4>
+                                  Subaru Forester<br />
+                                  2025
+                                </h4>
+                                <p>From AED 140,000</p>
+                              </div>
+                            </div>
+                            <button class="compare-btn">Compare</button>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/compare-new-car/popular-car-compare/mazda.html">
+                          <div class="comparison-item">
+                          <div class="car-comparison">
+                            <div class="car-icons">
+                              <div class="car-icon">
+                                <i class="fas fa-car"></i>
+                              </div>
+                              <div class="vs-badge">VS</div>
+                              <div class="car-icon">
+                                <i class="fas fa-car"></i>
+                              </div>
+                            </div>
+                            <div class="car-names">
+                              <div class="car-detail">
+                                <h4>
+                                  Mazda CX-50<br />
+                                  2025
+                                </h4>
+                                <p>From AED 113,900</p>
+                              </div>
+                              <div class="car-detail">
+                                <h4>
+                                  Honda CR-V<br />
+                                  2025
+                                </h4>
+                                <p>From AED 140,000</p>
+                              </div>
+                            </div>
+                            <button class="compare-btn">Compare</button>
+                          </div>
+                        </div>
+                        </a>
+                      </div>
+                      <a href="#" class="see-all-link">
+                        See all New Car Comparisons
+                        <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Car Prices Content -->
+                <div id="car-prices-content" class="tab-content">
+                  <div class="content-sections-row">
+                    <div class="content-section">
+                      <h3>New Car Brands Prices</h3>
+                      <div class="price-brands-grid">
+                        <a href="/menu-drop-down/car-price/new-car-brand-prices/toyotaprice.html">
+                          <div class="price-brand-item">
+                          <span>Toyota</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="//images.pexels.com/photos/3874333/pexels-photo-3874333.jpeg?auto=compress&cs=tinysrgb&w=35&h=28&fit=crop"
+                                alt="Toyota"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-price/new-car-brand-prices/nissan.html">
+                          <div class="price-brand-item">
+                          <span>Nissan</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="//images.pexels.com/photos/3874333/pexels-photo-3874333.jpeg?auto=compress&cs=tinysrgb&w=35&h=28&fit=crop"
+                                alt="Nissan"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-price/new-car-brand-prices/hyundai.html">
+                          <div class="price-brand-item">
+                          <span>Hyundai</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="//images.pexels.com/photos/3874333/pexels-photo-3874333.jpeg?auto=compress&cs=tinysrgb&w=35&h=28&fit=crop"
+                                alt="Hyundai"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-price/new-car-brand-prices/mercedes.html">
+                          <div class="price-brand-item">
+                          <span>Mercedes-Benz</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="//images.pexels.com/photos/3874333/pexels-photo-3874333.jpeg?auto=compress&cs=tinysrgb&w=35&h=28&fit=crop"
+                                alt="Mercedes"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-price/new-car-brand-prices/kia.html">
+                          <div class="price-brand-item">
+                          <span>Kia</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="//images.pexels.com/photos/3874333/pexels-photo-3874333.jpeg?auto=compress&cs=tinysrgb&w=35&h=28&fit=crop"
+                                alt="Kia"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-price/new-car-brand-prices/mitsubishi.html">
+                          <div class="price-brand-item">
+                          <span>Mitsubishi</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="//images.pexels.com/photos/3874333/pexels-photo-3874333.jpeg?auto=compress&cs=tinysrgb&w=35&h=28&fit=crop"
+                                alt="BMW"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-price/new-car-brand-prices/bmw.html">
+                          <div class="price-brand-item">
+                          <span>BMW</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="//images.pexels.com/photos/3874333/pexels-photo-3874333.jpeg?auto=compress&cs=tinysrgb&w=35&h=28&fit=crop"
+                                alt="BMW"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-price/new-car-brand-prices/chevrolet.html">
+                          <div class="price-brand-item">
+                          <span>Chevrolet</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="//images.pexels.com/photos/3874333/pexels-photo-3874333.jpeg?auto=compress&cs=tinysrgb&w=35&h=28&fit=crop"
+                                alt="BMW"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-price/new-car-brand-prices/ford.html">
+                          <div class="price-brand-item">
+                          <span>Ford</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="//images.pexels.com/photos/3874333/pexels-photo-3874333.jpeg?auto=compress&cs=tinysrgb&w=35&h=28&fit=crop"
+                                alt="BMW"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-price/new-car-brand-prices/honda.html">
+                          <div class="price-brand-item">
+                          <span>Honda</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="//images.pexels.com/photos/3874333/pexels-photo-3874333.jpeg?auto=compress&cs=tinysrgb&w=35&h=28&fit=crop"
+                                alt="BMW"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        </a>
+                      </div>
+                      <a href="#" class="see-all-link">
+                        See all Car Prices <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+
+                    <!-- Right Panel - App Promotion -->
+                    <div class="right-panel">
+                      <div class="app-promotion">
+                        <span class="new-badge">New</span>
+                        <h4>
+                          Introducing the all new
+                          <span class="app-name">Cars Portal App!</span>
+                        </h4>
+                        <p>
+                          Easily connect with sellers through Phone, SMS or
+                          WhatsApp.
+                        </p>
+                        <div class="app-buttons">
+                          <button class="app-store-btn">
+                            <i class="fab fa-apple"></i>
+                            Download on App Store
+                          </button>
+                          <button class="google-play-btn">
+                            <i class="fab fa-google-play"></i>
+                            Get it on Google Play
+                          </button>
+                        </div>
+                        <div class="app-illustration">
+                          <i class="fas fa-mobile-alt"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Popular New Cars Content -->
+                <div id="popular-cars-content" class="tab-content">
+                  <div class="content-sections-row">
+                    <div class="content-section">
+                      <h3>Popular New Cars</h3>
+                      <div class="popular-cars-list">
+                        <a href="/menu-drop-down/popular-new-car/popular-car-details/patrol-nissan.html">
+                          <div class="popular-car-item">
+                            <span>Nissan Patrol</span>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/popular-new-car/popular-car-details/jeep-wrangler.html">
+
+                          <div class="popular-car-item">
+                          <span>Jeep Wrangler</span>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/popular-new-car/popular-car-details/suzuki-jimny.html">
+                          <div class="popular-car-item">
+                          <span>Suzuki Jimny</span>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/popular-new-car/popular-car-details/toyota-rush.html">
+                          <div class="popular-car-item">
+                          <span>Toyota Rush</span>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/popular-new-car/popular-car-details/dodge-challenger.html">
+                          <div class="popular-car-item">
+                          <span>Dodge Challenger</span>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/popular-new-car/popular-car-details/kia-seltos.html">
+                          <div class="popular-car-item">
+                          <span>Kia Seltos</span>
+                          </div>
+                        </a>
+                      </div>
+                      <a href="#" class="see-all-link">
+                        See all New Cars <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+                    <!-- Right Panel - App Promotion -->
+                    <div class="right-panel">
+                      <div class="app-promotion">
+                        <span class="new-badge">New</span>
+                        <h4>
+                          Introducing the all new
+                          <span class="app-name">Cars Portal App!</span>
+                        </h4>
+                        <p>
+                          Easily connect with sellers through Phone, SMS or
+                          WhatsApp.
+                        </p>
+                        <div class="app-buttons">
+                          <button class="app-store-btn">
+                            <i class="fab fa-apple"></i>
+                            Download on App Store
+                          </button>
+                          <button class="google-play-btn">
+                            <i class="fab fa-google-play"></i>
+                            Get it on Google Play
+                          </button>
+                        </div>
+                        <div class="app-illustration">
+                          <i class="fas fa-mobile-alt"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Car Dictionary Content -->
+                <!-- Car Dictionary Content - FIXED LAYOUT -->
+                <div id="car-dictionary-content" class="tab-content">
+                  <div class="content-sections-row">
+                    <div class="content-section">
+                      <h3>Find Car Definitions</h3>
+                      <div class="dictionary-items">
+                        <a href="/menu-drop-down/car-dictionary/find-car-definitions/buetooth.html">
+                          <div class="dictionary-item">
+                          <span>Bluetooth System</span>
+                          <div class="feature-icon">
+                            <i class="fab fa-bluetooth-b"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-dictionary/find-car-definitions/cd-player.html">
+                          <div class="dictionary-item">
+                          <span>CD Player</span>
+                          <div class="feature-icon">
+                            <i class="fas fa-compact-disc"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-dictionary/find-car-definitions/security-system.html">
+                          <div class="dictionary-item">
+                          <span>Security System</span>
+                          <div class="feature-icon">
+                            <i class="fas fa-shield-alt"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-dictionary/find-car-definitions/abs.html">
+                          <div class="dictionary-item">
+                          <span>ABS (Anti-lock Brake System)</span>
+                          <div class="feature-icon">
+                            <i class="fas fa-car-crash"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/car-dictionary/find-car-definitions/aus.html">
+                          <div class="dictionary-item">
+                          <span>Aux/Audio Input</span>
+                          <div class="feature-icon">
+                            <i class="fas fa-plug"></i>
+                          </div>
+                        </div>
+                        </a>
+                      </div>
+                      <a href="#" class="see-all-link">
+                        See all Car Definitions
+                        <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+
+                    <!-- Right Panel - App Promotion -->
+                    <div class="right-panel">
+                      <div class="app-promotion">
+                        <span class="new-badge">New</span>
+                        <h4>
+                          Introducing the all new
+                          <span class="app-name">Cars Portal App!</span>
+                        </h4>
+                        <p>
+                          Easily connect with sellers through Phone, SMS or
+                          WhatsApp.
+                        </p>
+                        <div class="app-buttons">
+                          <button class="app-store-btn">
+                            <i class="fab fa-apple"></i>
+                            Download on App Store
+                          </button>
+                          <button class="google-play-btn">
+                            <i class="fab fa-google-play"></i>
+                            Get it on Google Play
+                          </button>
+                        </div>
+                        <div class="app-illustration">
+                          <i class="fas fa-mobile-alt"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Used Dropdown -->
+          <div
+            class="new-dropdown"
+            onmouseenter="showDropdown('used-dropdown-content')"
+            onmouseleave="hideDropdown('used-dropdown-content')">
+            
+            <a href="/used-cars.html" class="nav-link">USED</a>
+
+            <!-- Dropdown Content -->
+            <div class="dropdown-content" id="used-dropdown-content">
+              <!-- Left Panel - Navigation Tabs -->
+              <div class="left-panel">
+                <div class="nav-tabs">
+                  <a
+                    href="/used-tab-down/search-used-cars/used-search.html"
+                    class="tab-link active"
+                    data-tab="browse-guide"
+                  >
+                    <i class="fas fa-book"></i>
+                    Search Used Cars
+                  </a>
+                  <a
+                    href="/used-tab-down/search-used-cars/browse-used.html"
+                    class="tab-link"
+                    data-tab="browse-guide"
+                  >
+                    <i class="fas fa-search"></i>
+                    Browse Used Cars
+                  </a>
+                  <a
+                    href="/used-tab-down/search-used-cars/used-certified.html"
+                    class="tab-link"
+                    data-tab="browse-guide"
+                  >
+                    <i class="fas fa-balance-scale"></i>
+                    Search Certified Pre Owned Used Cars
+                  </a>
+                  <a
+                    href="/used-tab-down/search-used-cars/used-owned.html"
+                    class="tab-link"
+                    data-tab="browse-guide"
+                  >
+                    <i class="fas fa-tag"></i>
+                    Browse Certified Pre Owned Used Cars
+                  </a>
+                  <a
+                    href="/used-tab-down/search-used-cars/used-popular.html"
+                    class="tab-link"
+                    data-tab="popular-cars"
+                  >
+                    <i class="fas fa-star"></i>
+                    Popular Used Cars
+                  </a>
+                  <a
+                    href="/used-tab-down/search-used-cars/used-location.html"
+                    class="tab-link"
+                    data-tab="car-dictionary"
+                  >
+                    <i class="fas fa-book-open"></i>
+                    Used Cars by Location
+                  </a>
+                </div>
+                <a href="#" class="sell-car-link">
+                  Looking to sell your car?
+                </a>
+              </div>
+
+              <!-- Center Panel - Content -->
+              <div class="center-panel">
+                <!-- Browse New Car Guide Content -->
+                <div id="browse-guide-content" class="tab-content active">
+                  <div class="content-sections-row">
+                    <div class="content-section">
+                      <h3>Browse Cars by Body Style</h3>
+                      <div class="body-styles-grid">
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/sedan.html">
+                          <div class="style-item">
+                          <span>Sedan</span>
+                          <div class="style-icon">
+                            <i class="fas fa-car"></i>
+                          </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/hatchback.html">
+                          <div class="style-item">
+                          <span>Hatchback</span>
+                          <div class="style-icon">
+                            <i class="fas fa-car"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/convertible.html">
+                          <div class="style-item">
+                            <span>Convertible</span>
+                            <div class="style-icon">
+                              <i class="fas fa-car-side"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/van.html">
+                          <div class="style-item">
+                            <span>Van</span>
+                            <div class="style-icon">
+                              <i class="fas fa-shuttle-van"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/suv.html">
+                          <div class="style-item">
+                            <span>SUV</span>
+                            <div class="style-icon">
+                              <i class="fas fa-truck-pickup"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/coupe.html">
+                          <div class="style-item">
+                            <span>Coupe</span>
+                            <div class="style-icon">
+                              <i class="fas fa-car-side"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/pickup-truck.html">
+                          <div class="style-item">
+                            <span>Pickup Truck</span>
+                            <div class="style-icon">
+                              <i class="fas fa-truck"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/wagon.html">
+                          <div class="style-item">
+                            <span>Wagon</span>
+                            <div class="style-icon">
+                              <i class="fas fa-car"></i>
+                            </div>
+                          </div>
+                        </a>
+                      </div>
+                      <a href="#" class="see-all-link">
+                        See all Body Styles <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+
+                    <div class="content-section">
+                      <h3>Browse Cars by Brand</h3>
+                      <div class="brand-gridss">
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/toyota.html"
+                        >
+                          <div class="brand-item">
+                            <span>Toyota</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/toyota-logos-brands-10.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/nissan.html"
+                        >
+                          <div class="brand-item">
+                            <span>Nissan</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/pngwing.com.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/hyundai.html"
+                        >
+                          <div class="brand-item">
+                            <span>Hyundai</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/hyundai-logo-white.jpg ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/mercedes.html"
+                        >
+                          <div class="brand-item">
+                            <span>Mercedes</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/Mercedes-Benz-Logo.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/kia.html"
+                        >
+                          <div class="brand-item">
+                            <span>Kia</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/Kia-Logo.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/mitsubishi.html"
+                        >
+                          <div class="brand-item">
+                            <span>Mitsubishi</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/Mitsubishi-emblem-1024x768.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/bmw.html"
+                        >
+                          <div class="brand-item">
+                            <span>BMW</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/BMW-Logo.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/chevrolet.html">
+                          <div class="brand-item">
+                            <span>Chevrolet</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/Chevrolet-Logo-2010.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/ford.html">
+                          <div class="brand-item">
+                          <span>Ford</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="{% static 'images/cars/Ford-Logo-1965-present.png ' %}"
+                                alt=""
+                              />
+                            </div>
+                          </div>
+                         </div>
+                        </a>
+                        <a href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/honda.html">
+                          <div class="brand-item">
+                             <span>Honda</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img src="{% static 'images/cars/wp3351340.png ' %}" alt="" />
+                            </div>
+                          </div>
+                          </div>
+                         </div>
+                        </a>
+                      <a href="#" class="see-all-link">
+                        See all Brands <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Search New Cars Content -->
+                <div id="search-cars-content" class="tab-content">
+                  <div class="content-sections-row">
+                    <div class="content-section">
+                      <h3>Browse Cars by Body Style</h3>
+                      <div class="body-styles-grid">
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/sedan.html">
+                          <div class="style-item">
+                          <span>Sedan</span>
+                          <div class="style-icon">
+                            <i class="fas fa-car"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/hatchback.html">
+                          <div class="style-item">
+                          <span>Hatchback</span>
+                          <div class="style-icon">
+                            <i class="fas fa-car"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/convertible.html">
+                          <div class="style-item">
+                            <span>Convertible</span>
+                            <div class="style-icon">
+                              <i class="fas fa-car-side"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/van.html">
+                          <div class="style-item">
+                            <span>Van</span>
+                            <div class="style-icon">
+                              <i class="fas fa-shuttle-van"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/suv.html">
+                          <div class="style-item">
+                            <span>SUV</span>
+                            <div class="style-icon">
+                              <i class="fas fa-truck-pickup"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/coupe.html">
+                          <div class="style-item">
+                            <span>Coupe</span>
+                            <div class="style-icon">
+                              <i class="fas fa-car-side"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/pickup-truck.html">
+                          <div class="style-item">
+                            <span>Pickup Truck</span>
+                            <div class="style-icon">
+                              <i class="fas fa-truck"></i>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/search-new-car/browsecarsbybodystyle/wagon.html">
+                          <div class="style-item">
+                            <span>Wagon</span>
+                            <div class="style-icon">
+                              <i class="fas fa-car"></i>
+                            </div>
+                          </div>
+                        </a>
+                      </div>
+                      <a href="#" class="see-all-link">
+                        See all Body Styles <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+
+                    <div class="content-section">
+                      <h3>Browse Cars by Brand</h3>
+                      <div class="brand-gridss">
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/toyota.html"
+                        >
+                          <div class="brand-item">
+                            <span>Toyota</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/toyota-logos-brands-10.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/nissan.html"
+                        >
+                          <div class="brand-item">
+                            <span>Nissan</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/pngwing.com.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/hyundai.html"
+                        >
+                          <div class="brand-item">
+                            <span>Hyundai</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/hyundai-logo-white.jpg ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/mercedes.html"
+                        >
+                          <div class="brand-item">
+                            <span>Mercedes</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/Mercedes-Benz-Logo.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/kia.html"
+                        >
+                          <div class="brand-item">
+                            <span>Kia</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/Kia-Logo.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/mitsubishi.html"
+                        >
+                          <div class="brand-item">
+                            <span>Mitsubishi</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/Mitsubishi-emblem-1024x768.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a
+                          href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/bmw.html"
+                        >
+                          <div class="brand-item">
+                            <span>BMW</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/BMW-Logo.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/chevrolet.html">
+                          <div class="brand-item">
+                            <span>Chevrolet</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img
+                                  src="{% static 'images/cars/Chevrolet-Logo-2010.png ' %}"
+                                  alt=""
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/ford.html">
+                          <div class="brand-item">
+                          <span>Ford</span>
+                          <div class="brand-logo">
+                            <div class="brand-logo-img">
+                              <img
+                                src="{% static 'images/cars/Ford-Logo-1965-present.png ' %}"
+                                alt=""
+                              />
+                            </div>
+                          </div>
+                         </div>
+                        </a>
+                        <a href="/menu-drop-down/browse-new-car-guide/browsecarsbybrand/honda.html">
+                          <div class="brand-item">
+                            <span>Honda</span>
+                            <div class="brand-logo">
+                              <div class="brand-logo-img">
+                                <img src="{% static 'images/cars/wp3351340.png ' %}" alt="" />
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                      </div>
+                      <a href="#" class="see-all-link">
+                        See all Brands <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+
+                <!-- Popular New Cars Content -->
+                <div id="popular-cars-content" class="tab-content">
+                  <div class="content-sections-row">
+                    <div class="content-section">
+                      <h3>Popular New Cars</h3>
+                      <div class="popular-cars-list">
+                        <a href="/menu-drop-down/popular-new-car/popular-car-details/patrol-nissan.html">
+                          <div class="popular-car-item">
+                            <span>Nissan Patrol</span>
+                          </div>
+                        </a>
+                        <a href="/menu-drop-down/popular-new-car/popular-car-details/jeep-wrangler.html">
+
+                          <div class="popular-car-item">
+                          <span>Jeep Wrangler</span>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/popular-new-car/popular-car-details/suzuki-jimny.html">
+                          <div class="popular-car-item">
+                          <span>Suzuki Jimny</span>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/popular-new-car/popular-car-details/toyota-rush.html">
+                          <div class="popular-car-item">
+                          <span>Toyota Rush</span>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/popular-new-car/popular-car-details/dodge-challenger.html">
+                          <div class="popular-car-item">
+                          <span>Dodge Challenger</span>
+                        </div>
+                        </a>
+                        <a href="/menu-drop-down/popular-new-car/popular-car-details/kia-seltos.html">
+                          <div class="popular-car-item">
+                          <span>Kia Seltos</span>
+                          </div>
+                        </a>
+                      </div>
+                      <a href="#" class="see-all-link">
+                        See all New Cars <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+                    <!-- Right Panel - App Promotion -->
+                    <div class="right-panel">
+                      <div class="app-promotion">
+                        <span class="new-badge">New</span>
+                        <h4>
+                          Introducing the all new
+                          <span class="app-name">Cars Portal App!</span>
+                        </h4>
+                        <p>
+                          Easily connect with sellers through Phone, SMS or
+                          WhatsApp.
+                        </p>
+                        <div class="app-buttons">
+                          <button class="app-store-btn">
+                            <i class="fab fa-apple"></i>
+                            Download on App Store
+                          </button>
+                          <button class="google-play-btn">
+                            <i class="fab fa-google-play"></i>
+                            Get it on Google Play
+                          </button>
+                        </div>
+                        <div class="app-illustration">
+                          <i class="fas fa-mobile-alt"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Car Dictionary Content -->
+                <!-- Car Dictionary Content - FIXED LAYOUT -->
+                <div id="car-dictionary-content" class="tab-content">
+                  <div class="content-sections-row">
+                    <div class="content-section">
+                      <h3>Used Cars by Location</h3>
+                      <div class="dictionary-items">
+                        <a href="/used-tab-down/search-used-cars/abu-dhabi.html">
+                          <div class="dictionary-item">
+                          <span>Abu Dhabi</span>
+                          <div class="feature-icon">
+                            <i class="fa-solid fa-location-dot"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/used-tab-down/search-used-cars/ajman.html">
+                          <div class="dictionary-item">
+                          <span>Ajman</span>
+                          <div class="feature-icon">
+                            <i class="fa-solid fa-location-dot"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/used-tab-down/search-used-cars/ai-ain.html">
+                          <div class="dictionary-item">
+                          <span>Al Ain</span>
+                          <div class="feature-icon">
+                            <i class="fa-solid fa-location-dot"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/used-tab-down/search-used-cars/dubai.html">
+                          <div class="dictionary-item">
+                          <span>Dubai</span>
+                          <div class="feature-icon">
+                            <i class="fa-solid fa-location-dot"></i>
+                          </div>
+                        </div>
+                        </a>
+                        <a href="/used-tab-down/search-used-cars/fujairah.html">
+                          <div class="dictionary-item">
+                          <span>Fujairaht</span>
+                          <div class="feature-icon">
+                            <i class="fa-solid fa-location-dot"></i>
+                          </div>
+                        </div>
+                        </a>
+                      </div>
+                      <a href="#" class="see-all-link">
+                        See all Car Definitions
+                        <i class="fas fa-arrow-right"></i>
+                      </a>
+                    </div>
+
+                    <!-- Right Panel - App Promotion -->
+                    <div class="right-panel">
+                      <div class="app-promotion">
+                        <span class="new-badge">New</span>
+                        <h4>
+                          Introducing the all new
+                          <span class="app-name">Cars Portal App!</span>
+                        </h4>
+                        <p>
+                          Easily connect with sellers through Phone, SMS or
+                          WhatsApp.
+                        </p>
+                        <div class="app-buttons">
+                          <button class="app-store-btn">
+                            <i class="fab fa-apple"></i>
+                            Download on App Store
+                          </button>
+                          <button class="google-play-btn">
+                            <i class="fab fa-google-play"></i>
+                            Get it on Google Play
+                          </button>
+                        </div>
+                        <div class="app-illustration">
+                          <i class="fas fa-mobile-alt"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <a href="{% url 'parts:part_list' %}" class="nav-link">PARTS</a>
+          <a href="#" class="nav-link">SERVICES</a>
+          <a href="#" class="nav-link">FINANCING</a>
+          <!-- <div class="vendor-dropdown">
+            <a href="#" class="nav-link">VENDORS</a>
+            <div class="vendor-dropdown-content">
+              <a href="{% url 'business_partners:vendor_login' %}" class="vendor-dropdown-link">Vendor Login</a>
+              <a href="{% url 'business_partners:vendor_registration_start' %}" class="vendor-dropdown-link">Vendor Registration</a>
+            </div>
+          </div> -->
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+      {% block content %}
+      {% endblock %}
+    </main>
+
+    <!-- Footer will be included here -->
+    {% include 'frontend/footer.html' %}
+
+    <!-- JavaScript -->
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

@@ -1,0 +1,51 @@
+VENDOR APPLICATION APPROVED - CARS PORTAL
+
+CONGRATULATIONS! WELCOME TO CARS PORTAL!
+
+Dear {{ application.contact_person_name|default:application.user.get_full_name }},
+
+We are excited to inform you that your vendor application for {{ application.company_name }} has been APPROVED by our review team.
+
+You are now an official Cars Portal vendor partner!
+
+YOUR VENDOR DETAILS:
+- Application ID: {{ application.application_id }}
+- Company Name: {{ application.company_name }}
+- Business Partner ID: {{ vendor_profile.business_partner.bp_number }}
+- Vendor Status: ACTIVE
+- Approved On: {{ application.updated_at|date:"F d, Y \a\t g:i A" }}
+{% if application.reviewed_by %}- Reviewed By: {{ application.reviewed_by.get_full_name }}{% endif %}
+
+GETTING STARTED:
+
+Now that you're approved, here's what you can do:
+
+1. Access Your Dashboard: Log in to your vendor dashboard to manage your parts and inventory
+2. Add Your Parts: Start uploading your automotive parts catalog
+3. Set Up Inventory: Configure your stock levels and pricing
+4. Manage Orders: Track and fulfill customer orders
+5. View Analytics: Monitor your sales performance and metrics
+
+ACCESS YOUR VENDOR DASHBOARD:
+{{ dashboard_url }}
+
+ADD YOUR PARTS:
+{{ parts_url }}
+
+RESOURCES & SUPPORT:
+- Vendor Guide: {{ vendor_guide_url }}
+- API Documentation: {{ api_docs_url }}
+- Support Portal: {{ support_url }}
+
+VENDOR SUPPORT:
+
+Our dedicated vendor support team is here to help you succeed:
+- Email: vendors@carsportal.com
+- Phone: +966 11 123 4567
+- Business Hours: Sunday - Thursday, 9:00 AM - 6:00 PM
+- Dedicated Account Manager: We'll assign you a dedicated account manager within 24 hours
+
+We look forward to a successful partnership and helping you grow your business with Cars Portal!
+
+This is an automated message from Cars Portal Vendor Management System.
+© {{ current_year }} Cars Portal. All rights reserved.

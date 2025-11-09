@@ -1,0 +1,46 @@
+{
+  "makes": [
+    {
+      "name": "Toyota",
+      "name_arabic": "تويوتا",
+      "logo": "https://example.com/toyota-logo.png"
+    },
+    {
+      "name": "Honda",
+      "name_arabic": "هوندا"
+    },
+    {
+      "name": "BMW",
+      "name_arabic": "بي إم دبليو",
+      "logo": "https://example.com/bmw-logo.png"
+    },
+    {
+      "name": "Mercedes-Benz",
+      "name_arabic": "مرسيدس بنز"
+    },
+    {
+      "name": "Audi",
+      "name_arabic": "أودي"
+    },
+    {
+      "name": "Volkswagen",
+      "name_arabic": "فولكس فاجن"
+    },
+    {
+      "name": "Nissan",
+      "name_arabic": "نيسان"
+    },
+    {
+      "name": "Hyundai",
+      "name_arabic": "هيونداي"
+    },
+    {
+      "name": "Kia",
+      "name_arabic": "كيا"
+    },
+    {
+      "name": "Ford",
+      "name_arabic": "فورد"
+    }
+  ]
+}

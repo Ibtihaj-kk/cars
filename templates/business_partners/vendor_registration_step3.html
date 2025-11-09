@@ -1,0 +1,331 @@
+{% extends 'business_partners/vendor_registration_base.html' %}
+{% load static %}
+
+{% block registration_content %}
+<div class="registration-header-modern" style="text-align: center; margin-bottom: 2.5rem;">
+    <h1 style="color: var(--text-dark); font-weight: 700; font-size: 2.2rem; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-user-tie" style="color: var(--primary-color); margin-right: 1rem;"></i> 
+        Vendor Registration
+    </h1>
+    <p style="color: var(--text-light); font-size: 1.1rem; font-weight: 500;">Step 3 of 4: Bank Details</p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert-modern alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); border: 1px solid #90caf9; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; position: relative;">
+            <i class="fas fa-info-circle" style="color: var(--primary-color); margin-right: 0.75rem;"></i>
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; color: var(--text-light); cursor: pointer; transition: color 0.3s ease;">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="progress-container-modern" style="background: white; border-radius: 16px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); padding: 2rem; margin-bottom: 2.5rem;">
+    <div class="progress-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h4 style="color: var(--text-dark); font-weight: 600; font-size: 1.2rem; display: flex; align-items: center;">
+            <i class="fas fa-tasks" style="color: var(--primary-color); margin-right: 0.75rem;"></i>
+            Registration Progress
+        </h4>
+        <span style="color: var(--text-dark); font-weight: 700; font-size: 1.1rem;">{{ completion_percentage }}% Complete</span>
+    </div>
+    <div class="completion-bar-modern" style="background: #e9ecef; height: 12px; border-radius: 6px; overflow: hidden; margin-bottom: 2rem;">
+        <div class="completion-progress" style="width: {{ completion_percentage }}%; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); height: 100%; border-radius: 6px; transition: width 0.5s ease;"></div>
+    </div>
+    
+    <div class="progress-steps-modern" style="display: flex; justify-content: space-between; position: relative;">
+        <div class="progress-step completed" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle" style="width: 40px; height: 40px; background: linear-gradient(135deg, #28a745, #20c997); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; margin: 0 auto 0.75rem; font-size: 1.1rem;">✓</div>
+            <div class="step-label" style="color: #28a745; font-weight: 500; font-size: 0.9rem;">Business Details</div>
+        </div>
+        <div class="progress-step completed" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle" style="width: 40px; height: 40px; background: linear-gradient(135deg, #28a745, #20c997); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; margin: 0 auto 0.75rem; font-size: 1.1rem;">✓</div>
+            <div class="step-label" style="color: #28a745; font-weight: 500; font-size: 0.9rem;">Contact Info</div>
+        </div>
+        <div class="progress-step active" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle" style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; margin: 0 auto 0.75rem; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(var(--primary-color-rgb), 0.3);">3</div>
+            <div class="step-label" style="color: var(--primary-color); font-weight: 600; font-size: 0.9rem;">Bank Details</div>
+        </div>
+        <div class="progress-step" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle" style="width: 40px; height: 40px; background: #e9ecef; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #6c757d; font-weight: 600; margin: 0 auto 0.75rem; font-size: 1.1rem;">4</div>
+            <div class="step-label" style="color: #6c757d; font-weight: 500; font-size: 0.9rem;">Additional Info</div>
+        </div>
+    </div>
+</div>
+
+<div class="form-container-modern" style="background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 2rem; margin-bottom: 2rem;">
+    <form method="post" enctype="multipart/form-data" id="vendor-registration-form" class="vendor-registration-form-modern" data-user-authenticated="{{ user_authenticated|yesno:"true,false" }}">
+        {% csrf_token %}
+        
+        <div class="alert-modern alert-info" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); border: 1px solid #90caf9; border-radius: 12px; padding: 1.25rem; margin-bottom: 2rem; display: flex; align-items: flex-start;">
+            <i class="fas fa-info-circle" style="color: var(--primary-color); margin-right: 1rem; font-size: 1.2rem; margin-top: 0.2rem;"></i>
+            <div>
+                <h5 style="color: var(--text-dark); font-weight: 600; margin-bottom: 0.5rem;">Secure Banking Information</h5>
+                <p style="color: var(--text-light); margin: 0;">Your banking information is encrypted and stored securely. We only use this information for processing payments to your account.</p>
+            </div>
+        </div>
+        
+        <div class="form-section-modern" style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid #e9ecef;">
+            <h3 style="color: var(--text-dark); font-weight: 600; font-size: 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center;">
+                <i class="fas fa-university" style="color: var(--primary-color); margin-right: 0.75rem;"></i> 
+                Bank Information
+            </h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.bank_name.id_for_label }}" class="form-label required">
+                        Bank Name
+                    </label>
+                    <input type="text" name="bank_name" id="{{ form.bank_name.id_for_label }}" class="form-control-modern" value="{{ form.bank_name.value|default:'' }}" required>
+                    {% if form.bank_name.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.bank_name.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">Name of your banking institution</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.bank_branch.id_for_label }}" class="form-label">
+                        Bank Branch
+                    </label>
+                    <input type="text" name="bank_branch" id="{{ form.bank_branch.id_for_label }}" class="form-control-modern" value="{{ form.bank_branch.value|default:'' }}">
+                    {% if form.bank_branch.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.bank_branch.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">Specific branch name (optional)</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section-modern" style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid #e9ecef;">
+            <h3 style="color: var(--text-dark); font-weight: 600; font-size: 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center;">
+                <i class="fas fa-user-circle" style="color: var(--primary-color); margin-right: 0.75rem;"></i> 
+                Account Holder Information
+            </h3>
+            
+            <div class="form-group">
+                <label for="{{ form.account_holder_name.id_for_label }}" class="form-label required">
+                    Account Holder Name
+                </label>
+                <input type="text" name="account_holder_name" id="{{ form.account_holder_name.id_for_label }}" class="form-control-modern" value="{{ form.account_holder_name.value|default:'' }}" required>
+                {% if form.account_holder_name.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.account_holder_name.errors.0 }}
+                    </div>
+                {% endif %}
+                <small class="form-text">Name must match exactly as it appears on your bank account</small>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.account_number.id_for_label }}" class="form-label required">
+                        Account Number
+                    </label>
+                    <input type="text" name="account_number" id="{{ form.account_number.id_for_label }}" class="form-control-modern" value="{{ form.account_number.value|default:'' }}" required>
+                    {% if form.account_number.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.account_number.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">Your bank account number</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.iban.id_for_label }}" class="form-label">
+                        IBAN (International Bank Account Number)
+                    </label>
+                    <input type="text" name="iban" id="{{ form.iban.id_for_label }}" class="form-control-modern" value="{{ form.iban.value|default:'' }}">
+                    {% if form.iban.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.iban.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">International bank account number (if applicable)</small>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.swift_code.id_for_label }}" class="form-label">
+                    SWIFT/BIC Code
+                </label>
+                <input type="text" name="swift_code" id="{{ form.swift_code.id_for_label }}" class="form-control-modern" value="{{ form.swift_code.value|default:'' }}">
+                {% if form.swift_code.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.swift_code.errors.0 }}
+                    </div>
+                {% endif %}
+                <small class="form-text">Bank identifier code for international transfers</small>
+            </div>
+        </div>
+        
+        <div class="form-section-modern" style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid #e9ecef;">
+            <h3 style="color: var(--text-dark); font-weight: 600; font-size: 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center;">
+                <i class="fas fa-file-invoice" style="color: var(--primary-color); margin-right: 0.75rem;"></i> 
+                Verification Document
+            </h3>
+            
+            <div class="form-group">
+                <label for="{{ form.bank_statement.id_for_label }}" class="form-label required">
+                    Recent Bank Statement
+                </label>
+                <div class="file-upload-area-modern">
+                    <div class="file-upload-icon">🏦</div>
+                    <div class="file-upload-text">Click to upload bank statement</div>
+                    <div class="file-upload-hint">PDF, JPG, PNG (Max 5MB)</div>
+                </div>
+                <input type="file" name="bank_statement" id="{{ form.bank_statement.id_for_label }}" class="form-control-modern-file" accept=".pdf,.jpg,.jpeg,.png" required>
+                {% if form.bank_statement.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.bank_statement.errors.0 }}
+                    </div>
+                {% endif %}
+                {% if application.bank_statement %}
+                        <div class="mt-2">
+                            <small class="text-success">
+                                <i class="fas fa-check"></i> Current file: {{ application.bank_statement.name }}
+                            </small>
+                        </div>
+                    {% endif %}
+                <small class="form-text">Upload a recent bank statement (within 3 months) for verification</small>
+            </div>
+        </div>
+        
+        <div class="form-actions-modern" style="display: flex; justify-content: space-between; align-items: center; padding-top: 2rem; margin-top: 2rem; border-top: 1px solid #e9ecef;">
+            <a href="{{ prev_step_url }}" class="btn-secondary-modern" style="background: #6c757d; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 500; display: flex; align-items: center; transition: all 0.3s ease;">
+                <i class="fas fa-arrow-left" style="margin-right: 0.5rem;"></i> Previous Step
+            </a>
+            <button type="submit" class="btn-primary-modern" data-original-text="Save & Continue" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; display: flex; align-items: center; transition: all 0.3s ease;">
+                Save & Continue <i class="fas fa-arrow-right" style="margin-left: 0.5rem;"></i>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add form validation
+    const form = document.getElementById('vendor-registration-form');
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        // IBAN validation
+        const ibanField = document.getElementById('{{ form.iban.id_for_label }}');
+        if (ibanField && ibanField.value) {
+            const ibanRegex = /^[A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}([A-Z0-9]?){0,16}$/;
+            if (!ibanRegex.test(ibanField.value.replace(/\s/g, ''))) {
+                ibanField.classList.add('is-invalid');
+                if (!ibanField.nextElementSibling || !ibanField.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback d-block';
+                    errorDiv.textContent = 'Please enter a valid IBAN';
+                    ibanField.parentNode.insertBefore(errorDiv, ibanField.nextSibling);
+                }
+                isValid = false;
+            }
+        }
+        
+        // SWIFT code validation
+        const swiftField = document.getElementById('{{ form.swift_code.id_for_label }}');
+        if (swiftField && swiftField.value) {
+            const swiftRegex = /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/;
+            if (!swiftRegex.test(swiftField.value)) {
+                swiftField.classList.add('is-invalid');
+                if (!swiftField.nextElementSibling || !swiftField.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback d-block';
+                    errorDiv.textContent = 'Please enter a valid SWIFT/BIC code';
+                    swiftField.parentNode.insertBefore(errorDiv, swiftField.nextSibling);
+                }
+                isValid = false;
+            }
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            const firstInvalid = form.querySelector('.is-invalid');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstInvalid.focus();
+            }
+        }
+    });
+    
+    // Real-time validation
+    const inputs = document.querySelectorAll('.form-control');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.hasAttribute('required') && !this.value.trim()) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+            
+            // IBAN validation
+            if (this.id === '{{ form.iban.id_for_label }}' && this.value) {
+                const ibanRegex = /^[A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}([A-Z0-9]?){0,16}$/;
+                if (!ibanRegex.test(this.value.replace(/\s/g, ''))) {
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                }
+            }
+            
+            // SWIFT code validation
+            if (this.id === '{{ form.swift_code.id_for_label }}' && this.value) {
+                const swiftRegex = /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/;
+                if (!swiftRegex.test(this.value)) {
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                }
+            }
+        });
+        
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid') && this.value.trim()) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+    
+    // File upload enhancement
+    const fileInput = document.getElementById('{{ form.bank_statement.id_for_label }}');
+    if (fileInput) {
+        const uploadArea = fileInput.previousElementSibling;
+        if (uploadArea) {
+            uploadArea.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function() {
+                const fileName = this.files[0]?.name;
+                if (fileName) {
+                    uploadArea.innerHTML = `
+                        <div class="file-upload-icon">🏦</div>
+                        <div class="file-upload-text">${fileName}</div>
+                        <div class="file-upload-hint">Click to change file</div>
+                    `;
+                }
+            });
+        }
+    }
+});
+</script>
+{% endblock %}

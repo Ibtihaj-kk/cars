@@ -1,0 +1,398 @@
+{% extends "business_partners/vendor_base.html" %}
+{% load static %}
+
+{% block title %}{{ part.material_description }} - Inventory Details - {{ block.super }}{% endblock %}
+
+{% block vendor_content %}
+<div class="vendor-inventory-detail">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'business_partners:vendor_dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'business_partners:vendor_inventory_list' %}">Inventory</a></li>
+            <li class="breadcrumb-item active">{{ part.material_description|truncatewords:3 }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>{{ part.material_description }}</h2>
+            <p class="text-muted mb-0">Part Number: <strong>{{ part.parts_number }}</strong></p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'business_partners:vendor_inventory_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Inventory
+            </a>
+            <a href="{% url 'business_partners:vendor_inventory_update' part.id %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit Inventory
+            </a>
+        </div>
+    </div>
+
+    <!-- Inventory Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card {% if part.quantity == 0 %}bg-danger text-white{% elif part.quantity <= 10 %}bg-warning text-white{% else %}bg-success text-white{% endif %}">
+                <div class="card-body text-center">
+                    <h3 class="mb-2">{{ part.quantity }}</h3>
+                    <p class="mb-0">Current Stock</p>
+                    <small>{{ part.get_stock_status_display|default:"In Stock" }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-2">{{ inventory.reorder_level|default:"10" }}</h3>
+                    <p class="mb-0">Reorder Level</p>
+                    <small>When to reorder</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-2">${{ part.price|floatformat:2 }}</h3>
+                    <p class="mb-0">Unit Price</p>
+                    <small>Per unit</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-2">${{ part.price|floatformat:2|default:0|multiply:part.quantity|floatformat:2 }}</h3>
+                    <p class="mb-0">Total Value</p>
+                    <small>Stock × Price</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Inventory Actions</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'business_partners:vendor_inventory_adjustment' part.id %}">
+                        {% csrf_token %}
+                        <div class="row align-items-end">
+                            <div class="col-md-3">
+                                <label for="adjustment_type" class="form-label">Adjustment Type</label>
+                                <select class="form-select" id="adjustment_type" name="adjustment_type" required>
+                                    <option value="">Select Type</option>
+                                    <option value="add">Add Stock</option>
+                                    <option value="remove">Remove Stock</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="quantity" class="form-label">Quantity</label>
+                                <input type="number" class="form-control" id="quantity" name="quantity" 
+                                       min="1" required placeholder="Amount">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="reason" class="form-label">Reason (Optional)</label>
+                                <input type="text" class="form-control" id="reason" name="reason" 
+                                       placeholder="e.g., New shipment received, Damaged items">
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-adjust"></i> Adjust Inventory
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Part Information -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Part Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <th>Part Number:</th>
+                                <td>{{ part.parts_number }}</td>
+                            </tr>
+                            <tr>
+                                <th>Description:</th>
+                                <td>{{ part.material_description }}</td>
+                            </tr>
+                            <tr>
+                                <th>Category:</th>
+                                <td>{{ part.category.name|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Brand:</th>
+                                <td>{{ part.brand.name|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Manufacturer Part #:</th>
+                                <td>{{ part.manufacturer_part_number|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <th>OEM Number:</th>
+                                <td>{{ part.manufacturer_oem_number|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Unit of Measure:</th>
+                                <td>{{ part.unit_of_measure|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Weight:</th>
+                                <td>{{ part.weight_of_unit|default:"N/A" }} {{ part.weight_unit|default:"" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Dimensions:</th>
+                                <td>{{ part.length|default:"" }} × {{ part.width|default:"" }} × {{ part.height|default:"" }} {{ part.dimension_unit|default:"" }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Inventory Details</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <th>Current Stock:</th>
+                                <td><strong>{{ part.quantity }}</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Reorder Level:</th>
+                                <td>{{ inventory.reorder_level|default:"10" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Safety Stock:</th>
+                                <td>{{ part.safety_stock|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Max Stock Level:</th>
+                                <td>{{ inventory.max_stock_level|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Supplier:</th>
+                                <td>{{ inventory.supplier|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Last Restock:</th>
+                                <td>{{ inventory.last_restock_date|date:"Y-m-d H:i"|default:"Never" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Total Sold:</th>
+                                <td>{{ total_sold }}</td>
+                            </tr>
+                            <tr>
+                                <th>Total Restocked:</th>
+                                <td>{{ total_restocked }}</td>
+                            </tr>
+                            <tr>
+                                <th>Created:</th>
+                                <td>{{ part.created_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Last Updated:</th>
+                                <td>{{ part.updated_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Summary Chart -->
+    {% if monthly_summary %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">6-Month Transaction Summary</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Transactions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Transactions</h5>
+                    <small class="text-muted">Last 50 transactions</small>
+                </div>
+                <div class="card-body">
+                    {% if recent_transactions %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Quantity Change</th>
+                                    <th>Previous</th>
+                                    <th>New</th>
+                                    <th>Order</th>
+                                    <th>By</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in recent_transactions %}
+                                <tr>
+                                    <td>{{ transaction.timestamp|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if transaction.transaction_type == 'sale' %}
+                                            <span class="badge bg-danger">Sale</span>
+                                        {% elif transaction.transaction_type == 'restock' %}
+                                            <span class="badge bg-success">Restock</span>
+                                        {% elif transaction.transaction_type == 'adjustment' %}
+                                            <span class="badge bg-warning">Adjustment</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ transaction.transaction_type|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="{% if transaction.quantity_change > 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {% if transaction.quantity_change > 0 %}+{% endif %}{{ transaction.quantity_change }}
+                                    </td>
+                                    <td>{{ transaction.previous_quantity }}</td>
+                                    <td>{{ transaction.new_quantity }}</td>
+                                    <td>
+                                        {% if transaction.order %}
+                                            <a href="{% url 'business_partners:vendor_order_detail' transaction.order.id %}" class="text-decoration-none">
+                                                #{{ transaction.order.order_number }}
+                                            </a>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ transaction.created_by.email|default:"System" }}</td>
+                                    <td>{{ transaction.notes|truncatewords:3|default:"-" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-history fa-3x mb-3"></i>
+                        <p>No transaction history available for this part.</p>
+                        {% if created %}
+                        <p><small>This inventory record was just created.</small></p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js for monthly summary -->
+{% if monthly_summary %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('monthlyChart').getContext('2d');
+    
+    // Prepare data for Chart.js
+    const monthlyData = {{ monthly_summary|safe }};
+    const months = [...new Set(monthlyData.map(item => item.month))].sort();
+    
+    const salesData = months.map(month => {
+        const sale = monthlyData.find(item => item.month === month && item.transaction_type === 'sale');
+        return sale ? Math.abs(sale.total_quantity) : 0;
+    });
+    
+    const restockData = months.map(month => {
+        const restock = monthlyData.find(item => item.month === month && item.transaction_type === 'restock');
+        return restock ? restock.total_quantity : 0;
+    });
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Sales',
+                data: salesData,
+                borderColor: 'rgb(220, 53, 69)',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                tension: 0.1
+            }, {
+                label: 'Restocks',
+                data: restockData,
+                borderColor: 'rgb(25, 135, 84)',
+                backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Monthly Sales vs Restocks'
+                },
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Quantity'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Month'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+
+<style>
+.vendor-inventory-detail .card {
+    transition: transform 0.2s;
+}
+.vendor-inventory-detail .card:hover {
+    transform: translateY(-2px);
+}
+.table-responsive {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}

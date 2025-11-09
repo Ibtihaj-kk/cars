@@ -1,0 +1,329 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block page_title %}Message Detail{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-envelope"></i> Message Detail</h2>
+        <div>
+            <a href="{% url 'admin_panel:vendor_messages' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Messages
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Message Details -->
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-envelope-open"></i> {{ message.subject }}
+                    </h5>
+                    <div>
+                        <span class="badge bg-{{ message.get_priority_display|lower }}">
+                            {{ message.get_priority_display }}
+                        </span>
+                        <span class="badge bg-{{ message.get_category_display|lower }}">
+                            {{ message.get_category_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Message Header -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>From:</strong> 
+                            {% if message.sender.is_staff %}
+                                <i class="fas fa-user-shield text-primary"></i> Admin - {{ message.sender.get_full_name }}
+                            {% else %}
+                                <i class="fas fa-user text-success"></i> {{ message.vendor.business_name|default:message.sender.get_full_name }}
+                            {% endif %}
+                            <br>
+                            <small class="text-muted">{{ message.sender.email }}</small>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>To:</strong> 
+                            {% if message.recipient.is_staff %}
+                                <i class="fas fa-user-shield text-primary"></i> Admin - {{ message.recipient.get_full_name }}
+                            {% else %}
+                                <i class="fas fa-user text-success"></i> {{ message.vendor.business_name|default:message.recipient.get_full_name }}
+                            {% endif %}
+                            <br>
+                            <small class="text-muted">{{ message.recipient.email }}</small>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Sent:</strong> {{ message.created_at|date:"F j, Y g:i A" }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Status:</strong> 
+                            <span class="badge bg-{{ message.status|lower }}">{{ message.get_status_display }}</span>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Message Content -->
+                    <div class="mb-4">
+                        <h6><i class="fas fa-align-left"></i> Message Content</h6>
+                        <div class="border p-3 bg-light rounded">
+                            {{ message.content|linebreaks }}
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2">
+                        {% if message.status == 'unread' %}
+                            <button class="btn btn-sm btn-outline-primary" onclick="markAsRead({{ message.id }})">
+                                <i class="fas fa-check"></i> Mark as Read
+                            </button>
+                        {% endif %}
+                        <button class="btn btn-sm btn-outline-success" onclick="showReplyForm()">
+                            <i class="fas fa-reply"></i> Reply
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteMessage({{ message.id }})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reply Form -->
+            <div class="card" id="replyForm" style="display: none;">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-reply"></i> Reply to Message</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="replyMessageForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="parent_id" value="{{ message.id }}">
+                        <input type="hidden" name="recipient_id" value="{{ message.sender.id }}">
+                        <input type="hidden" name="category" value="{{ message.category }}">
+                        <input type="hidden" name="priority" value="{{ message.priority }}">
+                        
+                        <div class="mb-3">
+                            <label for="reply_subject" class="form-label">Subject</label>
+                            <input type="text" class="form-control" id="reply_subject" name="subject" 
+                                   value="Re: {{ message.subject }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="reply_content" class="form-label">Reply Content</label>
+                            <textarea class="form-control" id="reply_content" name="content" rows="5" required></textarea>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Send Reply
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="hideReplyForm()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Vendor Information -->
+            {% if message.vendor %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-store"></i> Vendor Information</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Business Name:</strong> {{ message.vendor.business_name }}</p>
+                    <p><strong>Contact Person:</strong> {{ message.vendor.user.get_full_name }}</p>
+                    <p><strong>Email:</strong> {{ message.vendor.user.email }}</p>
+                    <p><strong>Phone:</strong> {{ message.vendor.phone_number }}</p>
+                    <p><strong>Status:</strong> 
+                        <span class="badge bg-{{ message.vendor.status|lower }}">
+                            {{ message.vendor.get_status_display }}
+                        </span>
+                    </p>
+                    <div class="d-grid">
+                        <a href="{% url 'admin_panel:vendor_detail' message.vendor.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i> View Vendor Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Message Statistics -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Message Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Total Messages:</strong> {{ message_stats.total_messages }}</p>
+                    <p><strong>Unread Messages:</strong> {{ message_stats.unread_messages }}</p>
+                    <p><strong>Sent Messages:</strong> {{ message_stats.sent_messages }}</p>
+                    <p><strong>Read Messages:</strong> {{ message_stats.read_messages }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Messages -->
+    {% if related_messages %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-history"></i> Related Messages</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for related_message in related_messages %}
+                                <tr {% if related_message.id == message.id %}class="table-active"{% endif %}>
+                                    <td>
+                                        <a href="{% url 'admin_panel:message_detail' related_message.id %}">
+                                            {{ related_message.subject|truncatechars:50 }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if related_message.sender.is_staff %}
+                                            <i class="fas fa-user-shield text-primary"></i> Admin
+                                        {% else %}
+                                            {{ related_message.vendor.business_name|default:related_message.sender.get_full_name }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if related_message.recipient.is_staff %}
+                                            <i class="fas fa-user-shield text-primary"></i> Admin
+                                        {% else %}
+                                            {{ related_message.vendor.business_name|default:related_message.recipient.get_full_name }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ related_message.created_at|date:"M j, Y" }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ related_message.status|lower }}">
+                                            {{ related_message.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'admin_panel:message_detail' related_message.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showReplyForm() {
+    document.getElementById('replyForm').style.display = 'block';
+    document.getElementById('reply_content').focus();
+}
+
+function hideReplyForm() {
+    document.getElementById('replyForm').style.display = 'none';
+    document.getElementById('reply_content').value = '';
+}
+
+function markAsRead(messageId) {
+    fetch(`/admin/messages/${messageId}/mark-read/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error marking message as read');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error marking message as read');
+    });
+}
+
+function deleteMessage(messageId) {
+    if (confirm('Are you sure you want to delete this message? This action cannot be undone.')) {
+        fetch(`/admin/messages/${messageId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = "{% url 'admin_panel:vendor_messages' %}";
+            } else {
+                alert('Error deleting message');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting message');
+        });
+    }
+}
+
+// Reply form submission
+document.getElementById('replyMessageForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch("{% url 'admin_panel:send_vendor_message' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Reply sent successfully!');
+            location.reload();
+        } else {
+            alert('Error sending reply: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error sending reply');
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,37 @@
+Cars Portal - New Inquiry on Your Vehicle Listing
+
+Hi {{ dealer_name }},
+
+Great news! You've received a new inquiry for your vehicle listing:
+
+{{ listing_title }}
+
+INQUIRY DETAILS:
+================
+Inquiry Type: {{ inquiry_type }}
+From: {{ user_name }}
+Email: {{ contact_email }}
+{% if contact_phone != 'Not provided' %}Phone: {{ contact_phone }}{% endif %}
+Date: {{ inquiry_date }}
+
+MESSAGE:
+--------
+{{ user_message }}
+
+This is a great opportunity to connect with a potential buyer. We recommend responding promptly to maintain buyer interest.
+
+View your listing: {{ listing_url }}
+
+TIPS FOR RESPONDING:
+===================
+- Respond within 24 hours for best results
+- Be professional and courteous
+- Provide detailed answers to their questions
+- Suggest a convenient time for viewing or test drive
+
+Best regards,
+The Cars Portal Team
+
+---
+This email was sent because you have a vehicle listing on Cars Portal. 
+You can manage your notification preferences in your account settings.

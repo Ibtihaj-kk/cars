@@ -1,0 +1,28 @@
+NEW VENDOR APPLICATION SUBMITTED
+=====================================
+
+A new vendor has submitted an application for review.
+
+APPLICATION DETAILS:
+-------------------
+Application ID: {{ application_id }}
+Company Name: {{ company_name }}
+Business Type: {{ business_type }}
+Applicant Email: {{ applicant_email }}
+Submission Date: {{ submission_date|date:"F d, Y \a\t g:i A" }}
+
+REVIEW APPLICATION:
+------------------
+{{ review_url }}
+
+NEXT STEPS:
+----------
+- Review the complete application details
+- Verify business information and documentation  
+- Check bank details and contact information
+- Approve, reject, or request changes
+
+---
+Cars Portal Admin Team
+This is an automated notification. Please do not reply to this email.
+For support, contact: admin@carsportal.com

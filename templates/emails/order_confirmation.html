@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation - {{ order.order_number }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+            font-size: 28px;
+        }
+        .order-number {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .section {
+            margin: 25px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+            font-size: 18px;
+        }
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        .item-details {
+            flex: 1;
+        }
+        .item-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .item-info {
+            color: #666;
+            font-size: 14px;
+        }
+        .item-total {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .total-section {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+        }
+        .total-final {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            border-top: 2px solid #007bff;
+            padding-top: 10px;
+            margin-top: 15px;
+        }
+        .next-steps {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+        .next-steps ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .next-steps li {
+            margin: 8px 0;
+            color: #333;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .contact-info {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .email-container {
+                padding: 20px;
+            }
+            .order-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            .total-row {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>🎉 Order Confirmed!</h1>
+            <p>Thank you for your purchase, {{ customer_name }}!</p>
+        </div>
+
+        <div class="order-number">
+            📋 Order Number: {{ order.order_number }}
+        </div>
+
+        <div class="section">
+            <h3>📋 Order Details</h3>
+            <p><strong>Order Date:</strong> {{ order.created_at|date:"F d, Y at g:i A" }}</p>
+            <p><strong>Customer Email:</strong> {{ order.customer_email }}</p>
+            {% if order.guest_phone %}
+            <p><strong>Contact Phone:</strong> {{ order.guest_phone }}</p>
+            {% endif %}
+        </div>
+
+        <div class="section">
+            <h3>🛒 Items Ordered</h3>
+            {% for item in order_items %}
+            <div class="order-item">
+                <div class="item-details">
+                    <div class="item-name">{{ item.part.name }}</div>
+                    <div class="item-info">
+                        Quantity: {{ item.quantity }} × ${{ item.price }}
+                    </div>
+                </div>
+                <div class="item-total">
+                    ${{ item.total_price }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="total-section">
+            <div class="total-row">
+                <span>Subtotal:</span>
+                <span>${{ order.total_amount }}</span>
+            </div>
+            <div class="total-row">
+                <span>Shipping:</span>
+                <span>Free</span>
+            </div>
+            <div class="total-row">
+                <span>Tax:</span>
+                <span>Included</span>
+            </div>
+            <div class="total-row total-final">
+                <span>Total:</span>
+                <span>${{ order.total_amount }}</span>
+            </div>
+        </div>
+
+        {% if order.guest_address %}
+        <div class="section">
+            <h3>🚚 Delivery Information</h3>
+            <p><strong>Delivery Address:</strong><br>
+            {{ order.guest_address }}</p>
+        </div>
+        {% endif %}
+
+        <div class="next-steps">
+            <h3>✅ What happens next?</h3>
+            <ul>
+                <li>Your order will be processed within 1-2 business days</li>
+                <li>You'll receive tracking information once your order ships</li>
+                <li>Our team will contact you if any questions arise</li>
+                <li>Estimated delivery: 3-5 business days</li>
+            </ul>
+        </div>
+
+        <div class="contact-info">
+            <h3>💬 Need Help?</h3>
+            <p>If you have any questions about your order, please contact our customer service team and reference your order number: <strong>{{ order.order_number }}</strong></p>
+        </div>
+
+        <div class="footer">
+            <p><strong>Thank you for choosing Cars Portal!</strong></p>
+            <p>This is an automated message. Please do not reply to this email.<br>
+            For customer service, please contact us through our website.</p>
+        </div>
+    </div>
+</body>
+</html>

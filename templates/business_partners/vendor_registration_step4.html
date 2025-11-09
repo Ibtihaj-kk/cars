@@ -1,0 +1,473 @@
+{% extends 'business_partners/vendor_registration_base.html' %}
+{% load static %}
+
+{% block registration_content %}
+<div class="registration-header-modern" style="text-align: center; margin-bottom: 2.5rem;">
+    <h1 style="color: var(--text-dark); font-weight: 700; font-size: 2.2rem; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-user-tie" style="color: var(--primary-color); margin-right: 1rem;"></i> 
+        Vendor Registration
+    </h1>
+    <p style="color: var(--text-light); font-size: 1.1rem; font-weight: 500;">Step 4 of 4: Additional Information</p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert-modern alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); border: 1px solid #90caf9; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; position: relative;">
+            <i class="fas fa-info-circle" style="color: var(--primary-color); margin-right: 0.75rem;"></i>
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; color: var(--text-light); cursor: pointer; transition: color 0.3s ease;">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="progress-container-modern" style="background: white; border-radius: 16px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); padding: 2rem; margin-bottom: 2.5rem;">
+    <div class="progress-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h4 style="color: var(--text-dark); font-weight: 600; font-size: 1.2rem; display: flex; align-items: center;">
+            <i class="fas fa-tasks" style="color: var(--primary-color); margin-right: 0.75rem;"></i>
+            Registration Progress
+        </h4>
+        <span style="color: var(--text-dark); font-weight: 700; font-size: 1.1rem;">{{ completion_percentage }}% Complete</span>
+    </div>
+    <div class="completion-bar-modern" style="background: #e9ecef; height: 12px; border-radius: 6px; overflow: hidden; margin-bottom: 2rem;">
+        <div class="completion-progress" style="width: {{ completion_percentage }}%; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); height: 100%; border-radius: 6px; transition: width 0.5s ease;"></div>
+    </div>
+    
+    <div class="progress-steps-modern" style="display: flex; justify-content: space-between; position: relative;">
+        <div class="progress-step completed" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle" style="width: 40px; height: 40px; background: linear-gradient(135deg, #28a745, #20c997); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; margin: 0 auto 0.75rem; font-size: 1.1rem;">✓</div>
+            <div class="step-label" style="color: #28a745; font-weight: 500; font-size: 0.9rem;">Business Details</div>
+        </div>
+        <div class="progress-step completed" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle" style="width: 40px; height: 40px; background: linear-gradient(135deg, #28a745, #20c997); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; margin: 0 auto 0.75rem; font-size: 1.1rem;">✓</div>
+            <div class="step-label" style="color: #28a745; font-weight: 500; font-size: 0.9rem;">Contact Info</div>
+        </div>
+        <div class="progress-step completed" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle" style="width: 40px; height: 40px; background: linear-gradient(135deg, #28a745, #20c997); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; margin: 0 auto 0.75rem; font-size: 1.1rem;">✓</div>
+            <div class="step-label" style="color: #28a745; font-weight: 500; font-size: 0.9rem;">Bank Details</div>
+        </div>
+        <div class="progress-step active" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle" style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; margin: 0 auto 0.75rem; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(var(--primary-color-rgb), 0.3);">4</div>
+            <div class="step-label" style="color: var(--primary-color); font-weight: 600; font-size: 0.9rem;">Additional Info</div>
+        </div>
+    </div>
+</div>
+
+<div class="form-container-modern" style="background: white; border-radius: 16px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); padding: 2.5rem; margin-bottom: 2.5rem;">
+    <form method="post" enctype="multipart/form-data" id="vendorRegistrationForm" class="vendor-registration-form-modern" data-user-authenticated="{{ user_authenticated|yesno:"true,false" }}">
+        {% csrf_token %}
+        
+        <div class="form-section-modern" style="margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e9ecef;">
+            <h3 style="color: var(--text-dark); font-weight: 600; font-size: 1.3rem; display: flex; align-items: center; margin-bottom: 1.5rem;">
+                <i class="fas fa-chart-line" style="color: var(--primary-color); margin-right: 0.75rem;"></i>
+                Business Performance
+            </h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.expected_monthly_volume.id_for_label }}" class="form-label">
+                        Expected Monthly Volume
+                    </label>
+                    <select name="expected_monthly_volume" id="{{ form.expected_monthly_volume.id_for_label }}" class="form-control-modern">
+                        <option value="">Select Volume Range</option>
+                        {% for choice in form.expected_monthly_volume.field.choices %}
+                            <option value="{{ choice.0 }}" {% if form.expected_monthly_volume.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.expected_monthly_volume.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.expected_monthly_volume.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">Estimated monthly sales volume in USD</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.years_in_business.id_for_label }}" class="form-label">
+                        Years in Business
+                    </label>
+                    <select name="years_in_business" id="{{ form.years_in_business.id_for_label }}" class="form-control-modern">
+                        <option value="">Select Years</option>
+                        {% for choice in form.years_in_business.field.choices %}
+                            <option value="{{ choice.0 }}" {% if form.years_in_business.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.years_in_business.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.years_in_business.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">How long has your company been operating?</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section-modern" style="margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e9ecef;">
+            <h3 style="color: var(--text-dark); font-weight: 600; font-size: 1.3rem; display: flex; align-items: center; margin-bottom: 1.5rem;">
+                <i class="fas fa-tags" style="color: var(--primary-color); margin-right: 0.75rem;"></i>
+                Product Categories
+            </h3>
+            
+            <div class="form-group">
+                <label for="{{ form.product_categories.id_for_label }}" class="form-label">
+                    Product Categories
+                </label>
+                <select name="product_categories" id="{{ form.product_categories.id_for_label }}" class="form-control-modern" multiple>
+                    {% for choice in form.product_categories.field.choices %}
+                        <option value="{{ choice.0 }}" {% if choice.0 in form.product_categories.value %}selected{% endif %}>{{ choice.1 }}</option>
+                    {% endfor %}
+                </select>
+                {% if form.product_categories.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.product_categories.errors.0 }}
+                    </div>
+                {% endif %}
+                <small class="form-text">Select the categories of products you'll be selling</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.additional_info.id_for_label }}" class="form-label">
+                    Additional Information
+                </label>
+                <textarea name="additional_info" id="{{ form.additional_info.id_for_label }}" class="form-control-modern" rows="4">{{ form.additional_info.value|default:'' }}</textarea>
+                {% if form.additional_info.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.additional_info.errors.0 }}
+                    </div>
+                {% endif %}
+                <small class="form-text">Any additional information about your business, products, or services</small>
+            </div>
+        </div>
+        
+        <div class="form-section-modern" style="margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e9ecef;">
+            <h3 style="color: var(--text-dark); font-weight: 600; font-size: 1.3rem; display: flex; align-items: center; margin-bottom: 1.5rem;">
+                <i class="fas fa-handshake" style="color: var(--primary-color); margin-right: 0.75rem;"></i>
+                Business References
+            </h3>
+            
+            <div class="form-group">
+                <label for="{{ form.business_references.id_for_label }}" class="form-label">
+                    Business References
+                </label>
+                <textarea name="business_references" id="{{ form.business_references.id_for_label }}" class="form-control-modern" rows="4">{{ form.business_references.value|default:'' }}</textarea>
+                {% if form.business_references.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.business_references.errors.0 }}
+                    </div>
+                {% endif %}
+                <small class="form-text">Provide 2-3 business references (company names, contact persons, phone numbers)</small>
+            </div>
+        </div>
+        
+        <div class="form-section-modern" style="margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e9ecef;">
+            <h3 style="color: var(--text-dark); font-weight: 600; font-size: 1.3rem; display: flex; align-items: center; margin-bottom: 1.5rem;">
+                <i class="fas fa-file-contract" style="color: var(--primary-color); margin-right: 0.75rem;"></i>
+                Terms & Conditions
+            </h3>
+            
+            <div class="terms-container-modern" style="background: #f8f9fa; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #e9ecef;">
+                <div class="terms-content-modern" style="max-height: 300px; overflow-y: auto; padding-right: 1rem;">
+                    <h5 style="color: var(--text-dark); font-weight: 600; margin-bottom: 1rem; font-size: 1.1rem;">Vendor Agreement Terms</h5>
+                    <ul style="color: var(--text-light); line-height: 1.6; margin: 0; padding-left: 1.5rem;">
+                        <li style="margin-bottom: 0.5rem;">All products must meet quality standards and regulations</li>
+                        <li style="margin-bottom: 0.5rem;">Accurate product descriptions and pricing must be maintained</li>
+                        <li style="margin-bottom: 0.5rem;">Orders must be fulfilled within specified timeframes</li>
+                        <li style="margin-bottom: 0.5rem;">Customer service standards must be maintained</li>
+                        <li style="margin-bottom: 0.5rem;">Payment terms are Net 30 days from invoice date</li>
+                        <li style="margin-bottom: 0.5rem;">Platform commission fees apply as per agreement</li>
+                        <li style="margin-bottom: 0.5rem;">Vendor is responsible for product warranties and returns</li>
+                        <li style="margin-bottom: 0.5rem;">Compliance with all applicable laws and regulations is required</li>
+                    </ul>
+                </div>
+                
+                <div class="form-group form-check">
+                    <input type="checkbox" class="form-check-input-modern" id="terms_accepted" required>
+                    <label class="form-check-label" for="terms_accepted">
+                        I have read and agree to the <a href="#" target="_blank">Terms and Conditions</a> and <a href="#" target="_blank">Privacy Policy</a>
+                    </label>
+                    <div class="invalid-feedback d-block">
+                        You must accept the terms and conditions to continue
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-actions-modern" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-top: 2rem; border-top: 1px solid #e9ecef;">
+            <a href="{{ prev_step_url }}" class="btn btn-secondary-modern" style="background: #6c757d; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 500; display: flex; align-items: center; transition: all 0.3s ease;">
+                <i class="fas fa-arrow-left" style="margin-right: 0.5rem;"></i> Previous Step
+            </a>
+            <button type="submit" class="btn btn-success-modern btn-lg" data-original-text="Submit Application" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 0.75rem 2rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; transition: all 0.3s ease; font-size: 1.1rem;">
+                <i class="fas fa-check" style="margin-right: 0.5rem;"></i> Submit Application
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="review-summary-modern" style="background: white; border-radius: 16px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); padding: 2rem; margin-top: 2.5rem;">
+    <h4 style="color: var(--text-dark); font-weight: 600; font-size: 1.2rem; display: flex; align-items: center; margin-bottom: 1.5rem;">
+        <i class="fas fa-clipboard-check" style="color: var(--primary-color); margin-right: 0.75rem;"></i>
+        Application Summary
+    </h4>
+    <div class="summary-grid-modern" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+        <div class="summary-item-modern" style="background: #f8f9fa; padding: 1.25rem; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+            <strong style="color: var(--text-dark); display: block; margin-bottom: 0.5rem;">Business Name:</strong>
+            <span style="color: var(--text-light);">{{ application.company_name }}</span>
+        </div>
+        <div class="summary-item-modern" style="background: #f8f9fa; padding: 1.25rem; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+            <strong style="color: var(--text-dark); display: block; margin-bottom: 0.5rem;">Business Type:</strong>
+            <span style="color: var(--text-light);">{{ application.get_business_type_display }}</span>
+        </div>
+        <div class="summary-item-modern" style="background: #f8f9fa; padding: 1.25rem; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+            <strong style="color: var(--text-dark); display: block; margin-bottom: 0.5rem;">Contact Person:</strong>
+            <span style="color: var(--text-light);">{{ application.contact_person_name }}</span>
+        </div>
+        <div class="summary-item-modern" style="background: #f8f9fa; padding: 1.25rem; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+            <strong style="color: var(--text-dark); display: block; margin-bottom: 0.5rem;">Business Email:</strong>
+            <span style="color: var(--text-light);">{{ application.business_email }}</span>
+        </div>
+        <div class="summary-item-modern" style="background: #f8f9fa; padding: 1.25rem; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+            <strong style="color: var(--text-dark); display: block; margin-bottom: 0.5rem;">Bank Name:</strong>
+            <span style="color: var(--text-light);">{{ application.bank_name }}</span>
+        </div>
+        <div class="summary-item-modern" style="background: #f8f9fa; padding: 1.25rem; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+            <strong style="color: var(--text-dark); display: block; margin-bottom: 0.5rem;">Account Holder:</strong>
+            <span style="color: var(--text-light);">{{ application.account_holder_name }}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add form validation
+    const form = document.getElementById('vendor-registration-form');
+    const termsCheckbox = document.getElementById('terms_accepted');
+    
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+        
+        // Check terms acceptance
+        if (!termsCheckbox.checked) {
+            termsCheckbox.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            termsCheckbox.classList.remove('is-invalid');
+        }
+        
+        // Check required fields
+        requiredFields.forEach(field => {
+            if (!field.value.trim() && field.type !== 'checkbox') {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        // Validate numeric fields
+        const expectedVolumeField = document.getElementById('{{ form.expected_monthly_volume.id_for_label }}');
+        if (expectedVolumeField && expectedVolumeField.value) {
+            const value = parseFloat(expectedVolumeField.value);
+            if (isNaN(value) || value < 0) {
+                expectedVolumeField.classList.add('is-invalid');
+                if (!expectedVolumeField.nextElementSibling || !expectedVolumeField.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback d-block';
+                    errorDiv.textContent = 'Please enter a valid positive number';
+                    expectedVolumeField.parentNode.insertBefore(errorDiv, expectedVolumeField.nextSibling);
+                }
+                isValid = false;
+            }
+        }
+        
+        const yearsInBusinessField = document.getElementById('{{ form.years_in_business.id_for_label }}');
+        if (yearsInBusinessField && yearsInBusinessField.value) {
+            const value = parseInt(yearsInBusinessField.value);
+            if (isNaN(value) || value < 0 || value > 200) {
+                yearsInBusinessField.classList.add('is-invalid');
+                if (!yearsInBusinessField.nextElementSibling || !yearsInBusinessField.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback d-block';
+                    errorDiv.textContent = 'Please enter a valid number of years (0-200)';
+                    yearsInBusinessField.parentNode.insertBefore(errorDiv, yearsInBusinessField.nextSibling);
+                }
+                isValid = false;
+            }
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            const firstInvalid = form.querySelector('.is-invalid');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (firstInvalid.type !== 'checkbox') {
+                    firstInvalid.focus();
+                }
+            }
+        }
+    });
+    
+    // Real-time validation
+    const inputs = document.querySelectorAll('.form-control');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.hasAttribute('required') && !this.value.trim()) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+            
+            // Numeric validation
+            if (this.id === '{{ form.expected_monthly_volume.id_for_label }}' && this.value) {
+                const value = parseFloat(this.value);
+                if (isNaN(value) || value < 0) {
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                }
+            }
+            
+            if (this.id === '{{ form.years_in_business.id_for_label }}' && this.value) {
+                const value = parseInt(this.value);
+                if (isNaN(value) || value < 0 || value > 200) {
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                }
+            }
+        });
+        
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid') && this.value.trim()) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+    
+    // Terms checkbox validation
+    if (termsCheckbox) {
+        termsCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    }
+    
+    // Auto-dismiss alerts
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            if (alert.classList.contains('alert-success')) {
+                alert.classList.add('fade');
+                setTimeout(function() {
+                    alert.remove();
+                }, 500);
+            }
+        });
+    }, 5000);
+});
+</script>
+
+<style>
+.terms-container {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.terms-content {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    padding-right: 10px;
+}
+
+.terms-content h5 {
+    color: #495057;
+    margin-bottom: 10px;
+}
+
+.terms-content ul {
+    padding-left: 20px;
+}
+
+.terms-content li {
+    margin-bottom: 8px;
+    color: #6c757d;
+}
+
+.form-check-input.is-invalid ~ .form-check-label {
+    color: #dc3545;
+}
+
+.invalid-feedback {
+    color: #dc3545;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+
+.review-summary {
+    background-color: #e3f2fd;
+    border: 1px solid #2196f3;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 30px;
+}
+
+.review-summary h4 {
+    color: #1976d2;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.summary-item {
+    background-color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    border-left: 4px solid #2196f3;
+}
+
+.summary-item strong {
+    color: #495057;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+    padding: 12px 30px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+@media (max-width: 768px) {
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .terms-content {
+        max-height: 150px;
+    }
+}
+</style>
+{% endblock %}

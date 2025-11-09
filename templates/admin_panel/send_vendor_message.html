@@ -1,0 +1,247 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block page_title %}Send Message to Vendor{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-envelope"></i> Send Message to Vendor</h2>
+        <div>
+            <a href="{% url 'admin_panel:vendor_messages' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Messages
+            </a>
+        </div>
+    </div>
+
+    <!-- Message Form -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-edit"></i> Compose Message</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="messageForm">
+                        {% csrf_token %}
+                        
+                        <!-- Recipient Selection -->
+                        <div class="mb-3">
+                            <label for="recipient_id" class="form-label">To Vendor <span class="text-danger">*</span></label>
+                            <select class="form-select" id="recipient_id" name="recipient_id" required>
+                                <option value="">Select a vendor...</option>
+                                {% for vendor in vendors %}
+                                <option value="{{ vendor.user.id }}" 
+                                        {% if selected_vendor and selected_vendor.id == vendor.id %}selected{% endif %}>
+                                    {{ vendor.business_name|default:vendor.user.get_full_name }} 
+                                    ({{ vendor.user.email }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Template Selection -->
+                        <div class="mb-3">
+                            <label for="template_id" class="form-label">Use Template (Optional)</label>
+                            <select class="form-select" id="template_id" name="template_id">
+                                <option value="">No template</option>
+                                {% for template in templates %}
+                                <option value="{{ template.id }}" data-category="{{ template.category }}" 
+                                        data-subject="{{ template.subject }}" data-content="{{ template.content|escapejs }}">
+                                    {{ template.name }} ({{ template.get_category_display }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Category -->
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" id="category" name="category" required>
+                                {% for value, label in category_choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Priority -->
+                        <div class="mb-3">
+                            <label for="priority" class="form-label">Priority <span class="text-danger">*</span></label>
+                            <select class="form-select" id="priority" name="priority" required>
+                                {% for value, label in priority_choices %}
+                                <option value="{{ value }}" {% if value == 'medium' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Subject -->
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">Subject <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="subject" name="subject" required>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="mb-3">
+                            <label for="content" class="form-label">Message Content <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="content" name="content" rows="8" required></textarea>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Send Message
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="previewMessage()">
+                                <i class="fas fa-eye"></i> Preview
+                            </button>
+                            <a href="{% url 'admin_panel:vendor_messages' %}" class="btn btn-outline-danger">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar with Quick Actions -->
+        <div class="col-md-4">
+            <!-- Template Preview -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-file-alt"></i> Template Preview</h6>
+                </div>
+                <div class="card-body" id="templatePreview" style="display: none;">
+                    <h6 id="templateSubject"></h6>
+                    <div id="templateContent" class="small"></div>
+                </div>
+                <div class="card-body" id="noTemplatePreview">
+                    <p class="text-muted small mb-0">Select a template to see preview</p>
+                </div>
+            </div>
+
+            <!-- Available Variables -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-code"></i> Available Variables</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Use these variables in your templates:</p>
+                    <ul class="small">
+                        <li><code>{vendor_name}</code> - Vendor's business name</li>
+                        <li><code>{vendor_email}</code> - Vendor's email</li>
+                        <li><code>{user_name}</code> - Your name</li>
+                        <li><code>{date}</code> - Current date</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Message Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-eye"></i> Message Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>To:</strong> <span id="previewRecipient"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Subject:</strong> <span id="previewSubject"></span>
+                </div>
+                <div class="mb-3">
+                    <strong>Content:</strong>
+                    <div class="border p-3 bg-light rounded">
+                        <span id="previewContent"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('messageForm').submit();">Send Message</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Template selection handler
+document.getElementById('template_id').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const templatePreview = document.getElementById('templatePreview');
+    const noTemplatePreview = document.getElementById('noTemplatePreview');
+    
+    if (this.value) {
+        const subject = selectedOption.getAttribute('data-subject');
+        const content = selectedOption.getAttribute('data-content');
+        
+        document.getElementById('templateSubject').textContent = subject;
+        document.getElementById('templateContent').innerHTML = content.replace(/\n/g, '<br>');
+        
+        templatePreview.style.display = 'block';
+        noTemplatePreview.style.display = 'none';
+        
+        // Auto-fill form fields
+        document.getElementById('subject').value = subject;
+        document.getElementById('content').value = content;
+        document.getElementById('category').value = selectedOption.getAttribute('data-category');
+    } else {
+        templatePreview.style.display = 'none';
+        noTemplatePreview.style.display = 'block';
+        
+        // Clear form fields
+        document.getElementById('subject').value = '';
+        document.getElementById('content').value = '';
+    }
+});
+
+function previewMessage() {
+    const recipient = document.getElementById('recipient_id').options[document.getElementById('recipient_id').selectedIndex].text;
+    const subject = document.getElementById('subject').value;
+    const content = document.getElementById('content').value;
+    
+    if (!recipient || !subject || !content) {
+        alert('Please fill in all required fields before previewing.');
+        return;
+    }
+    
+    document.getElementById('previewRecipient').textContent = recipient;
+    document.getElementById('previewSubject').textContent = subject;
+    document.getElementById('previewContent').innerHTML = content.replace(/\n/g, '<br>');
+    
+    new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+
+// Form validation
+document.getElementById('messageForm').addEventListener('submit', function(e) {
+    const recipient = document.getElementById('recipient_id').value;
+    const subject = document.getElementById('subject').value.trim();
+    const content = document.getElementById('content').value.trim();
+    
+    if (!recipient || !subject || !content) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+        return false;
+    }
+    
+    if (subject.length < 5) {
+        e.preventDefault();
+        alert('Subject must be at least 5 characters long.');
+        return false;
+    }
+    
+    if (content.length < 10) {
+        e.preventDefault();
+        alert('Message content must be at least 10 characters long.');
+        return false;
+    }
+});
+</script>
+{% endblock %}

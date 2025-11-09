@@ -1,0 +1,301 @@
+{% extends 'business_partners/vendor_base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Business Partners{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0 text-gray-800">{{ title }}</h1>
+                <div class="btn-group">
+                    <a href="{% url 'business_partners:vendor_orders_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to Orders
+                    </a>
+                    <a href="{% url 'business_partners:vendor_order_analytics' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-chart-line"></i> Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Report Filters</h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="form">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="date_from">From Date:</label>
+                                    <input type="date" name="date_from" id="date_from" 
+                                           class="form-control" value="{{ date_from }}">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="date_to">To Date:</label>
+                                    <input type="date" name="date_to" id="date_to" 
+                                           class="form-control" value="{{ date_to }}">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="status">Order Status:</label>
+                                    <select name="status" id="status" class="form-control">
+                                        <option value="all" {% if status == 'all' or not status %}selected{% endif %}>All Status</option>
+                                        <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                                        <option value="confirmed" {% if status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                                        <option value="processing" {% if status == 'processing' %}selected{% endif %}>Processing</option>
+                                        <option value="shipped" {% if status == 'shipped' %}selected{% endif %}>Shipped</option>
+                                        <option value="delivered" {% if status == 'delivered' %}selected{% endif %}>Delivered</option>
+                                        <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <div class="form-check">
+                                        <input type="checkbox" name="include_details" id="include_details" 
+                                               class="form-check-input" {% if request.GET.include_details %}checked{% endif %}>
+                                        <label class="form-check-label" for="include_details">
+                                            Include detailed items
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" name="report_type" value="preview" class="btn btn-primary">
+                                    <i class="fas fa-eye"></i> Preview Report
+                                </button>
+                                <button type="submit" name="report_type" value="csv" class="btn btn-success">
+                                    <i class="fas fa-download"></i> Download CSV
+                                </button>
+                                <a href="{% url 'business_partners:vendor_order_reports' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-undo"></i> Reset
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Summary -->
+    {% if report_type == 'preview' %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Report Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-primary">{{ total_orders }}</h4>
+                                <p class="text-muted mb-0">Total Orders</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-success">${{ total_revenue|floatformat:2 }}</h4>
+                                <p class="text-muted mb-0">Total Revenue</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-info">{% if total_orders %}{{ total_revenue|floatformat:0|div:total_orders|floatformat:0 }}{% else %}0{% endif %}</h4>
+                                <p class="text-muted mb-0">Average Order Value</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-warning">{{ date_from }} - {{ date_to }}</h4>
+                                <p class="text-muted mb-0">Date Range</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Order Details</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Date</th>
+                                    <th>Customer</th>
+                                    <th>Status</th>
+                                    <th>Items</th>
+                                    <th>Total</th>
+                                    <th>Payment Method</th>
+                                    <th>Tracking #</th>
+                                    {% if request.GET.include_details %}
+                                    <th>Vendor Items</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'business_partners:vendor_order_detail' order.pk %}">
+                                            {{ order.order_number }}
+                                        </a>
+                                    </td>
+                                    <td>{{ order.created_at|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        {% if order.customer %}
+                                            {{ order.customer.email }}
+                                        {% else %}
+                                            {{ order.guest_name|default:"Guest Customer" }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-{% if order.status == 'pending' %}warning
+                                            {% elif order.status == 'confirmed' %}info
+                                            {% elif order.status == 'processing' %}secondary
+                                            {% elif order.status == 'shipped' %}primary
+                                            {% elif order.status == 'delivered' %}success
+                                            {% elif order.status == 'cancelled' %}danger
+                                            {% else %}dark{% endif %}">
+                                            {{ order.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% with vendor_items=order.order_items.filter %}
+                                            {{ vendor_items.count }} item{{ vendor_items.count|pluralize }}
+                                        {% endwith %}
+                                    </td>
+                                    <td>${{ order.total_price|floatformat:2 }}</td>
+                                    <td>{{ order.get_payment_method_display }}</td>
+                                    <td>{{ order.tracking_number|default:"-" }}</td>
+                                    {% if request.GET.include_details %}
+                                    <td>
+                                        {% with vendor_items=order.order_items.filter %}
+                                            {% for item in vendor_items %}
+                                                {{ item.part.name }} ({{ item.quantity }}x)<br>
+                                            {% endfor %}
+                                        {% endwith %}
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="{% if request.GET.include_details %}9{% else %}8{% endif %}" class="text-center">No orders found for the selected criteria.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Report Templates -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Available Report Templates</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-left-primary">
+                                <div class="card-body">
+                                    <h6 class="card-title">Monthly Sales Report</h6>
+                                    <p class="card-text">Comprehensive monthly sales analysis including revenue, order count, and top products.</p>
+                                    <a href="?date_from={{ date_from }}&date_to={{ date_to }}&report_type=preview" class="btn btn-primary btn-sm">
+                                        Generate Report
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-left-success">
+                                <div class="card-body">
+                                    <h6 class="card-title">Inventory Performance</h6>
+                                    <p class="card-text">Analyze which parts are performing best and identify slow-moving inventory.</p>
+                                    <a href="?date_from={{ date_from }}&date_to={{ date_to }}&report_type=preview" class="btn btn-success btn-sm">
+                                        Generate Report
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-left-info">
+                                <div class="card-body">
+                                    <h6 class="card-title">Customer Analysis</h6>
+                                    <p class="card-text">Understand your customer base and their ordering patterns.</p>
+                                    <a href="?date_from={{ date_from }}&date_to={{ date_to }}&report_type=preview" class="btn btn-info btn-sm">
+                                        Generate Report
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card.border-left-primary {
+        border-left: 0.25rem solid #4e73df !important;
+    }
+    .card.border-left-success {
+        border-left: 0.25rem solid #1cc88a !important;
+    }
+    .card.border-left-info {
+        border-left: 0.25rem solid #36b9cc !important;
+    }
+    .badge {
+        font-size: 0.75em;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Set default date range to last 30 days if not set
+    var dateFrom = $('#date_from').val();
+    var dateTo = $('#date_to').val();
+    
+    if (!dateFrom || !dateTo) {
+        var today = new Date();
+        var thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+        
+        $('#date_from').val(thirtyDaysAgo.toISOString().split('T')[0]);
+        $('#date_to').val(today.toISOString().split('T')[0]);
+    }
+});
+</script>
+{% endblock %}

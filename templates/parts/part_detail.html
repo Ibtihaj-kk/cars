@@ -1,0 +1,605 @@
+{% extends 'frontend/base.html' %}
+{% load static %}
+
+{% block title %}{{ part.name }} - CarPortal{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/products.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="pw-product-main-section">
+    <!-- Left Column - Product Details -->
+    <div class="pw-product-details-column">
+        <div class="pw-product-header-section">
+            <h1 class="pw-product-main-title">{{ part.name }}</h1>
+            <div class="pw-product-action-icons">
+                <i class="far fa-bookmark bookmark-icon"></i>
+                <i class="far fa-heart favorite-icon"></i>
+            </div>
+        </div>
+
+        <div class="pw-product-gallery-section">
+            <div class="pw-gallery-main-image-container">
+                <button class="pw-gallery-nav-btn pw-gallery-prev-btn" onclick="previousImage()">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <img id="mainImage" src="{% if part.image %}{{ part.image.url }}{% else %}{% static 'images/default-part.jpg' %}{% endif %}" alt="{{ part.name }}" class="pw-gallery-main-image">
+                <button class="pw-gallery-nav-btn pw-gallery-next-btn" onclick="nextImage()">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            
+            <div class="pw-gallery-thumbnail-container">
+                {% if part.image %}
+                <img src="{{ part.image.url }}" alt="Thumbnail 1" class="pw-gallery-thumbnail active" onclick="selectImage(0)">
+                {% endif %}
+                {% for image in part.additional_images.all %}
+                <img src="{{ image.image.url }}" alt="Thumbnail {{ forloop.counter|add:1 }}" class="pw-gallery-thumbnail" onclick="selectImage({{ forloop.counter }})">
+                {% endfor %}
+                {% if not part.image and not part.additional_images.all %}
+                <img src="{% static 'images/default-part.jpg' %}" alt="Default Thumbnail" class="pw-gallery-thumbnail active" onclick="selectImage(0)">
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="pw-product-info-section">
+            <div class="pw-product-info-grid">
+                <div class="pw-info-grid-item">
+                    <span class="pw-info-grid-label">Category</span>
+                    <span class="pw-info-grid-value pw-info-category-link">{{ part.category.name|default:"Auto Parts" }}</span>
+                </div>
+                <div class="pw-info-grid-item">
+                    <span class="pw-info-grid-label">Brand</span>
+                    <span class="pw-info-grid-value pw-info-category-link">{{ part.brand.name|default:"Generic" }}</span>
+                </div>
+                <div class="pw-info-grid-item">
+                    <span class="pw-info-grid-label">Last Updated:</span>
+                    <span class="pw-info-grid-value">{{ part.updated_at|date:"M d, Y" }}</span>
+                </div>
+                <div class="pw-info-grid-item">
+                    <span class="pw-info-grid-label">Part SKU #</span>
+                    <span class="pw-info-grid-value">{{ part.sku|default:part.id }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="pw-product-description-section">
+            <h3>Product Description:</h3>
+            {% if part.description %}
+                {{ part.description|linebreaks }}
+            {% else %}
+                <p>High-quality automotive part designed for optimal performance and durability. This part meets industry standards and is compatible with various vehicle models.</p>
+            {% endif %}
+        </div>
+
+        <!-- ==================== NEW MATERIAL SPECIFICATIONS SECTION ==================== -->
+        <div class="pw-product-specifications-section">
+            <h3>Material Specifications:</h3>
+            <div class="pw-specifications-grid">
+                <!-- Basic Information -->
+                {% if part.parts_number %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Parts Number:</span>
+                    <span class="pw-spec-value">{{ part.parts_number }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.material_type %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Material Type:</span>
+                    <span class="pw-spec-value">{{ part.material_type }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.plant %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Plant:</span>
+                    <span class="pw-spec-value">{{ part.plant }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.storage_location %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Storage Location:</span>
+                    <span class="pw-spec-value">{{ part.storage_location }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.warehouse_number %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Warehouse Number:</span>
+                    <span class="pw-spec-value">{{ part.warehouse_number }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.material_description %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Material Description:</span>
+                    <span class="pw-spec-value">{{ part.material_description }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.material_description_ar %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Material Description (Arabic):</span>
+                    <span class="pw-spec-value">{{ part.material_description_ar }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.base_unit_of_measure %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Base Unit of Measure:</span>
+                    <span class="pw-spec-value">{{ part.base_unit_of_measure }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.material_group %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Material Group:</span>
+                    <span class="pw-spec-value">{{ part.material_group }}</span>
+                </div>
+                {% endif %}
+                
+                <!-- Physical Properties -->
+                {% if part.gross_weight %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Gross Weight:</span>
+                    <span class="pw-spec-value">{{ part.gross_weight }} kg</span>
+                </div>
+                {% endif %}
+                
+                {% if part.net_weight %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Net Weight:</span>
+                    <span class="pw-spec-value">{{ part.net_weight }} kg</span>
+                </div>
+                {% endif %}
+                
+                {% if part.weight_of_unit %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Weight of Unit:</span>
+                    <span class="pw-spec-value">{{ part.weight_of_unit }} kg</span>
+                </div>
+                {% endif %}
+                
+                {% if part.size_dimensions %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Size/Dimensions:</span>
+                    <span class="pw-spec-value">{{ part.size_dimensions }}</span>
+                </div>
+                {% endif %}
+                
+                <!-- Organization -->
+                {% if part.division %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Division:</span>
+                    <span class="pw-spec-value">{{ part.division }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.abc_indicator %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">ABC Indicator:</span>
+                    <span class="pw-spec-value">{{ part.abc_indicator }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.industry_sector %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Industry Sector:</span>
+                    <span class="pw-spec-value">{{ part.industry_sector }}</span>
+                </div>
+                {% endif %}
+                
+                <!-- Inventory Management -->
+                {% if part.minimum_order_quantity %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Minimum Order Quantity:</span>
+                    <span class="pw-spec-value">{{ part.minimum_order_quantity }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.safety_stock %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Safety Stock:</span>
+                    <span class="pw-spec-value">{{ part.safety_stock }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.minimum_safety_stock %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Minimum Safety Stock:</span>
+                    <span class="pw-spec-value">{{ part.minimum_safety_stock }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.planned_delivery_time_days %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Planned Delivery Time:</span>
+                    <span class="pw-spec-value">{{ part.planned_delivery_time_days }} days</span>
+                </div>
+                {% endif %}
+                
+                {% if part.goods_receipt_processing_time_days %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Goods Receipt Processing Time:</span>
+                    <span class="pw-spec-value">{{ part.goods_receipt_processing_time_days }} days</span>
+                </div>
+                {% endif %}
+                
+                <!-- Pricing -->
+                {% if part.valuation_class %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Valuation Class:</span>
+                    <span class="pw-spec-value">{{ part.valuation_class }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.price_unit_peinh %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Price Unit (PEINH):</span>
+                    <span class="pw-spec-value">{{ part.price_unit_peinh }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.moving_average_price %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Moving Average Price:</span>
+                    <span class="pw-spec-value">${{ part.moving_average_price }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.standard_price %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Standard Price:</span>
+                    <span class="pw-spec-value">${{ part.standard_price }}</span>
+                </div>
+                {% endif %}
+                
+                <!-- Manufacturing -->
+                {% if part.manufacturer_part_number %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Manufacturer Part Number:</span>
+                    <span class="pw-spec-value">{{ part.manufacturer_part_number }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.manufacturer_oem_number %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Manufacturer OEM Number:</span>
+                    <span class="pw-spec-value">{{ part.manufacturer_oem_number }}</span>
+                </div>
+                {% endif %}
+                
+                <!-- Additional Fields -->
+                {% if part.old_material_number %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Old Material Number:</span>
+                    <span class="pw-spec-value">{{ part.old_material_number }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.external_material_group %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">External Material Group:</span>
+                    <span class="pw-spec-value">{{ part.external_material_group }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.procurement_type %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Procurement Type:</span>
+                    <span class="pw-spec-value">{{ part.procurement_type }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.mrp_type %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">MRP Type:</span>
+                    <span class="pw-spec-value">{{ part.mrp_type }}</span>
+                </div>
+                {% endif %}
+                
+                {% if part.total_replenishment_lead_time %}
+                <div class="pw-spec-item">
+                    <span class="pw-spec-label">Total Replenishment Lead Time:</span>
+                    <span class="pw-spec-value">{{ part.total_replenishment_lead_time }} workdays</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column - Pricing and Seller Info -->
+    <div class="pw-product-sidebar">
+        <!-- Price Box -->
+        <div class="pw-sidebar-price-box">
+            <div class="pw-price-section-container">
+                <div class="pw-price-current-amount">${{ part.price }}</div>
+            </div>
+            
+            <div class="pw-quantity-control-section">
+                <button class="pw-quantity-control-btn" onclick="decreaseQuantity()">-</button>
+                <input type="number" id="pw-quantity-input" data-part-id="{{ part.id }}" value="1" min="1" max="{{ part.quantity }}" readonly>
+                <button class="pw-quantity-control-btn" onclick="increaseQuantity()">+</button>
+            </div>
+            
+            <button class="pw-buy-now-button" data-part-id="{{ part.id }}">
+                <i class="fas fa-shopping-cart"></i> Buy Now
+            </button>
+            
+            <button class="pw-add-to-cart-button" 
+                    data-part-id="{{ part.id }}">
+                Add To Cart
+            </button>
+            
+            {% if part.quantity <= 0 %}
+            <div class="pw-stock-status out-of-stock">Out of Stock</div>
+            {% elif part.quantity <= 5 %}
+            <div class="pw-stock-status low-stock">Only {{ part.quantity }} left in stock</div>
+            {% else %}
+            <div class="pw-stock-status in-stock">In Stock ({{ part.quantity }} available)</div>
+            {% endif %}
+        </div>
+
+        <!-- Vendor Details Box -->
+        <div class="pw-sidebar-seller-box">
+            <h3>Vendor Details</h3>
+            <div class="pw-seller-info-container">
+                <div class="pw-seller-avatar-circle">
+                    {% if part.vendor.vendor_profile.logo %}
+                        <img src="{{ part.vendor.vendor_profile.logo.url }}" alt="{{ part.vendor.name }}">
+                    {% else %}
+                        <i class="fas fa-store"></i>
+                    {% endif %}
+                </div>
+                <div class="pw-seller-details-section">
+                    <div class="pw-seller-name-text">
+                        <a href="{% url 'business_partners:vendor_store' part.vendor.slug %}" class="vendor-store-link">
+                            {{ part.vendor.name }}
+                        </a>
+                    </div>
+                    <div class="pw-seller-since-text">Member Since {{ part.vendor.created_at|date:"M d, Y" }}</div>
+                    <div class="pw-seller-rating-container">
+                        {% if part.vendor.vendor_profile.average_rating %}
+                            <span class="pw-seller-rating-score">{{ part.vendor.vendor_profile.average_rating|floatformat:1 }}/5</span>
+                            <div class="pw-seller-rating-stars">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= part.vendor.vendor_profile.average_rating %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <span class="pw-seller-rating-score">New Vendor</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Vendor Badge -->
+                    <div class="vendor-badge-container">
+                        {% if part.vendor.vendor_profile.is_verified %}
+                            <span class="vendor-badge verified">
+                                <i class="fas fa-check-circle"></i> Verified Vendor
+                            </span>
+                        {% endif %}
+                        {% if part.vendor.vendor_profile.business_type %}
+                            <span class="vendor-badge business-type">
+                                {{ part.vendor.vendor_profile.get_business_type_display }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="pw-seller-contact-buttons">
+                {% if part.vendor.vendor_profile.business_phone %}
+<button class="pw-seller-contact-btn pw-seller-phone-btn" onclick="contactVendor('phone', '{{ part.vendor.vendor_profile.business_phone }}')">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                {% endif %}
+                {% if part.vendor.vendor_profile.email %}
+                    <button class="pw-seller-contact-btn pw-seller-email-btn" onclick="contactVendor('email', '{{ part.vendor.vendor_profile.email }}')">
+                        <i class="fas fa-envelope"></i>
+                    </button>
+                {% endif %}
+                {% if part.vendor.vendor_profile.website %}
+                    <button class="pw-seller-contact-btn pw-seller-website-btn" onclick="window.open('{{ part.vendor.vendor_profile.website }}', '_blank')">
+                        <i class="fas fa-globe"></i>
+                    </button>
+                {% endif %}
+            </div>
+            
+            <div class="pw-seller-facebook-connect">
+                <p>See if your friends know this seller</p>
+                <p>Connect with facebook</p>
+            </div>
+        </div>
+
+        <!-- Benefits Box -->
+        <div class="pw-sidebar-benefits-box">
+            <div class="pw-benefits-header-section">
+                <div class="pw-benefits-pakwheels-logo">
+                    <img src="{% static 'images/logos/carsportal-logo.png' %}" alt="Cars Portal">
+                </div>
+                <h3>Buy From Cars Portal and Get</h3>
+            </div>
+            
+            <ul class="pw-benefits-list-container">
+                <li>1. 100% Genuine Products</li>
+                <li>2. Hassle Free Buying</li>
+                <li>3. Money Back Guarantee</li>
+            </ul>
+        </div>
+
+        <!-- Report Button -->
+        <button class="pw-report-ad-button" data-part-id="{{ part.id }}">
+            <i class="fas fa-flag"></i> Report This Ad
+        </button>
+    </div>
+</div>
+
+<!-- More Products Section -->
+<div class="pw-more-products-main-section">
+    <div class="pw-more-products-section-header">
+        <h2>More {{ part.category.name|default:"Auto Parts" }} Products</h2>
+        <a href="{% url 'parts:part_list' %}" class="pw-more-products-visit-store-link">Visit Cars Portal Store</a>
+    </div>
+    
+    <div class="pw-products-carousel-main-container">
+        <button class="pw-carousel-navigation-btn pw-carousel-prev-products" onclick="scrollProductsLeft()">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        
+        <div class="pw-products-carousel-scroll" id="productsCarousel">
+            {% for related_part in related_parts %}
+            <div class="pw-product-card-item">
+                <div class="pw-product-card-image-container">
+                    {% if related_part.discount_percentage %}
+                    <div class="pw-product-card-discount-badge">{{ related_part.discount_percentage }}% OFF</div>
+                    {% endif %}
+                    {% if related_part.is_featured %}
+                    <div class="pw-product-card-featured-badge">FEATURED</div>
+                    {% endif %}
+                    <a href="{% url 'parts:part_detail' related_part.id %}">
+                        <img src="{% if related_part.image %}{{ related_part.image.url }}{% else %}{% static 'images/default-part.jpg' %}{% endif %}" alt="{{ related_part.name }}">
+                    </a>
+                </div>
+                <div class="pw-product-card-info-section">
+                    <h3 class="pw-product-card-name">
+                        <a href="{% url 'parts:part_detail' related_part.id %}">{{ related_part.name|truncatechars:25 }}</a>
+                    </h3>
+                    <div class="pw-product-card-price">${{ related_part.price }}</div>
+                    {% if related_part.original_price and related_part.original_price > related_part.price %}
+                    <div class="pw-product-card-original-price">${{ related_part.original_price }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <!-- Default products if no related parts -->
+            <div class="pw-product-card-item">
+                <div class="pw-product-card-image-container">
+                    <div class="pw-product-card-discount-badge">30% OFF</div>
+                    <img src="{% static 'images/default-part.jpg' %}" alt="Auto Part">
+                </div>
+                <div class="pw-product-card-info-section">
+                    <h3 class="pw-product-card-name">Premium Auto Part...</h3>
+                    <div class="pw-product-card-price">$174.99</div>
+                    <div class="pw-product-card-original-price">$250.01</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <button class="pw-carousel-navigation-btn pw-carousel-next-products" onclick="scrollProductsRight()">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Similar Accessories and Auto Parts Section -->
+<div class="pw-similar-accessories-main-section">
+    <h2>Similar Accessories and Auto Parts</h2>
+    
+    {% if categories_with_counts %}
+    <div class="pw-accessories-grid-container">
+        {% for category in categories_with_counts %}
+            {% if forloop.counter0|divisibleby:5 %}
+                <div class="pw-accessories-grid-column">
+            {% endif %}
+            
+            <a href="{% url 'parts:parts_by_category' category=category.slug %}" class="pw-accessory-link-item">
+                {{ category.name }} 
+                <span class="pw-accessory-count">({{ category.part_count }}{% if category.part_count >= 100 %}+{% endif %})</span>
+            </a>
+            
+            {% if forloop.counter|divisibleby:5 or forloop.last %}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="pw-accessories-grid-container">
+        <div class="pw-accessories-grid-column">
+            <p>No categories available at the moment.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Image gallery functionality
+let currentImageIndex = 0;
+const images = [
+    {% if part.image %}'{{ part.image.url }}'{% if part.additional_images.all %},{% endif %}{% endif %}
+    {% for image in part.additional_images.all %}
+    '{{ image.image.url }}'{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+function selectImage(index) {
+    currentImageIndex = index;
+    document.getElementById('mainImage').src = images[index];
+    
+    // Update thumbnail active state
+    document.querySelectorAll('.pw-gallery-thumbnail').forEach((thumb, i) => {
+        thumb.classList.toggle('active', i === index);
+    });
+}
+
+function previousImage() {
+    currentImageIndex = currentImageIndex > 0 ? currentImageIndex - 1 : images.length - 1;
+    selectImage(currentImageIndex);
+}
+
+function nextImage() {
+    currentImageIndex = currentImageIndex < images.length - 1 ? currentImageIndex + 1 : 0;
+    selectImage(currentImageIndex);
+}
+
+// Quantity control
+function increaseQuantity() {
+    const input = document.getElementById('pw-quantity-input');
+    const max = parseInt(input.getAttribute('max'));
+    const current = parseInt(input.value);
+    if (current < max) {
+        input.value = current + 1;
+    }
+}
+
+function decreaseQuantity() {
+    const input = document.getElementById('pw-quantity-input');
+    const current = parseInt(input.value);
+    if (current > 1) {
+        input.value = current - 1;
+    }
+}
+
+// Product carousel
+function scrollProductsLeft() {
+    const carousel = document.getElementById('productsCarousel');
+    carousel.scrollBy({ left: -300, behavior: 'smooth' });
+}
+
+function scrollProductsRight() {
+    const carousel = document.getElementById('productsCarousel');
+    carousel.scrollBy({ left: 300, behavior: 'smooth' });
+}
+
+// Action functions are now handled by parts.js
+
+function contactSeller(method) {
+    console.log('Contact seller via:', method);
+}
+
+function reportAd(partId) {
+    console.log('Report ad:', partId);
+}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/parts.js' %}"></script>
+{% endblock %}

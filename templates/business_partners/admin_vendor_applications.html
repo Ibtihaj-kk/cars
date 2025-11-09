@@ -1,0 +1,189 @@
+{% extends 'business_partners/vendor_base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Vendor Applications - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        Vendor Applications Management
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Status Filter -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <form method="get" class="form-inline">
+                                <div class="input-group">
+                                    <label class="input-group-text" for="status_filter">Filter by Status:</label>
+                                    <select class="form-select" id="status_filter" name="status" onchange="this.form.submit()">
+                                        <option value="">All Statuses</option>
+                                        {% for status_value, status_label in status_choices %}
+                                            <option value="{{ status_value }}" {% if status_filter == status_value %}selected{% endif %}>
+                                                {{ status_label }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% if status_filter %}
+                                        <a href="{% url 'business_partners:admin_vendor_applications' %}" class="btn btn-outline-secondary">
+                                            <i class="fas fa-times"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <span class="badge bg-info">{{ applications.count }} Total Applications</span>
+                        </div>
+                    </div>
+
+                    <!-- Applications Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Application ID</th>
+                                    <th>Company Name</th>
+                                    <th>Applicant</th>
+                                    <th>Status</th>
+                                    <th>Current Step</th>
+                                    <th>Completion %</th>
+                                    <th>Created</th>
+                                    <th>Submitted</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for application in applications %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ application.application_id }}</strong>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">{{ application.company_name }}</div>
+                                        <small class="text-muted">{{ application.business_type|title }}</small>
+                                    </td>
+                                    <td>
+                                        {% if application.user %}
+                                            <div>{{ application.user.get_full_name|default:application.user.email }}</div>
+                                            <small class="text-muted">{{ application.user.email }}</small>
+                                        {% else %}
+                                            <div class="text-muted">No user assigned</div>
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if application.status == 'approved' %}bg-success
+                                                       {% elif application.status == 'rejected' %}bg-danger
+                                                       {% elif application.status == 'under_review' %}bg-warning
+                                                       {% elif application.status == 'submitted' %}bg-info
+                                                       {% elif application.status == 'requires_changes' %}bg-secondary
+                                                       {% else %}bg-light text-dark{% endif %}">
+                                            {{ application.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-outline-primary">
+                                            Step {{ application.current_step }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="width: 80px;">
+                                            <div class="progress-bar {% if application.completion_percentage >= 75 %}bg-success
+                                                             {% elif application.completion_percentage >= 50 %}bg-warning
+                                                             {% else %}bg-danger{% endif %}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ application.completion_percentage }}%"
+                                                 aria-valuenow="{{ application.completion_percentage }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ application.completion_percentage }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small>{{ application.created_at|date:"M d, Y" }}<br>{{ application.created_at|time:"h:i A" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if application.submitted_at %}
+                                            <small>{{ application.submitted_at|date:"M d, Y" }}<br>{{ application.submitted_at|time:"h:i A" }}</small>
+                                        {% else %}
+                                            <span class="text-muted">Not submitted</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'business_partners:admin_review_application' application.application_id %}" 
+                                               class="btn btn-sm btn-primary"
+                                               title="Review Application">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if application.can_process_application %}
+                                                <a href="{% url 'business_partners:admin_review_application' application.application_id %}" 
+                                                   class="btn btn-sm btn-success"
+                                                   title="Process Application">
+                                                    <i class="fas fa-check"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">
+                                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                                        <p>No vendor applications found.</p>
+                                        {% if status_filter %}
+                                            <p>Try clearing the status filter or check back later.</p>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .progress {
+        height: 20px;
+    }
+    .progress-bar {
+        font-size: 12px;
+        line-height: 20px;
+    }
+    .table th {
+        border-top: none;
+        font-weight: 600;
+    }
+    .badge {
+        font-size: 0.75em;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add any additional JavaScript functionality here
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-refresh every 5 minutes for admin dashboard
+        setTimeout(function() {
+            if (document.visibilityState === 'visible') {
+                location.reload();
+            }
+        }, 300000); // 5 minutes
+    });
+</script>
+{% endblock %}

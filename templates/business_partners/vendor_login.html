@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Login - Cars Portal</title>
+    
+    <!-- Meta tags for SEO and accessibility -->
+    <meta name="description" content="Vendor login portal for Cars Portal - Manage your automotive products and orders">
+    <meta name="keywords" content="vendor login, cars portal, automotive, dealer login">
+    <meta name="author" content="Cars Portal">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/images/logos/cars-portal-logo.png">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* CSS Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            /* Color scheme matching Cars Portal logo */
+            --primary-color: #1e40af;
+            --primary-dark: #1e3a8a;
+            --primary-light: #3b82f6;
+            --secondary-color: #f59e0b;
+            --accent-color: #10b981;
+            --background-gradient-start: #0f172a;
+            --background-gradient-end: #1e293b;
+            --card-background: rgba(255, 255, 255, 0.95);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --border-color: #e5e7eb;
+            --error-color: #ef4444;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --shadow-light: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-medium: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-large: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background elements */
+        .bg-animation {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+        
+        .bg-animation::before,
+        .bg-animation::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            opacity: 0.1;
+            animation: float 20s infinite ease-in-out;
+        }
+        
+        .bg-animation::before {
+            width: 300px;
+            height: 300px;
+            top: -150px;
+            right: -150px;
+            animation-delay: 0s;
+        }
+        
+        .bg-animation::after {
+            width: 200px;
+            height: 200px;
+            bottom: -100px;
+            left: -100px;
+            animation-delay: 10s;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        /* Main container */
+        .login-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+        }
+        
+        /* Login card */
+        .login-card {
+            background: var(--card-background);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-large);
+            padding: 40px;
+            transition: var(--transition);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .login-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        /* Header section */
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .logo-container {
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .logo {
+            width: 180px;
+            height: 80px;
+            /* border-radius: 16px; */
+            /* background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* box-shadow: var(--shadow-medium); */
+            transition: var(--transition);
+        }
+        
+        .logo:hover {
+            transform: scale(1.05);
+        }
+        
+        .logo img {
+            width: 200px;
+            height: 150px;
+            object-fit: contain;
+            /* filter: brightness(0) invert(1); */
+        }
+        
+        .login-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+        
+        .login-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+        
+        /* Alert messages */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .alert-danger {
+            background-color: #fef2f2;
+            border-color: #fecaca;
+            color: #dc2626;
+        }
+        
+        .alert-success {
+            background-color: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #16a34a;
+        }
+        
+        .alert-warning {
+            background-color: #fffbeb;
+            border-color: #fed7aa;
+            color: #d97706;
+        }
+        
+        .alert-dismissible {
+            position: relative;
+            padding-right: 40px;
+        }
+        
+        .btn-close {
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: inherit;
+            opacity: 0.7;
+            transition: var(--transition);
+        }
+        
+        .btn-close:hover {
+            opacity: 1;
+        }
+        
+        /* Form styles */
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            transition: var(--transition);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            background: #ffffff;
+            color: var(--text-primary);
+            transition: var(--transition);
+            outline: none;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+        
+        .form-control::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .form-control.error {
+            border-color: var(--error-color);
+        }
+        
+        .form-control.success {
+            border-color: var(--success-color);
+        }
+        
+        /* Password input group */
+        .password-group {
+            position: relative;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+            transition: var(--transition);
+            z-index: 2;
+        }
+        
+        .password-toggle:hover {
+            color: var(--primary-color);
+        }
+        
+        /* Checkbox styles */
+        .form-check {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .form-check-input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary-color);
+            cursor: pointer;
+        }
+        
+        .form-check-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        /* Error messages */
+        .error-message {
+            font-size: 12px;
+            color: var(--error-color);
+            margin-top: 4px;
+            display: block;
+        }
+        
+        /* Submit button */
+        .btn-submit {
+            width: 100%;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(30, 64, 175, 0.3);
+        }
+        
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+        
+        .btn-submit:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-submit::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn-submit:hover::before {
+            left: 100%;
+        }
+        
+        /* Links */
+        .auth-links {
+            text-align: center;
+        }
+        
+        .auth-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        
+        .auth-link:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+        
+        .auth-link-secondary {
+            color: var(--text-secondary);
+        }
+        
+        .auth-link-secondary:hover {
+            color: var(--primary-color);
+        }
+        
+        /* Footer */
+        .login-footer {
+            text-align: center;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .footer-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 8px;
+        }
+        
+        .footer-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 12px;
+            transition: var(--transition);
+        }
+        
+        .footer-link:hover {
+            color: var(--primary-color);
+        }
+        
+        /* Loading state */
+        .loading {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Responsive design */
+        @media (max-width: 480px) {
+            body {
+                padding: 16px;
+            }
+            
+            .login-card {
+                padding: 32px 24px;
+            }
+            
+            .login-title {
+                font-size: 24px;
+            }
+            
+            .login-subtitle {
+                font-size: 14px;
+            }
+            
+            .logo {
+                width: 64px;
+                height: 64px;
+            }
+            
+            .logo img {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .form-control {
+                padding: 12px 14px;
+                font-size: 16px; /* Prevent zoom on iOS */
+            }
+            
+            .btn-submit {
+                padding: 12px 20px;
+                font-size: 16px;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            .login-card {
+                padding: 24px 20px;
+            }
+            
+            .login-title {
+                font-size: 22px;
+            }
+        }
+        
+        /* Accessibility improvements */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            .login-card {
+                border: 2px solid var(--text-primary);
+            }
+            
+            .form-control {
+                border-width: 3px;
+            }
+        }
+        
+        /* Focus visible for keyboard navigation */
+        .form-control:focus-visible,
+        .btn-submit:focus-visible,
+        .auth-link:focus-visible {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+        
+        /* Print styles */
+        @media print {
+            .bg-animation {
+                display: none;
+            }
+            
+            body {
+                background: white;
+            }
+            
+            .login-card {
+                box-shadow: none;
+                border: 1px solid #000;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated background -->
+    <div class="bg-animation"></div>
+    
+    <!-- Main login container -->
+    <div class="login-container">
+        <div class="login-card">
+            <!-- Header with logo -->
+            <div class="login-header">
+                <div class="logo-container">
+                    <div class="logo">
+                        <img src="/static/images/logos/cars-portal-logo.png" alt="Cars Portal Logo">
+                    </div>
+                </div>
+                <p class="login-subtitle">Sign in to manage your automotive products and orders</p>
+            </div>
+            
+            <!-- Alert messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible" role="alert">
+                        <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %}"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" onclick="this.parentElement.remove()" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <!-- Login form -->
+            <form method="post" class="login-form" id="vendorLoginForm">
+                {% csrf_token %}
+                
+                <!-- Non-field errors -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger alert-dismissible" role="alert">
+                        <i class="fas fa-exclamation-circle"></i>
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                        <button type="button" class="btn-close" onclick="this.parentElement.remove()" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                {% endif %}
+                
+                <!-- Email field -->
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                        Email Address
+                        {% if form.email.field.required %}<span class="text-danger">*</span>{% endif %}
+                    </label>
+                    <input type="email" 
+                           name="{{ form.email.name }}" 
+                           id="{{ form.email.id_for_label }}" 
+                           class="form-control {% if form.email.errors %}error{% endif %}" 
+                           placeholder="Enter your email address"
+                           value="{{ form.email.value|default:'' }}"
+                           required
+                           aria-describedby="{{ form.email.id_for_label }}_help">
+                    {% if form.email.errors %}
+                        <span class="error-message">{{ form.email.errors.0 }}</span>
+                    {% endif %}
+                    {% if form.email.help_text %}
+                        <small id="{{ form.email.id_for_label }}_help" class="form-text text-muted">{{ form.email.help_text }}</small>
+                    {% endif %}
+                </div>
+                
+                <!-- Password field -->
+                <div class="form-group">
+                    <label for="{{ form.password.id_for_label }}" class="form-label">
+                        Password
+                        {% if form.password.field.required %}<span class="text-danger">*</span>{% endif %}
+                    </label>
+                    <div class="password-group">
+                        <input type="password" 
+                               name="{{ form.password.name }}" 
+                               id="{{ form.password.id_for_label }}" 
+                               class="form-control {% if form.password.errors %}error{% endif %}" 
+                               placeholder="Enter your password"
+                               required
+                               aria-describedby="{{ form.password.id_for_label }}_help">
+                        <button type="button" class="password-toggle" onclick="togglePassword('{{ form.password.id_for_label }}')" aria-label="Toggle password visibility">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    {% if form.password.errors %}
+                        <span class="error-message">{{ form.password.errors.0 }}</span>
+                    {% endif %}
+                    {% if form.password.help_text %}
+                        <small id="{{ form.password.id_for_label }}_help" class="form-text text-muted">{{ form.password.help_text }}</small>
+                    {% endif %}
+                </div>
+                
+                <!-- Remember me checkbox -->
+                <div class="form-check">
+                    <input type="checkbox" 
+                           name="{{ form.remember_me.name }}" 
+                           id="{{ form.remember_me.id_for_label }}" 
+                           class="form-check-input"
+                           {% if form.remember_me.value %}checked{% endif %}>
+                    <label class="form-check-label" for="{{ form.remember_me.id_for_label }}">
+                        {{ form.remember_me.label|default:"Remember me" }}
+                    </label>
+                </div>
+                
+                <!-- Submit button -->
+                <button type="submit" class="btn-submit" id="submitButton">
+                    <span class="btn-text">Sign In</span>
+                    <div class="loading"></div>
+                    <i class="fas fa-sign-in-alt"></i>
+                </button>
+                
+                <!-- Auth links -->
+                <div class="auth-links">
+                    <p>
+                        <a href="{% url 'business_partners:vendor_password_reset_request' %}" class="auth-link">
+                            Forgot your password?
+                        </a>
+                    </p>
+                    <p>
+                        <span class="auth-link-secondary">Don't have a vendor account?</span>
+                        <a href="{% url 'business_partners:vendor_registration_start' %}" class="auth-link">
+                            Apply here
+                        </a>
+                    </p>
+                </div>
+            </form>
+            
+            <!-- Footer -->
+            <div class="login-footer">
+                <p class="footer-text">
+                    By signing in, you agree to our Terms of Service and Privacy Policy
+                </p>
+                <div class="footer-links">
+                    <a href="/terms/" class="footer-link" target="_blank">Terms</a>
+                    <a href="/privacy/" class="footer-link" target="_blank">Privacy</a>
+                    <a href="mailto:vendors@carsportal.com" class="footer-link">Support</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Password toggle functionality
+        function togglePassword(fieldId) {
+            const passwordField = document.getElementById(fieldId);
+            const toggleButton = passwordField.nextElementSibling;
+            const icon = toggleButton.querySelector('i');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+                toggleButton.setAttribute('aria-label', 'Hide password');
+            } else {
+                passwordField.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+                toggleButton.setAttribute('aria-label', 'Show password');
+            }
+        }
+        
+        // Form validation and submission
+        document.getElementById('vendorLoginForm').addEventListener('submit', function(e) {
+            const submitButton = document.getElementById('submitButton');
+            const btnText = submitButton.querySelector('.btn-text');
+            const loading = submitButton.querySelector('.loading');
+            
+            // Basic validation
+            const email = document.getElementById('{{ form.email.id_for_label }}');
+            const password = document.getElementById('{{ form.password.id_for_label }}');
+            
+            let isValid = true;
+            
+            // Email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email.value.trim()) {
+                showFieldError(email, 'Email is required');
+                isValid = false;
+            } else if (!emailRegex.test(email.value)) {
+                showFieldError(email, 'Please enter a valid email address');
+                isValid = false;
+            } else {
+                clearFieldError(email);
+            }
+            
+            // Password validation
+            if (!password.value.trim()) {
+                showFieldError(password, 'Password is required');
+                isValid = false;
+            } else if (password.value.length < 6) {
+                showFieldError(password, 'Password must be at least 6 characters');
+                isValid = false;
+            } else {
+                clearFieldError(password);
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Show loading state
+            submitButton.disabled = true;
+            btnText.style.display = 'none';
+            loading.style.display = 'block';
+            
+            // Form will submit normally
+        });
+        
+        // Field error display functions
+        function showFieldError(field, message) {
+            field.classList.add('error');
+            field.classList.remove('success');
+            
+            // Remove existing error message
+            const existingError = field.parentNode.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            // Create new error message
+            const errorElement = document.createElement('span');
+            errorElement.className = 'error-message';
+            errorElement.textContent = message;
+            field.parentNode.appendChild(errorElement);
+        }
+        
+        function clearFieldError(field) {
+            field.classList.remove('error');
+            field.classList.add('success');
+            
+            const errorElement = field.parentNode.querySelector('.error-message');
+            if (errorElement) {
+                errorElement.remove();
+            }
+        }
+        
+        // Real-time validation
+        document.getElementById('{{ form.email.id_for_label }}').addEventListener('blur', function() {
+            const email = this.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (email && !emailRegex.test(email)) {
+                showFieldError(this, 'Please enter a valid email address');
+            } else if (email) {
+                clearFieldError(this);
+            }
+        });
+        
+        document.getElementById('{{ form.password.id_for_label }}').addEventListener('blur', function() {
+            const password = this.value;
+            
+            if (password && password.length < 6) {
+                showFieldError(this, 'Password must be at least 6 characters');
+            } else if (password) {
+                clearFieldError(this);
+            }
+        });
+        
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert-dismissible');
+            alerts.forEach(alert => {
+                if (alert.classList.contains('alert')) {
+                    alert.style.opacity = '0';
+                    alert.style.transform = 'translateY(-10px)';
+                    setTimeout(() => alert.remove(), 300);
+                }
+            });
+        }, 5000);
+        
+        // Keyboard navigation support
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                const form = e.target.closest('form');
+                if (form) {
+                    const submitButton = form.querySelector('.btn-submit');
+                    if (submitButton && !submitButton.disabled) {
+                        submitButton.click();
+                    }
+                }
+            }
+        });
+        
+        // Prevent form submission on Enter key in password field to allow for password toggle
+        document.getElementById('{{ form.password.id_for_label }}').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                togglePassword('{{ form.password.id_for_label }}');
+            }
+        });
+        
+        // Focus management for accessibility
+        window.addEventListener('load', function() {
+            const firstInput = document.querySelector('.form-control');
+            if (firstInput && !document.querySelector('.alert')) {
+                firstInput.focus();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!-- Shared Filters Sidebar Component -->
+<div class="filters-sidebar" id="filters-sidebar">
+    <div class="filter-header">
+        <h3>
+            <i class="fas fa-filter"></i>
+            Filters
+        </h3>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-filters">
+            <i class="fas fa-times"></i>
+            Clear All
+        </button>
+    </div>
+
+    <form id="parts-filter-form" 
+          hx-get="{% url 'parts:parts_results_partial' %}" 
+          hx-target="#parts-results" 
+          hx-trigger="change, submit"
+          hx-indicator="#loading-indicator"
+          hx-push-url="true">
+        
+        <!-- Search Query -->
+        <div class="filter-section">
+            <label class="filter-title">
+                <i class="fas fa-search"></i>
+                Search
+            </label>
+            <div class="form-group">
+                {{ search_form.query }}
+            </div>
+        </div>
+
+        <!-- Category Filter -->
+        <div class="filter-section">
+            <label class="filter-title">
+                <i class="fas fa-tags"></i>
+                Category
+            </label>
+            <div class="form-group">
+                {{ search_form.category }}
+            </div>
+        </div>
+
+        <!-- Brand Filter -->
+        <div class="filter-section">
+            <label class="filter-title">
+                <i class="fas fa-industry"></i>
+                Brand
+            </label>
+            <div class="form-group">
+                {{ search_form.brand }}
+            </div>
+        </div>
+
+        <!-- Vehicle Compatibility -->
+        <div class="filter-section">
+            <label class="filter-title">
+                <i class="fas fa-car"></i>
+                Vehicle Compatibility
+            </label>
+            <div class="form-group">
+                <label for="{{ search_form.vehicle_make.id_for_label }}" class="form-label">Make</label>
+                {{ search_form.vehicle_make }}
+            </div>
+            <div class="form-group">
+                <label for="{{ search_form.vehicle_model.id_for_label }}" class="form-label">Model</label>
+                <select name="vehicle_model" 
+                        id="{{ search_form.vehicle_model.id_for_label }}"
+                        class="form-select"
+                        hx-get="{% url 'parts:vehicle_models_partial' %}"
+                        hx-trigger="change from:#{{ search_form.vehicle_make.id_for_label }}"
+                        hx-target="this"
+                        hx-swap="innerHTML"
+                        hx-include="#{{ search_form.vehicle_make.id_for_label }}">
+                    <option value="">Select Model</option>
+                    {% for choice in search_form.vehicle_model %}
+                        {{ choice.tag }}
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Price Range -->
+        <div class="filter-section">
+            <label class="filter-title">
+                <i class="fas fa-dollar-sign"></i>
+                Price Range
+            </label>
+            <div class="row">
+                <div class="col-6">
+                    <label for="{{ search_form.min_price.id_for_label }}" class="form-label">Min</label>
+                    {{ search_form.min_price }}
+                </div>
+                <div class="col-6">
+                    <label for="{{ search_form.max_price.id_for_label }}" class="form-label">Max</label>
+                    {{ search_form.max_price }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Filter -->
+        <div class="filter-section">
+            <label class="filter-title">
+                <i class="fas fa-boxes"></i>
+                Availability
+            </label>
+            <div class="form-check">
+                {{ search_form.in_stock_only }}
+                <label class="form-check-label" for="{{ search_form.in_stock_only.id_for_label }}">
+                    In Stock Only
+                </label>
+            </div>
+        </div>
+
+        <!-- Vendor/Admin Only Filters -->
+        {% if view_type == 'vendor' or view_type == 'admin' %}
+            <!-- Low Stock Filter -->
+            <div class="filter-section">
+                <label class="filter-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Stock Alerts
+                </label>
+                <div class="form-check">
+                    {{ search_form.low_stock_only }}
+                    <label class="form-check-label" for="{{ search_form.low_stock_only.id_for_label }}">
+                        Low Stock Only
+                    </label>
+                </div>
+            </div>
+
+            <!-- Status Filter -->
+            <div class="filter-section">
+                <label class="filter-title">
+                    <i class="fas fa-toggle-on"></i>
+                    Status
+                </label>
+                <div class="form-group">
+                    {{ search_form.status }}
+                </div>
+            </div>
+
+            <!-- Profitability Filter -->
+            <div class="filter-section">
+                <label class="filter-title">
+                    <i class="fas fa-chart-line"></i>
+                    Profitability
+                </label>
+                <div class="form-group">
+                    {{ search_form.profitability }}
+                </div>
+            </div>
+
+            <!-- Material Type Filter -->
+            <div class="filter-section">
+                <label class="filter-title">
+                    <i class="fas fa-cogs"></i>
+                    Material Type
+                </label>
+                <div class="form-group">
+                    {{ search_form.material_type }}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Vendor Filters -->
+        <div class="filter-section">
+            <label class="filter-title">
+                <i class="fas fa-store"></i>
+                Vendor Type
+            </label>
+            <div class="form-group">
+                <select name="vendor_type" class="form-select" 
+                        hx-get="{% url 'parts:parts_list' %}" 
+                        hx-target="#parts-results" 
+                        hx-include="#parts-filter-form"
+                        hx-indicator="#loading-indicator">
+                    <option value="">All Vendors</option>
+                    <option value="verified" {% if request.GET.vendor_type == 'verified' %}selected{% endif %}>Verified Vendors Only</option>
+                    <option value="top_rated" {% if request.GET.vendor_type == 'top_rated' %}selected{% endif %}>Top Rated Vendors</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Vendor Rating Filter -->
+        <div class="filter-section">
+            <label class="filter-title">
+                <i class="fas fa-star"></i>
+                Vendor Rating
+            </label>
+            <div class="form-group">
+                <select name="vendor_min_rating" class="form-select" 
+                        hx-get="{% url 'parts:parts_list' %}" 
+                        hx-target="#parts-results" 
+                        hx-include="#parts-filter-form"
+                        hx-indicator="#loading-indicator">
+                    <option value="">All Ratings</option>
+                    <option value="4.0" {% if request.GET.vendor_min_rating == '4.0' %}selected{% endif %}>
+                        <span class="rating-stars">★★★★☆</span> 4+ Stars
+                    </option>
+                    <option value="4.5" {% if request.GET.vendor_min_rating == '4.5' %}selected{% endif %}>
+                        <span class="rating-stars">★★★★★</span> 4.5+ Stars
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Enhanced Stock Availability Filter -->
+        <div class="filter-section">
+            <label class="filter-title">
+                <i class="fas fa-boxes"></i>
+                Stock Availability
+            </label>
+            <div class="form-group">
+                <select name="stock_availability" class="form-select" 
+                        hx-get="{% url 'parts:parts_list' %}" 
+                        hx-target="#parts-results" 
+                        hx-include="#parts-filter-form"
+                        hx-indicator="#loading-indicator">
+                    <option value="">All Items</option>
+                    <option value="in_stock" {% if request.GET.stock_availability == 'in_stock' %}selected{% endif %}>In Stock</option>
+                    <option value="pre_order" {% if request.GET.stock_availability == 'pre_order' %}selected{% endif %}>Pre-order Available</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Admin Only Filters -->
+        {% if view_type == 'admin' %}
+            <!-- Dealer Filter -->
+            <div class="filter-section">
+                <label class="filter-title">
+                    <i class="fas fa-store"></i>
+                    Dealer
+                </label>
+                <div class="form-group">
+                    {{ search_form.dealer }}
+                </div>
+            </div>
+
+            <!-- ABC Indicator Filter -->
+            <div class="filter-section">
+                <label class="filter-title">
+                    <i class="fas fa-sort-alpha-down"></i>
+                    ABC Indicator
+                </label>
+                <div class="form-group">
+                    {{ search_form.abc_indicator }}
+                </div>
+            </div>
+
+            <!-- Plant Filter -->
+            <div class="filter-section">
+                <label class="filter-title">
+                    <i class="fas fa-building"></i>
+                    Plant
+                </label>
+                <div class="form-group">
+                    {{ search_form.plant }}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Hidden submit button for form submission -->
+        <button type="submit" style="display: none;"></button>
+    </form>
+
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="loading-indicator" style="display: none;">
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <span class="ms-2">Filtering...</span>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Clear all filters functionality
+    document.getElementById('clear-filters').addEventListener('click', function() {
+        const form = document.getElementById('parts-filter-form');
+        form.reset();
+        
+        // Trigger HTMX request to reload results
+        htmx.trigger(form, 'submit');
+        
+        // Update URL to remove query parameters
+        const url = new URL(window.location);
+        url.search = '';
+        window.history.pushState({}, '', url);
+    });
+
+    // Auto-submit form on input changes with debouncing
+    let debounceTimer;
+    const formInputs = document.querySelectorAll('#parts-filter-form input, #parts-filter-form select');
+    
+    formInputs.forEach(input => {
+        if (input.type === 'text' || input.type === 'number') {
+            input.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    htmx.trigger(document.getElementById('parts-filter-form'), 'submit');
+                }, 500); // 500ms debounce
+            });
+        }
+    });
+});
+</script>

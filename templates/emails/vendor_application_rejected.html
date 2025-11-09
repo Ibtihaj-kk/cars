@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Application Update - Cars Portal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #dc3545;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #f8f9fa;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .application-details {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+        .rejection-reason {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .next-steps {
+            background-color: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Application Status Update</h1>
+        <p>Regarding your Cars Portal vendor application</p>
+    </div>
+    
+    <div class="content">
+        <h2>Dear {{ application.contact_person_name|default:application.user.get_full_name }},</h2>
+        
+        <p>Thank you for your interest in becoming a Cars Portal vendor. After careful review of your application, we regret to inform you that we are unable to approve your vendor application at this time.</p>
+        
+        <div class="application-details">
+            <h3>📋 Application Details</h3>
+            <p><strong>Application ID:</strong> {{ application.application_id }}</p>
+            <p><strong>Company Name:</strong> {{ application.company_name }}</p>
+            <p><strong>Business Type:</strong> {{ application.get_business_type_display }}</p>
+            <p><strong>Status:</strong> <span style="color: #dc3545; font-weight: bold;">{{ application.get_status_display }}</span></p>
+            <p><strong>Reviewed On:</strong> {{ application.updated_at|date:"F d, Y \a\t g:i A" }}</p>
+            {% if application.reviewed_by %}
+            <p><strong>Reviewed By:</strong> {{ application.reviewed_by.get_full_name }}</p>
+            {% endif %}
+        </div>
+        
+        {% if application.rejection_reason %}
+        <div class="rejection-reason">
+            <h3>📝 Reason for Decision</h3>
+            <p>{{ application.rejection_reason }}</p>
+        </div>
+        {% endif %}
+        
+        <div class="next-steps">
+            <h3>🔄 What You Can Do Next</h3>
+            <p>While your current application was not approved, you may be eligible to reapply in the future. Here are some suggestions:</p>
+            <ul>
+                <li><strong>Address the concerns:</strong> Review the feedback provided and work on addressing any issues mentioned</li>
+                <li><strong>Improve documentation:</strong> Ensure all required documents are complete and up-to-date</li>
+                <li><strong>Business development:</strong> Continue growing your business and establishing a stronger track record</li>
+                <li><strong>Reapply later:</strong> You may submit a new application after 90 days from this decision</li>
+            </ul>
+        </div>
+        
+        <p>We appreciate your interest in partnering with Cars Portal and encourage you to consider reapplying once you've had the opportunity to address the areas mentioned above.</p>
+        
+        <div style="background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p><strong>📞 Questions or Feedback?</strong></p>
+            <p>If you have questions about this decision or would like additional feedback, please contact our vendor support team:</p>
+            <ul>
+                <li>Email: vendors@carsportal.com</li>
+                <li>Phone: +966 11 123 4567</li>
+                <li>Business Hours: Sunday - Thursday, 9:00 AM - 6:00 PM</li>
+            </ul>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{ reapply_url }}" class="btn">Learn About Reapplying</a>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from Cars Portal Vendor Management System.</p>
+        <p>&copy; {{ current_year }} Cars Portal. All rights reserved.</p>
+    </div>
+</body>
+</html>

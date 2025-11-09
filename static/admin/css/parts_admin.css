@@ -1,0 +1,51 @@
+/* Parts Admin Custom Styles */
+
+.field-user_visible_fields_display,
+.field-vendor_admin_fields_display {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+.field-user_visible_fields_display .readonly {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.field-vendor_admin_fields_display .readonly {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Fieldset styling for better organization */
+.fieldset h2 {
+    background-color: #f1f1f1;
+    padding: 8px 12px;
+    margin: 0 0 10px 0;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* User-visible fields styling */
+fieldset:has(.field-material_description) h2 {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+/* Vendor/admin fields styling */
+fieldset:has(.field-material_type) h2 {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Improved form field spacing */
+.form-row {
+    margin-bottom: 8px;
+}
+
+.form-row .field-box {
+    margin-right: 15px;
+}

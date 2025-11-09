@@ -1,0 +1,240 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block title %}Parts Search{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/parts.css' %}">
+    <style>
+        .parts-search-container {
+            min-height: 80vh;
+        }
+        
+        .filters-sidebar {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .parts-content {
+            padding-left: 1rem;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .htmx-indicator {
+            display: none;
+        }
+        
+        .htmx-request .htmx-indicator {
+            display: flex;
+        }
+        
+        .htmx-request.htmx-indicator {
+            display: flex;
+        }
+        
+        @media (max-width: 768px) {
+            .filters-sidebar {
+                position: static;
+                margin-bottom: 1rem;
+            }
+            
+            .parts-content {
+                padding-left: 0;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid parts-search-container">
+    <div class="row">
+        <!-- Page Header -->
+        <div class="col-12 mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-search"></i> Parts Search</h2>
+                    <p class="text-muted mb-0">Find the parts you need with our advanced search and filtering system</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary" id="toggle-filters">
+                        <i class="fas fa-filter"></i> <span class="d-none d-md-inline">Filters</span>
+                    </button>
+                    <a href="{% url 'parts:part_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-list"></i> <span class="d-none d-md-inline">Browse All</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-lg-3 col-md-4" id="filters-container">
+            {% include 'parts/partials/filters_sidebar.html' with user_role='user' %}
+        </div>
+        
+        <!-- Parts Results -->
+        <div class="col-lg-9 col-md-8 parts-content">
+            <div class="position-relative">
+                <!-- Loading Indicator -->
+                <div class="loading-overlay htmx-indicator">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">Searching parts...</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results Header -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="results-info">
+                        <h5 class="mb-0">Search Results</h5>
+                        <small class="text-muted" id="results-count">
+                            {% if is_paginated %}
+                                Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} parts
+                            {% else %}
+                                {{ parts|length }} part{{ parts|length|pluralize }} found
+                            {% endif %}
+                        </small>
+                    </div>
+                    
+                    <!-- Sort Options -->
+                    <div class="sort-options">
+                        <select class="form-select form-select-sm" 
+                                hx-get="{% url 'parts:user_parts_search' %}"
+                                hx-target="#parts-results"
+                                hx-include="[name='query'], [name='category'], [name='brand'], [name='vehicle_make'], [name='vehicle_model'], [name='min_price'], [name='max_price'], [name='in_stock_only']"
+                                hx-push-url="true"
+                                name="sort">
+                            <option value="">Sort by...</option>
+                            <option value="parts_number" {% if request.GET.sort == 'parts_number' %}selected{% endif %}>Part Number A-Z</option>
+                            <option value="-parts_number" {% if request.GET.sort == '-parts_number' %}selected{% endif %}>Part Number Z-A</option>
+                            <option value="price" {% if request.GET.sort == 'price' %}selected{% endif %}>Price Low-High</option>
+                            <option value="-price" {% if request.GET.sort == '-price' %}selected{% endif %}>Price High-Low</option>
+                            <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Newest First</option>
+                            <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>Oldest First</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Parts Grid Results -->
+                <div id="parts-results" class="htmx-indicator">
+                    {% include 'parts/partials/user_parts_grid.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Search Modal for Mobile -->
+<div class="modal fade" id="quickSearchModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quick Search</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" class="form-control" placeholder="Search parts..." id="mobile-search">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle filters on mobile
+            const toggleFilters = document.getElementById('toggle-filters');
+            const filtersContainer = document.getElementById('filters-container');
+            
+            if (toggleFilters && filtersContainer) {
+                toggleFilters.addEventListener('click', function() {
+                    filtersContainer.classList.toggle('d-none');
+                    filtersContainer.classList.toggle('d-md-block');
+                });
+            }
+            
+            // Auto-hide filters on mobile by default
+            if (window.innerWidth < 768) {
+                filtersContainer.classList.add('d-none');
+                filtersContainer.classList.add('d-md-block');
+            }
+            
+            // Handle mobile search
+            const mobileSearch = document.getElementById('mobile-search');
+            if (mobileSearch) {
+                mobileSearch.addEventListener('input', function() {
+                    const queryInput = document.querySelector('input[name="query"]');
+                    if (queryInput) {
+                        queryInput.value = this.value;
+                        queryInput.dispatchEvent(new Event('input'));
+                    }
+                });
+            }
+            
+            // Preserve scroll position on HTMX requests
+            let scrollPosition = 0;
+            
+            document.body.addEventListener('htmx:beforeRequest', function() {
+                scrollPosition = window.pageYOffset;
+            });
+            
+            document.body.addEventListener('htmx:afterSettle', function() {
+                // Only restore scroll if we're not on the first page
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('page') && urlParams.get('page') !== '1') {
+                    window.scrollTo(0, scrollPosition);
+                }
+            });
+            
+            // Handle URL state preservation
+            window.addEventListener('popstate', function(event) {
+                if (event.state && event.state.htmx) {
+                    location.reload();
+                }
+            });
+        });
+        
+        // HTMX event handlers
+        document.body.addEventListener('htmx:configRequest', function(evt) {
+            // Add CSRF token to all HTMX requests
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) {
+                evt.detail.headers['X-CSRFToken'] = csrfToken.value;
+            }
+        });
+        
+        // Update results count after HTMX requests
+        document.body.addEventListener('htmx:afterSettle', function(evt) {
+            if (evt.target.id === 'parts-results') {
+                const resultsCount = evt.target.querySelector('.results-summary small');
+                const headerCount = document.getElementById('results-count');
+                if (resultsCount && headerCount) {
+                    headerCount.textContent = resultsCount.textContent;
+                }
+            }
+        });
+    </script>
+{% endblock %}

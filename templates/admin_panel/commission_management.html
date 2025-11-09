@@ -1,0 +1,489 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block page_title %}Commission Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-percentage"></i> Commission Management</h2>
+        <div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#commissionRuleModal">
+                <i class="fas fa-plus"></i> New Commission Rule
+            </button>
+            <a href="{% url 'admin_panel:payment_management' %}" class="btn btn-outline-primary">
+                <i class="fas fa-credit-card"></i> Payment Management
+            </a>
+        </div>
+    </div>
+
+    <!-- Commission Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card primary">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3>{{ commission_stats.total_rules }}</h3>
+                        <p class="text-muted mb-0">Total Rules</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-gavel"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card success">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3>{{ commission_stats.active_rules }}</h3>
+                        <p class="text-muted mb-0">Active Rules</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card warning">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3>{{ commission_stats.avg_rate|floatformat:1 }}%</h3>
+                        <p class="text-muted mb-0">Avg Commission Rate</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card info">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3>${{ commission_stats.total_commission_earned|floatformat:2 }}</h3>
+                        <p class="text-muted mb-0">Total Commission Earned</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commission Rules by Category -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Commission Rules by Category</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Monthly Commission Trends</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="trendsChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commission Rules Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-table"></i> Commission Rules</h5>
+            <div>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportRules()">
+                    <i class="fas fa-download"></i> Export
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if commission_rules %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Rate</th>
+                            <th>Type</th>
+                            <th>Min Amount</th>
+                            <th>Max Amount</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rule in commission_rules %}
+                        <tr>
+                            <td>
+                                <strong>{{ rule.name }}</strong>
+                                {% if rule.description %}
+                                <br><small class="text-muted">{{ rule.description|truncatewords:10 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ rule.get_category_display }}</span>
+                            </td>
+                            <td>
+                                <strong>{{ rule.commission_rate }}%</strong>
+                                {% if rule.commission_type == 'tiered' %}
+                                <br><small class="text-muted">Tiered</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ rule.commission_type }}">{{ rule.get_commission_type_display }}</span>
+                            </td>
+                            <td>
+                                {% if rule.min_amount %}
+                                ${{ rule.min_amount|floatformat:2 }}
+                                {% else %}
+                                <span class="text-muted">No min</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if rule.max_amount %}
+                                ${{ rule.max_amount|floatformat:2 }}
+                                {% else %}
+                                <span class="text-muted">No max</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ rule.is_active|yesno:"success,danger" }}">
+                                    {{ rule.is_active|yesno:"Active,Inactive" }}
+                                </span>
+                            </td>
+                            <td>{{ rule.created_at|date:"M j, Y" }}</td>
+                            <td>{{ rule.updated_at|date:"M j, Y" }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewRule({{ rule.id }})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="editRule({{ rule.id }})" title="Edit Rule">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    {% if rule.is_active %}
+                                    <button class="btn btn-sm btn-outline-warning" onclick="toggleRuleStatus({{ rule.id }}, false)" title="Deactivate">
+                                        <i class="fas fa-pause"></i>
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-sm btn-outline-success" onclick="toggleRuleStatus({{ rule.id }}, true)" title="Activate">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteRule({{ rule.id }})" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if commission_rules.has_other_pages %}
+            <nav aria-label="Commission rules pagination">
+                <ul class="pagination justify-content-center">
+                    {% if commission_rules.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ commission_rules.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in commission_rules.paginator.page_range %}
+                    {% if commission_rules.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > commission_rules.number|add:'-3' and num < commission_rules.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if commission_rules.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ commission_rules.next_page_number }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-percentage fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No Commission Rules Found</h5>
+                <p class="text-muted">Create your first commission rule to get started.</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#commissionRuleModal">
+                    <i class="fas fa-plus"></i> Create Commission Rule
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Commission Rule Modal -->
+<div class="modal fade" id="commissionRuleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus"></i> Create Commission Rule</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" id="commissionRuleForm">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="rule_name" class="form-label">Rule Name *</label>
+                                <input type="text" class="form-control" id="rule_name" name="name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="rule_category" class="form-label">Category *</label>
+                                <select class="form-select" id="rule_category" name="category" required>
+                                    <option value="">Select Category</option>
+                                    <option value="listing_purchase">Listing Purchase</option>
+                                    <option value="featured_listing">Featured Listing</option>
+                                    <option value="premium_membership">Premium Membership</option>
+                                    <option value="advertisement">Advertisement</option>
+                                    <option value="lead_generation">Lead Generation</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="rule_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="rule_description" name="description" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="commission_type" class="form-label">Commission Type *</label>
+                                <select class="form-select" id="commission_type" name="commission_type" required>
+                                    <option value="fixed">Fixed Rate</option>
+                                    <option value="tiered">Tiered</option>
+                                    <option value="percentage">Percentage</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="commission_rate" class="form-label">Commission Rate (%)</label>
+                                <input type="number" class="form-control" id="commission_rate" name="commission_rate" step="0.01" min="0" max="100">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="is_active" class="form-label">Status</label>
+                                <select class="form-select" id="is_active" name="is_active">
+                                    <option value="true">Active</option>
+                                    <option value="false">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="min_amount" class="form-label">Minimum Amount</label>
+                                <input type="number" class="form-control" id="min_amount" name="min_amount" step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="max_amount" class="form-label">Maximum Amount</label>
+                                <input type="number" class="form-control" id="max_amount" name="max_amount" step="0.01" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveCommissionRule()">
+                    <i class="fas fa-save"></i> Create Rule
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Category distribution chart
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+const categoryChart = new Chart(categoryCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ category_data.labels|safe }},
+        datasets: [{
+            data: {{ category_data.data|safe }},
+            backgroundColor: [
+                '#FF6384',
+                '#36A2EB',
+                '#FFCE56',
+                '#4BC0C0',
+                '#9966FF',
+                '#FF9F40'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Monthly trends chart
+const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+const trendsChart = new Chart(trendsCtx, {
+    type: 'line',
+    data: {
+        labels: {{ trends_data.labels|safe }},
+        datasets: [{
+            label: 'Commission Earned',
+            data: {{ trends_data.commission|safe }},
+            borderColor: '#36A2EB',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+function saveCommissionRule() {
+    const form = document.getElementById('commissionRuleForm');
+    const formData = new FormData(form);
+    
+    fetch('/admin/commissions/rules/create/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Commission rule created successfully!');
+            location.reload();
+        } else {
+            alert('Error creating commission rule: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating commission rule');
+    });
+}
+
+function viewRule(ruleId) {
+    // This would open a modal or redirect to rule details page
+    alert('Rule details view will be implemented in the next update');
+}
+
+function editRule(ruleId) {
+    // This would open an edit modal
+    alert('Rule edit functionality will be implemented in the next update');
+}
+
+function toggleRuleStatus(ruleId, activate) {
+    const action = activate ? 'activate' : 'deactivate';
+    if (confirm(`Are you sure you want to ${action} this commission rule?`)) {
+        fetch(`/admin/commissions/rules/${ruleId}/toggle/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Commission rule ${action}d successfully!`);
+                location.reload();
+            } else {
+                alert('Error updating rule status: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating rule status');
+        });
+    }
+}
+
+function deleteRule(ruleId) {
+    if (confirm('Are you sure you want to delete this commission rule?')) {
+        fetch(`/admin/commissions/rules/${ruleId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Commission rule deleted successfully!');
+                location.reload();
+            } else {
+                alert('Error deleting rule: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting rule');
+        });
+    }
+}
+
+function exportRules() {
+    // This would export the commission rules to CSV/Excel
+    alert('Export functionality will be implemented in the next update');
+}
+</script>
+{% endblock %}

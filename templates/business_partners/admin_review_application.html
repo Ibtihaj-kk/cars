@@ -1,0 +1,339 @@
+{% extends 'business_partners/vendor_base.html' %}
+{% load static %}
+
+{% block title %}Review Vendor Application - {{ application.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Review Vendor Application</h4>
+                    <a href="{% url 'business_partners:admin_vendor_applications' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Applications
+                    </a>
+                </div>
+                <div class="card-body">
+                    <!-- Application Header -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Application Details</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Application ID:</strong></td>
+                                    <td>{{ application.application_id }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Company Name:</strong></td>
+                                    <td>{{ application.company_name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Business Type:</strong></td>
+                                    <td>{{ application.get_business_type_display }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td>
+                                        <span class="badge bg-{% if application.status == 'approved' %}success{% elif application.status == 'rejected' %}danger{% elif application.status == 'pending' %}warning{% else %}info{% endif %}">
+                                            {{ application.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Current Step:</strong></td>
+                                    <td>{{ application.current_step }} of 4</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Completion:</strong></td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar" role="progressbar" style="width: {{ application.completion_percentage }}%" aria-valuenow="{{ application.completion_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                                                {{ application.completion_percentage }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Applicant Information</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Applicant:</strong></td>
+                                    <td>
+                                        {% if application.user %}
+                                            {{ application.user.get_full_name|default:application.user.email }}
+                                        {% else %}
+                                            No user assigned
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Email:</strong></td>
+                                    <td>
+                                        {% if application.user %}
+                                            {{ application.user.email }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Created:</strong></td>
+                                    <td>{{ application.created_at|date:'Y-m-d H:i' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Submitted:</strong></td>
+                                    <td>{{ application.submitted_at|date:'Y-m-d H:i'|default:'Not submitted' }}</td>
+                                </tr>
+                                {% if application.reviewed_at %}
+                                <tr>
+                                    <td><strong>Reviewed:</strong></td>
+                                    <td>{{ application.reviewed_at|date:'Y-m-d H:i' }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if application.reviewed_by %}
+                                <tr>
+                                    <td><strong>Reviewed By:</strong></td>
+                                    <td>{{ application.reviewed_by.get_full_name|default:application.reviewed_by.email }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Application Data -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <ul class="nav nav-tabs" id="applicationTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="business-tab" data-bs-toggle="tab" data-bs-target="#business" type="button" role="tab">Business Details</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" type="button" role="tab">Contact Information</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="bank-tab" data-bs-toggle="tab" data-bs-target="#bank" type="button" role="tab">Bank Details</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="additional-tab" data-bs-toggle="tab" data-bs-target="#additional" type="button" role="tab">Additional Info</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents" type="button" role="tab">Documents</button>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="applicationTabContent">
+                                <!-- Business Details Tab -->
+                                <div class="tab-pane fade show active" id="business" role="tabpanel">
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <h6>Company Information</h6>
+                                            <table class="table table-sm">
+                                                <tr><td><strong>Company Name:</strong></td><td>{{ application.company_name }}</td></tr>
+                                                <tr><td><strong>Business Type:</strong></td><td>{{ application.get_business_type_display }}</td></tr>
+                                                <tr><td><strong>Establishment Date:</strong></td><td>{{ application.establishment_date|date:'Y-m-d' }}</td></tr>
+                                                <tr><td><strong>Commercial Registration:</strong></td><td>{{ application.commercial_registration_number }}</td></tr>
+                                                <tr><td><strong>Legal Identifier:</strong></td><td>{{ application.legal_identifier }}</td></tr>
+                                            </table>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>Business Description</h6>
+                                            <p>{{ application.business_description|default:'No description provided' }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Contact Information Tab -->
+                                <div class="tab-pane fade" id="contact" role="tabpanel">
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <h6>Primary Contact</h6>
+                                            <table class="table table-sm">
+                                                <tr><td><strong>Contact Person:</strong></td><td>{{ application.contact_person_name }}</td></tr>
+                                                <tr><td><strong>Title:</strong></td><td>{{ application.contact_person_title }}</td></tr>
+                                                <tr><td><strong>Business Phone:</strong></td><td>{{ application.business_phone }}</td></tr>
+                                                <tr><td><strong>Business Email:</strong></td><td>{{ application.business_email }}</td></tr>
+                                            </table>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>Address</h6>
+                                            <table class="table table-sm">
+                                                <tr><td><strong>Street Address:</strong></td><td>{{ application.street_address }}</td></tr>
+                                                <tr><td><strong>City:</strong></td><td>{{ application.city }}</td></tr>
+                                                <tr><td><strong>State/Province:</strong></td><td>{{ application.state_province }}</td></tr>
+                                                <tr><td><strong>Postal Code:</strong></td><td>{{ application.postal_code }}</td></tr>
+                                                <tr><td><strong>Country:</strong></td><td>{{ application.country }}</td></tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Bank Details Tab -->
+                                <div class="tab-pane fade" id="bank" role="tabpanel">
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <h6>Bank Information</h6>
+                                            <table class="table table-sm">
+                                                <tr><td><strong>Bank Name:</strong></td><td>{{ application.bank_name }}</td></tr>
+                                                <tr><td><strong>Bank Branch:</strong></td><td>{{ application.bank_branch }}</td></tr>
+                                                <tr><td><strong>Account Holder:</strong></td><td>{{ application.account_holder_name }}</td></tr>
+                                                <tr><td><strong>Account Number:</strong></td><td>{{ application.account_number }}</td></tr>
+                                                <tr><td><strong>IBAN:</strong></td><td>{{ application.iban|default:'Not provided' }}</td></tr>
+                                                <tr><td><strong>SWIFT Code:</strong></td><td>{{ application.swift_code|default:'Not provided' }}</td></tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Additional Information Tab -->
+                                <div class="tab-pane fade" id="additional" role="tabpanel">
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <h6>Business Performance</h6>
+                                            <table class="table table-sm">
+                                                <tr><td><strong>Expected Monthly Volume:</strong></td><td>{{ application.expected_monthly_volume|default:'Not specified' }}</td></tr>
+                                                <tr><td><strong>Years in Business:</strong></td><td>{{ application.years_in_business|default:'Not specified' }}</td></tr>
+                                                <tr><td><strong>Product Categories:</strong></td><td>{{ application.product_categories|default:'Not specified' }}</td></tr>
+                                            </table>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>References</h6>
+                                            <p>{{ application.references|default:'No references provided' }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Documents Tab -->
+                                <div class="tab-pane fade" id="documents" role="tabpanel">
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <h6>Required Documents</h6>
+                                            <table class="table table-sm">
+                                                <tr>
+                                                    <td><strong>CR Document:</strong></td>
+                                                    <td>
+                                                        {% if application.cr_document %}
+                                                            <a href="{{ application.cr_document.url }}" target="_blank" class="btn btn-sm btn-outline-primary">View Document</a>
+                                                        {% else %}
+                                                            <span class="text-muted">Not uploaded</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Business License:</strong></td>
+                                                    <td>
+                                                        {% if application.business_license %}
+                                                            <a href="{{ application.business_license.url }}" target="_blank" class="btn btn-sm btn-outline-primary">View Document</a>
+                                                        {% else %}
+                                                            <span class="text-muted">Not uploaded</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Bank Statement:</strong></td>
+                                                    <td>
+                                                        {% if application.bank_statement %}
+                                                            <a href="{{ application.bank_statement.url }}" target="_blank" class="btn btn-sm btn-outline-primary">View Document</a>
+                                                        {% else %}
+                                                            <span class="text-muted">Not uploaded</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Review Form -->
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h5>Review Decision</h5>
+                                <div class="mb-3">
+                                    <label class="form-label">Action</label>
+                                    <div>
+                                        {% for choice in form.action %}
+                                            <div class="form-check">
+                                                {{ choice.tag }}
+                                                <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                                    {{ choice.choice_label }}
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                
+                                <div id="rejection_reason_group" class="mt-3" style="display: none;">
+                                    <div class="mb-3">
+                                        <label for="{{ form.rejection_reason.id_for_label }}" class="form-label">Rejection Reason</label>
+                                        {{ form.rejection_reason }}
+                                        {% if form.rejection_reason.errors %}
+                                            <div class="text-danger">
+                                                {{ form.rejection_reason.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <div class="mb-3">
+                                        <label for="{{ form.review_notes.id_for_label }}" class="form-label">Review Notes</label>
+                                        {{ form.review_notes }}
+                                        {% if form.review_notes.errors %}
+                                            <div class="text-danger">
+                                                {{ form.review_notes.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-check"></i> Submit Review
+                                </button>
+                                <a href="{% url 'business_partners:admin_vendor_applications' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide rejection reason based on action selection
+    const actionRadios = document.querySelectorAll('input[name="action"]');
+    const rejectionReasonGroup = document.getElementById('rejection_reason_group');
+    
+    function toggleRejectionReason() {
+        const selectedAction = document.querySelector('input[name="action"]:checked').value;
+        if (selectedAction === 'reject' || selectedAction === 'request_changes') {
+            rejectionReasonGroup.style.display = 'block';
+            document.getElementById('id_rejection_reason').required = true;
+        } else {
+            rejectionReasonGroup.style.display = 'none';
+            document.getElementById('id_rejection_reason').required = false;
+        }
+    }
+    
+    actionRadios.forEach(radio => {
+        radio.addEventListener('change', toggleRejectionReason);
+    });
+    
+    // Initial check
+    toggleRejectionReason();
+});
+</script>
+{% endblock %}

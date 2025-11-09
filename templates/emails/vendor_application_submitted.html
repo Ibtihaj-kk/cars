@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Application Submitted - Cars Portal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #007bff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #f8f9fa;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .application-details {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .status-badge {
+            background-color: #28a745;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-block;
+        }
+        .next-steps {
+            background-color: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎉 Application Submitted Successfully!</h1>
+        <p>Thank you for applying to become a Cars Portal vendor</p>
+    </div>
+    
+    <div class="content">
+        <h2>Dear {{ application.contact_person_name|default:application.user.get_full_name }},</h2>
+        
+        <p>We have successfully received your vendor application. Your application is now under review by our team.</p>
+        
+        <div class="application-details">
+            <h3>📋 Application Details</h3>
+            <p><strong>Application ID:</strong> {{ application.application_id }}</p>
+            <p><strong>Company Name:</strong> {{ application.company_name }}</p>
+            <p><strong>Business Type:</strong> {{ application.get_business_type_display }}</p>
+            <p><strong>Status:</strong> <span class="status-badge">{{ application.get_status_display }}</span></p>
+            <p><strong>Submitted On:</strong> {{ application.updated_at|date:"F d, Y \a\t g:i A" }}</p>
+            <p><strong>Completion:</strong> {{ application.get_completion_percentage }}%</p>
+        </div>
+        
+        <div class="next-steps">
+            <h3>📝 What Happens Next?</h3>
+            <ol>
+                <li><strong>Review Process:</strong> Our team will review your application within 3-5 business days</li>
+                <li><strong>Document Verification:</strong> We'll verify all submitted documents and information</li>
+                <li><strong>Background Check:</strong> We'll conduct necessary business verification checks</li>
+                <li><strong>Decision Notification:</strong> You'll receive an email with our decision</li>
+            </ol>
+        </div>
+        
+        <p>You can track your application status at any time by logging into your account.</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{ status_url }}" class="btn">Track Application Status</a>
+        </div>
+        
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p><strong>📞 Need Help?</strong></p>
+            <p>If you have any questions about your application, please contact our vendor support team:</p>
+            <ul>
+                <li>Email: vendors@carsportal.com</li>
+                <li>Phone: +966 11 123 4567</li>
+                <li>Business Hours: Sunday - Thursday, 9:00 AM - 6:00 PM</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from Cars Portal Vendor Management System.</p>
+        <p>&copy; {{ current_year }} Cars Portal. All rights reserved.</p>
+    </div>
+</body>
+</html>

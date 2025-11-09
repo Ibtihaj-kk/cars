@@ -1,0 +1,688 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block title %}Vendor Dashboard - {{ vendor_profile.business_partner.company_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card {
+        text-align: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .stat-card.success-card {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+    
+    .stat-card.danger-card {
+        background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+        animation: pulse 2s infinite;
+    }
+    
+    .stat-card.info-card {
+        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+    }
+    
+    .stat-card.warning-card {
+        background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.8; }
+        100% { opacity: 1; }
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        opacity: 0.9;
+        margin: 0;
+    }
+    
+    .quick-action-btn {
+        display: block;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        text-decoration: none;
+        color: #495057;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action-btn:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
+        color: #212529;
+        text-decoration: none;
+    }
+    
+    .recent-parts-table {
+        font-size: 0.9rem;
+    }
+    
+    .category-chart {
+        margin-top: 1rem;
+    }
+    
+    .category-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 5px;
+    }
+    
+    .category-bar {
+        height: 6px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 3px;
+        margin-top: 0.25rem;
+    }
+    
+    .alert-card {
+        background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+        border: 1px solid #fdcb6e;
+    }
+    
+    .recent-alerts {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .alert-item {
+        background: #f8f9fa;
+        border-radius: 5px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+    }
+    
+    .alert-item:hover {
+        background: #e9ecef;
+        transform: translateX(2px);
+    }
+    
+    .alert-item.priority-critical {
+        border-left-color: #dc3545 !important;
+    }
+    
+    .alert-item.priority-high {
+        border-left-color: #fd7e14 !important;
+    }
+    
+    .alert-item.priority-medium {
+        border-left-color: #ffc107 !important;
+    }
+    
+    .alert-item.priority-low {
+        border-left-color: #28a745 !important;
+    }
+
+    .alert-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .alert-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .alert-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 8px;
+    }
+
+    .alert-actions .btn {
+        margin-right: 5px;
+        font-size: 0.75rem;
+        padding: 2px 6px;
+    }
+
+    /* Notification Toast Styles */
+    .notification-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 16px;
+        min-width: 300px;
+        z-index: 1050;
+        transform: translateX(400px);
+        transition: transform 0.3s ease;
+        border-left: 4px solid #007bff;
+    }
+
+    .notification-toast.show {
+        transform: translateX(0);
+    }
+
+    .notification-toast.notification-success {
+        border-left-color: #28a745;
+    }
+
+    .notification-toast.notification-error {
+        border-left-color: #dc3545;
+    }
+
+    .notification-toast.notification-warning {
+        border-left-color: #ffc107;
+    }
+
+    .notification-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .notification-content i {
+        font-size: 1.2rem;
+    }
+
+    .notification-toast.notification-success .notification-content i {
+        color: #28a745;
+    }
+
+    .notification-toast.notification-error .notification-content i {
+        color: #dc3545;
+    }
+
+    .notification-toast.notification-warning .notification-content i {
+        color: #ffc107;
+    }
+
+    .notification-close {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: none;
+        border: none;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: color 0.2s ease;
+    }
+
+    .notification-close:hover {
+        color: #343a40;
+    }
+
+    /* Auto-refresh toggle styling */
+    .auto-refresh-toggle {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+    }
+
+    .auto-refresh-toggle .form-check {
+        margin: 0;
+    }
+
+    .auto-refresh-toggle .form-check-input {
+        width: 36px;
+        height: 20px;
+        margin-top: 0;
+    }
+
+    .auto-refresh-toggle .form-check-label {
+        font-size: 0.8rem;
+        margin-left: 8px;
+        color: #6c757d;
+    }
+
+    /* Refresh indicator */
+    .refresh-indicator {
+        text-align: center;
+        padding: 20px;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .refresh-indicator i {
+        margin-right: 8px;
+    }
+
+    /* Stock monitoring widget */
+    .stock-monitoring-widget {
+        position: relative;
+        overflow: visible;
+    }
+
+    /* Critical alerts card pulse animation */
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+        }
+    }
+
+    .danger-card.pulse {
+        animation: pulse 2s infinite;
+    }
+    
+    .stock-monitoring-widget {
+        position: relative;
+    }
+    
+    .refresh-indicator {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .auto-refresh-toggle {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+    }
+    
+    .notification-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">Vendor Dashboard</h1>
+                    <p class="text-muted mb-0">Welcome back, {{ vendor_profile.business_partner.company_name }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'business_partners:vendor_part_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add New Part
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% block vendor_content %}
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-lg-6 mb-4">
+            <div class="dashboard-card stat-card stock-monitoring-widget">
+                <div class="auto-refresh-toggle">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="auto-refresh-toggle" checked>
+                        <label class="form-check-label" for="auto-refresh-toggle">Auto</label>
+                    </div>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-cubes"></i>
+                </div>
+                <h3 class="stat-number">{{ stats.total_parts|default:"0" }}</h3>
+                <p class="stat-label">Total Parts</p>
+                <div class="stat-change positive">
+                    <i class="fas fa-arrow-up"></i> +12% from last month
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 mb-4">
+            <div class="dashboard-card stat-card success-card">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3 class="stat-number">{{ stats.active_parts|default:"0" }}</h3>
+                <p class="stat-label">Active Parts</p>
+                <div class="stat-change positive">
+                    <i class="fas fa-arrow-up"></i> +8% from last month
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 mb-4">
+            <div class="dashboard-card stat-card danger-card critical-alerts-card">
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3 class="stat-number alert-count">{{ stats.critical_notifications|default:"0" }}</h3>
+                <p class="stat-label">Critical Alerts</p>
+                {% if stats.critical_notifications > 0 %}
+                <div class="stat-change negative">
+                    <i class="fas fa-exclamation-circle"></i> Immediate attention required
+                </div>
+                {% else %}
+                <div class="stat-change positive">
+                    <i class="fas fa-check-circle"></i> All good
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 mb-4">
+            <div class="dashboard-card stat-card info-card inventory-health-card">
+                <div class="stat-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <h3 class="stat-number health-percentage">{{ stats.inventory_health_percentage|default:"100" }}%</h3>
+                <p class="stat-label health-status">{{ stats.health_status|default:"Excellent" }}</p>
+                <div class="stat-change positive">
+                    <i class="fas fa-chart-line"></i> Inventory Health
+                </div>
+            </div>
+        </div>
+                <div class="stat-icon">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <h3 class="stat-number">{{ stats.out_of_stock|default:"0" }}</h3>
+                <p class="stat-label">Out of Stock</p>
+                <div class="stat-change negative">
+                    <i class="fas fa-arrow-down"></i> -3% from last month
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Inventory Management Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="dashboard-card stat-card info-card">
+                <h2 class="stat-number">{{ stats.below_safety_stock }}</h2>
+                <p class="stat-label">Below Safety Stock</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card stat-card warning-card">
+                <h2 class="stat-number">{{ stats.needs_reorder }}</h2>
+                <p class="stat-label">Needs Reorder</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card stat-card success-card">
+                <h2 class="stat-number">{{ stats.inventory_health|floatformat:1 }}%</h2>
+                <p class="stat-label">Inventory Health</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card stat-card">
+                <h2 class="stat-number">{{ stats.healthy_stock_count }}</h2>
+                <p class="stat-label">Healthy Stock Items</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="dashboard-card stat-card info-card">
+                <h2 class="stat-number">${{ stats.total_value|floatformat:2 }}</h2>
+                <p class="stat-label">Total Inventory Value</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card stat-card">
+                <h2 class="stat-number">${{ stats.avg_price|floatformat:2 }}</h2>
+                <p class="stat-label">Average Part Price</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+                    <div class="dashboard-card stat-card {% if stats.critical_notifications > 0 %}danger-card{% else %}success-card{% endif %}">
+                        <h2 class="stat-number">{{ stats.critical_notifications }}</h2>
+                        <p class="stat-label">Critical Alerts</p>
+                        {% if stats.critical_notifications > 0 %}
+                        <small class="text-danger">Requires immediate attention</small>
+                        {% endif %}
+                    </div>
+                </div>
+    </div>
+
+    <div class="row">
+        <!-- Quick Actions -->
+        <div class="col-md-3">
+            <div class="dashboard-card">
+                <h5 class="mb-3">Quick Actions</h5>
+                <a href="{% url 'business_partners:vendor_parts_list' %}" class="quick-action-btn">
+                    <i class="fas fa-list"></i> Manage Parts
+                </a>
+                <a href="{% url 'business_partners:vendor_part_create' %}" class="quick-action-btn">
+                    <i class="fas fa-plus"></i> Add New Part
+                </a>
+                <a href="{% url 'business_partners:vendor_reorder_notifications' %}" class="quick-action-btn">
+                    <i class="fas fa-bell"></i> Reorder Notifications
+                    {% if stats.needs_reorder > 0 %}
+                        <span class="badge bg-danger ms-2">{{ stats.needs_reorder }}</span>
+                    {% endif %}
+                </a>
+                <a href="{% url 'business_partners:vendor_parts_bulk_update' %}" class="quick-action-btn">
+                    <i class="fas fa-edit"></i> Bulk Update
+                </a>
+                <a href="{% url 'business_partners:vendor_parts_export_csv' %}" class="quick-action-btn">
+                    <i class="fas fa-download"></i> Export CSV
+                </a>
+                <a href="{% url 'business_partners:vendor_inventory_alerts' %}" class="quick-action-btn">
+                    <i class="fas fa-exclamation-triangle"></i> Inventory Alerts
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Parts -->
+        <div class="col-md-6">
+            <div class="dashboard-card">
+                <h5 class="mb-3">Recent Parts</h5>
+                {% if recent_parts %}
+                    <div class="table-responsive recent-parts-table">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Part Number</th>
+                                    <th>Description</th>
+                                    <th>Price</th>
+                                    <th>Stock</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for part in recent_parts %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'business_partners:vendor_part_detail' part.id %}" class="text-decoration-none">
+                                            {{ part.parts_number }}
+                                        </a>
+                                    </td>
+                                    <td>{{ part.material_description|truncatechars:30 }}</td>
+                                    <td>${{ part.price|floatformat:2 }}</td>
+                                    <td>
+                                        <span class="badge {% if part.quantity == 0 %}badge-danger{% elif part.quantity <= 10 %}badge-warning{% else %}badge-success{% endif %}">
+                                            {{ part.quantity }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if part.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+                                            {% if part.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'business_partners:vendor_parts_list' %}" class="btn btn-outline-primary btn-sm">
+                            View All Parts
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No parts added yet</p>
+                        <a href="{% url 'business_partners:vendor_part_create' %}" class="btn btn-primary">
+                            Add Your First Part
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Stock Alerts Widget -->
+        <div class="col-md-3">
+            <div class="dashboard-card">
+                <div class="dashboard-header d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bell text-warning me-2"></i>
+                        Recent Stock Alerts
+                    </h5>
+                    <button class="btn btn-sm btn-outline-secondary refresh-alerts" title="Refresh alerts">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                {% if recent_notifications %}
+                    <div class="recent-alerts" id="recent-alerts-container">
+                        <div class="refresh-indicator" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i> Loading...
+                        </div>
+                        {% for notification in recent_notifications %}
+                        <div class="alert-item border-start border-3 border-{{ notification.get_priority_display|lower }} ps-3 mb-3" data-notification-id="{{ notification.id }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ notification.part.name|truncatechars:25 }}</strong>
+                                    <br>
+                                    <small class="text-muted">Stock: {{ notification.current_stock }}</small>
+                                </div>
+                                <span class="badge bg-{{ notification.get_priority_display|lower }}">{{ notification.get_priority_display }}</span>
+                            </div>
+                            <small class="text-muted">{{ notification.created_at|timesince }} ago</small>
+                            <div class="mt-1 alert-actions">
+                                <a href="{% url 'business_partners:vendor_reorder_notification_detail' notification.id %}" class="btn btn-sm btn-outline-primary">
+                                    View
+                                </a>
+                                <button class="btn btn-sm btn-outline-success mark-ordered" data-notification-id="{{ notification.id }}">Mark Ordered</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'business_partners:vendor_reorder_notifications' %}" class="btn btn-outline-primary btn-sm">
+                            View All Alerts
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                        <p class="text-muted small">No recent stock alerts</p>
+                        <small class="text-muted">All inventory levels are healthy</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts Section -->
+    {% if stats.out_of_stock > 0 or stats.low_stock > 0 or stats.below_safety_stock > 0 %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="dashboard-card alert-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                    Inventory Alerts
+                </h5>
+                <div class="row">
+                    {% if stats.out_of_stock > 0 %}
+                    <div class="col-md-4">
+                        <div class="alert alert-danger">
+                            <strong>{{ stats.out_of_stock }}</strong> parts are out of stock
+                            <a href="{% url 'business_partners:vendor_inventory_alerts' %}" class="alert-link">View Details</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if stats.low_stock > 0 %}
+                    <div class="col-md-4">
+                        <div class="alert alert-warning">
+                            <strong>{{ stats.low_stock }}</strong> parts have low stock
+                            <a href="{% url 'business_partners:vendor_inventory_alerts' %}" class="alert-link">View Details</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if stats.below_safety_stock > 0 %}
+                    <div class="col-md-4">
+                        <div class="alert alert-info">
+                            <strong>{{ stats.below_safety_stock }}</strong> parts below safety stock
+                            <a href="{% url 'business_partners:vendor_reorder_notifications' %}" class="alert-link">View Notifications</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if stats.needs_reorder > 0 %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-primary">
+                            <i class="fas fa-bell me-2"></i>
+                            <strong>{{ stats.needs_reorder }}</strong> items need reordering
+                            <a href="{% url 'business_partners:vendor_reorder_notifications' %}" class="btn btn-primary btn-sm ms-3">
+                                <i class="fas fa-eye me-1"></i>View Reorder Notifications
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock vendor_content %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/vendor_stock_monitoring.js' %}"></script>
+<script>
+    // Auto-refresh dashboard every 5 minutes (fallback)
+    setTimeout(function() {
+        location.reload();
+    }, 300000);
+    
+    // Add tooltips to stat cards
+    $(document).ready(function() {
+        $('[data-toggle="tooltip"]').tooltip();
+    });
+</script>
+{% endblock %}

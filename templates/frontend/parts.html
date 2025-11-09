@@ -1,0 +1,179 @@
+<!-- Main Content -->
+        <main class="pw-main-content">
+          <!-- Top Controls -->
+          <div class="pw-top-controls">
+            <div class="pw-sort-controls">
+              <span class="pw-sort-label">Sort By:</span>
+              <select class="pw-sort-select" id="sortSelect">
+                <option>Updated Date: Recent First</option>
+                <option>Updated Date: Oldest First</option>
+                <option>Price: Low to High</option>
+                <option>Price: High to Low</option>
+                <option>Top Sales</option>
+              </select>
+            </div>
+            <!-- <div class="pw-view-controls">
+                        <button class="pw-view-btn" id="listBtn" onclick="setViewMode('list')">LIST</button>
+                        <button class="pw-view-btn pw-view-active" id="gridBtn" onclick="setViewMode('grid')">GRID</button>
+                    </div> -->
+          </div>
+
+          <!-- Vehicle Selector -->
+          <div class="pw-vehicle-selector">
+            <span class="pw-vehicle-text"
+              >Select a vehicle to check if these parts fit</span
+            >
+            <button class="pw-vehicle-btn">
+              Select Vehicle
+              <span class="pw-vehicle-arrow"
+                ><i class="ri-arrow-down-s-line"></i
+              ></span>
+            </button>
+          </div>
+
+          <!-- Products Grid -->
+          <div class="pw-products-grid" id="productsGrid">
+            <!-- Products will be populated by JavaScript -->
+          </div>
+
+          <!-- Pagination -->
+          <div class="pw-pagination">
+            <button class="pw-page-btn pw-page-active" onclick="setPage(1)">
+              1
+            </button>
+            <button class="pw-page-btn" onclick="setPage(2)">2</button>
+            <button class="pw-page-btn" onclick="setPage(3)">3</button>
+            <button class="pw-page-btn" onclick="setPage(4)">4</button>
+            <button class="pw-page-btn" onclick="setPage(5)">5</button>
+            <span class="pw-page-dots">...</span>
+            <span class="pw-page-next">Next | Last</span>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- View Accessories Section -->
+    <div class="vas-container">
+        <!-- View Accessories by Category -->
+        <div class="vas-section">
+            <h2 class="vas-section-title">View Accessories by Category</h2>
+            <div class="vas-grid">
+                <a href="#" class="vas-link">Car Care <span class="vas-count">(8200+)</span></a>
+                <a href="#" class="vas-link">Interior <span class="vas-count">(6600+)</span></a>
+                <a href="#" class="vas-link">Brakes <span class="vas-count">(5600+)</span></a>
+                <a href="#" class="vas-link">Engine & Mechanical <span class="vas-count">(4800+)</span></a>
+                <a href="#" class="vas-link">Exterior <span class="vas-count">(4600+)</span></a>
+                <a href="#" class="vas-link">Lights & Electrical <span class="vas-count">(2000+)</span></a>
+                <a href="#" class="vas-link">Tools & Gadgets <span class="vas-count">(1400+)</span></a>
+                <a href="#" class="vas-link">Oils & Lubricants <span class="vas-count">(1200+)</span></a>
+                <a href="#" class="vas-link">Audio / Video <span class="vas-count">(710+)</span></a>
+                <a href="#" class="vas-link">Bikes Spare Parts <span class="vas-count">(600+)</span></a>
+                <a href="#" class="vas-link">Tyres & Wheels <span class="vas-count">(490+)</span></a>
+                <a href="#" class="vas-link">Exhaust and Parts <span class="vas-count">(150+)</span></a>
+                <a href="#" class="vas-link">Security & Sensors <span class="vas-count">(150+)</span></a>
+                <a href="#" class="vas-link">Car Utilities <span class="vas-count">(80+)</span></a>
+                <a href="#" class="vas-link">Other Vehicles <span class="vas-count">(2)</span></a>
+                <a href="#" class="vas-link">General Items <span class="vas-count">(1)</span></a>
+            </div>
+        </div>
+
+        <!-- View Accessories by Sub Category -->
+        <div class="vas-section">
+            <h2 class="vas-section-title">View Accessories by Sub Category</h2>
+            <div class="vas-grid">
+                <a href="#" class="vas-link">Car Covers <span class="vas-count">(3900+)</span></a>
+                <a href="#" class="vas-link">Brake Pads <span class="vas-count">(3900+)</span></a>
+                <a href="#" class="vas-link">Car Floor Mats <span class="vas-count">(2200+)</span></a>
+                <a href="#" class="vas-link">Car Wipers <span class="vas-count">(1600+)</span></a>
+                <a href="#" class="vas-link">Car Shades <span class="vas-count">(1300+)</span></a>
+                <a href="#" class="vas-link">Brake Shoe <span class="vas-count">(1200+)</span></a>
+                <a href="#" class="vas-link">Oil Filters <span class="vas-count">(1000+)</span></a>
+                <a href="#" class="vas-link">AC Filters <span class="vas-count">(980+)</span></a>
+                <a href="#" class="vas-link">Spark Plugs <span class="vas-count">(870+)</span></a>
+                <a href="#" class="vas-link">Air Filters <span class="vas-count">(770+)</span></a>
+                <a href="#" class="vas-link">Dashboard Covers <span class="vas-count">(760+)</span></a>
+                <a href="#" class="vas-link">Engine Oil <span class="vas-count">(730+)</span></a>
+                <a href="#" class="vas-link">Air Freshener <span class="vas-count">(720+)</span></a>
+                <a href="#" class="vas-link">Car Stickers <span class="vas-count">(550+)</span></a>
+                <a href="#" class="vas-link">Trunk Mats <span class="vas-count">(490+)</span></a>
+                <a href="#" class="vas-link">Microfiber Cloth <span class="vas-count">(470+)</span></a>
+                <a href="#" class="vas-link">Tool Kits <span class="vas-count">(430+)</span></a>
+                <a href="#" class="vas-link">Car Side Mirrors <span class="vas-count">(380+)</span></a>
+                <a href="#" class="vas-link">Key Covers <span class="vas-count">(360+)</span></a>
+                <a href="#" class="vas-link">Car LED Lights <span class="vas-count">(360+)</span></a>
+            </div>
+        </div>
+
+        <!-- View Accessories by Make -->
+        <div class="vas-section">
+            <h2 class="vas-section-title">View Accessories by Make</h2>
+            <div class="vas-grid">
+                <a href="#" class="vas-link">Toyota Parts and Accessories <span class="vas-count">(6300+)</span></a>
+                <a href="#" class="vas-link">Honda Parts and Accessories <span class="vas-count">(3600+)</span></a>
+                <a href="#" class="vas-link">Suzuki Parts and Accessories <span class="vas-count">(3300+)</span></a>
+                <a href="#" class="vas-link">Daihatsu Parts and Accessories <span class="vas-count">(980+)</span></a>
+                <a href="#" class="vas-link">Nissan Parts and Accessories <span class="vas-count">(670+)</span></a>
+                <a href="#" class="vas-link">KIA Parts and Accessories <span class="vas-count">(620+)</span></a>
+                <a href="#" class="vas-link">Hyundai Parts and Accessories <span class="vas-count">(580+)</span></a>
+                <a href="#" class="vas-link">Mitsubishi Parts and Accessories <span class="vas-count">(550+)</span></a>
+                <a href="#" class="vas-link">Changan Parts and Accessories <span class="vas-count">(200+)</span></a>
+                <a href="#" class="vas-link">MG Parts and Accessories <span class="vas-count">(200+)</span></a>
+                <a href="#" class="vas-link">Mercedes Benz Parts and Accessories <span class="vas-count">(200+)</span></a>
+                <a href="#" class="vas-link">Audi Parts and Accessories <span class="vas-count">(160+)</span></a>
+                <a href="#" class="vas-link">BMW Parts and Accessories <span class="vas-count">(160+)</span></a>
+                <a href="#" class="vas-link">Lexus Parts and Accessories <span class="vas-count">(140+)</span></a>
+                <a href="#" class="vas-link">Haval Parts and Accessories <span class="vas-count">(140+)</span></a>
+                <a href="#" class="vas-link">Mazda Parts and Accessories <span class="vas-count">(120+)</span></a>
+                <a href="#" class="vas-link">DFSK Parts and Accessories <span class="vas-count">(80+)</span></a>
+                <a href="#" class="vas-link">Others Parts and Accessories <span class="vas-count">(60+)</span></a>
+                <a href="#" class="vas-link">FAW Parts and Accessories <span class="vas-count">(60+)</span></a>
+                <a href="#" class="vas-link">Proton Parts and Accessories <span class="vas-count">(60+)</span></a>
+            </div>
+        </div>
+
+        <!-- View Accessories by City -->
+        <div class="vas-section">
+            <h2 class="vas-section-title">View Accessories by City</h2>
+            <div class="vas-grid">
+                <a href="#" class="vas-link">Parts and Accessories In Karachi <span class="vas-count">(19500+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Lahore <span class="vas-count">(13100+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Okara <span class="vas-count">(1900+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Islamabad <span class="vas-count">(580+)</span></a>
+                <a href="#" class="vas-link">Car Accessories In Mirpur Khas <span class="vas-count">(440+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Rawalpindi <span class="vas-count">(440+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Sialkot <span class="vas-count">(400+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Peshawar <span class="vas-count">(90+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Faisalabad <span class="vas-count">(80+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Multan <span class="vas-count">(50+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Gujranwala <span class="vas-count">(50+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Sargodha <span class="vas-count">(10+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Abbottabad <span class="vas-count">(10+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Gujrat <span class="vas-count">(10+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Wah cantt <span class="vas-count">(30+)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Rahim Yar Khan <span class="vas-count">(9)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Bahawalpur <span class="vas-count">(8)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Mirpur A.K <span class="vas-count">(8)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Hyderabad <span class="vas-count">(7)</span></a>
+                <a href="#" class="vas-link">Parts and Accessories In Mardan <span class="vas-count">(7)</span></a>
+            </div>
+        </div>
+
+        <!-- Popular Searches -->
+        <div class="vas-section">
+            <h2 class="vas-section-title">Popular Searches</h2>
+            <div class="vas-grid">
+                <a href="#" class="vas-link">Microfiber Cloth <span class="vas-count">(480+)</span></a>
+                <a href="#" class="vas-link">Car LED Lights <span class="vas-count">(360+)</span></a>
+                <a href="#" class="vas-link">Headlights <span class="vas-count">(250+)</span></a>
+                <a href="#" class="vas-link">Car Washer <span class="vas-count">(230+)</span></a>
+                <a href="#" class="vas-link">Car Tyres <span class="vas-count">(180+)</span></a>
+                <a href="#" class="vas-link">Car Key Chains <span class="vas-count">(90+)</span></a>
+                <a href="#" class="vas-link">GPS Trackers <span class="vas-count">(60+)</span></a>
+                <a href="#" class="vas-link">Helmets <span class="vas-count">(60+)</span></a>
+                <a href="#" class="vas-link">Ceramic Coating <span class="vas-count">(50+)</span></a>
+                <a href="#" class="vas-link">Car Air Conditioner <span class="vas-count">(30+)</span></a>
+                <a href="#" class="vas-link">Car Battery <span class="vas-count">(20+)</span></a>
+                <a href="#" class="vas-link">Air Blowers <span class="vas-count">(10+)</span></a>
+            </div>
+        </div>
+    </div>

@@ -1,0 +1,54 @@
+{
+  "models": [
+    {
+      "make_name": "Toyota",
+      "name": "Camry",
+      "model_code": "XV70"
+    },
+    {
+      "make_name": "Toyota",
+      "name": "Corolla",
+      "model_code": "E210"
+    },
+    {
+      "make_name": "Toyota",
+      "name": "RAV4",
+      "model_code": "XA50"
+    },
+    {
+      "make_name": "Honda",
+      "name": "Civic",
+      "model_code": "FC1"
+    },
+    {
+      "make_name": "Honda",
+      "name": "Accord",
+      "model_code": "CV3"
+    },
+    {
+      "make_name": "BMW",
+      "name": "3 Series",
+      "model_code": "G20"
+    },
+    {
+      "make_name": "BMW",
+      "name": "5 Series",
+      "model_code": "G30"
+    },
+    {
+      "make_name": "Mercedes-Benz",
+      "name": "C-Class",
+      "model_code": "W206"
+    },
+    {
+      "make_name": "Audi",
+      "name": "A4",
+      "model_code": "B9"
+    },
+    {
+      "make_name": "Nissan",
+      "name": "Altima",
+      "model_code": "L34"
+    }
+  ]
+}

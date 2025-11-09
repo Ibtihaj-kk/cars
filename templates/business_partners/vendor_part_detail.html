@@ -1,0 +1,417 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block title %}{{ part.parts_number }} - Part Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-header {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 30px 0;
+        margin-bottom: 30px;
+    }
+    
+    .detail-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 30px;
+        margin-bottom: 20px;
+    }
+    
+    .detail-section {
+        border-left: 4px solid #28a745;
+        padding-left: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .detail-section h5 {
+        color: #28a745;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+    
+    .field-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .field-row:last-child {
+        border-bottom: none;
+    }
+    
+    .field-label {
+        font-weight: 600;
+        color: #495057;
+        min-width: 200px;
+    }
+    
+    .field-value {
+        color: #212529;
+        flex: 1;
+        text-align: right;
+    }
+    
+    .status-badge {
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .status-active {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .status-featured {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .part-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .action-buttons {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .inventory-alert {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .alert-low-stock {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+    }
+    
+    .alert-out-of-stock {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    
+    .tabs-container {
+        margin-bottom: 30px;
+    }
+    
+    .nav-tabs .nav-link {
+        border-radius: 8px 8px 0 0;
+        border: none;
+        background: #f8f9fa;
+        color: #495057;
+        margin-right: 5px;
+    }
+    
+    .nav-tabs .nav-link.active {
+        background: #28a745;
+        color: white;
+    }
+    
+    .tab-content {
+        background: white;
+        border-radius: 0 8px 8px 8px;
+        padding: 30px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .price-display {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #28a745;
+    }
+    
+    .stock-display {
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="detail-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h3 mb-2">{{ part.parts_number }}</h1>
+                <p class="h5 mb-0">{{ part.material_description }}</p>
+                {% if part.material_description_ar %}
+                <p class="mb-0 text-light">{{ part.material_description_ar }}</p>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-md-right">
+                <div class="mb-2">
+                    <span class="status-badge {% if part.is_active %}status-active{% else %}status-inactive{% endif %}">
+                        {% if part.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                    {% if part.is_featured %}
+                    <span class="status-badge status-featured ml-2">Featured</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <div class="row">
+            <div class="col-md-8">
+                <a href="{% url 'business_partners:vendor_part_edit' part.id %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Edit Part
+                </a>
+                <a href="{% url 'business_partners:vendor_parts_list' %}" class="btn btn-secondary ml-2">
+                    <i class="fas fa-arrow-left"></i> Back to List
+                </a>
+                <button class="btn btn-info ml-2" onclick="window.print()">
+                    <i class="fas fa-print"></i> Print
+                </button>
+            </div>
+            <div class="col-md-4 text-right">
+                <button class="btn btn-danger" data-toggle="modal" data-target="#deleteModal">
+                    <i class="fas fa-trash"></i> Delete Part
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Inventory Alerts -->
+    {% if part.quantity <= part.minimum_safety_stock %}
+    <div class="inventory-alert {% if part.quantity == 0 %}alert-out-of-stock{% else %}alert-low-stock{% endif %}">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <i class="fas fa-exclamation-triangle"></i>
+                {% if part.quantity == 0 %}
+                <strong>Out of Stock:</strong> This part is currently out of stock.
+                {% else %}
+                <strong>Low Stock Alert:</strong> Current stock ({{ part.quantity }}) is below minimum safety stock ({{ part.minimum_safety_stock }}).
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-right">
+                <button class="btn btn-warning btn-sm">
+                    <i class="fas fa-plus"></i> Reorder Now
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Left Column - Image and Quick Info -->
+        <div class="col-md-4">
+            <div class="detail-card">
+                {% if part.image %}
+                <img src="{{ part.image.url }}" alt="{{ part.material_description }}" class="part-image mb-3">
+                {% elif part.image_url %}
+                <img src="{{ part.image_url }}" alt="{{ part.material_description }}" class="part-image mb-3">
+                {% else %}
+                <div class="text-center p-4" style="background: #f8f9fa; border-radius: 8px;">
+                    <i class="fas fa-image fa-3x text-muted"></i>
+                    <p class="text-muted mt-2">No image available</p>
+                </div>
+                {% endif %}
+                
+                <div class="text-center">
+                    <div class="price-display mb-2">${{ part.price|floatformat:2 }}</div>
+                    <div class="stock-display">
+                        Stock: {{ part.quantity }} {{ part.base_unit_of_measure|default:"units" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column - Detailed Information -->
+        <div class="col-md-8">
+            <!-- Tabs Navigation -->
+            <div class="tabs-container">
+                <ul class="nav nav-tabs" id="detailTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link active" id="basic-tab" data-toggle="tab" href="#basic" role="tab">
+                            <i class="fas fa-info-circle"></i> Basic Info
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="specifications-tab" data-toggle="tab" href="#specifications" role="tab">
+                            <i class="fas fa-cogs"></i> Specifications
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="inventory-tab" data-toggle="tab" href="#inventory" role="tab">
+                            <i class="fas fa-boxes"></i> Inventory
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="vendor-tab" data-toggle="tab" href="#vendor" role="tab">
+                            <i class="fas fa-industry"></i> Vendor Data
+                        </a>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="detailTabsContent">
+                    <!-- Basic Information Tab -->
+                    <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                        <div class="detail-section">
+                            <h5>Part Identification</h5>
+                            {% for field_name, field_data in visible_fields.items %}
+                                {% if field_data.category == 'identification' and field_data.value %}
+                                <div class="field-row">
+                                    <span class="field-label">{{ field_data.label }}:</span>
+                                    <span class="field-value">{{ field_data.value }}</span>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h5>Classification</h5>
+                            {% for field_name, field_data in visible_fields.items %}
+                                {% if field_data.category == 'classification' and field_data.value %}
+                                <div class="field-row">
+                                    <span class="field-label">{{ field_data.label }}:</span>
+                                    <span class="field-value">{{ field_data.value }}</span>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Specifications Tab -->
+                    <div class="tab-pane fade" id="specifications" role="tabpanel">
+                        <div class="detail-section">
+                            <h5>Physical Specifications</h5>
+                            {% for field_name, field_data in visible_fields.items %}
+                                {% if field_data.category == 'specifications' and field_data.value %}
+                                <div class="field-row">
+                                    <span class="field-label">{{ field_data.label }}:</span>
+                                    <span class="field-value">{{ field_data.value }}</span>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Inventory Tab -->
+                    <div class="tab-pane fade" id="inventory" role="tabpanel">
+                        <div class="detail-section">
+                            <h5>Pricing Information</h5>
+                            {% for field_name, field_data in visible_fields.items %}
+                                {% if field_data.category == 'pricing' and field_data.value %}
+                                <div class="field-row">
+                                    <span class="field-label">{{ field_data.label }}:</span>
+                                    <span class="field-value {% if 'price' in field_name %}price-display{% endif %}">{{ field_data.value }}</span>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h5>Stock Management</h5>
+                            {% for field_name, field_data in visible_fields.items %}
+                                {% if field_data.category == 'inventory' and field_data.value %}
+                                <div class="field-row">
+                                    <span class="field-label">{{ field_data.label }}:</span>
+                                    <span class="field-value {% if 'quantity' in field_name %}stock-display{% endif %}">{{ field_data.value }}</span>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Vendor Data Tab -->
+                    <div class="tab-pane fade" id="vendor" role="tabpanel">
+                        <div class="detail-section">
+                            <h5>Vendor Information</h5>
+                            {% for field_name, field_data in visible_fields.items %}
+                                {% if field_data.category == 'vendor' and field_data.value %}
+                                <div class="field-row">
+                                    <span class="field-label">{{ field_data.label }}:</span>
+                                    <span class="field-value">{{ field_data.value }}</span>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        
+                        {% if can_edit %}
+                        <div class="detail-section">
+                            <h5>Administrative Fields</h5>
+                            {% for field_name, field_data in visible_fields.items %}
+                                {% if field_data.category == 'admin' and field_data.value %}
+                                <div class="field-row">
+                                    <span class="field-label">{{ field_data.label }}:</span>
+                                    <span class="field-value">{{ field_data.value }}</span>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this part?</p>
+                <p><strong>{{ part.parts_number }} - {{ part.material_description }}</strong></p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'business_partners:vendor_part_delete' part.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Part</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-refresh for real-time updates
+    setInterval(function() {
+        // Could implement real-time stock updates here
+    }, 30000);
+    
+    // Print functionality
+    window.print = function() {
+        window.print();
+    };
+});
+</script>
+{% endblock %}

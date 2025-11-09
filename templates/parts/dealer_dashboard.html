@@ -1,0 +1,480 @@
+{% extends 'frontend/base.html' %}
+{% load static %}
+
+{% block title %}Dealer Dashboard - Cars Portal{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/parts_management.css' %}">
+<style>
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.dashboard-header {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.dashboard-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.dashboard-subtitle {
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3498db, #2980b9);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+    margin-bottom: 15px;
+}
+
+.stat-icon.revenue {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+
+.stat-icon.orders {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.stat-icon.parts {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
+.stat-icon.low-stock {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.chart-container {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.chart-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 20px;
+    background: white;
+    border: 2px solid #ecf0f1;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #2c3e50;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+    border-color: #3498db;
+    color: #3498db;
+    transform: translateY(-2px);
+}
+
+.action-icon {
+    font-size: 20px;
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 10px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .dashboard-header {
+        padding: 20px;
+    }
+    
+    .dashboard-title {
+        font-size: 24px;
+    }
+    
+    .stat-value {
+        font-size: 28px;
+    }
+    
+    .quick-actions {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">
+            <i class="fas fa-tachometer-alt"></i>
+            Dealer Dashboard
+        </h1>
+        <p class="dashboard-subtitle">
+            Welcome back, {{ user.get_full_name|default:user.username }}! 
+            Here's your business overview for today.
+        </p>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <a href="{% url 'parts:part_create' %}" class="action-btn">
+            <div class="action-icon">
+                <i class="fas fa-plus"></i>
+            </div>
+            <span>Add New Part</span>
+        </a>
+        
+        <a href="{% url 'parts:csv_upload' %}" class="action-btn">
+            <div class="action-icon">
+                <i class="fas fa-upload"></i>
+            </div>
+            <span>Upload Parts (.csv)</span>
+        </a>
+        
+        <a href="{% url 'parts:api_import' %}" class="action-btn">
+            <div class="action-icon">
+                <i class="fas fa-cloud-download-alt"></i>
+            </div>
+            <span>Import via API</span>
+        </a>
+        
+        <a href="{% url 'parts:dealer_parts_list' %}" class="action-btn">
+            <div class="action-icon">
+                <i class="fas fa-list"></i>
+            </div>
+            <span>Manage Parts</span>
+        </a>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon revenue">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="stat-value">${{ total_revenue|floatformat:2 }}</div>
+            <div class="stat-label">Total Revenue</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon orders">
+                <i class="fas fa-shopping-cart"></i>
+            </div>
+            <div class="stat-value">{{ total_orders }}</div>
+            <div class="stat-label">Total Orders</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon parts">
+                <i class="fas fa-cogs"></i>
+            </div>
+            <div class="stat-value" id="totalParts">{{ total_parts }}</div>
+            <div class="stat-label">Total Parts</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon low-stock">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-value" id="lowStockCount">{{ low_stock_count }}</div>
+            <div class="stat-label">Low Stock Alerts</div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sales Chart -->
+        <div class="col-lg-8">
+            <div class="chart-container">
+                <h3 class="chart-title">
+                    <i class="fas fa-chart-line"></i>
+                    Sales Overview (Last 30 Days)
+                </h3>
+                <canvas id="salesChart" width="400" height="200"></canvas>
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="chart-container">
+                <h3 class="chart-title">
+                    <i class="fas fa-list"></i>
+                    Recent Orders
+                </h3>
+                {% if recent_orders %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Parts</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in recent_orders %}
+                                    <tr>
+                                        <td><strong>#{{ order.id }}</strong></td>
+                                        <td>{{ order.user.get_full_name|default:order.user.username }}</td>
+                                        <td>{{ order.items.count }} item{{ order.items.count|pluralize }}</td>
+                                        <td><strong>${{ order.total_amount|floatformat:2 }}</strong></td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ order.get_status_display }}</span>
+                                        </td>
+                                        <td>{{ order.created_at|date:"M d, Y" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5>No Recent Orders</h5>
+                        <p class="text-muted">Orders will appear here once customers start purchasing your parts.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Low Stock Alerts -->
+            <div class="chart-container">
+                <h3 class="chart-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Low Stock Alerts
+                </h3>
+                {% if low_stock_parts %}
+                    {% for part in low_stock_parts %}
+                        <div class="d-flex align-items-center mb-3 p-3 bg-light rounded">
+                            {% if part.image %}
+                                <img src="{{ part.image.url }}" alt="{{ part.name }}" 
+                                     class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-warning rounded me-3 d-flex align-items-center justify-content-center" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="fas fa-exclamation-triangle text-white"></i>
+                                </div>
+                            {% endif %}
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ part.name|truncatechars:25 }}</h6>
+                                <small class="text-muted">Only {{ part.quantity }} left</small>
+                            </div>
+                            <a href="{% url 'parts:part_detail' part.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h6>All Good!</h6>
+                        <p class="text-muted small">No low stock alerts at the moment.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Top Selling Parts -->
+            <div class="chart-container">
+                <h3 class="chart-title">
+                    <i class="fas fa-star"></i>
+                    Top Selling Parts
+                </h3>
+                {% if top_selling_parts %}
+                    {% for part in top_selling_parts %}
+                        <div class="d-flex align-items-center mb-3 p-3 bg-light rounded">
+                            {% if part.image %}
+                                <img src="{{ part.image.url }}" alt="{{ part.name }}" 
+                                     class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-secondary rounded me-3 d-flex align-items-center justify-content-center" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="fas fa-cog text-white"></i>
+                                </div>
+                            {% endif %}
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ part.name|truncatechars:25 }}</h6>
+                                <small class="text-muted">${{ part.price }} • {{ part.total_sold|default:0 }} sold</small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <h6>No Sales Data</h6>
+                        <p class="text-muted small">Sales data will appear here once orders are placed.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Sales Chart
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    
+    // Sample data - in real implementation, this would come from the backend
+    const salesData = {
+        labels: [
+            {% for day in sales_chart_labels %}
+                '{{ day }}',
+            {% endfor %}
+        ],
+        datasets: [{
+            label: 'Sales ($)',
+            data: [
+                {% for amount in sales_chart_data %}
+                    {{ amount }},
+                {% endfor %}
+            ],
+            borderColor: '#007bff',
+            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+        }]
+    };
+
+    new Chart(ctx, {
+        type: 'line',
+        data: salesData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    radius: 4,
+                    hoverRadius: 6
+                }
+            }
+        }
+    });
+
+    // Auto-refresh dashboard every 5 minutes
+    setInterval(function() {
+        location.reload();
+    }, 300000);
+});
+</script>
+
+{% endblock %}
+        .catch(error => {
+            console.error('Error loading inventory analytics:', error);
+        });
+}
+
+// Auto-refresh analytics every 5 minutes
+setInterval(loadInventoryAnalytics, 300000);
+
+// Load analytics on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadInventoryAnalytics();
+});
+</script>
+{% endblock %}

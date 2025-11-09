@@ -1,0 +1,621 @@
+{% extends 'frontend/base.html' %}
+
+{% load static %}
+
+{% block title %}{% block vendor_title %}Vendor Dashboard{% endblock %} - Cars Portal{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/vendor-dashboard.css' %}">
+<style>
+/* Vendor Dashboard Specific Styles */
+.vendor-dashboard-layout {
+    display: flex;
+    min-height: 100vh;
+    background: #f8f9fa;
+}
+
+.vendor-sidebar {
+    width: 280px;
+    background: #2c3e50;
+    color: white;
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.vendor-sidebar.collapsed {
+    width: 70px;
+}
+
+.vendor-sidebar-header {
+    padding: 20px;
+    background: #34495e;
+    border-bottom: 1px solid #4a5f7a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.vendor-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.vendor-logo img {
+    height: 40px;
+    width: auto;
+}
+
+.vendor-logo-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    text-decoration: none;
+}
+
+.sidebar-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.sidebar-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.vendor-nav {
+    padding: 20px 0;
+}
+
+.vendor-nav-item {
+    margin-bottom: 5px;
+}
+
+.vendor-nav-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: #bdc3c7;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.vendor-nav-link:hover,
+.vendor-nav-link.active {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.vendor-nav-link.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #3498db;
+}
+
+.vendor-nav-icon {
+    width: 20px;
+    text-align: center;
+    margin-right: 15px;
+    font-size: 16px;
+}
+
+.vendor-nav-text {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.vendor-sidebar.collapsed .vendor-logo-text,
+.vendor-sidebar.collapsed .vendor-nav-text {
+    display: none;
+}
+
+.vendor-sidebar.collapsed .vendor-nav-link {
+    justify-content: center;
+    padding: 12px;
+}
+
+.vendor-sidebar.collapsed .vendor-nav-icon {
+    margin-right: 0;
+}
+
+.vendor-main-content {
+    flex: 1;
+    margin-left: 280px;
+    transition: all 0.3s ease;
+}
+
+.vendor-sidebar.collapsed + .vendor-main-content {
+    margin-left: 70px;
+}
+
+.vendor-top-bar {
+    background: white;
+    padding: 15px 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* Mobile menu toggle */
+.mobile-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #2c3e50;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+    margin-right: 15px;
+}
+
+.mobile-menu-toggle:hover {
+    background: #f8f9fa;
+}
+
+.vendor-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #666;
+    font-size: 14px;
+}
+
+.vendor-breadcrumb a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.vendor-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.vendor-user-menu {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.vendor-notification {
+    position: relative;
+}
+
+.vendor-notification-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.vendor-notification-btn:hover {
+    background: #f8f9fa;
+    color: #333;
+}
+
+.vendor-notification-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #e74c3c;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+}
+
+.vendor-user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 15px;
+    background: #f8f9fa;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.vendor-user-profile:hover {
+    background: #e9ecef;
+}
+
+.vendor-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #3498db;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.vendor-user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.vendor-user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.vendor-user-role {
+    font-size: 12px;
+    color: #666;
+}
+
+.vendor-content {
+    padding: 30px;
+}
+
+.vendor-content-header {
+    margin-bottom: 30px;
+}
+
+.vendor-content-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.vendor-content-subtitle {
+    color: #666;
+    font-size: 16px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .vendor-sidebar {
+        transform: translateX(-100%);
+        width: 280px;
+    }
+    
+    .vendor-sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    
+    .vendor-main-content {
+        margin-left: 0;
+    }
+    
+    .vendor-top-bar {
+        padding: 15px 20px;
+    }
+    
+    .vendor-content {
+        padding: 20px;
+    }
+    
+    .vendor-user-info {
+        display: none;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .vendor-dashboard-layout {
+        background: #1a1a1a;
+    }
+    
+    .vendor-top-bar {
+        background: #2d3748;
+        color: #e2e8f0;
+    }
+    
+    .vendor-breadcrumb {
+        color: #a0aec0;
+    }
+    
+    .vendor-notification-btn {
+        color: #a0aec0;
+    }
+    
+    .vendor-notification-btn:hover {
+        background: #374151;
+        color: #e2e8f0;
+    }
+    
+    .vendor-user-profile {
+        background: #374151;
+    }
+    
+    .vendor-user-profile:hover {
+        background: #4b5563;
+    }
+    
+    .vendor-user-name {
+        color: #e2e8f0;
+    }
+    
+    .vendor-user-role {
+        color: #a0aec0;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="vendor-dashboard-layout">
+    <!-- Sidebar -->
+    <div class="vendor-sidebar" id="vendorSidebar">
+        <div class="vendor-sidebar-header">
+            <div class="vendor-logo">
+                <a href="{% url 'business_partners:vendor_dashboard' %}" class="vendor-logo-text">
+                    <img src="{% static 'images/logos/carsportal-logo.png' %}" alt="Cars Portal" style="height: 30px;">
+                    <span class="ms-2">Vendor Portal</span>
+                </a>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <nav class="vendor-nav">
+            <div class="vendor-nav-item">
+                <a href="{% url 'business_partners:vendor_dashboard' %}" class="vendor-nav-link {% if request.resolver_match.url_name == 'vendor_dashboard' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt vendor-nav-icon"></i>
+                    <span class="vendor-nav-text">Dashboard</span>
+                </a>
+            </div>
+            
+            <div class="vendor-nav-item">
+                <a href="{% url 'business_partners:vendor_parts_list' %}" class="vendor-nav-link {% if 'vendor_parts' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="fas fa-box vendor-nav-icon"></i>
+                    <span class="vendor-nav-text">Parts Management</span>
+                </a>
+            </div>
+            
+            <div class="vendor-nav-item">
+                <a href="{% url 'business_partners:vendor_inventory' %}" class="vendor-nav-link {% if 'vendor_inventory' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="fas fa-warehouse vendor-nav-icon"></i>
+                    <span class="vendor-nav-text">Inventory</span>
+                </a>
+            </div>
+            
+            <div class="vendor-nav-item">
+                <a href="{% url 'business_partners:order_processing_dashboard' %}" class="vendor-nav-link {% if 'order_processing' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="fas fa-cogs vendor-nav-icon"></i>
+                    <span class="vendor-nav-text">Order Processing</span>
+                </a>
+            </div>
+            
+            <div class="vendor-nav-item">
+                <a href="{% url 'business_partners:vendor_orders' %}" class="vendor-nav-link {% if 'vendor_orders' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="fas fa-shopping-cart vendor-nav-icon"></i>
+                    <span class="vendor-nav-text">Orders</span>
+                    {% if pending_orders_count > 0 %}
+                        <span class="badge bg-danger ms-auto">{{ pending_orders_count }}</span>
+                    {% endif %}
+                </a>
+            </div>
+            
+            <div class="vendor-nav-item">
+                <a href="{% url 'vendor_reorder_notifications' %}" class="vendor-nav-link {% if 'reorder' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="fas fa-bell vendor-nav-icon"></i>
+                    <span class="vendor-nav-text">Reorder Alerts</span>
+                    {% if reorder_alerts_count > 0 %}
+                        <span class="badge bg-warning ms-auto">{{ reorder_alerts_count }}</span>
+                    {% endif %}
+                </a>
+            </div>
+            
+            <div class="vendor-nav-item">
+                <a href="{% url 'business_partners:vendor_analytics' %}" class="vendor-nav-link {% if 'vendor_analytics' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="fas fa-chart-bar vendor-nav-icon"></i>
+                    <span class="vendor-nav-text">Analytics</span>
+                </a>
+            </div>
+            
+            <div class="vendor-nav-item">
+                <a href="{% url 'business_partners:vendor_storefront' %}" class="vendor-nav-link {% if 'vendor_storefront' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="fas fa-store vendor-nav-icon"></i>
+                    <span class="vendor-nav-text">Storefront</span>
+                </a>
+            </div>
+            
+            <hr class="my-3" style="border-color: #4a5f7a;">
+            
+            <div class="vendor-nav-item">
+                <a href="{% url 'business_partners:vendor_profile_settings' %}" class="vendor-nav-link {% if 'vendor_profile' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="fas fa-cog vendor-nav-icon"></i>
+                    <span class="vendor-nav-text">Settings</span>
+                </a>
+            </div>
+            
+            <div class="vendor-nav-item">
+                <a href="{% url 'business_partners:vendor_logout' %}" class="vendor-nav-link">
+                    <i class="fas fa-sign-out-alt vendor-nav-icon"></i>
+                    <span class="vendor-nav-text">Logout</span>
+                </a>
+            </div>
+        </nav>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="vendor-main-content">
+        <!-- Top Bar -->
+        <div class="vendor-top-bar">
+            <div style="display: flex; align-items: center;">
+                <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="vendor-breadcrumb">
+                    <a href="{% url 'business_partners:vendor_dashboard' %}">
+                        <i class="fas fa-home me-1"></i> Dashboard
+                    </a>
+                    {% block vendor_breadcrumb %}{% endblock %}
+                </div>
+            </div>
+            
+            <div class="vendor-user-menu">
+                <div class="vendor-notification">
+                    <button class="vendor-notification-btn" id="notificationBtn">
+                        <i class="fas fa-bell"></i>
+                        {% if unread_notifications_count > 0 %}
+                            <span class="vendor-notification-badge">{{ unread_notifications_count }}</span>
+                        {% endif %}
+                    </button>
+                </div>
+                
+                <div class="vendor-user-profile" id="userProfile">
+                    <div class="vendor-user-avatar">
+                        {{ user.first_name.0|upper }}{{ user.last_name.0|upper }}
+                    </div>
+                    <div class="vendor-user-info">
+                        <div class="vendor-user-name">{{ user.first_name }} {{ user.last_name }}</div>
+                        <div class="vendor-user-role">{{ vendor_profile.business_partner.company_name }}</div>
+                    </div>
+                    <i class="fas fa-chevron-down ms-2"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="vendor-content">
+            <div class="vendor-content-header">
+                <h1 class="vendor-content-title">{% block vendor_content_title %}Dashboard{% endblock %}</h1>
+                <p class="vendor-content-subtitle">{% block vendor_content_subtitle %}Welcome back, {{ user.first_name }}!{% endblock %}</p>
+            </div>
+            
+            {% if messages %}
+                <div class="row">
+                    <div class="col-12">
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+            
+            {% block vendor_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+
+<!-- User Profile Dropdown -->
+<div class="dropdown-menu dropdown-menu-end" id="userDropdown" style="display: none;">
+    <a class="dropdown-item" href="{% url 'business_partners:vendor_profile_settings' %}">
+        <i class="fas fa-user me-2"></i>Profile Settings
+    </a>
+    <a class="dropdown-item" href="{% url 'business_partners:vendor_storefront' %}">
+        <i class="fas fa-store me-2"></i>View Storefront
+    </a>
+    <div class="dropdown-divider"></div>
+    <a class="dropdown-item text-danger" href="{% url 'business_partners:vendor_logout' %}">
+        <i class="fas fa-sign-out-alt me-2"></i>Logout
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Sidebar toggle functionality
+    const sidebar = document.getElementById('vendorSidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const userProfile = document.getElementById('userProfile');
+    const userDropdown = document.getElementById('userDropdown');
+    
+    // Sidebar toggle
+    sidebarToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('collapsed');
+        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+    });
+    
+    // Restore sidebar state
+    const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (isCollapsed) {
+        sidebar.classList.add('collapsed');
+    }
+    
+    // User profile dropdown
+    userProfile.addEventListener('click', function(e) {
+        e.stopPropagation();
+        userDropdown.style.display = userDropdown.style.display === 'none' ? 'block' : 'none';
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function() {
+        userDropdown.style.display = 'none';
+    });
+    
+    // Mobile sidebar toggle
+    function toggleMobileSidebar() {
+        sidebar.classList.toggle('mobile-open');
+    }
+    
+    // Mobile menu toggle button
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    if (mobileMenuToggle) {
+        mobileMenuToggle.addEventListener('click', toggleMobileSidebar);
+    }
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(e) {
+        if (window.innerWidth <= 992 && 
+            !sidebar.contains(e.target) && 
+            sidebar.classList.contains('mobile-open') &&
+            !mobileMenuToggle.contains(e.target)) {
+            sidebar.classList.remove('mobile-open');
+        }
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 992) {
+            sidebar.classList.remove('mobile-open');
+        }
+    });
+    
+    // Auto-dismiss alerts after 5 seconds
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 5000);
+    });
+    
+    // Notification button (placeholder for future implementation)
+    const notificationBtn = document.getElementById('notificationBtn');
+    if (notificationBtn) {
+        notificationBtn.addEventListener('click', function() {
+            // TODO: Implement notification dropdown
+            console.log('Notifications clicked');
+        });
+    }
+});
+</script>
+{% endblock %}

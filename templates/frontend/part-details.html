@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css"
+      rel="stylesheet"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      type="module"
+      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"
+    ></script>
+    <script
+      nomodule
+      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"
+    ></script>
+
+    <link rel="stylesheet" href="styles/products.css" />
+    <link rel="stylesheet" href="styles/navbar.css" />
+  </head>
+  <body>
+    <!-- Navbar Section -->
+    <div id="navbar"></div>
+
+    <div class="pw-main-container">
+        <!-- Added breadcrumb navigation and product header section at the top -->
+        <div class="pw-breadcrumb-section">
+            <nav class="pw-breadcrumb-nav">
+                <a href="#" class="pw-breadcrumb-link">Home</a>
+                <span class="pw-breadcrumb-separator">/</span>
+                <a href="#" class="pw-breadcrumb-link">Parts & Accessories</a>
+                <span class="pw-breadcrumb-separator">/</span>
+                <a href="#" class="pw-breadcrumb-link">Car Care</a>
+                <span class="pw-breadcrumb-separator">/</span>
+                <a href="#" class="pw-breadcrumb-link">Microfiber Cloth</a>
+                <span class="pw-breadcrumb-separator">/</span>
+                <span class="pw-breadcrumb-current">Microfiber Dry Pro Towel – 800GSM (40x40cm)</span>
+            </nav>
+        </div>
+
+        <div class="pw-product-main-section">
+            <!-- Left Column - Product Details -->
+            <div class="pw-product-details-column">
+                <div class="pw-product-header-section">
+                    <h1 class="pw-product-main-title">AIRR High Pressure Washer 1500W – 120 Bar with Free 500ml Car Shampoo</h1>
+                    <div class="pw-product-action-icons">
+                        <i class="far fa-bookmark bookmark-icon"></i>
+                        <i class="far fa-heart favorite-icon"></i>
+                    </div>
+                </div>
+
+                <div class="pw-product-gallery-section">
+                    <div class="pw-gallery-main-image-container">
+                        <button class="pw-gallery-nav-btn pw-gallery-prev-btn" onclick="previousImage()">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <img id="mainImage" src="/images/cars/OIP.jpeg" alt="AIRR High Pressure Washer" class="pw-gallery-main-image">
+                        <button class="pw-gallery-nav-btn pw-gallery-next-btn" onclick="nextImage()">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="pw-gallery-thumbnail-container">
+                        <img src="/images/cars/sg-11134201-22110-z5627tkr4gjve9.jpeg" alt="Thumbnail 1" class="pw-gallery-thumbnail active" onclick="selectImage(0)">
+                        <img src="/images/cars/id-11134207-7rasm-m3ll6tdd8oz37c.jpeg" alt="Thumbnail 2" class="pw-gallery-thumbnail" onclick="selectImage(1)">
+                        <img src="/images/cars/id-11134207-7rasc-m3x4wtcjzwa6f2.jpeg" alt="Thumbnail 3" class="pw-gallery-thumbnail" onclick="selectImage(2)">
+                    </div>
+                </div>
+
+                <div class="pw-product-info-section">
+                    <div class="pw-product-info-grid">
+                        <div class="pw-info-grid-item">
+                            <span class="pw-info-grid-label">Category</span>
+                            <span class="pw-info-grid-value pw-info-category-link">Car Care</span>
+                        </div>
+                        <div class="pw-info-grid-item">
+                            <span class="pw-info-grid-label">Sub Category</span>
+                            <span class="pw-info-grid-value pw-info-category-link">Car Washer</span>
+                        </div>
+                        <div class="pw-info-grid-item">
+                            <span class="pw-info-grid-label">Last Updated:</span>
+                            <span class="pw-info-grid-value">Sep 12, 2025</span>
+                        </div>
+                        <div class="pw-info-grid-item">
+                            <span class="pw-info-grid-label">Ad Ref #</span>
+                            <span class="pw-info-grid-value">11789668</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pw-product-description-section">
+                    <h3>Product Description:</h3>
+                    <p>The <strong>AIRR High Pressure Washer</strong> is built to deliver professional cleaning performance for your car, bike, and home surfaces. With a <strong>1500W powerful motor</strong> and up to <strong>120 Bar water pressure</strong>, it ensures deep and effortless cleaning every time. The solid brass pump offers durability, while the compact, lightweight body with an ergonomic handle makes it easy to carry and store.</p>
+                    
+                    <p>This washer comes with a <strong>FREE 500ml Car Shampoo</strong>, giving you a complete car wash solution in one package.</p>
+                    
+                    <h4>Key Features:</h4>
+                    <ul>
+                        <li><strong>Maximum Pressure:</strong> 120 Bar</li>
+                        <li><strong>Motor Power:</strong> 1500W</li>
+                        <li><strong>Durable Brass Pump</strong> for long-lasting performance</li>
+                        <li><strong>Built-in Pressure Gauge</strong> for precise monitoring</li>
+                        <li><strong>Portable & Lightweight</strong> with ergonomic handle</li>
+                        <li>Perfect for <strong>cars, bikes, patios, driveways, outdoor furniture</strong></li>
+                        <li><strong>FREE 500ml Car Shampoo</strong> included</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Right Column - Pricing and Seller Info -->
+            <div class="pw-product-sidebar">
+                <!-- Price Box -->
+                <div class="pw-sidebar-price-box">
+                    <div class="pw-price-section-container">
+                        <div class="pw-price-current-amount">$ 13,999</div>
+                        <div class="pw-price-original-section">
+                            <span class="pw-price-strikethrough">$ 15,999</span>
+                            <span class="pw-price-discount-badge">13% Off</span>
+                        </div>
+                    </div>
+                    
+                    <div class="pw-quantity-control-section">
+                        <button class="pw-quantity-control-btn" onclick="decreaseQuantity()">-</button>
+                        <input type="number" id="pw-quantity-input" value="1" min="1" readonly>
+                        <button class="pw-quantity-control-btn" onclick="increaseQuantity()">+</button>
+                    </div>
+                    
+                    <button class="pw-buy-now-button">
+                        <i class="fas fa-shopping-cart"></i> Buy Now
+                    </button>
+                    
+                    <button class="pw-add-to-cart-button">Add To Cart</button>
+                </div>
+
+                <!-- Seller Details Box -->
+                <div class="pw-sidebar-seller-box">
+                    <h3>Seller Details</h3>
+                    <div class="pw-seller-info-container">
+                        <div class="pw-seller-avatar-circle">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="pw-seller-details-section">
+                            <div class="pw-seller-name-text">GTX MOTORSPORTS</div>
+                            <div class="pw-seller-since-text">Member Since Jun 30, 2025</div>
+                            <div class="pw-seller-rating-container">
+                                <span class="pw-seller-rating-score">3.2/5</span>
+                                <div class="pw-seller-rating-stars">
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="fas fa-star"></i>
+                                    <i class="far fa-star"></i>
+                                    <i class="far fa-star"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pw-seller-contact-buttons">
+                        <button class="pw-seller-contact-btn pw-seller-phone-btn">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                        <button class="pw-seller-contact-btn pw-seller-email-btn">
+                            <i class="fas fa-envelope"></i>
+                        </button>
+                        <button class="pw-seller-contact-btn pw-seller-facebook-btn">
+                            <i class="fab fa-facebook-f"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="pw-seller-facebook-connect">
+                        <p>See if your friends know this seller</p>
+                        <p>Connect with facebook</p>
+                    </div>
+                </div>
+
+                <!-- Benefits Box -->
+                <div class="pw-sidebar-benefits-box">
+                    <div class="pw-benefits-header-section">
+                        <div class="pw-benefits-pakwheels-logo">
+                            <img src="/images/logos/buy-from-pakwheels-ea2531ee98a9776eb98afe6246b7826178c6dd18071aa01a8c03dd898a524aab.png" alt="">
+                        </div>
+                        <h3>Buy From PakWheels and Get</h3>
+                    </div>
+                    
+                    <ul class="pw-benefits-list-container">
+                        <li>1. 100% Genuine Products</li>
+                        <li>2. Hassle Free Buying</li>
+                        <li>3. Money Back Guarantee</li>
+                    </ul>
+                </div>
+
+                <!-- Report Button -->
+                <button class="pw-report-ad-button">
+                    <i class="fas fa-flag"></i> Report This Ad
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- More Car washer/Pressure washer Products Section -->
+    <div class="pw-more-products-main-section">
+        <div class="pw-more-products-section-header">
+            <h2>More Car washer/Pressure washer Products</h2>
+            <a href="#" class="pw-more-products-visit-store-link">Visit PakWheels Store</a>
+        </div>
+        
+        <div class="pw-products-carousel-main-container">
+            <button class="pw-carousel-navigation-btn pw-carousel-prev-products" onclick="scrollProductsLeft()">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            
+            <div class="pw-products-carousel-scroll" id="productsCarousel">
+                <div class="pw-product-card-item">
+                    <div class="pw-product-card-image-container">
+                        <div class="pw-product-card-discount-badge">30% OFF</div>
+                        <div class="pw-product-card-new-badge">2019 NEW</div>
+                        <img src="/images/cars/sg-11134201-22110-z5627tkr4gjve9.jpeg" alt="Ke-Pioneer P2 High Pressure Washer">
+                    </div>
+                    <div class="pw-product-card-info-section">
+                        <h3 class="pw-product-card-name">Ke-Pioneer P2 High Pressure...</h3>
+                        <div class="pw-product-card-price">PKR 17,499</div>
+                        <div class="pw-product-card-original-price">PKR 25,001</div>
+                    </div>
+                </div>
+                
+                <div class="pw-product-card-item">
+                    <div class="pw-product-card-image-container">
+                        <div class="pw-product-card-discount-badge">37% OFF</div>
+                        <div class="pw-product-card-featured-badge">FEATURED</div>
+                        <img src="/images/cars/id-11134207-7rasm-m3ll6tdd8oz37c.jpeg" alt="Ke Pioneer P2 Compact High Pressure Washer">
+                    </div>
+                    <div class="pw-product-card-info-section">
+                        <h3 class="pw-product-card-name">Ke Pioneer P2 Compact Hig...</h3>
+                        <div class="pw-product-card-price">PKR 11,999</div>
+                        <div class="pw-product-card-original-price">PKR 18,998</div>
+                    </div>
+                </div>
+                
+                <div class="pw-product-card-item">
+                    <div class="pw-product-card-image-container">
+                        <div class="pw-product-card-discount-badge">14% OFF</div>
+                        <img src="/images/cars/id-11134207-7rasc-m3x4wtcjzwa6f2.jpeg" alt="INGCO 1500W High Pressure Washer">
+                    </div>
+                    <div class="pw-product-card-info-section">
+                        <h3 class="pw-product-card-name">INGCO 1500W High Pressu...</h3>
+                        <div class="pw-product-card-price">PKR 39,999</div>
+                        <div class="pw-product-card-original-price">PKR 44,999</div>
+                    </div>
+                </div>
+                
+                <div class="pw-product-card-item">
+                    <div class="pw-product-card-image-container">
+                        <div class="pw-product-card-discount-badge">12% OFF</div>
+                        <img src="/images/cars/id-11134207-7rasc-m3x4wtcjzwa6f2.jpeg" alt="Ingco HPWR14008 High Pressure Washer">
+                    </div>
+                    <div class="pw-product-card-info-section">
+                        <h3 class="pw-product-card-name">Ingco HPWR14008 High Pr...</h3>
+                        <div class="pw-product-card-price">PKR 26,499</div>
+                        <div class="pw-product-card-original-price">PKR 30,000</div>
+                    </div>
+                </div>
+                
+                <div class="pw-product-card-item">
+                    <div class="pw-product-card-image-container">
+                        <div class="pw-product-card-discount-badge">25% OFF</div>
+                        <img src="/images/cars/id-11134207-7rasc-m3x4wtcjzwa6f2.jpeg" alt="Professional Car Washer">
+                    </div>
+                    <div class="pw-product-card-info-section">
+                        <h3 class="pw-product-card-name">Professional Car Washer...</h3>
+                        <div class="pw-product-card-price">PKR 22,999</div>
+                        <div class="pw-product-card-original-price">PKR 30,599</div>
+                    </div>
+                </div>
+                
+                <div class="pw-product-card-item">
+                    <div class="pw-product-card-image-container">
+                        <div class="pw-product-card-discount-badge">18% OFF</div>
+                        <img src="/images/cars/sg-11134201-22110-z5627tkr4gjve9.jpeg" alt="Heavy Duty Pressure Washer">
+                    </div>
+                    <div class="pw-product-card-info-section">
+                        <h3 class="pw-product-card-name">Heavy Duty Pressure Was...</h3>
+                        <div class="pw-product-card-price">PKR 45,999</div>
+                        <div class="pw-product-card-original-price">PKR 55,999</div>
+                    </div>
+                </div>
+                
+                <div class="pw-product-card-item">
+                    <div class="pw-product-card-image-container">
+                        <div class="pw-product-card-discount-badge">20% OFF</div>
+                        <img src="/images/cars/id-11134207-7rasm-m3ll6tdd8oz37c.jpeg" alt="Compact Pressure Washer">
+                    </div>
+                    <div class="pw-product-card-info-section">
+                        <h3 class="pw-product-card-name">Compact Pressure Washer...</h3>
+                        <div class="pw-product-card-price">PKR 15,999</div>
+                        <div class="pw-product-card-original-price">PKR 19,999</div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="pw-carousel-navigation-btn pw-carousel-next-products" onclick="scrollProductsRight()">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Similar Accessories and Auto Parts Section -->
+    <div class="pw-similar-accessories-main-section">
+        <h2>Similar Accessories and Auto Parts</h2>
+        
+        <div class="pw-accessories-grid-container">
+            <div class="pw-accessories-grid-column">
+                <a href="#" class="pw-accessory-link-item">Bundles <span class="pw-accessory-count">(240+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Car Wax <span class="pw-accessory-count">(190+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Car Exterior Care <span class="pw-accessory-count">(140+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Protectants <span class="pw-accessory-count">(80+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Car Tyre Shine <span class="pw-accessory-count">(60+)</span></a>
+            </div>
+            
+            <div class="pw-accessories-grid-column">
+                <a href="#" class="pw-accessory-link-item">Car Washer <span class="pw-accessory-count">(240+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Car Coolants <span class="pw-accessory-count">(180+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Detailing Brushes <span class="pw-accessory-count">(130+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Tyre Care <span class="pw-accessory-count">(80+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Spray Paint <span class="pw-accessory-count">(50+)</span></a>
+            </div>
+            
+            <div class="pw-accessories-grid-column">
+                <a href="#" class="pw-accessory-link-item">Engine Cleaners <span class="pw-accessory-count">(230+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Car Shampoo <span class="pw-accessory-count">(160+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Leather Care <span class="pw-accessory-count">(100+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Glass Cleaners <span class="pw-accessory-count">(80+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Ceramic Coating <span class="pw-accessory-count">(50+)</span></a>
+            </div>
+            
+            <div class="pw-accessories-grid-column">
+                <a href="#" class="pw-accessory-link-item">Car Interior Products <span class="pw-accessory-count">(220+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Car Polish <span class="pw-accessory-count">(160+)</span></a>
+                <a href="#" class="pw-accessory-link-item">All Purpose Cleaners <span class="pw-accessory-count">(90+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Car Compound Polish <span class="pw-accessory-count">(60+)</span></a>
+                <a href="#" class="pw-accessory-link-item">Car Polisher <span class="pw-accessory-count">(50+)</span></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Section -->
+    <div id="footer"></div>
+
+    <script src="js/products.js"></script>
+    <script src="js/navbar.js"></script>
+  </body>
+</html>

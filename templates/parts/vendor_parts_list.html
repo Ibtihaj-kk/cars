@@ -1,0 +1,371 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block title %}Vendor Parts Management{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/parts.css' %}">
+    <style>
+        .vendor-parts-container {
+            min-height: 80vh;
+        }
+        
+        .filters-sidebar {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .parts-content {
+            padding-left: 1rem;
+        }
+        
+        .vendor-header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .htmx-indicator {
+            display: none;
+        }
+        
+        .htmx-request .htmx-indicator {
+            display: flex;
+        }
+        
+        .htmx-request.htmx-indicator {
+            display: flex;
+        }
+        
+        .table-actions {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .filters-sidebar {
+                position: static;
+                margin-bottom: 1rem;
+            }
+            
+            .parts-content {
+                padding-left: 0;
+            }
+            
+            .vendor-header {
+                padding: 1rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid vendor-parts-container">
+    <!-- Vendor Header -->
+    <div class="vendor-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2><i class="fas fa-store"></i> Vendor Parts Management</h2>
+                <p class="mb-0">Manage your inventory, pricing, and part performance</p>
+            </div>
+            <div class="col-md-4">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="stats-card">
+                            <div class="stats-number">{{ total_parts|default:0 }}</div>
+                            <small>Total Parts</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stats-card">
+                            <div class="stats-number text-warning">{{ low_stock_count|default:0 }}</div>
+                            <small>Low Stock</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-lg-3 col-md-4" id="filters-container">
+            {% include 'parts/partials/filters_sidebar.html' with user_role='vendor' %}
+        </div>
+        
+        <!-- Parts Management Area -->
+        <div class="col-lg-9 col-md-8 parts-content">
+            <!-- Action Bar -->
+            <div class="table-actions">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i> Add Part
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" id="toggle-filters">
+                                <i class="fas fa-filter"></i> Filters
+                            </button>
+                            <button class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-end gap-2">
+                            <!-- Bulk Actions -->
+                            <select class="form-select form-select-sm" style="width: auto;" disabled id="bulk-actions">
+                                <option>Bulk Actions</option>
+                                <option value="activate">Activate Selected</option>
+                                <option value="deactivate">Deactivate Selected</option>
+                                <option value="update-stock">Update Stock</option>
+                                <option value="update-price">Update Pricing</option>
+                            </select>
+                            
+                            <!-- View Toggle -->
+                            <div class="btn-group btn-group-sm" role="group">
+                                <input type="radio" class="btn-check" name="view-mode" id="table-view" checked>
+                                <label class="btn btn-outline-secondary" for="table-view">
+                                    <i class="fas fa-table"></i>
+                                </label>
+                                <input type="radio" class="btn-check" name="view-mode" id="card-view">
+                                <label class="btn btn-outline-secondary" for="card-view">
+                                    <i class="fas fa-th-large"></i>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="position-relative">
+                <!-- Loading Indicator -->
+                <div class="loading-overlay htmx-indicator">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">Loading parts...</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results Header -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="results-info">
+                        <h5 class="mb-0">Your Parts Inventory</h5>
+                        <small class="text-muted" id="results-count">
+                            {% if is_paginated %}
+                                Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} parts
+                            {% else %}
+                                {{ parts|length }} part{{ parts|length|pluralize }} found
+                            {% endif %}
+                        </small>
+                    </div>
+                    
+                    <!-- Sort Options -->
+                    <div class="sort-options">
+                        <select class="form-select form-select-sm" 
+                                hx-get="{% url 'parts:vendor_parts_search' %}"
+                                hx-target="#parts-results"
+                                hx-include="[name='query'], [name='category'], [name='brand'], [name='vehicle_make'], [name='vehicle_model'], [name='min_price'], [name='max_price'], [name='in_stock_only'], [name='low_stock_only'], [name='status'], [name='profitability']"
+                                hx-push-url="true"
+                                name="sort">
+                            <option value="">Sort by...</option>
+                            <option value="parts_number" {% if request.GET.sort == 'parts_number' %}selected{% endif %}>Part Number A-Z</option>
+                            <option value="-parts_number" {% if request.GET.sort == '-parts_number' %}selected{% endif %}>Part Number Z-A</option>
+                            <option value="price" {% if request.GET.sort == 'price' %}selected{% endif %}>Price Low-High</option>
+                            <option value="-price" {% if request.GET.sort == '-price' %}selected{% endif %}>Price High-Low</option>
+                            <option value="stock_level" {% if request.GET.sort == 'stock_level' %}selected{% endif %}>Stock Low-High</option>
+                            <option value="-stock_level" {% if request.GET.sort == '-stock_level' %}selected{% endif %}>Stock High-Low</option>
+                            <option value="-total_sales" {% if request.GET.sort == '-total_sales' %}selected{% endif %}>Best Selling</option>
+                            <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Newest First</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Parts Table Results -->
+                <div id="parts-results" class="htmx-indicator">
+                    {% include 'parts/partials/vendor_parts_table.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions Modal -->
+<div class="modal fade" id="quickActionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quick Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add New Part
+                    </button>
+                    <button class="btn btn-outline-info">
+                        <i class="fas fa-upload"></i> Bulk Import
+                    </button>
+                    <button class="btn btn-outline-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Low Stock Alert
+                    </button>
+                    <button class="btn btn-outline-success">
+                        <i class="fas fa-chart-line"></i> Performance Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle filters on mobile
+            const toggleFilters = document.getElementById('toggle-filters');
+            const filtersContainer = document.getElementById('filters-container');
+            
+            if (toggleFilters && filtersContainer) {
+                toggleFilters.addEventListener('click', function() {
+                    filtersContainer.classList.toggle('d-none');
+                    filtersContainer.classList.toggle('d-md-block');
+                });
+            }
+            
+            // Auto-hide filters on mobile by default
+            if (window.innerWidth < 768) {
+                filtersContainer.classList.add('d-none');
+                filtersContainer.classList.add('d-md-block');
+            }
+            
+            // Bulk selection handling
+            const selectAllCheckbox = document.getElementById('select-all');
+            const bulkActions = document.getElementById('bulk-actions');
+            
+            function updateBulkActions() {
+                const selectedCheckboxes = document.querySelectorAll('input[name="selected_parts"]:checked');
+                bulkActions.disabled = selectedCheckboxes.length === 0;
+            }
+            
+            // Handle select all
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', function() {
+                    const checkboxes = document.querySelectorAll('input[name="selected_parts"]');
+                    checkboxes.forEach(cb => cb.checked = this.checked);
+                    updateBulkActions();
+                });
+            }
+            
+            // Handle individual selections
+            document.addEventListener('change', function(e) {
+                if (e.target.name === 'selected_parts') {
+                    updateBulkActions();
+                    
+                    // Update select all state
+                    const allCheckboxes = document.querySelectorAll('input[name="selected_parts"]');
+                    const checkedCheckboxes = document.querySelectorAll('input[name="selected_parts"]:checked');
+                    
+                    if (selectAllCheckbox) {
+                        selectAllCheckbox.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+                        selectAllCheckbox.checked = checkedCheckboxes.length === allCheckboxes.length;
+                    }
+                }
+            });
+            
+            // Handle bulk actions
+            if (bulkActions) {
+                bulkActions.addEventListener('change', function() {
+                    if (this.value) {
+                        const selectedIds = Array.from(document.querySelectorAll('input[name="selected_parts"]:checked'))
+                            .map(cb => cb.value);
+                        
+                        if (selectedIds.length > 0) {
+                            // Implement bulk action logic here
+                            console.log('Bulk action:', this.value, 'for parts:', selectedIds);
+                            
+                            // Reset selection
+                            this.value = '';
+                        }
+                    }
+                });
+            }
+            
+            // Preserve scroll position on HTMX requests
+            let scrollPosition = 0;
+            
+            document.body.addEventListener('htmx:beforeRequest', function() {
+                scrollPosition = window.pageYOffset;
+            });
+            
+            document.body.addEventListener('htmx:afterSettle', function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('page') && urlParams.get('page') !== '1') {
+                    window.scrollTo(0, scrollPosition);
+                }
+                
+                // Re-initialize bulk selection after HTMX update
+                updateBulkActions();
+            });
+        });
+        
+        // HTMX event handlers
+        document.body.addEventListener('htmx:configRequest', function(evt) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfToken) {
+                evt.detail.headers['X-CSRFToken'] = csrfToken.value;
+            }
+        });
+        
+        // Update results count after HTMX requests
+        document.body.addEventListener('htmx:afterSettle', function(evt) {
+            if (evt.target.id === 'parts-results') {
+                const resultsCount = evt.target.querySelector('.results-summary small');
+                const headerCount = document.getElementById('results-count');
+                if (resultsCount && headerCount) {
+                    headerCount.textContent = resultsCount.textContent;
+                }
+            }
+        });
+    </script>
+{% endblock %}

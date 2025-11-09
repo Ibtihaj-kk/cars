@@ -1,0 +1,339 @@
+{% extends 'business_partners/vendor_base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Business Partners{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0 text-gray-800">{{ title }}</h1>
+                <div class="btn-group">
+                    <a href="{% url 'business_partners:vendor_orders_list' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to Orders
+                    </a>
+                    <a href="{% url 'business_partners:vendor_order_analytics' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-chart-line"></i> Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Order Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Order Number:</strong> {{ order.order_number }}</p>
+                            <p><strong>Order Date:</strong> {{ order.created_at|date:"M d, Y H:i" }}</p>
+                            <p><strong>Status:</strong> 
+                                <span class="badge badge-{% if order.status == 'pending' %}warning
+                                    {% elif order.status == 'confirmed' %}info
+                                    {% elif order.status == 'processing' %}secondary
+                                    {% elif order.status == 'shipped' %}primary
+                                    {% elif order.status == 'delivered' %}success
+                                    {% elif order.status == 'cancelled' %}danger
+                                    {% else %}dark{% endif %}">
+                                    {{ order.get_status_display }}
+                                </span>
+                            </p>
+                            {% if order.tracking_number %}
+                            <p><strong>Tracking Number:</strong> {{ order.tracking_number }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Customer:</strong> 
+                                {% if order.customer %}
+                                    {{ order.customer.email }}
+                                {% else %}
+                                    {{ order.guest_name|default:"Guest Customer" }}
+                                {% endif %}
+                            </p>
+                            <p><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</p>
+                            <p><strong>Total Amount:</strong> ${{ order.total_price|floatformat:2 }}</p>
+                            {% if discount_info %}
+                            <p><strong>Discount Applied:</strong> -${{ discount_info.discount_amount|floatformat:2 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Order Status Update -->
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Update Order Status</h6>
+                </div>
+                <div class="card-body">
+                    <form id="updateOrderStatusForm">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="status">New Status:</label>
+                            <select name="status" id="status" class="form-control form-control-sm">
+                                <option value="">Select Status</option>
+                                {% if order.status == 'pending' %}
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                {% elif order.status == 'confirmed' %}
+                                    <option value="processing">Processing</option>
+                                    <option value="cancelled">Cancelled</option>
+                                {% elif order.status == 'processing' %}
+                                    <option value="shipped">Shipped</option>
+                                    <option value="cancelled">Cancelled</option>
+                                {% elif order.status == 'shipped' %}
+                                    <option value="delivered">Delivered</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="tracking_number">Tracking Number:</label>
+                            <input type="text" name="tracking_number" id="tracking_number" 
+                                   class="form-control form-control-sm" value="{{ order.tracking_number|default:'' }}">
+                        </div>
+                        <div class="form-group">
+                            <label for="notes">Notes:</label>
+                            <textarea name="notes" id="notes" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm btn-block">
+                            <i class="fas fa-save"></i> Update Status
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Vendor Items Summary -->
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-success">Your Items Summary</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Items in this order:</strong> {{ vendor_items.count }}</p>
+                    <p><strong>Your revenue:</strong> ${{ vendor_items_total|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Items -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Order Items (Your Parts)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Part Name</th>
+                                    <th>SKU</th>
+                                    <th>Brand</th>
+                                    <th>Category</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in vendor_items %}
+                                <tr>
+                                    <td>{{ item.part.name }}</td>
+                                    <td>{{ item.part.sku }}</td>
+                                    <td>{{ item.part.brand.name }}</td>
+                                    <td>{{ item.part.category.name }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>${{ item.price_at_order|floatformat:2 }}</td>
+                                    <td>${{ item.total_price|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No items found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="6" class="text-right">Total for Your Items:</th>
+                                    <th>${{ vendor_items_total|floatformat:2 }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shipping Information -->
+    {% if shipping_info %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Shipping Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Contact Name:</strong> {{ shipping_info.contact_name }}</p>
+                            <p><strong>Mobile:</strong> {{ shipping_info.mobile }}</p>
+                            <p><strong>City:</strong> {{ shipping_info.city }}</p>
+                            <p><strong>Area:</strong> {{ shipping_info.area }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Address:</strong> {{ shipping_info.address }}</p>
+                            <p><strong>Landmark:</strong> {{ shipping_info.landmark|default:"N/A" }}</p>
+                            <p><strong>Shipping Cost:</strong> ${{ shipping_info.shipping_cost|floatformat:2 }}</p>
+                            <p><strong>Estimated Delivery:</strong> {{ shipping_info.estimated_delivery_date|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Order Status History -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Order Status History</h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for history in status_history %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-{% if history.new_status == 'pending' %}warning
+                                {% elif history.new_status == 'confirmed' %}info
+                                {% elif history.new_status == 'processing' %}secondary
+                                {% elif history.new_status == 'shipped' %}primary
+                                {% elif history.new_status == 'delivered' %}success
+                                {% elif history.new_status == 'cancelled' %}danger
+                                {% else %}dark{% endif %}"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">{{ history.get_new_status_display }}</h6>
+                                <p class="timeline-text">
+                                    Changed by: {{ history.changed_by.email }}<br>
+                                    Reason: {{ history.change_reason }}<br>
+                                    {% if history.notes %}Notes: {{ history.notes }}{% endif %}
+                                </p>
+                                <small class="text-muted">{{ history.timestamp|date:"M d, Y H:i" }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .badge {
+        font-size: 0.75em;
+    }
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e3e6f0;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    .timeline-marker {
+        position: absolute;
+        left: -30px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #e3e6f0;
+    }
+    .timeline-content {
+        background: #f8f9fc;
+        padding: 15px;
+        border-radius: 5px;
+        border-left: 3px solid #4e73df;
+    }
+    .timeline-title {
+        margin: 0 0 5px 0;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .timeline-text {
+        margin: 0;
+        font-size: 13px;
+        color: #858796;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Handle order status update form submission
+    $('#updateOrderStatusForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        var form = $(this);
+        var submitBtn = form.find('button[type="submit"]');
+        var originalText = submitBtn.html();
+        
+        // Disable submit button and show loading
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
+        
+        $.ajax({
+            url: '{% url "business_partners:vendor_update_order_status" order.id %}',
+            type: 'POST',
+            data: form.serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Show success message
+                    toastr.success(response.message);
+                    
+                    // Reload page after 2 seconds to show updated status
+                    setTimeout(function() {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    // Show error message
+                    toastr.error(response.error);
+                }
+            },
+            error: function(xhr, status, error) {
+                toastr.error('An error occurred while updating the order status.');
+                console.error('Error:', error);
+            },
+            complete: function() {
+                // Re-enable submit button
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

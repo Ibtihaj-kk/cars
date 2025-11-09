@@ -1,0 +1,33 @@
+VENDOR APPLICATION SUBMITTED - CARS PORTAL
+
+Dear {{ application.contact_person_name|default:application.user.get_full_name }},
+
+We have successfully received your vendor application. Your application is now under review by our team.
+
+APPLICATION DETAILS:
+- Application ID: {{ application.application_id }}
+- Company Name: {{ application.company_name }}
+- Business Type: {{ application.get_business_type_display }}
+- Status: {{ application.get_status_display }}
+- Submitted On: {{ application.updated_at|date:"F d, Y \a\t g:i A" }}
+- Completion: {{ application.get_completion_percentage }}%
+
+WHAT HAPPENS NEXT?
+
+1. Review Process: Our team will review your application within 3-5 business days
+2. Document Verification: We'll verify all submitted documents and information
+3. Background Check: We'll conduct necessary business verification checks
+4. Decision Notification: You'll receive an email with our decision
+
+You can track your application status at any time by logging into your account:
+{{ status_url }}
+
+NEED HELP?
+
+If you have any questions about your application, please contact our vendor support team:
+- Email: vendors@carsportal.com
+- Phone: +966 11 123 4567
+- Business Hours: Sunday - Thursday, 9:00 AM - 6:00 PM
+
+This is an automated message from Cars Portal Vendor Management System.
+© {{ current_year }} Cars Portal. All rights reserved.

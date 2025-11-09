@@ -1,0 +1,45 @@
+Order Confirmation - {{ order.order_number }}
+
+Dear {{ customer_name }},
+
+Thank you for your order! We're excited to confirm that your order has been successfully placed.
+
+ORDER DETAILS:
+Order Number: {{ order.order_number }}
+Order Date: {{ order.created_at|date:"F d, Y" }}
+Customer Email: {{ order.customer_email }}
+
+ITEMS ORDERED:
+{% for item in order_items %}
+- {{ item.part.name }}
+  Quantity: {{ item.quantity }}
+  Price: ${{ item.price }}
+  Total: ${{ item.total_price }}
+{% endfor %}
+
+ORDER SUMMARY:
+Total Amount: ${{ order.total_amount }}
+
+DELIVERY INFORMATION:
+{% if order.user %}
+Delivery will be arranged based on your account preferences.
+{% else %}
+Delivery Address: {{ order.guest_address }}
+Contact Phone: {{ order.guest_phone }}
+{% endif %}
+
+WHAT'S NEXT:
+1. Your order will be processed within 1-2 business days
+2. You'll receive tracking information once your order ships
+3. Our team will contact you if any questions arise
+
+If you have any questions about your order, please contact our customer service team and reference your order number: {{ order.order_number }}
+
+Thank you for choosing Cars Portal!
+
+Best regards,
+The Cars Portal Team
+
+---
+This is an automated message. Please do not reply to this email.
+For customer service, please contact us through our website.

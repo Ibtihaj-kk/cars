@@ -1,0 +1,1703 @@
+{% extends 'business_partners/vendor_registration_base.html' %}
+{% load static %}
+
+{% block registration_content %}
+<!-- Modern Header Section -->
+<div class="registration-header-modern">
+    <div class="container">
+        <h1>Partner with CarsPortal</h1>
+        <p>Join thousands of trusted automotive businesses in the PAK</p>
+        
+        <div class="header-stats">
+            <div class="stat-item">
+                <div class="stat-icon">🏢</div>
+                <span class="stat-number">5000+</span>
+                <span class="stat-label">Active Partners</span>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon">📈</div>
+                <span class="stat-number">50K+</span>
+                <span class="stat-label">Monthly Leads</span>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon">⭐</div>
+                <span class="stat-number">98%</span>
+                <span class="stat-label">Satisfaction Rate</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-modern alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <div class="alert-icon">
+                {% if message.tags == 'success' %}
+                    <i class="fas fa-check-circle"></i>
+                {% elif message.tags == 'error' %}
+                    <i class="fas fa-exclamation-triangle"></i>
+                {% elif message.tags == 'warning' %}
+                    <i class="fas fa-exclamation-circle"></i>
+                {% else %}
+                    <i class="fas fa-info-circle"></i>
+                {% endif %}
+            </div>
+            <div class="alert-content">
+                {{ message }}
+            </div>
+            <button type="button" class="alert-close" data-dismiss="alert" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+{% if user.is_authenticated and user.vendor_profile %}
+    <div class="alert alert-info alert-dismissible fade show alert-modern" role="alert">
+        <div class="alert-icon">
+            <i class="fas fa-info-circle"></i>
+        </div>
+        <div class="alert-content">
+            <strong>Welcome back!</strong> You already have a vendor account. 
+            <a href="{% url 'vendor_dashboard' %}" class="alert-link" style="color: white; text-decoration: underline;">Go to Dashboard</a>
+        </div>
+        <button type="button" class="alert-close" data-dismiss="alert" aria-label="Close">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+{% endif %}
+
+<div class="form-container-modern">
+    {% if requires_login %}
+    <div class="auth-card-modern">
+        <div class="auth-card-header">
+            <div class="auth-card-icon">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <h3>Welcome to Vendor Registration</h3>
+            <p>Start your journey to become a verified Cars Portal vendor</p>
+        </div>
+        <div class="auth-card-body">
+            <div class="auth-options">
+                <div class="auth-option">
+                    <div class="auth-option-icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="auth-option-content">
+                        <h5>New to Cars Portal?</h5>
+                        <p>Create your free account and start your vendor application</p>
+                        <a href="{% url 'users:user-register' %}?next={% url 'business_partners:vendor_registration_step1' %}" class="btn btn-primary-modern btn-block">
+                            Create Account
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <small style="color: var(--text-light);">Registration takes 5-10 minutes</small>
+                    </div>
+                </div>
+                <div class="divider-modern">
+                    <span>or</span>
+                </div>
+                <div class="auth-option">
+                    <div class="auth-option-icon">
+                        <i class="fas fa-sign-in-alt"></i>
+                    </div>
+                    <div class="auth-option-content">
+                        <h5>Already have an account?</h5>
+                        <p>Login to continue your vendor application</p>
+                        <a href="{% url 'business_partners:vendor_login' %}?next={% url 'business_partners:vendor_registration_step1' %}" class="btn btn-outline-modern btn-block">
+                            Login
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <small style="color: var(--text-light);">Manage your listings and orders</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% elif approved_application %}
+    <div class="status-card-modern status-success">
+        <div class="status-card-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="status-card-content">
+            <h3>Congratulations! You're Approved!</h3>
+            <p>Your vendor application has been approved. Welcome to the Cars Portal vendor community!</p>
+            <div class="status-details">
+                <div class="detail-item">
+                    <span class="detail-label">Application ID:</span>
+                    <span class="detail-value">{{ approved_application.application_id }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Approved on:</span>
+                    <span class="detail-value">{{ approved_application.updated_at|date:"F d, Y" }}</span>
+                </div>
+            </div>
+            <div class="status-actions">
+                <a href="{% url 'vendor_dashboard' %}" class="btn btn-success-modern">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Go to Vendor Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+{% elif existing_application %}
+    <div class="status-card-modern status-info">
+        <div class="status-card-icon">
+            <i class="fas fa-info-circle"></i>
+        </div>
+        <div class="status-card-content">
+            <h3>Continue Your Application</h3>
+            <p>You have an existing vendor application in progress. Pick up where you left off.</p>
+            <div class="status-details">
+                <div class="detail-item">
+                    <span class="detail-label">Application ID:</span>
+                    <span class="detail-value">{{ existing_application.application_id }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Current Step:</span>
+                    <span class="detail-value">{{ existing_application.get_current_step_display }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value status-badge status-{{ existing_application.status }}">{{ existing_application.get_status_display }}</span>
+                </div>
+            </div>
+            <div class="status-actions">
+                <a href="{{ next_step_url }}" class="btn btn-primary-modern">
+                    <i class="fas fa-arrow-right"></i>
+                    Continue Application
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+        <!-- Progress Overview -->
+        <div class="progress-container-modern">
+            <div class="completion-text-modern">
+                <p><strong>Registration Progress:</strong> Complete all steps to become a verified vendor</p>
+            </div>
+            <div class="progress-steps-modern">
+                <div class="step-modern completed">
+                    <div class="step-icon">✓</div>
+                    <div class="step-content">
+                        <h5>Basic Information</h5>
+                        <p style="color: var(--text-light);">Company details and contact info</p>
+                    </div>
+                </div>
+                <div class="step-modern">
+                    <div class="step-icon">2</div>
+                    <div class="step-content">
+                        <h5>Business Verification</h5>
+                        <p style="color: var(--text-light);">Upload required documents</p>
+                    </div>
+                </div>
+                <div class="step-modern">
+                    <div class="step-icon">3</div>
+                    <div class="step-content">
+                        <h5>Payment Setup</h5>
+                        <p style="color: var(--text-light);">Configure payment methods</p>
+                    </div>
+                </div>
+                <div class="step-modern">
+                    <div class="step-icon">4</div>
+                    <div class="step-content">
+                        <h5>Final Review</h5>
+                        <p style="color: var(--text-light);">Review and submit application</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="features-grid-modern">
+            <div class="feature-card-modern">
+                <div class="feature-icon-modern">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="feature-content-modern">
+                    <h4>Business Details</h4>
+                    <p style="color: var(--text-light);">Provide your company information and legal documents for verification</p>
+                    <div class="feature-tags">
+                        <span class="tag">Commercial Registration</span>
+                        <span class="tag">Business License</span>
+                    </div>
+                </div>
+            </div>
+            <div class="feature-card-modern">
+                <div class="feature-icon-modern">
+                    <i class="fas fa-address-card"></i>
+                </div>
+                <div class="feature-content-modern">
+                    <h4>Contact Information</h4>
+                    <p style="color: var(--text-light);">Share your contact details and business address for communication</p>
+                    <div class="feature-tags">
+                        <span class="tag">Contact Details</span>
+                        <span class="tag">Business Address</span>
+                    </div>
+                </div>
+            </div>
+            <div class="feature-card-modern">
+                <div class="feature-icon-modern">
+                    <i class="fas fa-university"></i>
+                </div>
+                <div class="feature-content-modern">
+                    <h4>Bank Details</h4>
+                    <p style="color: var(--text-light);">Enter your banking information for secure payment processing</p>
+                    <div class="feature-tags">
+                        <span class="tag">Bank Account</span>
+                        <span class="tag">Payment Setup</span>
+                    </div>
+                </div>
+            </div>
+            <div class="feature-card-modern">
+                <div class="feature-icon-modern">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="feature-content-modern">
+                    <h4>Additional Info</h4>
+                    <p style="color: var(--text-light);">Tell us about your products and business experience</p>
+                    <div class="feature-tags">
+                        <span class="tag">Product Catalog</span>
+                        <span class="tag">Experience</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Requirements Section -->
+        <div class="form-container-modern">
+            <h3 class="text-center mb-4" style="color: var(--text-dark);">Registration Requirements</h3>
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <div class="requirement-item">
+                        <div class="requirement-icon">📄</div>
+                        <h5 style="color: var(--text-dark);">Business License</h5>
+                        <p style="color: var(--text-light);">Valid trade license</p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="requirement-item">
+                        <div class="requirement-icon">🏢</div>
+                        <h5 style="color: var(--text-dark);">Company Documents</h5>
+                        <p style="color: var(--text-light);">Registration certificates</p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="requirement-item">
+                        <div class="requirement-icon">💳</div>
+                        <h5 style="color: var(--text-dark);">Bank Details</h5>
+                        <p style="color: var(--text-light);">Business bank account</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Benefits Section -->
+<div class="form-container-modern">
+    <h3 class="text-center mb-5" style="color: var(--text-dark);">Why Partner with Us?</h3>
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="benefit-card-modern">
+                <div class="benefit-icon-modern">📈</div>
+                <h4 style="color: var(--text-dark);">Increased Sales</h4>
+                <p style="color: var(--text-light);">Reach thousands of potential customers daily</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="benefit-card-modern">
+                <div class="benefit-icon-modern">🎯</div>
+                <h4 style="color: var(--text-dark);">Targeted Marketing</h4>
+                <p style="color: var(--text-light);">Get matched with relevant customer inquiries</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="benefit-card-modern">
+                <div class="benefit-icon-modern">💰</div>
+                <h4 style="color: var(--text-dark);">Competitive Rates</h4>
+                <p style="color: var(--text-light);">Low commission fees and transparent pricing</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <!-- CTA Section -->
+        <div class="cta-section-modern">
+            <div class="cta-content-modern">
+                <h3 style="color: var(--text-dark);">Ready to Get Started?</h3>
+                <p style="color: var(--text-light);">Join the leading automotive parts marketplace in the region</p>
+                <a href="{% url 'business_partners:vendor_registration_step1' %}" class="btn btn-primary-modern btn-cta-modern">
+                    <i class="fas fa-rocket"></i>
+                    Start Application Now
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Footer Links -->
+<div class="footer-links-modern">
+    <div class="footer-link-item">
+        <span>Already have an account?</span>
+        <a href="{% url 'business_partners:vendor_login' %}" class="footer-link">
+            <i class="fas fa-sign-in-alt"></i>
+            Login to Vendor Dashboard
+        </a>
+    </div>
+    <div class="footer-link-item">
+        <span>Need help?</span>
+        <a href="#" class="footer-link">
+            <i class="fas fa-question-circle"></i>
+            Contact Support
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/vendor-registration-modern.css' %}">
+<style>
+/* Fix navbar spacing issue */
+body {
+    padding-top: 0 !important;
+}
+
+/* Modern color scheme */
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --accent-color: #e74c3c;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --info-color: #3498db;
+    --light-gray: #ecf0f1;
+    --dark-gray: #7f8c8d;
+    --text-dark: #2c3e50;
+    --text-light: #7f8c8d;
+}
+
+/* Enhanced header section */
+.registration-header-modern {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4rem 0;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.registration-header-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="1" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="1" fill="white" opacity="0.1"/><circle cx="90" cy="40" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    pointer-events: none;
+}
+
+.registration-header-modern .container {
+    position: relative;
+    z-index: 1;
+}
+
+.registration-header-modern h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.registration-header-modern p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+}
+
+/* Enhanced stats section */
+.header-stats {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin-top: 2rem;
+}
+
+.stat-item {
+    text-align: center;
+    background: rgba(255,255,255,0.1);
+    padding: 1.5rem;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: transform 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-5px);
+}
+
+.stat-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
+}
+
+.stat-number {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: white;
+}
+
+.stat-label {
+    font-size: 1rem;
+    opacity: 0.8;
+    color: white;
+}
+
+/* Enhanced alert styling */
+.alert-modern {
+    border: none;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.alert-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+    pointer-events: none;
+}
+
+.alert-modern.alert-success {
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.9), rgba(46, 204, 113, 0.9));
+    color: white;
+    border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.alert-modern.alert-info {
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.9), rgba(93, 173, 226, 0.9));
+    color: white;
+    border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.alert-modern.alert-warning {
+    background: linear-gradient(135deg, rgba(243, 156, 18, 0.9), rgba(241, 196, 15, 0.9));
+    color: white;
+    border: 1px solid rgba(243, 156, 18, 0.3);
+}
+
+.alert-modern.alert-danger {
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.9), rgba(236, 112, 99, 0.9));
+    color: white;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.alert-icon {
+    font-size: 1.5rem;
+    margin-right: 1rem;
+    opacity: 0.9;
+}
+
+.alert-content {
+    font-weight: 500;
+    font-size: 1.1rem;
+}
+
+.alert-close {
+    background: none;
+    border: none;
+    color: white;
+    opacity: 0.7;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+}
+
+.alert-close:hover {
+    opacity: 1;
+}
+
+/* Enhanced form container */
+.form-container-modern {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    padding: 3rem;
+    margin: 2rem 0;
+    border: 1px solid #e0e0e0;
+    position: relative;
+    overflow: hidden;
+}
+
+.form-container-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3498db, #2ecc71, #f39c12, #e74c3c);
+}
+
+/* Enhanced authentication cards */
+.auth-card-modern {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin: 2rem 0;
+    border: 1px solid #e0e0e0;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.auth-card-modern:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.auth-card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+}
+
+.auth-card-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="1" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="1" fill="white" opacity="0.1"/><circle cx="90" cy="40" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    pointer-events: none;
+}
+
+.auth-card-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.9;
+}
+
+.auth-card-header h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.auth-card-header p {
+    opacity: 0.8;
+    font-size: 1rem;
+}
+
+/* Enhanced buttons */
+.btn-primary-modern {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(52, 152, 219, 0.3);
+}
+
+.btn-primary-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-primary-modern:hover::before {
+    left: 100%;
+}
+
+.btn-outline-modern {
+    background: transparent;
+    color: #3498db;
+    border: 2px solid #3498db;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-modern:hover {
+    background: #3498db;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(52, 152, 219, 0.3);
+}
+
+.btn-success-modern {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-success-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(39, 174, 96, 0.3);
+}
+
+/* Enhanced status cards */
+.status-card-modern {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    padding: 2.5rem;
+    margin: 2rem 0;
+    border: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    transition: transform 0.3s ease;
+}
+
+.status-card-modern:hover {
+    transform: translateY(-5px);
+}
+
+.status-card-modern.status-success {
+    border-left: 6px solid #27ae60;
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.05), rgba(46, 204, 113, 0.05));
+}
+
+.status-card-modern.status-info {
+    border-left: 6px solid #3498db;
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.05), rgba(93, 173, 226, 0.05));
+}
+
+.status-card-icon {
+    font-size: 4rem;
+    opacity: 0.8;
+}
+
+.status-card-modern.status-success .status-card-icon {
+    color: #27ae60;
+}
+
+.status-card-modern.status-info .status-card-icon {
+    color: #3498db;
+}
+
+.status-card-content h3 {
+    color: var(--text-dark);
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.status-card-content p {
+    color: var(--text-light);
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Enhanced progress section */
+.progress-container-modern {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    padding: 2.5rem;
+    margin: 2rem 0;
+    border: 1px solid #e0e0e0;
+}
+
+.completion-text-modern p {
+    color: var(--text-dark);
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.completion-text-modern strong {
+    color: #3498db;
+}
+
+/* Enhanced features grid */
+.features-grid-modern {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.feature-card-modern {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    padding: 2.5rem;
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-card-modern:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.feature-card-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3498db, #2ecc71);
+}
+
+.feature-icon-modern {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+    color: #3498db;
+    opacity: 0.8;
+}
+
+.feature-content-modern h4 {
+    color: var(--text-dark);
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.feature-content-modern p {
+    color: var(--text-light);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.feature-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tag {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Enhanced footer links */
+.footer-link {
+    color: var(--text-light);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.footer-link:hover {
+    color: #3498db;
+    transform: translateX(5px);
+}
+
+.footer-link::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: #3498db;
+    transition: width 0.3s ease;
+}
+
+.footer-link:hover::before {
+    width: 100%;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .registration-header-modern {
+        margin-top: 125px;
+        padding: 2rem 0;
+    }
+    
+    .registration-header-modern h1 {
+        font-size: 2rem;
+    }
+    
+    .header-stats {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .stat-item {
+        padding: 1rem;
+    }
+    
+    .features-grid-modern {
+        grid-template-columns: 1fr;
+    }
+    
+    .status-card-modern {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+/* Animation for page load */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.registration-header-modern,
+.form-container-modern,
+.auth-card-modern,
+.status-card-modern,
+.progress-container-modern,
+.feature-card-modern {
+    animation: fadeInUp 0.6s ease-out;
+}
+/* Modern Vendor Registration Start Page Styles */
+
+/* Header Section */
+.registration-header-modern {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 4rem 0;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.registration-header-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.05"/><circle cx="10" cy="60" r="0.5" fill="white" opacity="0.05"/><circle cx="90" cy="40" r="0.5" fill="white" opacity="0.05"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.3;
+}
+
+.registration-header-modern .container {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+}
+
+.registration-header-modern h1 {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.registration-header-modern p {
+    font-size: 1.3rem;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+}
+
+.header-stats {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin-top: 2rem;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+/* Modern Form Container */
+.form-container-modern {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Modern Alerts */
+.alert-modern {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.alert-modern.alert-success {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    color: #155724;
+}
+
+.alert-modern.alert-info {
+    background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+    color: #0c5460;
+}
+
+.alert-modern.alert-warning {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    color: #856404;
+}
+
+.alert-modern.alert-error {
+    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+    color: #721c24;
+}
+
+.alert-icon {
+    flex-shrink: 0;
+    font-size: 1.5rem;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.alert-close:hover {
+    opacity: 1;
+}
+
+/* Auth Card Modern */
+.auth-card-modern {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.auth-card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    padding: 2rem;
+    text-align: center;
+}
+
+.auth-card-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.9;
+}
+
+.auth-card-header h3 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.auth-card-header p {
+    opacity: 0.9;
+    margin: 0;
+}
+
+.auth-card-body {
+    padding: 2rem;
+}
+
+.auth-options {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.auth-option {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border: 2px solid var(--border-light);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.auth-option:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.auth-option-icon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.auth-option-content {
+    flex: 1;
+}
+
+.auth-option-content h5 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.auth-option-content p {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.divider-modern {
+    text-align: center;
+    position: relative;
+    margin: 1rem 0;
+}
+
+.divider-modern::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--border-light);
+}
+
+.divider-modern span {
+    background: white;
+    padding: 0 1rem;
+    position: relative;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Status Cards Modern */
+.status-card-modern {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 2rem;
+}
+
+.status-card-modern.status-success {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    border-left: 6px solid #28a745;
+}
+
+.status-card-modern.status-info {
+    background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+    border-left: 6px solid #17a2b8;
+}
+
+.status-card-icon {
+    font-size: 3rem;
+    flex-shrink: 0;
+}
+
+.status-card-modern.status-success .status-card-icon {
+    color: #28a745;
+}
+
+.status-card-modern.status-info .status-card-icon {
+    color: #17a2b8;
+}
+
+.status-card-content {
+    flex: 1;
+}
+
+.status-card-content h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.status-card-content p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+.status-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.detail-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.status-approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Features Grid Modern */
+.features-grid-modern {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.feature-card-modern {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-light);
+}
+
+.feature-card-modern:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+}
+
+.feature-icon-modern {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    color: white;
+    box-shadow: 0 4px 15px rgba(77, 120, 188, 0.3);
+}
+
+.feature-content-modern h4 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.feature-content-modern p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.feature-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tag {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Requirements Section */
+.requirements-section-modern {
+    background: white;
+    border-radius: 16px;
+    padding: 2.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin-bottom: 3rem;
+    border: 1px solid var(--border-light);
+}
+
+.requirements-header-modern {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.requirements-header-modern h4 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.requirements-header-modern p {
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.requirements-grid-modern {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.requirement-item-modern {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    border-left: 4px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.requirement-item-modern:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.requirement-icon-modern {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+}
+
+.requirement-content-modern h6 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.requirement-content-modern p {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Benefits Section */
+.benefits-section-modern {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 16px;
+    padding: 2.5rem;
+    margin-bottom: 3rem;
+    text-align: center;
+}
+
+.benefits-section-modern h4 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.benefits-grid-modern {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.benefit-item-modern {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.benefit-item-modern:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.benefit-item-modern i {
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.benefit-item-modern span {
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: left;
+}
+
+/* CTA Section */
+.cta-section-modern {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.cta-section-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.05"/><circle cx="10" cy="60" r="0.5" fill="white" opacity="0.05"/><circle cx="90" cy="40" r="0.5" fill="white" opacity="0.05"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.3;
+}
+
+.cta-content-modern {
+    position: relative;
+    z-index: 1;
+}
+
+.cta-content-modern h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.cta-content-modern p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+}
+
+.btn-cta-modern {
+    padding: 1rem 2.5rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-radius: 50px;
+    background: white;
+    color: var(--primary-color);
+    border: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.btn-cta-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    background: white;
+    color: var(--primary-dark);
+}
+
+/* Footer Links */
+.footer-links-modern {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin-top: 3rem;
+    padding: 2rem 0;
+    border-top: 1px solid var(--border-light);
+}
+
+.footer-link-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.footer-link-item span {
+    color: var(--text-secondary);
+}
+
+.footer-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: color 0.3s ease;
+}
+
+.footer-link:hover {
+    color: var(--primary-dark);
+}
+
+/* Modern Buttons */
+.btn-primary-modern {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border: none;
+    padding: 0.875rem 2rem;
+    font-weight: 600;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 4px 15px rgba(77, 120, 188, 0.3);
+}
+
+.btn-primary-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(77, 120, 188, 0.4);
+    color: white;
+}
+
+.btn-outline-modern {
+    background: transparent;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    padding: 0.875rem 2rem;
+    font-weight: 600;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.btn-outline-modern:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(77, 120, 188, 0.3);
+}
+
+.btn-success-modern {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    padding: 0.875rem 2rem;
+    font-weight: 600;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.btn-success-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+    color: white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .registration-header-modern {
+        padding: 3rem 1rem;
+    }
+    
+    .registration-header-modern h1 {
+        font-size: 2.5rem;
+    }
+    
+    .header-stats {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    .auth-option {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .status-card-modern {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .requirements-grid-modern {
+        grid-template-columns: 1fr;
+    }
+    
+    .benefits-grid-modern {
+        grid-template-columns: 1fr;
+    }
+    
+    .footer-links-modern {
+        flex-direction: column;
+        gap: 1.5rem;
+        text-align: center;
+    }
+    
+    .footer-link-item {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .registration-header-modern h1 {
+        font-size: 2rem;
+    }
+    
+    .registration-header-modern p {
+        font-size: 1.1rem;
+    }
+    
+    .features-grid-modern {
+        grid-template-columns: 1fr;
+    }
+    
+    .feature-card-modern {
+        padding: 1.5rem;
+    }
+    
+    .requirements-section-modern {
+        padding: 1.5rem;
+    }
+    
+    .benefits-section-modern {
+        padding: 1.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add smooth scrolling to anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.querySelector(this.getAttribute('href')).scrollIntoView({
+                behavior: 'smooth'
+            });
+        });
+    });
+    
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert-modern.alert-dismissible');
+        alerts.forEach(alert => {
+            if (alert.classList.contains('show')) {
+                alert.classList.remove('show');
+                setTimeout(() => alert.remove(), 300);
+            }
+        });
+    }, 5000);
+    
+    // Add animation to feature cards on scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+    
+    // Observe feature cards
+    document.querySelectorAll('.feature-card-modern').forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(card);
+    });
+    
+    // Add hover effect to requirement items
+    document.querySelectorAll('.requirement-item-modern').forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(5px)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateX(0)';
+        });
+    });
+});
+</script>
+{% endblock %}

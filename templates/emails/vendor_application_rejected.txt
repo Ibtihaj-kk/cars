@@ -1,0 +1,42 @@
+VENDOR APPLICATION STATUS UPDATE - CARS PORTAL
+
+Dear {{ application.contact_person_name|default:application.user.get_full_name }},
+
+Thank you for your interest in becoming a Cars Portal vendor. After careful review of your application, we regret to inform you that we are unable to approve your vendor application at this time.
+
+APPLICATION DETAILS:
+- Application ID: {{ application.application_id }}
+- Company Name: {{ application.company_name }}
+- Business Type: {{ application.get_business_type_display }}
+- Status: {{ application.get_status_display }}
+- Reviewed On: {{ application.updated_at|date:"F d, Y \a\t g:i A" }}
+{% if application.reviewed_by %}- Reviewed By: {{ application.reviewed_by.get_full_name }}{% endif %}
+
+{% if application.rejection_reason %}
+REASON FOR DECISION:
+{{ application.rejection_reason }}
+{% endif %}
+
+WHAT YOU CAN DO NEXT:
+
+While your current application was not approved, you may be eligible to reapply in the future. Here are some suggestions:
+
+- Address the concerns: Review the feedback provided and work on addressing any issues mentioned
+- Improve documentation: Ensure all required documents are complete and up-to-date
+- Business development: Continue growing your business and establishing a stronger track record
+- Reapply later: You may submit a new application after 90 days from this decision
+
+We appreciate your interest in partnering with Cars Portal and encourage you to consider reapplying once you've had the opportunity to address the areas mentioned above.
+
+QUESTIONS OR FEEDBACK?
+
+If you have questions about this decision or would like additional feedback, please contact our vendor support team:
+- Email: vendors@carsportal.com
+- Phone: +966 11 123 4567
+- Business Hours: Sunday - Thursday, 9:00 AM - 6:00 PM
+
+LEARN ABOUT REAPPLYING:
+{{ reapply_url }}
+
+This is an automated message from Cars Portal Vendor Management System.
+© {{ current_year }} Cars Portal. All rights reserved.

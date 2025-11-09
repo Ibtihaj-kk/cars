@@ -1,0 +1,304 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Vendor Management - Admin Panel{% endblock %}
+{% block page_title %}Vendor Management{% endblock %}
+
+{% block content %}
+<!-- Vendor Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stats-card primary">
+            <div class="d-flex align-items-center">
+                <div class="icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="ms-3">
+                    <h3 class="mb-0">{{ vendor_stats.total }}</h3>
+                    <p class="text-muted mb-0">Total Vendors</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stats-card warning">
+            <div class="d-flex align-items-center">
+                <div class="icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="ms-3">
+                    <h3 class="mb-0">{{ vendor_stats.pending }}</h3>
+                    <p class="text-muted mb-0">Pending Approval</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stats-card success">
+            <div class="d-flex align-items-center">
+                <div class="icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="ms-3">
+                    <h3 class="mb-0">{{ vendor_stats.approved }}</h3>
+                    <p class="text-muted mb-0">Approved</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stats-card danger">
+            <div class="d-flex align-items-center">
+                <div class="icon">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <div class="ms-3">
+                    <h3 class="mb-0">{{ vendor_stats.rejected }}</h3>
+                    <p class="text-muted mb-0">Rejected</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Quick Actions</h5>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'admin_panel:vendor_approval_queue' %}" class="btn btn-warning">
+                        <i class="fas fa-tasks me-2"></i>Approval Queue
+                    </a>
+                    <button type="button" class="btn btn-primary" onclick="exportVendors()">
+                        <i class="fas fa-download me-2"></i>Export Vendors
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="sendBulkMessage()">
+                        <i class="fas fa-envelope me-2"></i>Bulk Message
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Filters</h5>
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">All Statuses</option>
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="type" class="form-label">Type</label>
+                        <select class="form-select" id="type" name="type">
+                            <option value="">All Types</option>
+                            {% for value, label in role_types %}
+                            <option value="{{ value }}" {% if current_filters.type == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">Search</label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               value="{{ current_filters.search }}" placeholder="Name, email, business...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_from" class="form-label">Date From</label>
+                        <input type="date" class="form-control" id="date_from" name="date_from" 
+                               value="{{ current_filters.date_from }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_to" class="form-label">Date To</label>
+                        <input type="date" class="form-control" id="date_to" name="date_to" 
+                               value="{{ current_filters.date_to }}">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search me-1"></i>Filter
+                        </button>
+                        <a href="{% url 'admin_panel:vendor_management' %}" class="btn btn-secondary">
+                            <i class="fas fa-undo me-1"></i>Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vendors Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="table-container">
+            <h5 class="table-header">Vendors</h5>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Business Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vendor in page_obj %}
+                        <tr>
+                            <td>{{ vendor.id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar me-2">
+                                        {% if vendor.user.profile.avatar %}
+                                        <img src="{{ vendor.user.profile.avatar.url }}" alt="{{ vendor.user.get_full_name }}" 
+                                             class="rounded-circle" width="32" height="32">
+                                        {% else %}
+                                        <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" 
+                                             style="width: 32px; height: 32px; background-color: #e3f2fd; color: #1976d2;">
+                                            {{ vendor.user.get_full_name|first|upper }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold">{{ vendor.user.get_full_name }}</div>
+                                        <small class="text-muted">{{ vendor.user.username }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ vendor.user.email }}</td>
+                            <td>{{ vendor.business_name|default:"N/A" }}</td>
+                            <td>
+                                {% for role in vendor.roles.all %}
+                                <span class="badge bg-info me-1">{{ role.get_role_type_display }}</span>
+                                {% empty %}
+                                <span class="text-muted">No roles</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <span class="status-badge status-{{ vendor.status }}">
+                                    {{ vendor.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ vendor.created_at|date:"M d, Y" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'admin_panel:vendor_detail' vendor.id %}" 
+                                       class="btn btn-outline-primary" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if vendor.status == 'pending' %}
+                                    <button type="button" class="btn btn-outline-success" title="Approve"
+                                            onclick="updateVendorStatus({{ vendor.id }}, 'approved')">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" title="Reject"
+                                            onclick="updateVendorStatus({{ vendor.id }}, 'rejected')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-users fa-3x mb-3"></i>
+                                <h5>No vendors found</h5>
+                                <p>No vendors match your current filters.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Vendor pagination" class="mt-3">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            Previous
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            Next
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateVendorStatus(vendorId, newStatus) {
+    if (confirm(`Are you sure you want to ${newStatus} this vendor?`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/admin-panel/vendors/${vendorId}/update-status/`;
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        const statusInput = document.createElement('input');
+        statusInput.type = 'hidden';
+        statusInput.name = 'status';
+        statusInput.value = newStatus;
+        form.appendChild(statusInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function exportVendors() {
+    alert('Export functionality will be implemented soon');
+}
+
+function sendBulkMessage() {
+    alert('Bulk messaging functionality will be implemented soon');
+}
+</script>
+{% endblock %}

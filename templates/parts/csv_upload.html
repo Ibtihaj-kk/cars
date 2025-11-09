@@ -1,0 +1,477 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title %}CSV Upload - Parts Management{% endblock %}
+{% block page_title %}CSV Upload{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/parts_management.css' %}">
+<style>
+    .upload-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .upload-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .upload-body {
+        padding: 30px;
+    }
+    
+    .file-upload-area {
+        border: 2px dashed #ddd;
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+    }
+    
+    .file-upload-area.dragover {
+        border-color: #667eea;
+        background-color: #f8f9ff;
+    }
+    
+    .file-upload-icon {
+        font-size: 48px;
+        color: #ddd;
+        margin-bottom: 15px;
+    }
+    
+    .file-upload-text {
+        color: #666;
+        margin-bottom: 15px;
+    }
+    
+    .file-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+        display: none;
+    }
+    
+    .progress-container {
+        margin: 20px 0;
+        display: none;
+    }
+    
+    .progress {
+        height: 20px;
+        border-radius: 10px;
+        overflow: hidden;
+        background-color: #e9ecef;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        transition: width 0.3s ease;
+        border-radius: 10px;
+    }
+    
+    .upload-options {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    
+    .results-container {
+        margin-top: 30px;
+        padding: 20px;
+        border-radius: 8px;
+    }
+    
+    .results-success {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    
+    .results-warning {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+    }
+    
+    .results-error {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    
+    .results-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin: 15px 0;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .stat-number {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+    }
+    
+    .error-list {
+        max-height: 200px;
+        overflow-y: auto;
+        background: white;
+        border-radius: 4px;
+        padding: 10px;
+        margin-top: 10px;
+    }
+    
+    .error-item {
+        padding: 5px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+    }
+    
+    .sample-format {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 0 8px 8px 0;
+    }
+    
+    .btn-download-sample {
+        background: #2196f3;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 10px;
+    }
+    
+    .btn-download-sample:hover {
+        background: #1976d2;
+        color: white;
+        text-decoration: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="upload-container">
+    <div class="upload-header">
+        <h2><i class="fas fa-upload"></i> Bulk Upload Parts</h2>
+        <p>Upload a CSV file to create multiple parts at once</p>
+    </div>
+    
+    <div class="upload-body">
+        <!-- Sample Format Info -->
+        <div class="sample-format">
+            <h5><i class="fas fa-info-circle"></i> CSV Format Requirements</h5>
+            <p>Your CSV file must include these columns: <strong>name, category, brand, price, quantity, sku, description, image_url</strong></p>
+            <p>The first 6 columns are required. Description and image_url are optional.</p>
+            <a href="#" class="btn-download-sample" onclick="downloadSample()">
+                <i class="fas fa-download"></i> Download Sample CSV
+            </a>
+        </div>
+        
+        <!-- Upload Form -->
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+            {% csrf_token %}
+            
+            <div class="file-upload-area" id="fileUploadArea">
+                <div class="file-upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <div class="file-upload-text">
+                    <strong>Click to select a CSV file</strong> or drag and drop it here
+                </div>
+                <div class="file-upload-text">
+                    Maximum file size: 10MB
+                </div>
+                {{ form.csv_file }}
+            </div>
+            
+            <div class="file-info" id="fileInfo">
+                <h6><i class="fas fa-file-csv"></i> Selected File</h6>
+                <div id="fileName"></div>
+                <div id="fileSize"></div>
+            </div>
+            
+            <div class="upload-options">
+                <h6><i class="fas fa-cog"></i> Upload Options</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            {{ form.skip_duplicates }}
+                            <label class="form-check-label" for="{{ form.skip_duplicates.id_for_label }}">
+                                {{ form.skip_duplicates.label }}
+                            </label>
+                            <small class="form-text text-muted">{{ form.skip_duplicates.help_text }}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            {{ form.update_existing }}
+                            <label class="form-check-label" for="{{ form.update_existing.id_for_label }}">
+                                {{ form.update_existing.label }}
+                            </label>
+                            <small class="form-text text-muted">{{ form.update_existing.help_text }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="progress-container" id="progressContainer">
+                <h6><i class="fas fa-spinner fa-spin"></i> Processing Upload...</h6>
+                <div class="progress">
+                    <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                </div>
+                <div class="text-center mt-2">
+                    <small id="progressText">Preparing upload...</small>
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn">
+                    <i class="fas fa-upload"></i> Upload CSV
+                </button>
+                <a href="{% url 'parts:dealer_dashboard' %}" class="btn btn-secondary btn-lg ml-3">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </form>
+        
+        <!-- Upload Results -->
+        {% if upload_results %}
+        <div class="results-container {% if upload_results.error_count > 0 %}results-warning{% else %}results-success{% endif %}">
+            <h5><i class="fas fa-check-circle"></i> Upload Results</h5>
+            
+            <div class="results-stats">
+                <div class="stat-card">
+                    <div class="stat-number text-success">{{ upload_results.success_count }}</div>
+                    <div class="stat-label">Imported</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number text-warning">{{ upload_results.skipped_count }}</div>
+                    <div class="stat-label">Skipped</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number text-danger">{{ upload_results.error_count }}</div>
+                    <div class="stat-label">Errors</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number text-info">{{ upload_results.total_rows }}</div>
+                    <div class="stat-label">Total Rows</div>
+                </div>
+            </div>
+            
+            {% if upload_results.created_parts %}
+            <div class="mt-3">
+                <h6><i class="fas fa-plus-circle text-success"></i> Created Parts (showing first 10)</h6>
+                <div class="row">
+                    {% for part in upload_results.created_parts %}
+                    <div class="col-md-6">
+                        <span class="badge badge-success">{{ part }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if upload_results.updated_parts %}
+            <div class="mt-3">
+                <h6><i class="fas fa-edit text-info"></i> Updated Parts (showing first 10)</h6>
+                <div class="row">
+                    {% for part in upload_results.updated_parts %}
+                    <div class="col-md-6">
+                        <span class="badge badge-info">{{ part }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if upload_results.errors %}
+            <div class="mt-3">
+                <h6><i class="fas fa-exclamation-triangle text-danger"></i> Errors (showing first 10)</h6>
+                <div class="error-list">
+                    {% for error in upload_results.errors %}
+                    <div class="error-item">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="text-center mt-3">
+                <a href="{% url 'parts:dealer_parts_list' %}" class="btn btn-primary">
+                    <i class="fas fa-list"></i> View Parts List
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('{{ form.csv_file.id_for_label }}');
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const uploadForm = document.getElementById('uploadForm');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    // Hide the default file input
+    fileInput.style.display = 'none';
+    
+    // Click to select file
+    fileUploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+    
+    // Drag and drop functionality
+    fileUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        fileUploadArea.classList.add('dragover');
+    });
+    
+    fileUploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        fileUploadArea.classList.remove('dragover');
+    });
+    
+    fileUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        fileUploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect(files[0]);
+        }
+    });
+    
+    // File selection handler
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+    
+    function handleFileSelect(file) {
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        
+        // Validate file type
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            alert('Please select a CSV file.');
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            return;
+        }
+        
+        // Validate file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File size cannot exceed 10MB.');
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            return;
+        }
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Form submission with progress simulation
+    uploadForm.addEventListener('submit', function(e) {
+        if (!fileInput.files.length) {
+            e.preventDefault();
+            alert('Please select a CSV file to upload.');
+            return;
+        }
+        
+        // Show progress
+        uploadBtn.disabled = true;
+        progressContainer.style.display = 'block';
+        
+        // Simulate progress (since we can't track actual upload progress easily)
+        let progress = 0;
+        const progressInterval = setInterval(function() {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            
+            progressBar.style.width = progress + '%';
+            
+            if (progress < 30) {
+                progressText.textContent = 'Uploading file...';
+            } else if (progress < 60) {
+                progressText.textContent = 'Validating CSV format...';
+            } else if (progress < 90) {
+                progressText.textContent = 'Processing data...';
+            }
+        }, 200);
+        
+        // Clear interval after form submission
+        setTimeout(function() {
+            clearInterval(progressInterval);
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Finalizing...';
+        }, 3000);
+    });
+});
+
+function downloadSample() {
+    // Create sample CSV content
+    const csvContent = `name,category,brand,price,quantity,sku,description,image_url
+Brake Pads Front,Brake System,Bosch,45.99,50,BP-001,High-quality ceramic brake pads for front wheels,https://example.com/brake-pads.jpg
+Oil Filter,Engine,Mann-Filter,12.50,100,OF-002,Premium oil filter for engine maintenance,https://example.com/oil-filter.jpg
+Spark Plugs Set,Ignition,NGK,25.00,75,SP-003,Set of 4 spark plugs for optimal engine performance,https://example.com/spark-plugs.jpg`;
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sample_parts.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

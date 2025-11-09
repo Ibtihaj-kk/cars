@@ -1,0 +1,475 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block page_title %}Vendor Balance - {{ vendor.business_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-wallet"></i> Vendor Balance</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'admin_panel:vendor_management' %}">Vendors</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'admin_panel:vendor_detail' vendor.id %}">{{ vendor.business_name }}</a></li>
+                    <li class="breadcrumb-item active">Balance</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="{% url 'admin_panel:payment_management' %}?vendor={{ vendor.id }}" class="btn btn-outline-primary">
+                <i class="fas fa-credit-card"></i> Payment History
+            </a>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#adjustBalanceModal">
+                <i class="fas fa-edit"></i> Adjust Balance
+            </button>
+        </div>
+    </div>
+
+    <!-- Balance Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card primary">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3>${{ balance.current_balance|floatformat:2 }}</h3>
+                        <p class="text-muted mb-0">Current Balance</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card success">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3>${{ balance.total_earned|floatformat:2 }}</h3>
+                        <p class="text-muted mb-0">Total Earned</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card warning">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3>${{ balance.total_withdrawn|floatformat:2 }}</h3>
+                        <p class="text-muted mb-0">Total Withdrawn</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card info">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3>{{ pending_payments.count }}</h3>
+                        <p class="text-muted mb-0">Pending Payments</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vendor Information -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-store"></i> Vendor Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <h6>Business Details</h6>
+                    <p><strong>Business Name:</strong> {{ vendor.business_name }}</p>
+                    <p><strong>Contact Person:</strong> {{ vendor.contact_person }}</p>
+                    <p><strong>Email:</strong> {{ vendor.user.email }}</p>
+                    <p><strong>Phone:</strong> {{ vendor.phone }}</p>
+                </div>
+                <div class="col-md-4">
+                    <h6>Membership Status</h6>
+                    <p><strong>Status:</strong> 
+                        <span class="badge bg-{{ vendor.is_approved|yesno:"success,warning" }}">
+                            {{ vendor.is_approved|yesno:"Approved,Pending" }}
+                        </span>
+                    </p>
+                    <p><strong>Member Since:</strong> {{ vendor.created_at|date:"M j, Y" }}</p>
+                    <p><strong>Last Updated:</strong> {{ vendor.updated_at|date:"M j, Y" }}</p>
+                </div>
+                <div class="col-md-4">
+                    <h6>Performance Metrics</h6>
+                    <p><strong>Total Listings:</strong> {{ vendor.listings.count }}</p>
+                    <p><strong>Active Listings:</strong> {{ vendor.listings.filter(is_active=True).count }}</p>
+                    <p><strong>Average Rating:</strong> {{ vendor.avg_rating|floatformat:1 }}/5.0</p>
+                    <p><strong>Total Reviews:</strong> {{ vendor.total_reviews }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balance Trends Chart -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-chart-line"></i> Balance Trends (Last 6 Months)</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="balanceChart" width="400" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Pending Payments -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-clock"></i> Pending Payments</h5>
+            {% if pending_payments %}
+            <button class="btn btn-sm btn-success" onclick="processAllPending()">
+                <i class="fas fa-play"></i> Process All
+            </button>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {% if pending_payments %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Amount</th>
+                            <th>Commission</th>
+                            <th>Net Amount</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in pending_payments %}
+                        <tr>
+                            <td>
+                                <strong>{{ payment.payment_reference }}</strong>
+                                <br><small class="text-muted">{{ payment.related_listings.count }} listings</small>
+                            </td>
+                            <td>${{ payment.amount|floatformat:2 }}</td>
+                            <td>
+                                <span class="text-danger">-${{ payment.commission_amount|floatformat:2 }}</span>
+                                <br><small class="text-muted">{{ payment.commission_rate }}%</small>
+                            </td>
+                            <td><strong class="text-success">${{ payment.net_amount|floatformat:2 }}</strong></td>
+                            <td>
+                                {{ payment.due_date|date:"M j, Y" }}
+                                {% if payment.due_date < today %}
+                                <span class="badge bg-warning">Overdue</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-warning">{{ payment.get_status_display }}</span>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-success" onclick="processPayment({{ payment.id }})" title="Process Payment">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewPaymentDetails({{ payment.id }})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                <p class="text-muted">No pending payments</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Transaction History -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-history"></i> Transaction History</h5>
+            <div>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportTransactions()">
+                    <i class="fas fa-download"></i> Export
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if transactions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Balance</th>
+                            <th>Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td>{{ transaction.created_at|date:"M j, Y H:i" }}</td>
+                            <td>
+                                <span class="badge bg-{{ transaction.transaction_type }}">
+                                    {{ transaction.get_transaction_type_display }}
+                                </span>
+                            </td>
+                            <td>{{ transaction.description }}</td>
+                            <td>
+                                {% if transaction.amount > 0 %}
+                                <span class="text-success">+${{ transaction.amount|floatformat:2 }}</span>
+                                {% else %}
+                                <span class="text-danger">-${{ transaction.amount|abs|floatformat:2 }}</span>
+                                {% endif %}
+                            </td>
+                            <td>${{ transaction.balance_after|floatformat:2 }}</td>
+                            <td>
+                                {% if transaction.payment %}
+                                <a href="{% url 'admin_panel:payment_management' %}?vendor={{ vendor.id }}">
+                                    {{ transaction.payment.payment_reference }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if transactions.has_other_pages %}
+            <nav aria-label="Transaction pagination">
+                <ul class="pagination justify-content-center">
+                    {% if transactions.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ transactions.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in transactions.paginator.page_range %}
+                    {% if transactions.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > transactions.number|add:'-3' and num < transactions.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if transactions.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ transactions.next_page_number }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                <p class="text-muted">No transaction history</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Adjust Balance Modal -->
+<div class="modal fade" id="adjustBalanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit"></i> Adjust Balance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" id="adjustBalanceForm">
+                    {% csrf_token %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Warning:</strong> This action will directly modify the vendor's balance.
+                        Please ensure you have proper authorization.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="adjustment_type" class="form-label">Adjustment Type *</label>
+                        <select class="form-select" id="adjustment_type" name="adjustment_type" required>
+                            <option value="credit">Credit (Add to Balance)</option>
+                            <option value="debit">Debit (Deduct from Balance)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="adjustment_amount" class="form-label">Amount *</label>
+                        <input type="number" class="form-control" id="adjustment_amount" name="amount" 
+                               step="0.01" min="0.01" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="adjustment_reason" class="form-label">Reason *</label>
+                        <textarea class="form-control" id="adjustment_reason" name="reason" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="adjustBalance()">
+                    <i class="fas fa-edit"></i> Adjust Balance
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Balance trends chart
+const balanceCtx = document.getElementById('balanceChart').getContext('2d');
+const balanceChart = new Chart(balanceCtx, {
+    type: 'line',
+    data: {
+        labels: {{ balance_trends.labels|safe }},
+        datasets: [{
+            label: 'Balance',
+            data: {{ balance_trends.balances|safe }},
+            borderColor: '#007bff',
+            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+function processPayment(paymentId) {
+    if (confirm('Are you sure you want to process this payment?')) {
+        fetch(`/admin/payments/${paymentId}/process/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Payment processed successfully!');
+                location.reload();
+            } else {
+                alert('Error processing payment: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error processing payment');
+        });
+    }
+}
+
+function processAllPending() {
+    if (confirm('Are you sure you want to process all pending payments?')) {
+        fetch('/admin/payments/batch-process/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                vendor_id: {{ vendor.id }},
+                name: 'Batch Payment for {{ vendor.business_name }}',
+                description: 'Processing all pending payments for vendor'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('All pending payments processed successfully!');
+                location.reload();
+            } else {
+                alert('Error processing payments: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error processing payments');
+        });
+    }
+}
+
+function viewPaymentDetails(paymentId) {
+    // This would open a modal or redirect to payment details page
+    alert('Payment details view will be implemented in the next update');
+}
+
+function adjustBalance() {
+    const form = document.getElementById('adjustBalanceForm');
+    const formData = new FormData(form);
+    
+    if (confirm('Are you absolutely sure you want to adjust this vendor\'s balance? This action cannot be undone.')) {
+        fetch(`/admin/vendors/${{ vendor.id }}/balance/adjust/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Balance adjusted successfully!');
+                location.reload();
+            } else {
+                alert('Error adjusting balance: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error adjusting balance');
+        });
+    }
+}
+
+function exportTransactions() {
+    // This would export the transaction history to CSV/Excel
+    alert('Export functionality will be implemented in the next update');
+}
+
+// Set today's date for overdue calculation
+const today = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}

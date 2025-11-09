@@ -1,0 +1,291 @@
+{% extends 'business_partners/vendor_registration_base.html' %}
+{% load static %}
+
+{% block registration_content %}
+<div class="registration-header-modern">
+    <h1 style="color: var(--text-dark); font-weight: 600; margin-bottom: 0.5rem;">
+        <i class="fas fa-user-tie" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+        Vendor Registration
+    </h1>
+    <p style="color: var(--text-light); font-size: 1.1rem;">Step 1 of 4: Business Details</p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show alert-modern" role="alert" style="background: linear-gradient(135deg, #e8f5e8, #f0f8f0); border: 1px solid #28a745; border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1.5rem;">
+            <i class="fas fa-info-circle" style="color: #28a745; margin-right: 0.5rem;"></i>
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close" style="background: none; border: none; font-size: 1.2rem; color: #6c757d;">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="progress-container-modern">
+    <div class="completion-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h4 style="color: var(--text-dark); margin: 0; font-weight: 600;">
+            <i class="fas fa-chart-line" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+            Registration Progress
+        </h4>
+        <div class="completion-text" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600;">
+            <strong>{{ completion_percentage }}% Complete</strong>
+        </div>
+    </div>
+    
+    <div class="completion-bar-modern" style="background: #e9ecef; border-radius: 10px; height: 8px; margin-bottom: 2rem; overflow: hidden;">
+        <div class="completion-progress-modern" style="width: {{ completion_percentage }}%; background: linear-gradient(135deg, #667eea, #764ba2); height: 100%; border-radius: 10px; transition: width 0.3s ease;"></div>
+    </div>
+    
+    <div class="progress-steps-modern" style="display: flex; justify-content: space-between; position: relative;">
+        <div class="progress-step-modern active" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle-modern" style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 600; font-size: 1.2rem;">1</div>
+            <div class="step-label-modern" style="color: var(--text-dark); font-weight: 600; font-size: 0.9rem;">Business Details</div>
+        </div>
+        <div class="progress-step-modern" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle-modern" style="width: 50px; height: 50px; border-radius: 50%; background: #e9ecef; color: #6c757d; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 600; font-size: 1.2rem;">2</div>
+            <div class="step-label-modern" style="color: var(--text-light); font-size: 0.9rem;">Contact Info</div>
+        </div>
+        <div class="progress-step-modern" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle-modern" style="width: 50px; height: 50px; border-radius: 50%; background: #e9ecef; color: #6c757d; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 600; font-size: 1.2rem;">3</div>
+            <div class="step-label-modern" style="color: var(--text-light); font-size: 0.9rem;">Bank Details</div>
+        </div>
+        <div class="progress-step-modern" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle-modern" style="width: 50px; height: 50px; border-radius: 50%; background: #e9ecef; color: #6c757d; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 600; font-size: 1.2rem;">4</div>
+            <div class="step-label-modern" style="color: var(--text-light); font-size: 0.9rem;">Additional Info</div>
+        </div>
+    </div>
+</div>
+
+<div class="form-container-modern" style="background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 2rem; margin-bottom: 2rem;">
+    <form method="post" enctype="multipart/form-data" id="vendor-registration-form" class="vendor-registration-form-modern" data-user-authenticated="{{ user_authenticated|yesno:"true,false" }}">
+        {% csrf_token %}
+        
+        <div class="form-section-modern" style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid #e9ecef;">
+            <h3 style="color: var(--text-dark); font-weight: 600; font-size: 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center;">
+                <i class="fas fa-building" style="color: var(--primary-color); margin-right: 0.75rem;"></i> 
+                Company Information
+            </h3>
+            
+            <div class="form-group-modern" style="margin-bottom: 1.5rem;">
+                <label for="{{ form.company_name.id_for_label }}" class="form-label-modern required" style="color: var(--text-dark); font-weight: 600; margin-bottom: 0.5rem; display: block;">
+                    <i class="fas fa-building" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+                    Legal Company Name
+                </label>
+                <input type="text" name="company_name" id="{{ form.company_name.id_for_label }}" class="form-control-modern" value="{{ form.company_name.value|default:'' }}" required style="width: 100%; padding: 0.75rem 1rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; transition: border-color 0.3s ease;">
+                {% if form.company_name.errors %}
+                    <div class="invalid-feedback-modern d-block" style="color: #dc3545; font-size: 0.875rem; margin-top: 0.25rem;">
+                        <i class="fas fa-exclamation-circle" style="margin-right: 0.25rem;"></i>
+                        {{ form.company_name.errors.0 }}
+                    </div>
+                {% endif %}
+                <small class="form-text-modern" style="color: var(--text-light); font-size: 0.875rem; margin-top: 0.25rem;">
+                    <i class="fas fa-info-circle" style="margin-right: 0.25rem;"></i>
+                    Enter your company's legal name as it appears on your registration documents
+                </small>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.business_type.id_for_label }}" class="form-label required">
+                        Business Type
+                    </label>
+                    <select name="business_type" id="{{ form.business_type.id_for_label }}" class="form-control-modern" required>
+                        <option value="">Select Business Type</option>
+                        {% for choice in form.business_type.field.choices %}
+                            <option value="{{ choice.0 }}" {% if form.business_type.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.business_type.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.business_type.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.establishment_date.id_for_label }}" class="form-label">
+                        Establishment Date
+                    </label>
+                    <input type="date" name="establishment_date" id="{{ form.establishment_date.id_for_label }}" class="form-control-modern" value="{{ form.establishment_date.value|default:'' }}">
+                    {% if form.establishment_date.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.establishment_date.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">When was your business established?</small>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.business_description.id_for_label }}" class="form-label required">
+                    Business Description
+                </label>
+                <textarea name="business_description" id="{{ form.business_description.id_for_label }}" class="form-control-modern" rows="4" required>{{ form.business_description.value|default:'' }}</textarea>
+                {% if form.business_description.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.business_description.errors.0 }}
+                    </div>
+                {% endif %}
+                <small class="form-text">Describe your business activities and the types of automotive parts you sell</small>
+            </div>
+        </div>
+        
+        <div class="form-section-modern" style="margin-bottom: 2.5rem;">
+            <h3 style="color: var(--text-dark); font-weight: 600; font-size: 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center;">
+                <i class="fas fa-file-alt" style="color: var(--primary-color); margin-right: 0.75rem;"></i> 
+                Legal Documents
+            </h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.commercial_registration_number.id_for_label }}" class="form-label required">
+                        Commercial Registration Number
+                    </label>
+                    <input type="text" name="commercial_registration_number" id="{{ form.commercial_registration_number.id_for_label }}" class="form-control-modern" value="{{ form.commercial_registration_number.value|default:'' }}" required>
+                    {% if form.commercial_registration_number.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.commercial_registration_number.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">Your CR number from the commercial registration</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.legal_identifier.id_for_label }}" class="form-label required">
+                        Tax ID / VAT Number
+                    </label>
+                    <input type="text" name="legal_identifier" id="{{ form.legal_identifier.id_for_label }}" class="form-control-modern" value="{{ form.legal_identifier.value|default:'' }}" required>
+                    {% if form.legal_identifier.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.legal_identifier.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">Your tax identification or VAT registration number</small>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.cr_document.id_for_label }}" class="form-label required">
+                        Commercial Registration Document
+                    </label>
+                    <div class="file-upload-area-modern">
+                        <div class="file-upload-icon">📄</div>
+                        <div class="file-upload-text">Click to upload CR document</div>
+                        <div class="file-upload-hint">PDF, JPG, PNG (Max 5MB)</div>
+                    </div>
+                    <input type="file" name="cr_document" id="{{ form.cr_document.id_for_label }}" class="form-control-modern-file" accept=".pdf,.jpg,.jpeg,.png" required>
+                    {% if form.cr_document.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.cr_document.errors.0 }}
+                        </div>
+                    {% endif %}
+                    {% if application.cr_document %}
+                        <div class="mt-2">
+                            <small class="text-success">
+                                <i class="fas fa-check"></i> Current file: {{ application.cr_document.name }}
+                            </small>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.business_license.id_for_label }}" class="form-label required">
+                        Business License
+                    </label>
+                    <div class="file-upload-area-modern">
+                        <div class="file-upload-icon">📄</div>
+                        <div class="file-upload-text">Click to upload business license</div>
+                        <div class="file-upload-hint">PDF, JPG, PNG (Max 5MB)</div>
+                    </div>
+                    <input type="file" name="business_license" id="{{ form.business_license.id_for_label }}" class="form-control-modern-file" accept=".pdf,.jpg,.jpeg,.png" required>
+                    {% if form.business_license.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.business_license.errors.0 }}
+                        </div>
+                    {% endif %}
+                    {% if application.business_license %}
+                        <div class="mt-2">
+                            <small class="text-success">
+                                <i class="fas fa-check"></i> Current file: {{ application.business_license.name }}
+                            </small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-actions-modern" style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e9ecef;">
+            <a href="{% url 'business_partners:vendor_registration_start' %}" class="btn btn-secondary-modern" style="background: #6c757d; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; display: flex; align-items: center; transition: background 0.3s ease;">
+                <i class="fas fa-arrow-left" style="margin-right: 0.5rem;"></i> Back to Start
+            </a>
+            <button type="submit" class="btn btn-primary-modern" data-original-text="Save & Continue" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                Save & Continue <i class="fas fa-arrow-right" style="margin-left: 0.5rem;"></i>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add file upload functionality
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    
+    fileInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const fileName = this.files[0]?.name;
+            const uploadArea = this.previousElementSibling;
+            
+            if (fileName && uploadArea) {
+                uploadArea.innerHTML = `
+                    <div class="file-upload-icon">📄</div>
+                    <div class="file-upload-text">${fileName}</div>
+                    <div class="file-upload-hint">Click to change file</div>
+                `;
+            }
+        });
+    });
+    
+    // Add form validation
+    const form = document.getElementById('vendor-registration-form');
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            const firstInvalid = form.querySelector('.is-invalid');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstInvalid.focus();
+            }
+        }
+    });
+    
+    // Real-time validation
+    const inputs = document.querySelectorAll('.form-control');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.hasAttribute('required') && !this.value.trim()) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

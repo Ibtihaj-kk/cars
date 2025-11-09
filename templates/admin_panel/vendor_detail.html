@@ -1,0 +1,350 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Vendor Details - {{ vendor.user.get_full_name }} - Admin Panel{% endblock %}
+{% block page_title %}Vendor Details{% endblock %}
+
+{% block content %}
+<!-- Vendor Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar me-3">
+                            {% if vendor.user.profile.avatar %}
+                            <img src="{{ vendor.user.profile.avatar.url }}" alt="{{ vendor.user.get_full_name }}" 
+                                 class="rounded-circle" width="64" height="64">
+                            {% else %}
+                            <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 64px; height: 64px; background-color: #e3f2fd; color: #1976d2; font-size: 24px;">
+                                {{ vendor.user.get_full_name|first|upper }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h3 class="mb-1">{{ vendor.user.get_full_name }}</h3>
+                            <p class="text-muted mb-1">{{ vendor.user.email }}</p>
+                            <div class="d-flex align-items-center">
+                                <span class="status-badge status-{{ vendor.status }} me-2">
+                                    {{ vendor.get_status_display }}
+                                </span>
+                                {% for role in roles %}
+                                <span class="badge bg-info me-1">{{ role.get_role_type_display }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">Vendor ID: #{{ vendor.id }}</small>
+                        <br>
+                        <small class="text-muted">Joined: {{ vendor.created_at|date:"M d, Y" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vendor Metrics -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stats-card primary">
+            <div class="d-flex align-items-center">
+                <div class="icon">
+                    <i class="fas fa-list"></i>
+                </div>
+                <div class="ms-3">
+                    <h3 class="mb-0">{{ metrics.total_listings }}</h3>
+                    <p class="text-muted mb-0">Total Listings</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stats-card success">
+            <div class="d-flex align-items-center">
+                <div class="icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="ms-3">
+                    <h3 class="mb-0">{{ metrics.active_listings }}</h3>
+                    <p class="text-muted mb-0">Active Listings</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stats-card info">
+            <div class="d-flex align-items-center">
+                <div class="icon">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="ms-3">
+                    <h3 class="mb-0">--</h3>
+                    <p class="text-muted mb-0">Rating</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stats-card warning">
+            <div class="d-flex align-items-center">
+                <div class="icon">
+                    <i class="fas fa-calendar"></i>
+                </div>
+                <div class="ms-3">
+                    <h3 class="mb-0">{{ vendor.created_at|timesince }}</h3>
+                    <p class="text-muted mb-0">Member Since</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vendor Information Tabs -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="vendorTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" 
+                                data-bs-target="#overview" type="button" role="tab">
+                            <i class="fas fa-info-circle me-2"></i>Overview
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="contact-tab" data-bs-toggle="tab" 
+                                data-bs-target="#contact" type="button" role="tab">
+                            <i class="fas fa-address-book me-2"></i>Contact Info
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="listings-tab" data-bs-toggle="tab" 
+                                data-bs-target="#listings" type="button" role="tab">
+                            <i class="fas fa-car me-2"></i>Listings
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="activity-tab" data-bs-toggle="tab" 
+                                data-bs-target="#activity" type="button" role="tab">
+                            <i class="fas fa-history me-2"></i>Activity
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="vendorTabContent">
+                    <!-- Overview Tab -->
+                    <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Business Information</h6>
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td><strong>Business Name:</strong></td>
+                                        <td>{{ vendor.business_name|default:"Not provided" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Registration Number:</strong></td>
+                                        <td>{{ vendor.registration_number|default:"Not provided" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Tax ID:</strong></td>
+                                        <td>{{ vendor.tax_id|default:"Not provided" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Website:</strong></td>
+                                        <td>
+                                            {% if vendor.website %}
+                                            <a href="{{ vendor.website }}" target="_blank">{{ vendor.website }}</a>
+                                            {% else %}
+                                            Not provided
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="mb-3">Account Details</h6>
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td><strong>Username:</strong></td>
+                                        <td>{{ vendor.user.username }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Email:</strong></td>
+                                        <td>{{ vendor.user.email }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Phone:</strong></td>
+                                        <td>{{ vendor.user.profile.phone|default:"Not provided" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Account Status:</strong></td>
+                                        <td>
+                                            {% if vendor.user.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Contact Info Tab -->
+                    <div class="tab-pane fade" id="contact" role="tabpanel">
+                        {% if contact_info %}
+                        <div class="row">
+                            {% for contact in contact_info %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ contact.get_contact_type_display }}</h6>
+                                        <p class="card-text">
+                                            <strong>Address:</strong> {{ contact.address|default:"Not provided" }}<br>
+                                            <strong>City:</strong> {{ contact.city|default:"Not provided" }}<br>
+                                            <strong>State:</strong> {{ contact.state|default:"Not provided" }}<br>
+                                            <strong>ZIP:</strong> {{ contact.zip_code|default:"Not provided" }}<br>
+                                            <strong>Country:</strong> {{ contact.country|default:"Not provided" }}<br>
+                                            {% if contact.phone %}
+                                            <strong>Phone:</strong> {{ contact.phone }}<br>
+                                            {% endif %}
+                                            {% if contact.email %}
+                                            <strong>Email:</strong> {{ contact.email }}<br>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-address-book fa-3x mb-3"></i>
+                            <h5>No contact information available</h5>
+                            <p>This vendor has not provided any contact information yet.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Listings Tab -->
+                    <div class="tab-pane fade" id="listings" role="tabpanel">
+                        {% if listings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Make</th>
+                                        <th>Model</th>
+                                        <th>Price</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for listing in listings %}
+                                    <tr>
+                                        <td>{{ listing.title|truncatechars:30 }}</td>
+                                        <td>{{ listing.make.name }}</td>
+                                        <td>{{ listing.model.name }}</td>
+                                        <td>${{ listing.price|floatformat:0 }}</td>
+                                        <td>
+                                            <span class="status-badge status-{{ listing.status }}">
+                                                {{ listing.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ listing.created_at|date:"M d, Y" }}</td>
+                                        <td>
+                                            <a href="{% url 'admin_panel:listing_detail' listing.id %}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-car fa-3x mb-3"></i>
+                            <h5>No listings found</h5>
+                            <p>This vendor has not created any listings yet.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Activity Tab -->
+                    <div class="tab-pane fade" id="activity" role="tabpanel">
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-history fa-3x mb-3"></i>
+                            <h5>Activity tracking coming soon</h5>
+                            <p>Vendor activity logs will be displayed here.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Update Modal -->
+<div class="modal fade" id="statusUpdateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Vendor Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'admin_panel:update_vendor_status' vendor.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">New Status</label>
+                        <select class="form-select" id="status" name="status" required>
+                            {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if vendor.status == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Reason (Optional)</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3" 
+                                  placeholder="Provide a reason for this status change..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Status update modal trigger
+document.addEventListener('DOMContentLoaded', function() {
+    const statusUpdateModal = document.getElementById('statusUpdateModal');
+    if (statusUpdateModal) {
+        statusUpdateModal.addEventListener('show.bs.modal', function(event) {
+            // Modal is triggered, any additional logic can go here
+        });
+    }
+});
+</script>
+{% endblock %}

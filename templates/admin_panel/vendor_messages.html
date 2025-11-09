@@ -1,0 +1,280 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block page_title %}Vendor Messages{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-envelope"></i> Vendor Messages</h2>
+        <div>
+            <a href="{% url 'admin_panel:message_templates' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-file-alt"></i> Templates
+            </a>
+            <a href="{% url 'admin_panel:send_vendor_message' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Message
+            </a>
+        </div>
+    </div>
+
+    <!-- Message Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="stats-card primary">
+                <div class="icon"><i class="fas fa-envelope"></i></div>
+                <div class="content">
+                    <h3>{{ message_stats.total }}</h3>
+                    <p>Total</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card warning">
+                <div class="icon"><i class="fas fa-envelope-open"></i></div>
+                <div class="content">
+                    <h3>{{ message_stats.unread }}</h3>
+                    <p>Unread</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card info">
+                <div class="icon"><i class="fas fa-paper-plane"></i></div>
+                <div class="content">
+                    <h3>{{ message_stats.sent }}</h3>
+                    <p>Sent</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card success">
+                <div class="icon"><i class="fas fa-check"></i></div>
+                <div class="content">
+                    <h3>{{ message_stats.read }}</h3>
+                    <p>Read</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stats-card danger">
+                <div class="icon"><i class="fas fa-reply"></i></div>
+                <div class="content">
+                    <h3>{{ message_stats.replied }}</h3>
+                    <p>Replied</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="all">All Status</option>
+                        {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="all">All Categories</option>
+                        {% for value, label in category_choices %}
+                        <option value="{{ value }}" {% if current_filters.category == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Priority</label>
+                    <select name="priority" class="form-select">
+                        <option value="all">All Priorities</option>
+                        {% for value, label in priority_choices %}
+                        <option value="{{ value }}" {% if current_filters.priority == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control" placeholder="Search messages..." value="{{ current_filters.search }}">
+                        <button type="submit" class="btn btn-outline-secondary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Messages Table -->
+    <div class="table-container">
+        <div class="table-header">
+            <h5 class="mb-0"><i class="fas fa-table"></i> Messages</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>From/To</th>
+                        <th>Subject</th>
+                        <th>Vendor</th>
+                        <th>Category</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for message in messages %}
+                    <tr class="{% if not message.is_read %}table-warning{% endif %}">
+                        <td>
+                            {% if message.sender == request.user %}
+                                <div class="text-primary">
+                                    <strong>To:</strong> {{ message.recipient.get_full_name|default:message.recipient.email }}
+                                    <br><small class="text-muted">{{ message.sender.email }}</small>
+                                </div>
+                            {% else %}
+                                <div class="text-success">
+                                    <strong>From:</strong> {{ message.sender.get_full_name|default:message.sender.email }}
+                                    <br><small class="text-muted">{{ message.recipient.email }}</small>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ message.subject }}</strong>
+                            <br><small class="text-muted">{{ message.content|truncatechars:100 }}</small>
+                        </td>
+                        <td>
+                            {% if message.business_partner %}
+                                <a href="{% url 'admin_panel:vendor_detail' message.business_partner.id %}">
+                                    {{ message.business_partner.business_name|default:message.business_partner.user.get_full_name }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ message.get_category_display }}</span>
+                        </td>
+                        <td>
+                            <span class="badge 
+                                {% if message.priority == 'urgent' %}bg-danger
+                                {% elif message.priority == 'high' %}bg-warning
+                                {% elif message.priority == 'medium' %}bg-info
+                                {% else %}bg-secondary{% endif %}">
+                                {{ message.get_priority_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge 
+                                {% if message.status == 'read' %}bg-success
+                                {% elif message.status == 'replied' %}bg-primary
+                                {% elif message.status == 'sent' %}bg-info
+                                {% elif message.status == 'draft' %}bg-secondary
+                                {% else %}bg-light{% endif %}">
+                                {{ message.get_status_display }}
+                            </span>
+                            {% if message.is_read %}
+                                <small class="text-muted d-block">Read: {{ message.read_at|date:"M d, H:i" }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {{ message.created_at|date:"M d, Y" }}
+                                <br>{{ message.created_at|time:"H:i" }}
+                            </small>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'admin_panel:message_detail' message.id %}" class="btn btn-sm btn-outline-primary" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if message.recipient == request.user %}
+                                <a href="{% url 'admin_panel:send_vendor_message_to' message.sender.business_partner.id %}" class="btn btn-sm btn-outline-success" title="Reply">
+                                    <i class="fas fa-reply"></i>
+                                </a>
+                                {% endif %}
+                                {% if message.status == 'draft' %}
+                                <button class="btn btn-sm btn-outline-info" title="Send" onclick="sendMessage({{ message.id }})">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <h5>No messages found</h5>
+                            <p>Start by sending your first message to a vendor.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if messages.has_other_pages %}
+        <div class="card-footer">
+            <nav aria-label="Message pagination">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if messages.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ messages.previous_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in messages.paginator.page_range %}
+                    <li class="page-item {% if messages.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if messages.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ messages.next_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function sendMessage(messageId) {
+    if (confirm('Are you sure you want to send this message?')) {
+        // AJAX call to send message
+        fetch(`/messages/${messageId}/send/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error sending message: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error sending message: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,548 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title %}Application Detail - {{ application.company_name }} - YallaMotor Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'admin_panel:dashboard' %}">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'admin_panel:vendor_management' %}">Vendor Management</a></li>
+                            <li class="breadcrumb-item active">{{ application.company_name }}</li>
+                        </ol>
+                    </nav>
+                    <h1 class="h3 mb-1">{{ application.company_name }}</h1>
+                    <p class="text-muted mb-0">Application ID: {{ application.application_id }}</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'admin_panel:vendor_management' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to List
+                    </a>
+                    {% if application.status in 'submitted,under_review' %}
+                    <button type="button" class="btn btn-success" onclick="approveApplication()">
+                        <i class="fas fa-check me-1"></i>Approve
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="rejectApplication()">
+                        <i class="fas fa-times me-1"></i>Reject
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="requestChanges()">
+                        <i class="fas fa-edit me-1"></i>Request Changes
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Status and Progress -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Application Status</h5>
+                    {% if application.status == 'pending' %}
+                        <span class="badge bg-warning fs-6">Pending</span>
+                    {% elif application.status == 'submitted' %}
+                        <span class="badge bg-info fs-6">Submitted</span>
+                    {% elif application.status == 'under_review' %}
+                        <span class="badge bg-primary fs-6">Under Review</span>
+                    {% elif application.status == 'approved' %}
+                        <span class="badge bg-success fs-6">Approved</span>
+                    {% elif application.status == 'rejected' %}
+                        <span class="badge bg-danger fs-6">Rejected</span>
+                    {% elif application.status == 'requires_changes' %}
+                        <span class="badge bg-secondary fs-6">Changes Required</span>
+                    {% endif %}
+                    <p class="text-muted mt-2 mb-0">
+                        {% if application.submitted_at %}
+                            Submitted: {{ application.submitted_at|date:"M d, Y" }}
+                        {% else %}
+                            Not submitted yet
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Completion Progress</h5>
+                    <div class="progress mb-2" style="height: 25px;">
+                        <div class="progress-bar {% if completion_percentage >= 80 %}bg-success{% elif completion_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ completion_percentage }}%"
+                             aria-valuenow="{{ completion_percentage }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ completion_percentage }}%
+                        </div>
+                    </div>
+                    <p class="text-muted mb-0">{{ completion_percentage }}% Complete</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Can Submit?</h5>
+                    {% if can_submit %}
+                        <span class="badge bg-success fs-6">Ready to Submit</span>
+                    {% else %}
+                        <span class="badge bg-warning fs-6">Incomplete</span>
+                    {% endif %}
+                    <p class="text-muted mt-2 mb-0">Application completeness</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step Completion Status -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks me-2"></i>Application Steps
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded">
+                                <div class="mb-2">
+                                    {% if step_status.step1 %}
+                                        <i class="fas fa-check-circle text-success fa-2x"></i>
+                                    {% else %}
+                                        <i class="fas fa-circle text-muted fa-2x"></i>
+                                    {% endif %}
+                                </div>
+                                <h6>Step 1</h6>
+                                <p class="text-muted small mb-0">Basic Information</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded">
+                                <div class="mb-2">
+                                    {% if step_status.step2 %}
+                                        <i class="fas fa-check-circle text-success fa-2x"></i>
+                                    {% else %}
+                                        <i class="fas fa-circle text-muted fa-2x"></i>
+                                    {% endif %}
+                                </div>
+                                <h6>Step 2</h6>
+                                <p class="text-muted small mb-0">Business Details</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded">
+                                <div class="mb-2">
+                                    {% if step_status.step3 %}
+                                        <i class="fas fa-check-circle text-success fa-2x"></i>
+                                    {% else %}
+                                        <i class="fas fa-circle text-muted fa-2x"></i>
+                                    {% endif %}
+                                </div>
+                                <h6>Step 3</h6>
+                                <p class="text-muted small mb-0">Bank Information</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded">
+                                <div class="mb-2">
+                                    {% if step_status.step4 %}
+                                        <i class="fas fa-check-circle text-success fa-2x"></i>
+                                    {% else %}
+                                        <i class="fas fa-circle text-muted fa-2x"></i>
+                                    {% endif %}
+                                </div>
+                                <h6>Step 4</h6>
+                                <p class="text-muted small mb-0">Documents</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Details -->
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Business Information -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-building me-2"></i>Business Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Company Details</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Company Name:</strong></td>
+                                    <td>{{ application.company_name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Business Type:</strong></td>
+                                    <td>{{ application.business_type }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Registration Number:</strong></td>
+                                    <td>{{ business_registration_number|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>License Number:</strong></td>
+                                    <td>{{ business_license_number|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Years in Business:</strong></td>
+                                    <td>{{ application.years_in_business|default:"N/A" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Contact Information</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Contact Person:</strong></td>
+                                    <td>{{ application.contact_person_name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Title:</strong></td>
+                                    <td>{{ application.contact_person_title|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Phone:</strong></td>
+                                    <td>{{ application.business_phone }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Email:</strong></td>
+                                    <td>{{ application.business_email }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Website:</strong></td>
+                                    <td>{{ business_website|default:"N/A" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Business Address</h6>
+                            <p>{{ application.business_address|default:"N/A" }}</p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Business Description</h6>
+                            <p>{{ application.business_description|default:"N/A" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Banking Information -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-university me-2"></i>Banking Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Bank Name:</strong></td>
+                                    <td>{{ application.bank_name|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Branch:</strong></td>
+                                    <td>{{ application.bank_branch|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Account Holder:</strong></td>
+                                    <td>{{ application.account_holder_name|default:"N/A" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Account Number:</strong></td>
+                                    <td>{{ application.bank_account_number|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>IBAN:</strong></td>
+                                    <td>{{ application.iban|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>SWIFT Code:</strong></td>
+                                    <td>{{ application.swift_code|default:"N/A" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Information -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Additional Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Expected Monthly Volume:</strong></td>
+                                    <td>{{ application.expected_monthly_volume|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Product Categories:</strong></td>
+                                    <td>{{ application.product_categories|default:"N/A" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>References:</strong></td>
+                                    <td>{{ application.references|default:"N/A" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Documents -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>Documents
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if documents %}
+                    <div class="list-group list-group-flush">
+                        {% for document in documents %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ document.category.name }}</h6>
+                                <small class="text-muted">Uploaded: {{ document.uploaded_at|date:"M d, Y" }}</small>
+                            </div>
+                            <div>
+                                {% if document.status == 'verified' %}
+                                    <span class="badge bg-success">Verified</span>
+                                {% elif document.status == 'pending' %}
+                                    <span class="badge bg-warning">Pending</span>
+                                {% elif document.status == 'rejected' %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                {% endif %}
+                                <a href="{{ document.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary ms-1">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-3">No documents uploaded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Verification Queue -->
+            {% if verification_queue %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-check me-2"></i>Verification Queue
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for item in verification_queue %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ item.document.category.name }}</h6>
+                                    <small class="text-muted">
+                                        Assigned to: {{ item.assigned_to.get_full_name|default:item.assigned_to.username }}
+                                    </small>
+                                </div>
+                                <span class="badge bg-info">In Progress</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Review Information -->
+            {% if application.reviewed_by %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-check me-2"></i>Review Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Reviewed By:</strong></td>
+                            <td>{{ application.reviewed_by.get_full_name|default:application.reviewed_by.username }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Reviewed At:</strong></td>
+                            <td>{{ application.reviewed_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% if application.review_notes %}
+                        <tr>
+                            <td><strong>Review Notes:</strong></td>
+                            <td>{{ application.review_notes }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if application.rejection_reason %}
+                        <tr>
+                            <td><strong>Rejection Reason:</strong></td>
+                            <td>{{ application.rejection_reason }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modals for Actions -->
+<div class="modal fade" id="approveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Approve Application</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="approveForm" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="approve_notes" class="form-label">Review Notes (Optional)</label>
+                        <textarea class="form-control" id="approve_notes" name="review_notes" rows="3"></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This action will approve the vendor application and create a business partner account.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Approve Application</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reject Application</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="rejectForm" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="rejection_reason" class="form-label">Rejection Reason *</label>
+                        <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reject_notes" class="form-label">Review Notes (Optional)</label>
+                        <textarea class="form-control" id="reject_notes" name="review_notes" rows="2"></textarea>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        The applicant will be notified of the rejection and the reason provided.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Reject Application</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="changesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request Changes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="changesForm" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="changes_required" class="form-label">Changes Required *</label>
+                        <textarea class="form-control" id="changes_required" name="changes_required" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="changes_notes" class="form-label">Review Notes (Optional)</label>
+                        <textarea class="form-control" id="changes_notes" name="review_notes" rows="2"></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        The applicant will be notified and can resubmit after making the requested changes.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Request Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function approveApplication() {
+    new bootstrap.Modal(document.getElementById('approveModal')).show();
+}
+
+function rejectApplication() {
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+}
+
+function requestChanges() {
+    new bootstrap.Modal(document.getElementById('changesModal')).show();
+}
+
+// Set form actions
+document.getElementById('approveForm').action = "{% url 'admin_panel:approve_vendor_application' application.id %}";
+document.getElementById('rejectForm').action = "{% url 'admin_panel:reject_vendor_application' application.id %}";
+document.getElementById('changesForm').action = "{% url 'admin_panel:request_changes_vendor_application' application.id %}";
+</script>
+{% endblock %}

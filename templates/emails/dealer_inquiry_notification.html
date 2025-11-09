@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Inquiry on Your Vehicle Listing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .inquiry-details {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .detail-row {
+            margin-bottom: 10px;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #555;
+            display: inline-block;
+            width: 120px;
+        }
+        .message-box {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-style: italic;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .cta-button:hover {
+            background-color: #0056b3;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .logo {
+            color: #007bff;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Cars Portal</div>
+            <h1>New Inquiry on Your Vehicle Listing</h1>
+        </div>
+        
+        <div class="content">
+            <p>Hi {{ dealer_name }},</p>
+            
+            <p>Great news! You've received a new inquiry for your vehicle listing:</p>
+            
+            <div class="inquiry-details">
+                <h3 style="margin-top: 0; color: #007bff;">{{ listing_title }}</h3>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Inquiry Type:</span>
+                    {{ inquiry_type }}
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">From:</span>
+                    {{ user_name }}
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Email:</span>
+                    <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
+                </div>
+                
+                {% if contact_phone != 'Not provided' %}
+                <div class="detail-row">
+                    <span class="detail-label">Phone:</span>
+                    <a href="tel:{{ contact_phone }}">{{ contact_phone }}</a>
+                </div>
+                {% endif %}
+                
+                <div class="detail-row">
+                    <span class="detail-label">Date:</span>
+                    {{ inquiry_date }}
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <span class="detail-label">Message:</span>
+                    <div class="message-box">
+                        {{ user_message }}
+                    </div>
+                </div>
+            </div>
+            
+            <p>This is a great opportunity to connect with a potential buyer. We recommend responding promptly to maintain buyer interest.</p>
+            
+            <div style="text-align: center;">
+                <a href="{{ listing_url }}" class="cta-button">View Your Listing</a>
+            </div>
+            
+            <p><strong>Tips for responding:</strong></p>
+            <ul>
+                <li>Respond within 24 hours for best results</li>
+                <li>Be professional and courteous</li>
+                <li>Provide detailed answers to their questions</li>
+                <li>Suggest a convenient time for viewing or test drive</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>Best regards,<br>
+            <strong>The Cars Portal Team</strong></p>
+            
+            <p style="font-size: 12px; color: #999;">
+                This email was sent because you have a vehicle listing on Cars Portal. 
+                You can manage your notification preferences in your account settings.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,47 @@
+ACTION REQUIRED - VENDOR APPLICATION - CARS PORTAL
+
+Dear {{ application.contact_person_name|default:application.user.get_full_name }},
+
+Thank you for your vendor application with Cars Portal. Our review team has examined your application and requires some changes or additional information before we can proceed with approval.
+
+APPLICATION DETAILS:
+- Application ID: {{ application.application_id }}
+- Company Name: {{ application.company_name }}
+- Business Type: {{ application.get_business_type_display }}
+- Status: {{ application.get_status_display }}
+- Reviewed On: {{ application.updated_at|date:"F d, Y \a\t g:i A" }}
+{% if application.reviewed_by %}- Reviewed By: {{ application.reviewed_by.get_full_name }}{% endif %}
+
+{% if application.review_notes %}
+REQUIRED CHANGES:
+
+Our review team has identified the following items that need attention:
+
+{{ application.review_notes }}
+{% endif %}
+
+⏰ TIME SENSITIVE: Please address these items within 14 days to avoid application expiration. If no action is taken within this timeframe, you may need to restart the application process.
+
+HOW TO MAKE CHANGES:
+
+1. Log into your account: Access your vendor application portal
+2. Review the feedback: Carefully read all the required changes
+3. Update your application: Make the necessary corrections or provide additional information
+4. Upload new documents: If required, upload any missing or updated documents
+5. Resubmit for review: Once all changes are made, resubmit your application
+
+UPDATE YOUR APPLICATION:
+{{ edit_application_url }}
+
+NEED HELP?
+
+If you have questions about the required changes or need assistance with your application:
+- Email: vendors@carsportal.com
+- Phone: +966 11 123 4567
+- Business Hours: Sunday - Thursday, 9:00 AM - 6:00 PM
+- Reference your Application ID: {{ application.application_id }}
+
+We appreciate your patience and look forward to welcoming you as a Cars Portal vendor partner once these items are addressed.
+
+This is an automated message from Cars Portal Vendor Management System.
+© {{ current_year }} Cars Portal. All rights reserved.

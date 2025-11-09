@@ -1,0 +1,774 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block title %}My Parts - {{ vendor_profile.business_partner.company_name }}{% endblock %}
+
+<!-- Price Update Modal -->
+<div class="modal fade" id="priceUpdateModal" tabindex="-1" aria-labelledby="priceUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="priceUpdateModalLabel">
+                    <i class="fas fa-dollar-sign"></i> Update Prices
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="priceUpdateForm">
+                    <div class="mb-3">
+                        <label for="pricePercentage" class="form-label">Price Adjustment (%)</label>
+                        <input type="number" class="form-control" id="pricePercentage" step="0.1" placeholder="e.g., 10 for 10% increase, -5 for 5% decrease">
+                        <div class="form-text">Enter positive number to increase prices, negative to decrease</div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        This will update prices for <span id="priceUpdateCount">0</span> selected parts.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="applyPriceUpdate()">Update Prices</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Update Modal -->
+<div class="modal fade" id="stockUpdateModal" tabindex="-1" aria-labelledby="stockUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="stockUpdateModalLabel">
+                    <i class="fas fa-boxes"></i> Update Stock
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="stockUpdateForm">
+                    <div class="mb-3">
+                        <label for="stockAction" class="form-label">Action</label>
+                        <select class="form-select" id="stockAction">
+                            <option value="set">Set to specific quantity</option>
+                            <option value="add">Add to current stock</option>
+                            <option value="subtract">Subtract from current stock</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stockQuantity" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="stockQuantity" min="0" placeholder="Enter quantity">
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        This will update stock for <span id="stockUpdateCount">0</span> selected parts.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="applyStockUpdate()">Update Stock</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+
+{% block extra_css %}
+<style>
+    .parts-header {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        padding: 20px 0;
+        margin-bottom: 30px;
+    }
+    
+    .search-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .parts-table {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .parts-table th {
+        background-color: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+    }
+    
+    .part-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 5px;
+    }
+    
+    .stock-badge {
+        font-size: 0.8rem;
+    }
+    
+    .action-buttons .btn {
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+    
+    .bulk-actions {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: none;
+    }
+    
+    .bulk-actions.show {
+        display: block;
+    }
+    
+    .filter-section {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+    
+    .advanced-filters {
+        display: none;
+    }
+    
+    .advanced-filters.show {
+        display: block;
+    }
+    
+    .pagination-wrapper {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="parts-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h3 mb-0">My Parts</h1>
+                <p class="mb-0">Manage your parts inventory with full access to all Excel fields</p>
+            </div>
+            <div class="col-md-4 text-md-right">
+                <a href="{% url 'business_partners:vendor_part_create' %}" class="btn btn-light">
+                    <i class="fas fa-plus"></i> Add New Part
+                </a>
+                <a href="{% url 'business_partners:vendor_dashboard' %}" class="btn btn-outline-light">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Search and Filters -->
+    <div class="search-card">
+        <form method="get" id="searchForm">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="search">Search Parts</label>
+                        <input type="text" class="form-control" name="search" id="search" 
+                               placeholder="Part number, description, manufacturer..." 
+                               value="{{ search_form.search.value|default:'' }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        {{ search_form.category }}
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="brand">Brand</label>
+                        {{ search_form.brand }}
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="stock_status">Stock Status</label>
+                        {{ search_form.stock_status }}
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <div>
+                            <button type="submit" class="btn btn-primary btn-block">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Advanced Filters Toggle -->
+            <div class="text-center mt-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="toggleAdvanced">
+                    <i class="fas fa-filter"></i> Advanced Filters
+                </button>
+                <a href="?" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-times"></i> Clear All
+                </a>
+            </div>
+            
+            <!-- Advanced Filters -->
+            <div class="advanced-filters mt-3" id="advancedFilters">
+                <div class="filter-section">
+                    <h6>Status Filters</h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="is_active">Active Status</label>
+                                {{ search_form.is_active }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="is_featured">Featured Status</label>
+                                {{ search_form.is_featured }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="min_price">Min Price</label>
+                                {{ search_form.min_price }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="max_price">Max Price</label>
+                                {{ search_form.max_price }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="filter-section">
+                    <h6>Vendor-Specific Filters</h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="material_type">Material Type</label>
+                                {{ search_form.material_type }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="plant">Plant</label>
+                                {{ search_form.plant }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="material_group">Material Group</label>
+                                {{ search_form.material_group }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="abc_indicator">ABC Indicator</label>
+                                {{ search_form.abc_indicator }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="filter-section">
+                    <h6>Sorting</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="sort_by">Sort By</label>
+                                {{ search_form.sort_by }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="bulk-actions" id="bulkActions">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <span id="selectedCount">0</span> parts selected
+            </div>
+            <div class="col-md-8 text-right">
+                <!-- Quick Actions -->
+                <div class="btn-group btn-group-sm me-2" role="group">
+                    <button type="button" class="btn btn-success" onclick="performBulkAction('activate')" title="Activate Selected">
+                        <i class="fas fa-check"></i> Activate
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="performBulkAction('deactivate')" title="Deactivate Selected">
+                        <i class="fas fa-times"></i> Deactivate
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="performBulkAction('feature')" title="Feature Selected">
+                        <i class="fas fa-star"></i> Feature
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" onclick="performBulkAction('unfeature')" title="Remove Featured">
+                        <i class="far fa-star"></i> Unfeature
+                    </button>
+                </div>
+                
+                <!-- Advanced Actions -->
+                <div class="btn-group btn-group-sm me-2" role="group">
+                    <button type="button" class="btn btn-info" onclick="showPriceUpdateModal()" title="Update Prices">
+                        <i class="fas fa-dollar-sign"></i> Price
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="showStockUpdateModal()" title="Update Stock">
+                        <i class="fas fa-boxes"></i> Stock
+                    </button>
+                </div>
+                
+                <!-- Other Actions -->
+                <a href="{% url 'business_partners:vendor_parts_bulk_update' %}" class="btn btn-warning btn-sm me-2" id="bulkUpdateBtn">
+                    <i class="fas fa-edit"></i> Advanced Update
+                </a>
+                <button type="button" class="btn btn-danger btn-sm me-2" onclick="performBulkAction('delete')" id="bulkDeleteBtn">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="clearSelectionBtn">
+                    <i class="fas fa-times"></i> Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <p class="text-muted mb-0">
+                Showing {{ parts.start_index }}-{{ parts.end_index }} of {{ total_parts }} parts
+            </p>
+        </div>
+        <div class="col-md-6 text-right">
+            <a href="{% url 'business_partners:vendor_parts_export_csv' %}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-download"></i> Export CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Parts Table -->
+    <div class="parts-table">
+        {% if parts %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th width="40">
+                            <input type="checkbox" id="selectAll" class="form-check-input">
+                        </th>
+                        <th width="60">Image</th>
+                        <th>Part Number</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Brand</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                        <th width="150">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in parts %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input part-checkbox" value="{{ part.id }}">
+                        </td>
+                        <td>
+                            {% if part.image %}
+                                <img src="{{ part.image.url }}" alt="{{ part.parts_number }}" class="part-image">
+                            {% else %}
+                                <div class="part-image bg-light d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-image text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ part.parts_number }}</strong>
+                            {% if part.manufacturer_part_number %}
+                                <br><small class="text-muted">MPN: {{ part.manufacturer_part_number }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ part.material_description|truncatechars:50 }}
+                            {% if part.material_description_ar %}
+                                <br><small class="text-muted">{{ part.material_description_ar|truncatechars:30 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ part.category.name|default:"—" }}</td>
+                        <td>{{ part.brand.name|default:"—" }}</td>
+                        <td>
+                            <strong>${{ part.price|floatformat:2 }}</strong>
+                            {% if part.moving_average_price %}
+                                <br><small class="text-muted">Avg: ${{ part.moving_average_price|floatformat:2 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge stock-badge {% if part.quantity == 0 %}badge-danger{% elif part.quantity <= 10 %}badge-warning{% else %}badge-success{% endif %}">
+                                {{ part.quantity }}
+                            </span>
+                            {% if part.safety_stock %}
+                                <br><small class="text-muted">Safety: {{ part.safety_stock }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if part.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+                                {% if part.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                            {% if part.is_featured %}
+                                <br><span class="badge badge-info">Featured</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{% url 'business_partners:vendor_part_detail' part.id %}" 
+                                   class="btn btn-info btn-sm" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'business_partners:vendor_part_edit' part.id %}" 
+                                   class="btn btn-primary btn-sm" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-danger btn-sm delete-part" 
+                                        data-part-id="{{ part.id }}" 
+                                        data-part-number="{{ part.parts_number }}" 
+                                        title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <h5>No parts found</h5>
+            <p class="text-muted">Try adjusting your search criteria or add a new part.</p>
+            <a href="{% url 'business_partners:vendor_part_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add New Part
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if parts.has_other_pages %}
+    <div class="pagination-wrapper">
+        <nav aria-label="Parts pagination">
+            <ul class="pagination justify-content-center mb-0">
+                {% if parts.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ parts.previous_page_number }}">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% for num in parts.paginator.page_range %}
+                    {% if parts.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > parts.number|add:'-3' and num < parts.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if parts.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ parts.next_page_number }}">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete part <strong id="deletePartNumber"></strong>?</p>
+                <p class="text-muted">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Toggle advanced filters
+    $('#toggleAdvanced').click(function() {
+        $('#advancedFilters').toggleClass('show');
+        $(this).find('i').toggleClass('fa-filter fa-filter-circle-xmark');
+    });
+    
+    // Select all checkbox
+    $('#selectAll').change(function() {
+        $('.part-checkbox').prop('checked', this.checked);
+        updateBulkActions();
+    });
+    
+    // Individual checkboxes
+    $('.part-checkbox').change(function() {
+        updateBulkActions();
+        
+        // Update select all checkbox
+        var totalCheckboxes = $('.part-checkbox').length;
+        var checkedCheckboxes = $('.part-checkbox:checked').length;
+        $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
+    });
+    
+    // Update bulk actions visibility
+    function updateBulkActions() {
+        var selectedCount = $('.part-checkbox:checked').length;
+        $('#selectedCount').text(selectedCount);
+        
+        if (selectedCount > 0) {
+            $('#bulkActions').addClass('show');
+        } else {
+            $('#bulkActions').removeClass('show');
+        }
+    }
+    
+    // Clear selection
+    $('#clearSelectionBtn').click(function() {
+        $('.part-checkbox, #selectAll').prop('checked', false);
+        updateBulkActions();
+    });
+    
+    // Delete part
+    $('.delete-part').click(function() {
+        var partId = $(this).data('part-id');
+        var partNumber = $(this).data('part-number');
+        
+        $('#deletePartNumber').text(partNumber);
+        $('#deleteModal').modal('show');
+        
+        $('#confirmDelete').off('click').on('click', function() {
+            $.ajax({
+                url: '{% url "business_partners:vendor_part_delete" 0 %}'.replace('0', partId),
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.error);
+                    }
+                },
+                error: function() {
+                    alert('An error occurred while deleting the part.');
+                }
+            });
+            
+            $('#deleteModal').modal('hide');
+        });
+    });
+    
+    // Auto-submit form on select change
+    $('.form-control').change(function() {
+        if ($(this).attr('name') !== 'search') {
+            $('#searchForm').submit();
+        }
+    });
+});
+
+// Bulk operation functions
+function performBulkAction(action) {
+    var selectedParts = [];
+    $('.part-checkbox:checked').each(function() {
+        selectedParts.push($(this).val());
+    });
+    
+    if (selectedParts.length === 0) {
+        alert('Please select at least one part.');
+        return;
+    }
+    
+    // Handle special actions that need modals
+    if (action === 'update_price') {
+        $('#priceUpdateCount').text(selectedParts.length);
+        $('#priceUpdateModal').modal('show');
+        return;
+    }
+    
+    if (action === 'update_stock') {
+        $('#stockUpdateCount').text(selectedParts.length);
+        $('#stockUpdateModal').modal('show');
+        return;
+    }
+    
+    // Confirm destructive actions
+    if (action === 'delete') {
+        if (!confirm(`Are you sure you want to delete ${selectedParts.length} selected parts? This action cannot be undone.`)) {
+            return;
+        }
+    }
+    
+    // Perform the bulk action
+    $.ajax({
+        url: '{% url "business_partners:vendor_parts_bulk_action" %}',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        data: {
+            'action': action,
+            'part_ids': selectedParts
+        },
+        success: function(response) {
+            if (response.success) {
+                showMessage(response.message, 'success');
+                location.reload();
+            } else {
+                showMessage(response.error, 'error');
+            }
+        },
+        error: function() {
+            showMessage('An error occurred while performing the bulk action.', 'error');
+        }
+    });
+}
+
+function applyPriceUpdate() {
+    var percentage = $('#pricePercentage').val();
+    if (!percentage || percentage === '') {
+        alert('Please enter a price adjustment percentage.');
+        return;
+    }
+    
+    var selectedParts = [];
+    $('.part-checkbox:checked').each(function() {
+        selectedParts.push($(this).val());
+    });
+    
+    $.ajax({
+        url: '{% url "business_partners:vendor_parts_bulk_action" %}',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        data: {
+            'action': 'update_price',
+            'part_ids': selectedParts,
+            'price_percentage': percentage
+        },
+        success: function(response) {
+            $('#priceUpdateModal').modal('hide');
+            if (response.success) {
+                showMessage(response.message, 'success');
+                location.reload();
+            } else {
+                showMessage(response.error, 'error');
+            }
+        },
+        error: function() {
+            showMessage('An error occurred while updating prices.', 'error');
+        }
+    });
+}
+
+function applyStockUpdate() {
+    var action = $('#stockAction').val();
+    var quantity = $('#stockQuantity').val();
+    
+    if (!quantity || quantity === '') {
+        alert('Please enter a quantity.');
+        return;
+    }
+    
+    var selectedParts = [];
+    $('.part-checkbox:checked').each(function() {
+        selectedParts.push($(this).val());
+    });
+    
+    $.ajax({
+        url: '{% url "business_partners:vendor_parts_bulk_action" %}',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        data: {
+            'action': 'update_stock',
+            'part_ids': selectedParts,
+            'stock_action': action,
+            'stock_quantity': quantity
+        },
+        success: function(response) {
+            $('#stockUpdateModal').modal('hide');
+            if (response.success) {
+                showMessage(response.message, 'success');
+                location.reload();
+            } else {
+                showMessage(response.error, 'error');
+            }
+        },
+        error: function() {
+            showMessage('An error occurred while updating stock.', 'error');
+        }
+    });
+}
+
+function showMessage(message, type) {
+    var alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    var alertHtml = `<div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>`;
+    
+    // Insert at the top of the content
+    $('.container-fluid').prepend(alertHtml);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        $('.alert').alert('close');
+    }, 5000);
+}
+</script>
+{% endblock %}

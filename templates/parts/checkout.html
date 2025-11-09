@@ -1,0 +1,348 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block title %}Checkout - Cars Portal{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+.checkout-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.checkout-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #eee;
+}
+
+.checkout-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 30px;
+}
+
+.checkout-form {
+    background: #f8f9fa;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.order-summary {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border: 1px solid #eee;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.error {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.order-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.order-item:last-child {
+    border-bottom: none;
+}
+
+.item-info {
+    flex: 1;
+}
+
+.item-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.item-details {
+    color: #666;
+    font-size: 14px;
+}
+
+.item-total {
+    font-weight: 600;
+    color: #333;
+}
+
+.order-total {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #eee;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.total-row.final {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+.checkout-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+}
+
+.checkout-btn:hover {
+    background: linear-gradient(135deg, #0056b3, #004085);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+}
+
+.checkout-btn:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.back-to-cart {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.back-to-cart:hover {
+    text-decoration: underline;
+}
+
+.guest-info {
+    background: #e3f2fd;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    border-left: 4px solid #2196f3;
+}
+
+.authenticated-info {
+    background: #e8f5e8;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    border-left: 4px solid #4caf50;
+}
+
+@media (max-width: 768px) {
+    .checkout-content {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .checkout-form,
+    .order-summary {
+        padding: 20px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block parts_content %}
+<div class="checkout-container">
+    <div class="checkout-header">
+        <h1>Checkout</h1>
+        <p>Review your order and complete your purchase</p>
+    </div>
+
+    <a href="{% url 'parts:cart_view' %}" class="back-to-cart">
+        <i class="fas fa-arrow-left"></i> Back to Cart
+    </a>
+
+    <div class="checkout-content">
+        <!-- Checkout Form -->
+        <div class="checkout-form">
+            {% if is_authenticated %}
+                <div class="authenticated-info">
+                    <h3><i class="fas fa-user-check"></i> Logged in as {{ user.get_full_name|default:user.username }}</h3>
+                    <p>Your order will be associated with your account.</p>
+                </div>
+                
+                <form method="post" id="checkoutForm">
+                    {% csrf_token %}
+                    <button type="submit" class="checkout-btn">
+                        <i class="fas fa-credit-card"></i> Complete Order
+                    </button>
+                </form>
+            {% else %}
+                <div class="guest-info">
+                    <h3><i class="fas fa-user"></i> Guest Checkout</h3>
+                    <p>Please provide your information to complete the order.</p>
+                </div>
+
+                <form method="post" id="checkoutForm">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label for="{{ guest_form.name.id_for_label }}">Full Name *</label>
+                        {{ guest_form.name }}
+                        {% if guest_form.name.errors %}
+                            <div class="error">{{ guest_form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ guest_form.email.id_for_label }}">Email Address *</label>
+                        {{ guest_form.email }}
+                        {% if guest_form.email.errors %}
+                            <div class="error">{{ guest_form.email.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ guest_form.phone.id_for_label }}">Phone Number *</label>
+                        {{ guest_form.phone }}
+                        {% if guest_form.phone.errors %}
+                            <div class="error">{{ guest_form.phone.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ guest_form.address.id_for_label }}">Delivery Address *</label>
+                        {{ guest_form.address }}
+                        {% if guest_form.address.errors %}
+                            <div class="error">{{ guest_form.address.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="checkout-btn">
+                        <i class="fas fa-credit-card"></i> Complete Order
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+
+        <!-- Order Summary -->
+        <div class="order-summary">
+            <h3><i class="fas fa-shopping-cart"></i> Order Summary</h3>
+            
+            {% for part_id, item in cart.items %}
+                <div class="order-item">
+                    <div class="item-info">
+                        <div class="item-name">{{ item.name }}</div>
+                        <div class="item-details">
+                            Quantity: {{ item.quantity }} × ${{ item.price }}
+                        </div>
+                    </div>
+                    <div class="item-total">
+                        ${{ item.total_price }}
+                    </div>
+                </div>
+            {% endfor %}
+
+            <div class="order-total">
+                <div class="total-row">
+                    <span>Subtotal:</span>
+                    <span>${{ cart_total }}</span>
+                </div>
+                <div class="total-row">
+                    <span>Shipping:</span>
+                    <span>Free</span>
+                </div>
+                <div class="total-row">
+                    <span>Tax:</span>
+                    <span>Included</span>
+                </div>
+                <div class="total-row final">
+                    <span>Total:</span>
+                    <span>${{ cart_total }}</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; font-size: 14px; color: #666;">
+                <i class="fas fa-info-circle"></i>
+                <strong>Order Information:</strong><br>
+                • Free shipping on all orders<br>
+                • Email confirmation will be sent<br>
+                • Processing time: 1-2 business days
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('checkoutForm');
+    const submitBtn = form.querySelector('.checkout-btn');
+    
+    form.addEventListener('submit', function(e) {
+        // Disable submit button to prevent double submission
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        
+        // Re-enable after 5 seconds in case of error
+        setTimeout(function() {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-credit-card"></i> Complete Order';
+        }, 5000);
+    });
+});
+</script>
+{% endblock %}

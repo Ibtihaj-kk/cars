@@ -1,0 +1,335 @@
+{% extends 'business_partners/vendor_registration_base.html' %}
+{% load static %}
+
+{% block registration_content %}
+<div class="registration-header-modern">
+    <h1 style="color: var(--text-dark); font-weight: 600; margin-bottom: 0.5rem;">
+        <i class="fas fa-user-tie" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+        Vendor Registration
+    </h1>
+    <p style="color: var(--text-light); font-size: 1.1rem;">Step 2 of 4: Contact Information</p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show alert-modern" role="alert" style="background: linear-gradient(135deg, #e8f5e8, #f0f8f0); border: 1px solid #28a745; border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 1.5rem;">
+            <i class="fas fa-info-circle" style="color: #28a745; margin-right: 0.5rem;"></i>
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close" style="background: none; border: none; font-size: 1.2rem; color: #6c757d;">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="progress-container-modern">
+    <div class="completion-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h4 style="color: var(--text-dark); margin: 0; font-weight: 600;">
+            <i class="fas fa-chart-line" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+            Registration Progress
+        </h4>
+        <div class="completion-text" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600;">
+            <strong>{{ completion_percentage }}% Complete</strong>
+        </div>
+    </div>
+    
+    <div class="completion-bar-modern" style="background: #e9ecef; border-radius: 10px; height: 8px; margin-bottom: 2rem; overflow: hidden;">
+        <div class="completion-progress-modern" style="width: {{ completion_percentage }}%; background: linear-gradient(135deg, #667eea, #764ba2); height: 100%; border-radius: 10px; transition: width 0.3s ease;"></div>
+    </div>
+    
+    <div class="progress-steps-modern" style="display: flex; justify-content: space-between; position: relative;">
+        <div class="progress-step-modern completed" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle-modern" style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #28a745, #20c997); color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 600; font-size: 1.2rem;">✓</div>
+            <div class="step-label-modern" style="color: var(--text-dark); font-weight: 600; font-size: 0.9rem;">Business Details</div>
+        </div>
+        <div class="progress-step-modern active" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle-modern" style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 600; font-size: 1.2rem;">2</div>
+            <div class="step-label-modern" style="color: var(--text-dark); font-weight: 600; font-size: 0.9rem;">Contact Info</div>
+        </div>
+        <div class="progress-step-modern" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle-modern" style="width: 50px; height: 50px; border-radius: 50%; background: #e9ecef; color: #6c757d; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 600; font-size: 1.2rem;">3</div>
+            <div class="step-label-modern" style="color: var(--text-light); font-size: 0.9rem;">Bank Details</div>
+        </div>
+        <div class="progress-step-modern" style="flex: 1; text-align: center; position: relative;">
+            <div class="step-circle-modern" style="width: 50px; height: 50px; border-radius: 50%; background: #e9ecef; color: #6c757d; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-weight: 600; font-size: 1.2rem;">4</div>
+            <div class="step-label-modern" style="color: var(--text-light); font-size: 0.9rem;">Additional Info</div>
+        </div>
+    </div>
+</div>
+
+<div class="form-container-modern" style="background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 2rem; margin-bottom: 2rem;">
+    <form method="post" enctype="multipart/form-data" id="vendor-registration-form" class="vendor-registration-form-modern" data-user-authenticated="{{ user_authenticated|yesno:"true,false" }}">
+        {% csrf_token %}
+        
+        <div class="form-section-modern" style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid #e9ecef;">
+            <h3 style="color: var(--text-dark); font-weight: 600; font-size: 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center;">
+                <i class="fas fa-user-tie" style="color: var(--primary-color); margin-right: 0.75rem;"></i> 
+                Primary Contact Person
+            </h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.contact_person_name.id_for_label }}" class="form-label required">
+                        Contact Person Name
+                    </label>
+                    <input type="text" name="contact_person_name" id="{{ form.contact_person_name.id_for_label }}" class="form-control-modern" value="{{ form.contact_person_name.value|default:'' }}" required>
+                    {% if form.contact_person_name.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.contact_person_name.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">Full name of the primary contact person</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.contact_person_title.id_for_label }}" class="form-label">
+                        Job Title
+                    </label>
+                    <input type="text" name="contact_person_title" id="{{ form.contact_person_title.id_for_label }}" class="form-control-modern" value="{{ form.contact_person_title.value|default:'' }}">
+                    {% if form.contact_person_title.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.contact_person_title.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">e.g., Sales Manager, Owner, Director</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section-modern" style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid #e9ecef;">
+            <h3 style="color: var(--text-dark); font-weight: 600; font-size: 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center;">
+                <i class="fas fa-phone" style="color: var(--primary-color); margin-right: 0.75rem;"></i> 
+                Contact Details
+            </h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.business_phone.id_for_label }}" class="form-label required">
+                        Business Phone Number
+                    </label>
+                    <input type="tel" name="business_phone" id="{{ form.business_phone.id_for_label }}" class="form-control-modern" value="{{ form.business_phone.value|default:'' }}" required>
+                    {% if form.business_phone.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.business_phone.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">Primary business contact number</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.business_email.id_for_label }}" class="form-label required">
+                        Business Email Address
+                    </label>
+                    <input type="email" name="business_email" id="{{ form.business_email.id_for_label }}" class="form-control-modern" value="{{ form.business_email.value|default:'' }}" required>
+                    {% if form.business_email.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.business_email.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <small class="form-text">Official business email address</small>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.website.id_for_label }}" class="form-label">
+                    Company Website
+                </label>
+                <input type="url" name="website" id="{{ form.website.id_for_label }}" class="form-control-modern" value="{{ form.website.value|default:'' }}">
+                {% if form.website.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.website.errors.0 }}
+                    </div>
+                {% endif %}
+                <small class="form-text">Optional - Your company website URL</small>
+            </div>
+        </div>
+        
+        <div class="form-section-modern" style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid #e9ecef;">
+            <h3 style="color: var(--text-dark); font-weight: 600; font-size: 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center;">
+                <i class="fas fa-map-marker-alt" style="color: var(--primary-color); margin-right: 0.75rem;"></i> 
+                Business Address
+            </h3>
+            
+            <div class="form-group">
+                <label for="{{ form.street_address.id_for_label }}" class="form-label required">
+                    Street Address
+                </label>
+                <textarea name="street_address" id="{{ form.street_address.id_for_label }}" class="form-control-modern" rows="3" required>{{ form.street_address.value|default:'' }}</textarea>
+                {% if form.street_address.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.street_address.errors.0 }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.city.id_for_label }}" class="form-label required">
+                        City
+                    </label>
+                    <input type="text" name="city" id="{{ form.city.id_for_label }}" class="form-control-modern" value="{{ form.city.value|default:'' }}" required>
+                    {% if form.city.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.city.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.state_province.id_for_label }}" class="form-label">
+                        State/Province
+                    </label>
+                    <input type="text" name="state_province" id="{{ form.state_province.id_for_label }}" class="form-control-modern" value="{{ form.state_province.value|default:'' }}">
+                    {% if form.state_province.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.state_province.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.postal_code.id_for_label }}" class="form-label">
+                        Postal Code
+                    </label>
+                    <input type="text" name="postal_code" id="{{ form.postal_code.id_for_label }}" class="form-control-modern" value="{{ form.postal_code.value|default:'' }}">
+                    {% if form.postal_code.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.postal_code.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.country.id_for_label }}" class="form-label required">
+                        Country
+                    </label>
+                    <select name="country" id="{{ form.country.id_for_label }}" class="form-control-modern" required>
+                        <option value="">Select Country</option>
+                        {% for choice in form.country.field.choices %}
+                            <option value="{{ choice.0 }}" {% if form.country.value == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.country.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.country.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-actions-modern" style="display: flex; justify-content: space-between; align-items: center; padding-top: 2rem; margin-top: 2rem; border-top: 1px solid #e9ecef;">
+            <a href="{{ prev_step_url }}" class="btn-secondary-modern" style="background: #6c757d; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 500; display: flex; align-items: center; transition: all 0.3s ease;">
+                <i class="fas fa-arrow-left" style="margin-right: 0.5rem;"></i> Previous Step
+            </a>
+            <button type="submit" class="btn-primary-modern" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; display: flex; align-items: center; transition: all 0.3s ease;">
+                Save & Continue <i class="fas fa-arrow-right" style="margin-left: 0.5rem;"></i>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add form validation
+    const form = document.getElementById('vendor-registration-form');
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        // Email validation
+        const emailField = document.getElementById('{{ form.business_email.id_for_label }}');
+        if (emailField && emailField.value) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(emailField.value)) {
+                emailField.classList.add('is-invalid');
+                if (!emailField.nextElementSibling || !emailField.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback d-block';
+                    errorDiv.textContent = 'Please enter a valid email address';
+                    emailField.parentNode.insertBefore(errorDiv, emailField.nextSibling);
+                }
+                isValid = false;
+            }
+        }
+        
+        // Phone validation
+        const phoneField = document.getElementById('{{ form.business_phone.id_for_label }}');
+        if (phoneField && phoneField.value) {
+            const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+            if (!phoneRegex.test(phoneField.value.replace(/[\s\-\(\)]/g, ''))) {
+                phoneField.classList.add('is-invalid');
+                if (!phoneField.nextElementSibling || !phoneField.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback d-block';
+                    errorDiv.textContent = 'Please enter a valid phone number';
+                    phoneField.parentNode.insertBefore(errorDiv, phoneField.nextSibling);
+                }
+                isValid = false;
+            }
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            const firstInvalid = form.querySelector('.is-invalid');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstInvalid.focus();
+            }
+        }
+    });
+    
+    // Real-time validation
+    const inputs = document.querySelectorAll('.form-control');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.hasAttribute('required') && !this.value.trim()) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+            
+            // Email validation
+            if (this.type === 'email' && this.value) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(this.value)) {
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                }
+            }
+            
+            // Phone validation
+            if (this.id === '{{ form.business_phone.id_for_label }}' && this.value) {
+                const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+                if (!phoneRegex.test(this.value.replace(/[\s\-\(\)]/g, ''))) {
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                }
+            }
+        });
+        
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid') && this.value.trim()) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
