@@ -61,8 +61,9 @@ urlpatterns = [
     # Cart functionality
     path('cart/', views.cart_view, name='cart_view'),
     path('cart/add/<int:part_id>/', views.add_to_cart, name='add_to_cart'),
-    path('cart/update/<int:item_id>/', views.update_cart_item, name='update_cart_item'),
-    path('cart/remove/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
+    path('cart/update/<int:item_id>/', views.update_cart_item_universal, name='update_cart_item'),
+    path('cart/remove/<int:item_id>/', views.remove_from_cart_universal, name='remove_from_cart'),
+    path('cart/clear/', views.clear_cart_universal, name='clear_cart'),
     
     # Buy Now functionality
     path('buy-now/', views.buy_now, name='buy_now'),

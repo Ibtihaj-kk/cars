@@ -1213,6 +1213,7 @@ function showToast(message, type = 'success') {
             z-index: 10000;
             opacity: 0;
             transition: opacity 0.3s ease;
+            pointer-events: none; /* Ensure toast doesn't block clicks */
         `;
         document.body.appendChild(toast);
     }
@@ -1235,6 +1236,29 @@ function updateCartCount(count) {
         element.textContent = count;
     });
 }
+
+// Function to adjust body padding for fixed header
+function adjustBodyPaddingForFixedHeader() {
+    const header = document.querySelector('.navbar-top-header');
+    if (header && window.getComputedStyle(header).position === 'fixed') {
+        const headerHeight = header.offsetHeight;
+        const currentPadding = parseInt(window.getComputedStyle(document.body).paddingTop) || 0;
+        
+        // Only adjust if needed
+        if (currentPadding < headerHeight) {
+            document.body.style.paddingTop = headerHeight + 'px';
+            console.log('Adjusted body padding to:', headerHeight, 'px for fixed header');
+        }
+    }
+}
+
+// Call this function on page load and after cart operations
+document.addEventListener('DOMContentLoaded', function() {
+    adjustBodyPaddingForFixedHeader();
+});
+
+// Also adjust on window resize
+window.addEventListener('resize', adjustBodyPaddingForFixedHeader);
 
 // ---------- BEGIN: Robust buyNow ----------
 function buyNow(productId) {
@@ -1368,6 +1392,14 @@ function addToCart(productId, quantity = 1, redirectAfter = false) {
         if (data.success) {
             showToast(data.message || 'Added to cart', 'success');
 
+            // Debug: Log header state before cart operations
+            console.log('Before cart update - Header classes:', document.querySelector('.navbar-top-header')?.className);
+            console.log('Before cart update - Body classes:', document.body.className);
+            console.log('Before cart update - Body padding:', window.getComputedStyle(document.body).paddingTop);
+            console.log('Before cart update - Header position:', window.getComputedStyle(document.querySelector('.navbar-top-header')).position);
+            console.log('Before cart update - Header top:', window.getComputedStyle(document.querySelector('.navbar-top-header')).top);
+            console.log('Before cart update - Header z-index:', window.getComputedStyle(document.querySelector('.navbar-top-header')).zIndex);
+
             // Update client-side cart state
             cartItems.push({ productId, qty: quantity });
             addedToCart.add(productId);
@@ -1389,6 +1421,17 @@ function addToCart(productId, quantity = 1, redirectAfter = false) {
 
             // Re-render UI where appropriate
             try { renderProducts(); } catch (e) {}
+
+            // Debug: Log header state after cart operations
+            console.log('After cart update - Header classes:', document.querySelector('.navbar-top-header')?.className);
+            console.log('After cart update - Body classes:', document.body.className);
+            console.log('After cart update - Body padding:', window.getComputedStyle(document.body).paddingTop);
+            console.log('After cart update - Header position:', window.getComputedStyle(document.querySelector('.navbar-top-header')).position);
+            console.log('After cart update - Header top:', window.getComputedStyle(document.querySelector('.navbar-top-header')).top);
+            console.log('After cart update - Header z-index:', window.getComputedStyle(document.querySelector('.navbar-top-header')).zIndex);
+
+            // Ensure proper header spacing after cart operations
+            adjustBodyPaddingForFixedHeader();
 
             // Redirect to cart if needed
             if (redirectAfter) {
@@ -1450,7 +1493,50 @@ cartItems = JSON.parse(savedCartItems);
 if (savedAddedToCart) {
 addedToCart = new Set(JSON.parse(savedAddedToCart));
 }
+
+// Fetch current cart count from server
+fetchCartCount();
+
+// Debug: Add click event listeners to cart and user icons
+const cartIcon = document.querySelector('.navbar-cart');
+const userProfileTrigger = document.querySelector('.navbar-profile-trigger');
+
+if (cartIcon) {
+    cartIcon.addEventListener('click', function(e) {
+        console.log('Cart icon clicked:', e);
+        console.log('Cart icon href:', this.href);
+        console.log('Cart icon styles:', window.getComputedStyle(this));
+        console.log('Cart icon parent styles:', window.getComputedStyle(this.parentElement));
+    });
+}
+
+if (userProfileTrigger) {
+    userProfileTrigger.addEventListener('click', function(e) {
+        console.log('User profile trigger clicked:', e);
+        console.log('User profile trigger styles:', window.getComputedStyle(this));
+        console.log('User profile trigger parent styles:', window.getComputedStyle(this.parentElement));
+    });
+}
 });
+
+// Fetch cart count from server
+function fetchCartCount() {
+    fetch('/parts/api/cart/count/', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (typeof data.cart_count !== 'undefined') {
+            updateCartCount(data.cart_count);
+        }
+    })
+    .catch(error => {
+        console.log('Could not fetch cart count:', error);
+    });
+}
 
 // Vendor contact functionality
 function contactVendor(type, contact) {

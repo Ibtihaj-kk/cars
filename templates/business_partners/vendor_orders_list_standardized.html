@@ -1,0 +1,498 @@
+{% extends 'business_partners/vendor_layout_standard.html' %}
+{% load static %}
+
+{% block title %}Orders - {{ vendor_profile.business_partner.company_name }}{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="ym-breadcrumb-item"><a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-breadcrumb-link">Dashboard</a></li>
+    <li class="ym-breadcrumb-item ym-active">Orders</li>
+{% endblock %}
+
+{% block page_header_actions %}
+    <div class="ym-btn-group">
+        <a href="{% url 'business_partners:vendor_order_create' %}" class="ym-btn ym-btn-primary ym-btn-sm">
+            <i class="fas fa-plus"></i> New Order
+        </a>
+        <button type="button" class="ym-btn ym-btn-outline-secondary ym-btn-sm" onclick="exportOrders()">
+            <i class="fas fa-download"></i> Export
+        </button>
+    </div>
+{% endblock %}
+
+{% block content %}
+<!-- Order Statistics -->
+<div class="ym-grid ym-mb-6">
+    <div class="ym-col-xl-3 ym-col-md-6 ym-mb-4">
+        <div class="ym-card ym-border-left-primary">
+            <div class="ym-card-body">
+                <div class="ym-d-flex ym-align-items-center">
+                    <div class="ym-flex-grow-1">
+                        <div class="ym-text-xs ym-font-weight-bold ym-text-primary ym-text-uppercase ym-mb-1">
+                            Total Orders
+                        </div>
+                        <div class="ym-h5 ym-mb-0 ym-font-weight-bold ym-text-gray-800">{{ total_orders }}</div>
+                    </div>
+                    <div class="ym-text-primary">
+                        <i class="fas fa-shopping-cart fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="ym-col-xl-3 ym-col-md-6 ym-mb-4">
+        <div class="ym-card ym-border-left-warning">
+            <div class="ym-card-body">
+                <div class="ym-d-flex ym-align-items-center">
+                    <div class="ym-flex-grow-1">
+                        <div class="ym-text-xs ym-font-weight-bold ym-text-warning ym-text-uppercase ym-mb-1">
+                            Pending
+                        </div>
+                        <div class="ym-h5 ym-mb-0 ym-font-weight-bold ym-text-gray-800">{{ status_counts.pending|default:0 }}</div>
+                    </div>
+                    <div class="ym-text-warning">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="ym-col-xl-3 ym-col-md-6 ym-mb-4">
+        <div class="ym-card ym-border-left-info">
+            <div class="ym-card-body">
+                <div class="ym-d-flex ym-align-items-center">
+                    <div class="ym-flex-grow-1">
+                        <div class="ym-text-xs ym-font-weight-bold ym-text-info ym-text-uppercase ym-mb-1">
+                            Processing
+                        </div>
+                        <div class="ym-h5 ym-mb-0 ym-font-weight-bold ym-text-gray-800">{{ status_counts.processing|default:0 }}</div>
+                    </div>
+                    <div class="ym-text-info">
+                        <i class="fas fa-cog fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="ym-col-xl-3 ym-col-md-6 ym-mb-4">
+        <div class="ym-card ym-border-left-success">
+            <div class="ym-card-body">
+                <div class="ym-d-flex ym-align-items-center">
+                    <div class="ym-flex-grow-1">
+                        <div class="ym-text-xs ym-font-weight-bold ym-text-success ym-text-uppercase ym-mb-1">
+                            Completed
+                        </div>
+                        <div class="ym-h5 ym-mb-0 ym-font-weight-bold ym-text-gray-800">{{ status_counts.completed|default:0 }}</div>
+                    </div>
+                    <div class="ym-text-success">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="ym-card ym-mb-6">
+    <div class="ym-card-header">
+        <h6 class="ym-mb-0">Filters and Search</h6>
+    </div>
+    <div class="ym-card-body">
+        <form method="get" class="ym-form" id="ordersFilterForm">
+            <div class="ym-row">
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group">
+                        <label for="search" class="ym-form-label">Search</label>
+                        <input type="text" class="ym-form-control" id="search" name="search" 
+                               value="{{ search_query }}" placeholder="Order number, customer name...">
+                    </div>
+                </div>
+                
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group">
+                        <label for="status" class="ym-form-label">Status</label>
+                        <select class="ym-form-control" id="status" name="status">
+                            <option value="">All Status</option>
+                            <option value="pending" {% if status_filter == "pending" %}selected{% endif %}>Pending</option>
+                            <option value="processing" {% if status_filter == "processing" %}selected{% endif %}>Processing</option>
+                            <option value="shipped" {% if status_filter == "shipped" %}selected{% endif %}>Shipped</option>
+                            <option value="delivered" {% if status_filter == "delivered" %}selected{% endif %}>Delivered</option>
+                            <option value="cancelled" {% if status_filter == "cancelled" %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group">
+                        <label for="date_from" class="ym-form-label">Date From</label>
+                        <input type="date" class="ym-form-control" id="date_from" name="date_from" value="{{ date_from }}">
+                    </div>
+                </div>
+                
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group">
+                        <label for="date_to" class="ym-form-label">Date To</label>
+                        <input type="date" class="ym-form-control" id="date_to" name="date_to" value="{{ date_to }}">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ym-row">
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group">
+                        <label for="min_amount" class="ym-form-label">Min Amount</label>
+                        <input type="number" class="ym-form-control" id="min_amount" name="min_amount" 
+                               value="{{ min_amount }}" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group">
+                        <label for="max_amount" class="ym-form-label">Max Amount</label>
+                        <input type="number" class="ym-form-control" id="max_amount" name="max_amount" 
+                               value="{{ max_amount }}" step="0.01" placeholder="9999.99">
+                    </div>
+                </div>
+                
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group">
+                        <label for="sort_by" class="ym-form-label">Sort By</label>
+                        <select class="ym-form-control" id="sort_by" name="sort_by">
+                            <option value="-created_at" {% if sort_by == "-created_at" %}selected{% endif %}>Newest First</option>
+                            <option value="created_at" {% if sort_by == "created_at" %}selected{% endif %}>Oldest First</option>
+                            <option value="order_number" {% if sort_by == "order_number" %}selected{% endif %}>Order Number</option>
+                            <option value="-total_amount" {% if sort_by == "-total_amount" %}selected{% endif %}>Amount (High to Low)</option>
+                            <option value="total_amount" {% if sort_by == "total_amount" %}selected{% endif %}>Amount (Low to High)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group ym-mt-4">
+                        <button type="submit" class="ym-btn ym-btn-primary ym-w-100">
+                            <i class="fas fa-filter"></i> Apply Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Orders Table -->
+<div class="ym-card ym-mb-6">
+    <div class="ym-card-header ym-d-flex ym-justify-content-between ym-align-items-center">
+        <h6 class="ym-m-0">Orders</h6>
+        <div class="ym-text-muted">
+            Showing {{ orders.start_index }}-{{ orders.end_index }} of {{ orders.paginator.count }} orders
+        </div>
+    </div>
+    <div class="ym-card-body ym-p-0">
+        <div class="ym-table-responsive">
+            <table class="ym-table ym-table-hover ym-mb-0" id="ordersTable">
+                <thead class="ym-thead-light">
+                    <tr>
+                        <th>Order Number</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Items</th>
+                        <th>Total Amount</th>
+                        <th>Status</th>
+                        <th width="120">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'business_partners:vendor_order_detail' order.id %}" class="ym-font-weight-bold">
+                                {{ order.order_number }}
+                            </a>
+                        </td>
+                        <td>
+                            <div>
+                                <div class="ym-font-weight-bold">{{ order.customer_name }}</div>
+                                <div class="ym-text-muted ym-text-sm">{{ order.customer_email }}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="ym-text-sm">
+                                <div>{{ order.created_at|date:"M d, Y" }}</div>
+                                <div class="ym-text-muted">{{ order.created_at|time:"h:i A" }}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="ym-badge ym-badge-secondary">{{ order.items.count }} items</span>
+                        </td>
+                        <td>
+                            <span class="ym-font-weight-bold">${{ order.total_amount|floatformat:2 }}</span>
+                        </td>
+                        <td>
+                            {% if order.status == 'pending' %}
+                                <span class="ym-badge ym-badge-warning">{{ order.status|title }}</span>
+                            {% elif order.status == 'processing' %}
+                                <span class="ym-badge ym-badge-info">{{ order.status|title }}</span>
+                            {% elif order.status == 'shipped' %}
+                                <span class="ym-badge ym-badge-primary">{{ order.status|title }}</span>
+                            {% elif order.status == 'delivered' %}
+                                <span class="ym-badge ym-badge-success">{{ order.status|title }}</span>
+                            {% else %}
+                                <span class="ym-badge ym-badge-secondary">{{ order.status|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="ym-btn-group ym-btn-group-sm">
+                                <a href="{% url 'business_partners:vendor_order_detail' order.id %}" class="ym-btn ym-btn-outline-primary" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button type="button" class="ym-btn ym-btn-outline-secondary" onclick="updateOrderStatus({{ order.id }}, '{{ order.order_number }}', '{{ order.status }}')" title="Update Status">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="ym-btn ym-btn-outline-danger" onclick="deleteOrder({{ order.id }}, '{{ order.order_number }}')" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="ym-text-center">
+                            <div class="ym-empty-state">
+                                <i class="fas fa-shopping-cart fa-3x ym-text-muted ym-mb-3"></i>
+                                <h6>No orders found</h6>
+                                <p class="ym-text-muted">Try adjusting your filters or search terms</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if orders.has_other_pages %}
+<nav aria-label="Orders pagination" class="ym-mb-6">
+    <ul class="ym-pagination ym-justify-content-center">
+        {% if orders.has_previous %}
+            <li class="ym-page-item">
+                <a class="ym-page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ orders.previous_page_number }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="ym-page-item ym-disabled">
+                <span class="ym-page-link" aria-hidden="true">&laquo;</span>
+            </li>
+        {% endif %}
+        
+        {% for num in orders.paginator.page_range %}
+            {% if orders.number == num %}
+                <li class="ym-page-item ym-active">
+                    <span class="ym-page-link">{{ num }}</span>
+                </li>
+            {% elif num > orders.number|add:'-3' and num < orders.number|add:'3' %}
+                <li class="ym-page-item">
+                    <a class="ym-page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if orders.has_next %}
+            <li class="ym-page-item">
+                <a class="ym-page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ orders.next_page_number }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="ym-page-item ym-disabled">
+                <span class="ym-page-link" aria-hidden="true">&raquo;</span>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Orders management functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Track page view
+    if (window.VendorSystem && window.VendorSystem.analytics) {
+        window.VendorSystem.analytics.track('orders_page_viewed', {
+            total_orders: '{{ total_orders }}',
+            search_query: '{{ search_query }}',
+            status_filter: '{{ status_filter }}',
+            date_from: '{{ date_from }}',
+            date_to: '{{ date_to }}'
+        });
+    }
+});
+
+function updateOrderStatus(orderId, orderNumber, currentStatus) {
+    const newStatus = prompt(`Update status for order ${orderNumber}:\n\nCurrent status: ${currentStatus}\nEnter new status (pending, processing, shipped, delivered, cancelled):`, currentStatus);
+    
+    if (newStatus === null) return;
+    
+    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(newStatus.toLowerCase())) {
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('Please enter a valid status.', 'error');
+        } else {
+            alert('Please enter a valid status.');
+        }
+        return;
+    }
+    
+    if (window.VendorSystem && window.VendorSystem.notifications) {
+        window.VendorSystem.notifications.show('Updating order status...', 'info');
+    }
+    
+    fetch("{% url 'business_partners:vendor_order_status_update' 0 %}".replace('0', orderId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            status: newStatus.toLowerCase()
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show('Order status updated successfully!', 'success');
+            } else {
+                alert('Order status updated successfully!');
+            }
+            
+            // Track the action
+            if (window.VendorSystem && window.VendorSystem.analytics) {
+                window.VendorSystem.analytics.track('order_status_updated', {
+                    order_id: orderId,
+                    old_status: currentStatus,
+                    new_status: newStatus.toLowerCase()
+                });
+            }
+            
+            // Reload page to reflect changes
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.error || 'Failed to update order status', 'error');
+            } else {
+                alert(data.error || 'Failed to update order status');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error updating order status:', error);
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('An error occurred while updating order status.', 'error');
+        } else {
+            alert('An error occurred while updating order status.');
+        }
+    });
+}
+
+function deleteOrder(orderId, orderNumber) {
+    if (!confirm(`Are you sure you want to delete order ${orderNumber}?\n\nThis action cannot be undone.`)) {
+        return;
+    }
+    
+    if (window.VendorSystem && window.VendorSystem.notifications) {
+        window.VendorSystem.notifications.show('Deleting order...', 'info');
+    }
+    
+    fetch("{% url 'business_partners:vendor_order_delete' 0 %}".replace('0', orderId), {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show('Order deleted successfully!', 'success');
+            } else {
+                alert('Order deleted successfully!');
+            }
+            
+            // Track the action
+            if (window.VendorSystem && window.VendorSystem.analytics) {
+                window.VendorSystem.analytics.track('order_deleted', {
+                    order_id: orderId,
+                    order_number: orderNumber
+                });
+            }
+            
+            // Reload page to reflect changes
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.error || 'Failed to delete order', 'error');
+            } else {
+                alert(data.error || 'Failed to delete order');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting order:', error);
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('An error occurred while deleting the order.', 'error');
+        } else {
+            alert('An error occurred while deleting the order.');
+        }
+    });
+}
+
+function exportOrders() {
+    if (window.VendorSystem && window.VendorSystem.notifications) {
+        window.VendorSystem.notifications.show('Preparing export...', 'info');
+    }
+    
+    // Get current filter parameters
+    const params = new URLSearchParams(window.location.search);
+    const exportUrl = "{% url 'business_partners:vendor_orders_export' %}" + '?' + params.toString();
+    
+    // Track the export
+    if (window.VendorSystem && window.VendorSystem.analytics) {
+        window.VendorSystem.analytics.track('orders_export', {
+            export_type: 'csv',
+            filters: Object.fromEntries(params)
+        });
+    }
+    
+    // Redirect to export URL
+    window.location.href = exportUrl;
+}
+
+// Auto-submit form on filter change
+document.getElementById('ordersFilterForm').addEventListener('change', function(e) {
+    if (e.target.tagName === 'SELECT' || (e.target.type === 'date')) {
+        this.submit();
+    }
+});
+
+// Submit form on Enter key in search field
+document.getElementById('search').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('ordersFilterForm').submit();
+    }
+});
+</script>
+{% endblock %}

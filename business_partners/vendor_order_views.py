@@ -30,7 +30,7 @@ from .utils import get_vendor_profile
 class VendorOrderListView(LoginRequiredMixin, ListView):
     """Vendor-specific view to list orders containing their parts."""
     model = Order
-    template_name = 'business_partners/vendor_orders_list.html'
+    template_name = 'business_partners/vendor_orders_list_standardized.html'
     context_object_name = 'orders'
     paginate_by = 20
     
@@ -44,13 +44,13 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
         
         # Get orders that contain parts from this vendor
         return Order.objects.filter(
-            order_items__part__vendor=vendor_profile.business_partner
+            items__part__vendor=vendor_profile.business_partner
         ).distinct().select_related(
             'customer', 'shipping_info'
         ).prefetch_related(
-            'order_items__part',
-            'order_items__part__brand',
-            'order_items__part__category',
+            'items__part',
+            'items__part__brand',
+            'items__part__category',
             'status_history'
         ).order_by('-created_at')
     
@@ -76,7 +76,7 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
             context['total_revenue'] = vendor_orders.filter(
                 status__in=['delivered', 'shipped']
             ).aggregate(
-                total=Sum('order_items__total_price')
+                total=Sum(F('items__quantity') * F('items__price'))
             )['total'] or 0
             
             # Recent activity
@@ -93,7 +93,7 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
 class VendorOrderDetailView(LoginRequiredMixin, DetailView):
     """Detailed view of an order for vendors (only shows their parts)."""
     model = Order
-    template_name = 'business_partners/vendor_order_detail.html'
+    template_name = 'business_partners/vendor_order_detail_standardized.html'
     context_object_name = 'order'
     
     def get_object(self):
@@ -106,7 +106,7 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
             raise PermissionDenied("You don't have vendor access.")
         
         # Check if this order contains parts from this vendor
-        vendor_items = order.order_items.filter(part__vendor=vendor_profile.business_partner)
+        vendor_items = order.items.filter(part__vendor=vendor_profile.business_partner)
         if not vendor_items.exists():
             raise PermissionDenied("This order doesn't contain any of your parts.")
         
@@ -120,7 +120,7 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
         vendor_profile = get_vendor_profile(self.request.user)
         
         # Get only the vendor's items from this order
-        vendor_items = self.object.order_items.filter(
+        vendor_items = self.object.items.filter(
             part__vendor=vendor_profile.business_partner
         ).select_related(
             'part', 'part__brand', 'part__category'
@@ -164,7 +164,7 @@ def vendor_update_order_status(request, order_id):
             })
         
         # Check if this order contains parts from this vendor
-        vendor_items = order.order_items.filter(part__vendor=vendor_profile.business_partner)
+        vendor_items = order.items.filter(part__vendor=vendor_profile.business_partner)
         if not vendor_items.exists():
             return JsonResponse({
                 'success': False,
@@ -265,14 +265,14 @@ def vendor_order_analytics(request):
     
     # Get vendor orders in date range
     vendor_orders = Order.objects.filter(
-        order_items__part__vendor=vendor_profile.business_partner,
+        items__part__vendor=vendor_profile.business_partner,
         created_at__range=[date_from_dt, date_to_dt]
     ).distinct()
     
     # Order status breakdown
     status_breakdown = vendor_orders.values('status').annotate(
         count=Count('id'),
-        total_revenue=Sum('order_items__total_price')
+        total_revenue=Sum(F('items__quantity') * F('items__price'))
     ).order_by('status')
     
     # Daily order trends
@@ -280,16 +280,16 @@ def vendor_order_analytics(request):
         select={'day': 'date(created_at)'}
     ).values('day').annotate(
         order_count=Count('id'),
-        revenue=Sum('order_items__total_price')
+        revenue=Sum(F('items__quantity') * F('items__price'))
     ).order_by('day')
     
     # Top selling parts
     top_parts = vendor_orders.values(
-        'order_items__part__name',
-        'order_items__part__sku'
+        'items__part__name',
+        'items__part__sku'
     ).annotate(
-        total_quantity=Sum('order_items__quantity'),
-        total_revenue=Sum('order_items__total_price')
+        total_quantity=Sum('items__quantity'),
+        total_revenue=Sum(F('items__quantity') * F('items__price'))
     ).order_by('-total_quantity')[:10]
     
     # Recent orders
@@ -302,14 +302,14 @@ def vendor_order_analytics(request):
         'date_to': date_to,
         'total_orders': vendor_orders.count(),
         'total_revenue': vendor_orders.aggregate(
-            total=Sum('order_items__total_price')
+            total=Sum(F('items__quantity') * F('items__price'))
         )['total'] or 0,
         'status_breakdown': status_breakdown,
         'daily_orders': daily_orders,
         'top_parts': top_parts,
         'recent_orders': recent_orders,
         'average_order_value': vendor_orders.aggregate(
-            avg=Avg('order_items__total_price')
+            avg=Avg('items__total_price')
         )['avg'] or 0,
     }
     
@@ -338,7 +338,7 @@ def vendor_order_reports(request):
     
     # Get vendor orders based on filters
     vendor_orders = Order.objects.filter(
-        order_items__part__vendor=vendor_profile.business_partner
+        items__part__vendor=vendor_profile.business_partner
     ).distinct()
     
     # Apply date filter
@@ -368,7 +368,7 @@ def vendor_order_reports(request):
         ])
         
         for order in vendor_orders:
-            vendor_items_total = order.order_items.filter(
+            vendor_items_total = order.items.filter(
                 part__vendor=vendor_profile.business_partner
             ).aggregate(total=Sum('total_price'))['total'] or 0
             
@@ -398,7 +398,7 @@ def vendor_order_reports(request):
             'orders': vendor_orders,
             'total_orders': vendor_orders.count(),
             'total_revenue': vendor_orders.aggregate(
-                total=Sum('order_items__total_price')
+                total=Sum(F('items__quantity') * F('items__price'))
             )['total'] or 0,
         }
         

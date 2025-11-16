@@ -340,6 +340,33 @@ body {
   color: #4d78bc;
 }
 
+/* Cart count badge */
+.cart-count {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  background: #ff4444;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  transition: all 0.2s ease;
+  z-index: 1; /* Ensure count appears above cart icon */
+}
+
+.navbar-cart {
+  position: relative;
+  min-width: 30px; /* Prevent layout shifts when count appears */
+  text-align: center;
+  z-index: 10; /* Ensure cart icon is clickable */
+}
+
 /* Sell My Car Button */
 .sell-car-button {
   background-color: #29d846;
@@ -364,6 +391,7 @@ body {
   position: relative;
   display: flex;
   align-items: center;
+  z-index: 10; /* Ensure user profile dropdown is clickable */
 }
 
 .navbar-profile-trigger {
@@ -1512,6 +1540,27 @@ body {
   .content-area {
     margin-top: 60px;
   }
+
+  /* Mobile cart icon adjustments */
+  .navbar-cart {
+    position: relative;
+    min-width: 25px; /* Smaller minimum width for mobile */
+  }
+
+  .navbar-cart ion-icon {
+    width: 22px; /* Slightly larger icon on mobile for better touch target */
+    height: 22px;
+    margin-top: 0; /* Remove top margin on mobile */
+  }
+
+  .cart-count {
+    top: -6px; /* Adjust position for mobile */
+    right: -6px;
+    width: 16px; /* Slightly smaller count badge */
+    height: 16px;
+    font-size: 10px; /* Smaller font size */
+    min-width: 16px;
+  }
 }
 
 /* Small Mobile Styles */
@@ -1528,6 +1577,16 @@ body {
     margin-left: 10px;
         width: 130px;
         height: 49px;
+  }
+
+  /* Small mobile cart adjustments */
+  .cart-count {
+    top: -5px; /* Slightly higher position for very small screens */
+    right: -5px;
+    width: 15px; /* Even smaller for small screens */
+    height: 15px;
+    font-size: 9px;
+    min-width: 15px;
   }
 
   .mobile-menu-toggle {

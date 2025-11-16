@@ -1,0 +1,368 @@
+/* Vendor Form Validation System - Integrated with Unified Design System */
+
+/* Form Validation States */
+.ym-form-control.ym-is-valid,
+.ym-form-select.ym-is-valid,
+.ym-form-textarea.ym-is-valid {
+    border-color: var(--ym-success-500);
+    box-shadow: 0 0 0 3px var(--ym-success-100);
+}
+
+.ym-form-control.ym-is-valid:focus,
+.ym-form-select.ym-is-valid:focus,
+.ym-form-textarea.ym-is-valid:focus {
+    border-color: var(--ym-success-500);
+    box-shadow: 0 0 0 3px var(--ym-success-200), 0 0 0 1px var(--ym-success-500);
+}
+
+.ym-form-control.ym-is-invalid,
+.ym-form-select.ym-is-invalid,
+.ym-form-textarea.ym-is-invalid {
+    border-color: var(--ym-danger-500);
+    box-shadow: 0 0 0 3px var(--ym-danger-100);
+}
+
+.ym-form-control.ym-is-invalid:focus,
+.ym-form-select.ym-is-invalid:focus,
+.ym-form-textarea.ym-is-invalid:focus {
+    border-color: var(--ym-danger-500);
+    box-shadow: 0 0 0 3px var(--ym-danger-200), 0 0 0 1px var(--ym-danger-500);
+}
+
+/* Validation Feedback Messages */
+.ym-form-feedback {
+    display: block;
+    font-size: var(--ym-font-size-sm);
+    margin-top: var(--ym-spacing-1);
+    font-weight: var(--ym-font-weight-medium);
+}
+
+.ym-valid-feedback {
+    color: var(--ym-success-600);
+}
+
+.ym-invalid-feedback {
+    color: var(--ym-danger-600);
+}
+
+/* Validation Icons */
+.ym-form-group {
+    position: relative;
+}
+
+.ym-form-group .ym-form-control,
+.ym-form-group .ym-form-select,
+.ym-form-group .ym-form-textarea {
+    padding-right: var(--ym-spacing-10);
+}
+
+.ym-form-validation-icon {
+    position: absolute;
+    right: var(--ym-spacing-3);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.ym-form-validation-icon.ym-valid-icon {
+    color: var(--ym-success-500);
+}
+
+.ym-form-validation-icon.ym-invalid-icon {
+    color: var(--ym-danger-500);
+}
+
+/* Form Group Validation States */
+.ym-form-group.ym-has-error .ym-form-label {
+    color: var(--ym-danger-600);
+}
+
+.ym-form-group.ym-has-success .ym-form-label {
+    color: var(--ym-success-600);
+}
+
+/* Real-time Validation Indicators */
+.ym-form-control.ym-validating {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 8l3 3 7-7'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right var(--ym-spacing-3) center;
+    background-size: 16px 16px;
+    padding-right: var(--ym-spacing-10);
+}
+
+/* Character Counter */
+.ym-character-counter {
+    font-size: var(--ym-font-size-xs);
+    color: var(--ym-gray-500);
+    text-align: right;
+    margin-top: var(--ym-spacing-1);
+}
+
+.ym-character-counter.ym-near-limit {
+    color: var(--ym-warning-600);
+}
+
+.ym-character-counter.ym-over-limit {
+    color: var(--ym-danger-600);
+    font-weight: var(--ym-font-weight-semibold);
+}
+
+/* Password Strength Indicator */
+.ym-password-strength {
+    margin-top: var(--ym-spacing-2);
+}
+
+.ym-password-strength-bar {
+    height: 4px;
+    background: var(--ym-gray-200);
+    border-radius: var(--ym-border-radius-full);
+    overflow: hidden;
+    margin-bottom: var(--ym-spacing-1);
+}
+
+.ym-password-strength-fill {
+    height: 100%;
+    transition: width var(--ym-transition-base), background-color var(--ym-transition-base);
+    border-radius: var(--ym-border-radius-full);
+}
+
+.ym-password-strength-weak {
+    background: var(--ym-danger-500);
+}
+
+.ym-password-strength-fair {
+    background: var(--ym-warning-500);
+}
+
+.ym-password-strength-good {
+    background: var(--ym-info-500);
+}
+
+.ym-password-strength-strong {
+    background: var(--ym-success-500);
+}
+
+.ym-password-strength-text {
+    font-size: var(--ym-font-size-xs);
+    font-weight: var(--ym-font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.ym-password-strength-weak {
+    color: var(--ym-danger-600);
+}
+
+.ym-password-strength-fair {
+    color: var(--ym-warning-600);
+}
+
+.ym-password-strength-good {
+    color: var(--ym-info-600);
+}
+
+.ym-password-strength-strong {
+    color: var(--ym-success-600);
+}
+
+/* Form Validation Animations */
+@keyframes ym-shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+    20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+.ym-form-group.ym-has-error {
+    animation: ym-shake 0.5s ease-in-out;
+}
+
+@keyframes ym-pulse-success {
+    0% { box-shadow: 0 0 0 0 var(--ym-success-200); }
+    70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.ym-form-control.ym-is-valid {
+    animation: ym-pulse-success 1s ease-out;
+}
+
+/* Input Formatting */
+.ym-form-control[data-format="phone"] {
+    font-family: var(--ym-font-family-mono);
+}
+
+.ym-form-control[data-format="currency"] {
+    text-align: right;
+}
+
+.ym-form-control[data-format="card"] {
+    font-family: var(--ym-font-family-mono);
+    letter-spacing: 0.1em;
+}
+
+/* Form Validation Responsive Design */
+@media (max-width: 768px) {
+    .ym-form-group .ym-form-control,
+    .ym-form-group .ym-form-select,
+    .ym-form-group .ym-form-textarea {
+        padding-right: var(--ym-spacing-8);
+    }
+    
+    .ym-form-validation-icon {
+        right: var(--ym-spacing-2);
+        width: 16px;
+        height: 16px;
+    }
+    
+    .ym-form-feedback {
+        font-size: var(--ym-font-size-xs);
+    }
+    
+    .ym-character-counter {
+        font-size: var(--ym-font-size-2xs);
+    }
+}
+
+@media (max-width: 480px) {
+    .ym-form-group .ym-form-control,
+    .ym-form-group .ym-form-select,
+    .ym-form-group .ym-form-textarea {
+        padding-right: var(--ym-spacing-7);
+    }
+    
+    .ym-form-validation-icon {
+        right: var(--ym-spacing-2);
+        width: 14px;
+        height: 14px;
+    }
+    
+    .ym-password-strength-text {
+        font-size: var(--ym-font-size-2xs);
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .ym-form-control.ym-is-valid,
+    .ym-form-select.ym-is-valid,
+    .ym-form-textarea.ym-is-valid {
+        border-color: var(--ym-success-400);
+        box-shadow: 0 0 0 3px var(--ym-success-900);
+    }
+    
+    .ym-form-control.ym-is-valid:focus,
+    .ym-form-select.ym-is-valid:focus,
+    .ym-form-textarea.ym-is-valid:focus {
+        border-color: var(--ym-success-400);
+        box-shadow: 0 0 0 3px var(--ym-success-800), 0 0 0 1px var(--ym-success-400);
+    }
+    
+    .ym-form-control.ym-is-invalid,
+    .ym-form-select.ym-is-invalid,
+    .ym-form-textarea.ym-is-invalid {
+        border-color: var(--ym-danger-400);
+        box-shadow: 0 0 0 3px var(--ym-danger-900);
+    }
+    
+    .ym-form-control.ym-is-invalid:focus,
+    .ym-form-select.ym-is-invalid:focus,
+    .ym-form-textarea.ym-is-invalid:focus {
+        border-color: var(--ym-danger-400);
+        box-shadow: 0 0 0 3px var(--ym-danger-800), 0 0 0 1px var(--ym-danger-400);
+    }
+    
+    .ym-valid-feedback {
+        color: var(--ym-success-400);
+    }
+    
+    .ym-invalid-feedback {
+        color: var(--ym-danger-400);
+    }
+    
+    .ym-form-group.ym-has-error .ym-form-label {
+        color: var(--ym-danger-400);
+    }
+    
+    .ym-form-group.ym-has-success .ym-form-label {
+        color: var(--ym-success-400);
+    }
+    
+    .ym-character-counter {
+        color: var(--ym-gray-400);
+    }
+    
+    .ym-character-counter.ym-near-limit {
+        color: var(--ym-warning-400);
+    }
+    
+    .ym-character-counter.ym-over-limit {
+        color: var(--ym-danger-400);
+    }
+    
+    .ym-password-strength-bar {
+        background: var(--ym-gray-700);
+    }
+    
+    .ym-password-strength-weak {
+        color: var(--ym-danger-400);
+    }
+    
+    .ym-password-strength-fair {
+        color: var(--ym-warning-400);
+    }
+    
+    .ym-password-strength-good {
+        color: var(--ym-info-400);
+    }
+    
+    .ym-password-strength-strong {
+        color: var(--ym-success-400);
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .ym-form-control.ym-is-valid,
+    .ym-form-select.ym-is-valid,
+    .ym-form-textarea.ym-is-valid {
+        border-width: 2px;
+    }
+    
+    .ym-form-control.ym-is-invalid,
+    .ym-form-select.ym-is-invalid,
+    .ym-form-textarea.ym-is-invalid {
+        border-width: 2px;
+    }
+    
+    .ym-valid-feedback {
+        font-weight: var(--ym-font-weight-bold);
+    }
+    
+    .ym-invalid-feedback {
+        font-weight: var(--ym-font-weight-bold);
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .ym-form-group.ym-has-error {
+        animation: none;
+    }
+    
+    .ym-form-control.ym-is-valid {
+        animation: none;
+    }
+    
+    .ym-password-strength-fill {
+        transition: none;
+    }
+    
+    .ym-form-validation-icon {
+        transition: none;
+    }
+}

@@ -1,0 +1,909 @@
+{% extends "admin_panel/base.html" %}
+{% load static %}
+
+{% block title %}Vendor Management Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/vendor-framework.css' %}">
+<style>
+  /* Custom dashboard styles */
+  .dashboard-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: white;
+    padding: var(--space-8) 0;
+    margin-bottom: var(--space-8);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    animation: grain 8s steps(10) infinite;
+  }
+  
+  @keyframes grain {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-5%, -10%); }
+    20% { transform: translate(-15%, 5%); }
+    30% { transform: translate(7%, -25%); }
+    40% { transform: translate(-5%, 25%); }
+    50% { transform: translate(-15%, 10%); }
+    60% { transform: translate(15%, 0%); }
+    70% { transform: translate(0%, 15%); }
+    80% { transform: translate(3%, 35%); }
+    90% { transform: translate(-10%, 10%); }
+  }
+  
+  .dashboard-content {
+    position: relative;
+    z-index: 1;
+  }
+  
+  .quick-actions {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-md);
+    margin-bottom: var(--space-8);
+  }
+  
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+  }
+  
+  .action-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-6);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: var(--gray-700);
+    transition: all var(--transition-normal);
+    background: white;
+  }
+  
+  .action-item:hover {
+    border-color: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: white;
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .action-icon {
+    font-size: var(--text-3xl);
+    margin-bottom: var(--space-3);
+    transition: transform var(--transition-normal);
+  }
+  
+  .action-item:hover .action-icon {
+    transform: scale(1.2);
+  }
+  
+  .action-title {
+    font-weight: 600;
+    margin-bottom: var(--space-2);
+    text-align: center;
+  }
+  
+  .action-description {
+    font-size: var(--text-sm);
+    text-align: center;
+    opacity: 0.8;
+  }
+  
+  .recent-activity {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .activity-item {
+    display: flex;
+    align-items: center;
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--gray-100);
+    transition: background-color var(--transition-fast);
+  }
+  
+  .activity-item:hover {
+    background-color: var(--gray-50);
+  }
+  
+  .activity-item:last-child {
+    border-bottom: none;
+  }
+  
+  .activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: var(--space-4);
+    font-size: var(--text-lg);
+  }
+  
+  .activity-content {
+    flex: 1;
+  }
+  
+  .activity-title {
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: var(--space-1);
+  }
+  
+  .activity-time {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+  }
+  
+  .chart-container {
+    position: relative;
+    height: 300px;
+    margin: var(--space-4) 0;
+  }
+  
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+    z-index: 10;
+  }
+  
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+  }
+  
+  .stat-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-light) 100%);
+  }
+  
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+  }
+  
+  .stat-value {
+    font-size: var(--text-3xl);
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: var(--space-2);
+  }
+  
+  .stat-label {
+    font-size: var(--text-sm);
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  .stat-change {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    margin-top: var(--space-2);
+  }
+  
+  .stat-change.positive {
+    color: var(--success-color);
+  }
+  
+  .stat-change.negative {
+    color: var(--error-color);
+  }
+  
+  .filter-bar {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .filter-group {
+    display: flex;
+    gap: var(--space-4);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  
+  .filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .filter-label {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--gray-700);
+  }
+  
+  .btn-filter {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--gray-300);
+    background: white;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  
+  .btn-filter:hover,
+  .btn-filter.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+  }
+  
+  .responsive-table {
+    overflow-x: auto;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .table-responsive {
+    min-width: 600px;
+  }
+  
+  .mobile-card {
+    display: none;
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .mobile-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-3);
+  }
+  
+  .mobile-card-title {
+    font-weight: 600;
+    color: var(--gray-900);
+  }
+  
+  .mobile-card-content {
+    display: grid;
+    gap: var(--space-2);
+  }
+  
+  .mobile-card-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--gray-100);
+  }
+  
+  .mobile-card-item:last-child {
+    border-bottom: none;
+  }
+  
+  .mobile-card-label {
+    font-size: var(--text-sm);
+    color: var(--gray-600);
+  }
+  
+  .mobile-card-value {
+    font-weight: 500;
+    color: var(--gray-900);
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 767px) {
+    .dashboard-header {
+      padding: var(--space-6) 0;
+    }
+    
+    .action-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .filter-group {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .responsive-table {
+      display: none;
+    }
+    
+    .mobile-card {
+      display: block;
+    }
+    
+    .quick-actions {
+      padding: var(--space-4);
+    }
+    
+    .recent-activity {
+      padding: var(--space-4);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .action-item {
+      padding: var(--space-4);
+    }
+    
+    .stat-card {
+      padding: var(--space-4);
+    }
+    
+    .dashboard-card {
+      padding: var(--space-4);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header animate-fade-in">
+  <div class="container">
+    <div class="dashboard-content">
+      <h1 class="text-3xl md:text-4xl font-bold mb-2">Vendor Management Dashboard</h1>
+      <p class="text-lg opacity-90">Monitor, analyze, and manage your vendor relationships</p>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Quick Stats -->
+  <div class="stats-grid animate-slide-in">
+    <div class="stat-card">
+      <div class="stat-value">{{ total_vendors|default:"0" }}</div>
+      <div class="stat-label">Total Vendors</div>
+      <div class="stat-change positive">
+        <i class="fas fa-arrow-up"></i> +{{ vendor_growth|default:"0" }}% this month
+      </div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-value">{{ active_applications|default:"0" }}</div>
+      <div class="stat-label">Active Applications</div>
+      <div class="stat-change">
+        <i class="fas fa-clock"></i> {{ pending_reviews|default:"0" }} pending review
+      </div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-value">{{ avg_performance|default:"0.0" }}%</div>
+      <div class="stat-label">Avg Performance</div>
+      <div class="stat-change positive">
+        <i class="fas fa-chart-line"></i> +{{ performance_improvement|default:"0" }}% vs last month
+      </div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-value">{{ compliance_rate|default:"0" }}%</div>
+      <div class="stat-label">Compliance Rate</div>
+      <div class="stat-change {% if compliance_rate >= 90 %}positive{% else %}negative{% endif %}">
+        <i class="fas fa-shield-alt"></i> {{ compliance_alerts|default:"0" }} alerts active
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions animate-slide-in">
+    <h2 class="text-xl font-semibold mb-6">Quick Actions</h2>
+    <div class="action-grid">
+      <a href="{% url 'business_partners:vendor_application_create' %}" class="action-item">
+        <div class="action-icon">📋</div>
+        <div class="action-title">New Application</div>
+        <div class="action-description">Submit a new vendor application</div>
+      </a>
+      
+      <a href="{% url 'business_partners:vendor_list' %}" class="action-item">
+        <div class="action-icon">👥</div>
+        <div class="action-title">View Vendors</div>
+        <div class="action-description">Browse and manage vendors</div>
+      </a>
+      
+      <a href="{% url 'business_partners:performance_dashboard' %}" class="action-item">
+        <div class="action-icon">📊</div>
+        <div class="action-title">Performance</div>
+        <div class="action-description">View performance analytics</div>
+      </a>
+      
+      <a href="{% url 'business_partners:compliance_dashboard' %}" class="action-item">
+        <div class="action-icon">✅</div>
+        <div class="action-title">Compliance</div>
+        <div class="action-description">Check compliance status</div>
+      </a>
+      
+      <a href="{% url 'business_partners:document_list' %}" class="action-item">
+        <div class="action-icon">📄</div>
+        <div class="action-title">Documents</div>
+        <div class="action-description">Manage vendor documents</div>
+      </a>
+      
+      <a href="{% url 'business_partners:reports' %}" class="action-item">
+        <div class="action-icon">📈</div>
+        <div class="action-title">Reports</div>
+        <div class="action-description">Generate and view reports</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar animate-fade-in">
+    <div class="filter-group">
+      <div class="filter-item">
+        <label class="filter-label">Time Period</label>
+        <select class="form-control" id="timeFilter">
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="365">Last year</option>
+        </select>
+      </div>
+      
+      <div class="filter-item">
+        <label class="filter-label">Status</label>
+        <select class="form-control" id="statusFilter">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      
+      <div class="filter-item">
+        <label class="filter-label">Tier</label>
+        <select class="form-control" id="tierFilter">
+          <option value="">All Tiers</option>
+          <option value="premium">Premium</option>
+          <option value="standard">Standard</option>
+          <option value="basic">Basic</option>
+        </select>
+      </div>
+      
+      <div class="filter-item">
+        <button class="btn btn-primary" onclick="applyFilters()">
+          <i class="fas fa-filter"></i> Apply Filters
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="card animate-scale-in">
+      <div class="card-header">
+        <h3 class="card-title">Application Trends</h3>
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="applicationChart"></canvas>
+          <div class="loading-overlay" id="applicationChartLoading">
+            <div class="loading-spinner"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card animate-scale-in">
+      <div class="card-header">
+        <h3 class="card-title">Performance Distribution</h3>
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="performanceChart"></canvas>
+          <div class="loading-overlay" id="performanceChartLoading">
+            <div class="loading-spinner"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Applications Table -->
+  <div class="card animate-slide-in">
+    <div class="card-header">
+      <h3 class="card-title">Recent Applications</h3>
+      <a href="{% url 'business_partners:vendor_application_list' %}" class="btn btn-outline btn-sm">View All</a>
+    </div>
+    <div class="card-body">
+      <div class="responsive-table">
+        <table class="table table-responsive">
+          <thead>
+            <tr>
+              <th>Company Name</th>
+              <th>Contact Person</th>
+              <th>Application Date</th>
+              <th>Status</th>
+              <th>Performance Score</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for application in recent_applications %}
+            <tr class="animate-fade-in">
+              <td>
+                <div class="font-medium">{{ application.company_name }}</div>
+                <div class="text-sm text-gray-500">{{ application.business_type|default:"N/A" }}</div>
+              </td>
+              <td>
+                <div class="font-medium">{{ application.contact_person }}</div>
+                <div class="text-sm text-gray-500">{{ application.contact_email }}</div>
+              </td>
+              <td>{{ application.created_at|date:"M d, Y" }}</td>
+              <td>
+                <span class="status-indicator {% if application.status == 'approved' %}status-approved{% elif application.status == 'pending' %}status-pending{% else %}status-rejected{% endif %}">
+                  {{ application.get_status_display }}
+                </span>
+              </td>
+              <td>
+                {% if application.performance_score %}
+                <div class="performance-metric">
+                  <div class="performance-value">{{ application.performance_score }}%</div>
+                  <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ application.performance_score }}%"></div>
+                  </div>
+                </div>
+                {% else %}
+                <span class="text-gray-400">Not evaluated</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="flex gap-2">
+                  <a href="{% url 'business_partners:vendor_application_detail' application.id %}" class="btn btn-ghost btn-sm">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                  {% if application.status == 'pending' %}
+                  <button onclick="reviewApplication({{ application.id }})" class="btn btn-primary btn-sm">
+                    Review
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-gray-500 py-8">
+                No recent applications found
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Mobile cards for small screens -->
+      <div class="mobile-card-container">
+        {% for application in recent_applications %}
+        <div class="mobile-card animate-fade-in">
+          <div class="mobile-card-header">
+            <div class="mobile-card-title">{{ application.company_name }}</div>
+            <span class="status-indicator {% if application.status == 'approved' %}status-approved{% elif application.status == 'pending' %}status-pending{% else %}status-rejected{% endif %}">
+              {{ application.get_status_display }}
+            </span>
+          </div>
+          <div class="mobile-card-content">
+            <div class="mobile-card-item">
+              <span class="mobile-card-label">Contact Person</span>
+              <span class="mobile-card-value">{{ application.contact_person }}</span>
+            </div>
+            <div class="mobile-card-item">
+              <span class="mobile-card-label">Email</span>
+              <span class="mobile-card-value">{{ application.contact_email }}</span>
+            </div>
+            <div class="mobile-card-item">
+              <span class="mobile-card-label">Application Date</span>
+              <span class="mobile-card-value">{{ application.created_at|date:"M d, Y" }}</span>
+            </div>
+            {% if application.performance_score %}
+            <div class="mobile-card-item">
+              <span class="mobile-card-label">Performance Score</span>
+              <span class="mobile-card-value">{{ application.performance_score }}%</span>
+            </div>
+            {% endif %}
+          </div>
+          <div class="flex gap-2 mt-4">
+            <a href="{% url 'business_partners:vendor_application_detail' application.id %}" class="btn btn-ghost btn-sm flex-1">
+              <i class="fas fa-eye"></i> View Details
+            </a>
+            {% if application.status == 'pending' %}
+            <button onclick="reviewApplication({{ application.id }})" class="btn btn-primary btn-sm flex-1">
+              Review
+            </button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="recent-activity animate-slide-in">
+    <h3 class="text-xl font-semibold mb-6">Recent Activity</h3>
+    <div class="space-y-4">
+      {% for activity in recent_activities %}
+      <div class="activity-item animate-fade-in">
+        <div class="activity-icon bg-{{ activity.type_color|default:'primary' }}-100 text-{{ activity.type_color|default:'primary' }}-600">
+          <i class="fas fa-{{ activity.icon|default:'circle' }}"></i>
+        </div>
+        <div class="activity-content">
+          <div class="activity-title">{{ activity.title }}</div>
+          <div class="activity-time">{{ activity.timestamp|timesince }} ago</div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="text-center text-gray-500 py-8">
+        No recent activity
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Navigation -->
+<nav class="mobile-nav">
+  <a href="{% url 'business_partners:dashboard' %}" class="mobile-nav-item active">
+    <div class="mobile-nav-icon">📊</div>
+    <div class="mobile-nav-label">Dashboard</div>
+  </a>
+  <a href="{% url 'business_partners:vendor_list' %}" class="mobile-nav-item">
+    <div class="mobile-nav-icon">👥</div>
+    <div class="mobile-nav-label">Vendors</div>
+  </a>
+  <a href="{% url 'business_partners:vendor_application_list' %}" class="mobile-nav-item">
+    <div class="mobile-nav-icon">📋</div>
+    <div class="mobile-nav-label">Applications</div>
+  </a>
+  <a href="{% url 'business_partners:document_list' %}" class="mobile-nav-item">
+    <div class="mobile-nav-icon">📄</div>
+    <div class="mobile-nav-label">Documents</div>
+  </a>
+</nav>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Vendor Components CSS -->
+<link rel="stylesheet" href="{% static 'css/vendor-components.css' %}">
+<script>
+  // Initialize charts with animations
+  document.addEventListener('DOMContentLoaded', function() {
+    // Application trends chart
+    const applicationCtx = document.getElementById('applicationChart').getContext('2d');
+    const applicationChart = new Chart(applicationCtx, {
+      type: 'line',
+      data: {
+        labels: {{ chart_labels|safe }},
+        datasets: [{
+          label: 'Applications',
+          data: {{ chart_data|safe }},
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.1)'
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            }
+          }
+        },
+        animation: {
+          duration: 2000,
+          easing: 'easeInOutQuart'
+        }
+      }
+    });
+
+    // Performance distribution chart
+    const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+    const performanceChart = new Chart(performanceCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Excellent', 'Good', 'Average', 'Poor'],
+        datasets: [{
+          data: {{ performance_distribution|safe }},
+          backgroundColor: [
+            '#10b981',
+            '#3b82f6',
+            '#f59e0b',
+            '#ef4444'
+          ],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 20,
+              usePointStyle: true
+            }
+          }
+        },
+        animation: {
+          animateRotate: true,
+          duration: 2000
+        }
+      }
+    });
+
+    // Hide loading overlays after charts are loaded
+    setTimeout(() => {
+      document.getElementById('applicationChartLoading').style.display = 'none';
+      document.getElementById('performanceChartLoading').style.display = 'none';
+    }, 1500);
+  });
+
+  // Filter functionality
+  function applyFilters() {
+    const timeFilter = document.getElementById('timeFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    const tierFilter = document.getElementById('tierFilter').value;
+    
+    // Show loading state
+    showLoading();
+    
+    // Simulate API call
+    setTimeout(() => {
+      // Update dashboard with filtered data
+      updateDashboard(timeFilter, statusFilter, tierFilter);
+      hideLoading();
+    }, 1000);
+  }
+
+  function reviewApplication(applicationId) {
+    // Show loading overlay
+    showLoading();
+    
+    // Navigate to review page
+    window.location.href = `/business-partners/applications/${applicationId}/review/`;
+  }
+
+  function showLoading() {
+    const overlay = document.createElement('div');
+    overlay.className = 'loading-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.right = '0';
+    overlay.style.bottom = '0';
+    overlay.style.background = 'rgba(255, 255, 255, 0.9)';
+    overlay.style.zIndex = '9999';
+    overlay.innerHTML = '<div class="loading-spinner"></div>';
+    document.body.appendChild(overlay);
+  }
+
+  function hideLoading() {
+    const overlay = document.querySelector('.loading-overlay');
+    if (overlay) {
+      overlay.remove();
+    }
+  }
+
+  function updateDashboard(timeFilter, statusFilter, tierFilter) {
+    // Simulate dashboard update with animation
+    const cards = document.querySelectorAll('.stat-card, .card');
+    cards.forEach((card, index) => {
+      setTimeout(() => {
+        card.style.opacity = '0.5';
+        setTimeout(() => {
+          card.style.opacity = '1';
+        }, 300);
+      }, index * 100);
+    });
+  }
+
+  // Add smooth scrolling for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    });
+  });
+
+  // Add intersection observer for animations
+  const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, observerOptions);
+
+  // Observe elements for scroll animations
+  document.querySelectorAll('.card, .stat-card, .action-item').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+    observer.observe(el);
+  });
+
+  // Mobile navigation active state
+  const currentPath = window.location.pathname;
+  document.querySelectorAll('.mobile-nav-item').forEach(item => {
+    if (item.getAttribute('href') === currentPath) {
+      item.classList.add('active');
+    }
+  });
+</script>
+{% endblock %}

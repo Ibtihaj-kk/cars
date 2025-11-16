@@ -19,6 +19,7 @@ from datetime import timedelta
 import json
 import requests
 from requests.exceptions import RequestException, Timeout, ConnectionError
+from decimal import Decimal
 
 from .models import (
     Part, Category, Brand, Inventory, Order, OrderItem, Review, BulkUploadLog, 
@@ -894,6 +895,9 @@ def buy_now(request):
     from django.http import JsonResponse
     from django.shortcuts import get_object_or_404
     from decimal import Decimal
+    import logging
+    
+    logger = logging.getLogger(__name__)
     
     try:
         # Parse request data
@@ -905,10 +909,14 @@ def buy_now(request):
         part_id = data.get('part_id')
         qty = int(data.get('qty', 1))
         
+        logger.info(f"Buy now request received: part_id={part_id}, qty={qty}, user={request.user}")
+        
         if not part_id:
+            logger.warning("Buy now failed: Part ID is required")
             return JsonResponse({'error': 'Part ID is required'}, status=400)
         
         if qty < 1:
+            logger.warning(f"Buy now failed: Invalid quantity {qty}")
             return JsonResponse({'error': 'Quantity must be at least 1'}, status=400)
         
         with transaction.atomic():
@@ -917,6 +925,7 @@ def buy_now(request):
             
             # Check stock availability
             if part.quantity < qty:
+                logger.warning(f"Buy now failed: Insufficient stock for part {part_id}. Available: {part.quantity}, Requested: {qty}")
                 return JsonResponse({
                     'error': f'Insufficient stock. Only {part.quantity} items available.'
                 }, status=400)
@@ -933,6 +942,8 @@ def buy_now(request):
                 'shipping_cost': shipping_cost,
                 'tax_amount': tax_amount,
                 'status': 'pending',
+                'payment_method': None,  # Will be set during checkout
+                'payment_status': 'pending',
                 'notes': f'Buy Now order for {part.name}'
             }
             
@@ -949,6 +960,7 @@ def buy_now(request):
             
             # Create the order
             order = Order.objects.create(**order_data)
+            logger.info(f"Created buy now order: order_id={order.id}, order_number={order.order_number}")
             
             # Create order item
             OrderItem.objects.create(
@@ -962,8 +974,28 @@ def buy_now(request):
             part.quantity -= qty
             part.save(update_fields=['quantity'])
             
+            # Optionally add to user's cart for consistency (but don't duplicate if already there)
+            if request.user.is_authenticated:
+                try:
+                    cart = Cart.objects.get(user=request.user)
+                    cart_item, created = CartItem.objects.get_or_create(
+                        cart=cart,
+                        part=part,
+                        defaults={'quantity': qty}
+                    )
+                    if not created:
+                        # If item already exists, update quantity
+                        cart_item.quantity += qty
+                        cart_item.save()
+                except Cart.DoesNotExist:
+                    # If user doesn't have a cart, create one
+                    cart = Cart.objects.create(user=request.user)
+                    CartItem.objects.create(cart=cart, part=part, quantity=qty)
+            
             # Generate checkout URL
             checkout_url = reverse('parts:checkout_step1') + f'?order_id={order.id}'
+            
+            logger.info(f"Buy now successful: order_id={order.id}, order_number={order.order_number}, checkout_url={checkout_url}")
             
             return JsonResponse({
                 'success': True,
@@ -974,8 +1006,10 @@ def buy_now(request):
             })
             
     except ValueError as e:
+        logger.error(f"Buy now failed: Invalid data error - {str(e)}")
         return JsonResponse({'error': f'Invalid data: {str(e)}'}, status=400)
     except Exception as e:
+        logger.error(f"Buy now failed: Unexpected error - {str(e)}", exc_info=True)
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
     def get_template_names(self):
@@ -1845,8 +1879,16 @@ def get_cart_total(request):
 
 def get_cart_count(request):
     """Get total number of items in cart."""
-    cart = get_cart(request)
-    return sum(item['quantity'] for item in cart.values())
+    if request.user.is_authenticated:
+        try:
+            cart = Cart.objects.get(user=request.user)
+            return cart.items.count()
+        except Cart.DoesNotExist:
+            return 0
+    else:
+        # Session-based cart for anonymous users
+        cart = get_cart(request)
+        return sum(item['quantity'] for item in cart.values())
 
 
 @ensure_csrf_cookie
@@ -1952,52 +1994,113 @@ def add_to_cart(request, part_id):
     return redirect('parts:part_detail', pk=part_id)
 
 
-def view_cart(request):
-    """Display cart contents."""
-    cart = get_cart(request)
-    cart_items = []
-    cart_total = 0
-    has_out_of_stock = False
-    has_insufficient_stock = False
-    
-    for item_id, item_data in cart.items():
+def cart_view(request):
+    """Display cart contents - works for both authenticated and anonymous users"""
+    if request.user.is_authenticated:
+        # Use database cart for authenticated users
         try:
-            part = Part.objects.get(id=item_id, is_active=True)
-            item_total = part.price * item_data['quantity']
-            available_stock = part.inventory.stock if hasattr(part, 'inventory') else part.quantity
-            in_stock = available_stock >= item_data['quantity']
+            cart_obj = Cart.objects.get(user=request.user)
+            cart_items = cart_obj.items.select_related('part', 'part__brand', 'part__category').all()
             
-            # Track stock issues
-            if available_stock == 0:
-                has_out_of_stock = True
-            elif not in_stock:
-                has_insufficient_stock = True
+            # Convert to template-compatible format
+            cart_items_list = []
+            has_out_of_stock = False
+            has_insufficient_stock = False
+            cart_total = 0
             
-            cart_items.append({
-                'part': part,
-                'quantity': item_data['quantity'],
-                'item_total': item_total,
-                'in_stock': in_stock,
-                'available_stock': available_stock
-            })
-            cart_total += item_total
-        except Part.DoesNotExist:
-            # Remove invalid items from cart
-            del cart[item_id]
-            request.session['cart'] = cart
-            request.session.modified = True
+            for item in cart_items:
+                part = item.part
+                available_stock = part.inventory.stock if hasattr(part, 'inventory') else part.quantity
+                in_stock = available_stock >= item.quantity
+                
+                # Track stock issues
+                if available_stock == 0:
+                    has_out_of_stock = True
+                elif not in_stock:
+                    has_insufficient_stock = True
+                
+                cart_items_list.append({
+                    'part': part,
+                    'quantity': item.quantity,
+                    'item_total': item.total_price,
+                    'in_stock': in_stock,
+                    'available_stock': available_stock,
+                    'id': item.id  # Add item ID for authenticated users
+                })
+                cart_total += item.total_price
+            
+            context = {
+                'cart_items': cart_items_list,
+                'cart_total': cart_total,
+                'cart_count': len(cart_items_list),
+                'has_out_of_stock': has_out_of_stock,
+                'has_insufficient_stock': has_insufficient_stock,
+                'can_checkout': not has_out_of_stock and not has_insufficient_stock,
+                'page_title': 'Shopping Cart'
+            }
+            
+            return render(request, 'parts/cart.html', context)
+            
+        except Cart.DoesNotExist:
+            # No cart exists for authenticated user
+            context = {
+                'cart_items': [],
+                'cart_total': 0,
+                'cart_count': 0,
+                'has_out_of_stock': False,
+                'has_insufficient_stock': False,
+                'can_checkout': True,
+                'page_title': 'Shopping Cart'
+            }
+            return render(request, 'parts/cart.html', context)
     
-    context = {
-        'cart_items': cart_items,
-        'cart_total': cart_total,
-        'cart_count': len(cart_items),
-        'has_out_of_stock': has_out_of_stock,
-        'has_insufficient_stock': has_insufficient_stock,
-        'can_checkout': not has_out_of_stock and not has_insufficient_stock,
-        'page_title': 'Shopping Cart'
-    }
-    
-    return render(request, 'parts/cart.html', context)
+    else:
+        # Session-based cart for anonymous users
+        cart = get_cart(request)
+        cart_items = []
+        cart_total = 0
+        has_out_of_stock = False
+        has_insufficient_stock = False
+        
+        for item_id, item_data in cart.items():
+            try:
+                part = Part.objects.get(id=item_id, is_active=True)
+                item_total = part.price * item_data['quantity']
+                available_stock = part.inventory.stock if hasattr(part, 'inventory') else part.quantity
+                in_stock = available_stock >= item_data['quantity']
+                
+                # Track stock issues
+                if available_stock == 0:
+                    has_out_of_stock = True
+                elif not in_stock:
+                    has_insufficient_stock = True
+                
+                cart_items.append({
+                    'part': part,
+                    'quantity': item_data['quantity'],
+                    'item_total': item_total,
+                    'in_stock': in_stock,
+                    'available_stock': available_stock,
+                    'part_id': item_id  # Use part_id for guest users
+                })
+                cart_total += item_total
+            except Part.DoesNotExist:
+                # Remove invalid items from cart
+                del cart[item_id]
+                request.session['cart'] = cart
+                request.session.modified = True
+        
+        context = {
+            'cart_items': cart_items,
+            'cart_total': cart_total,
+            'cart_count': len(cart_items),
+            'has_out_of_stock': has_out_of_stock,
+            'has_insufficient_stock': has_insufficient_stock,
+            'can_checkout': not has_out_of_stock and not has_insufficient_stock,
+            'page_title': 'Shopping Cart'
+        }
+        
+        return render(request, 'parts/cart.html', context)
 
 
 def update_cart(request, part_id):
@@ -2019,7 +2122,7 @@ def update_cart(request, part_id):
                     available_stock = part.inventory.stock if hasattr(part, 'inventory') else part.quantity
                     if available_stock < quantity:
                         messages.error(request, f'Only {available_stock} items available in stock.')
-                        return redirect('parts:view_cart')
+                        return redirect('parts:cart_view')
                     
                     cart[str(part_id)]['quantity'] = quantity
                     messages.success(request, f'Updated {part.name} quantity.')
@@ -2038,11 +2141,11 @@ def update_cart(request, part_id):
         except (Part.DoesNotExist, ValueError) as e:
             messages.error(request, 'Error updating cart.')
     
-    return redirect('parts:view_cart')
+    return redirect('parts:cart_view')
 
 
-def remove_from_cart(request, part_id):
-    """Remove item from cart."""
+def remove_from_session_cart_legacy(request, part_id):
+    """Remove item from cart (legacy session-based function for non-AJAX requests)."""
     try:
         part = get_object_or_404(Part, id=part_id)
         cart = get_cart(request)
@@ -2065,7 +2168,7 @@ def remove_from_cart(request, part_id):
     except Part.DoesNotExist:
         messages.error(request, 'Part not found.')
     
-    return redirect('parts:view_cart')
+    return redirect('parts:cart_view')
 
 
 def clear_cart(request):
@@ -2075,7 +2178,157 @@ def clear_cart(request):
         request.session.modified = True
         messages.success(request, 'Cart cleared successfully.')
     
-    return redirect('parts:view_cart')
+    return redirect('parts:cart_view')
+
+
+def clear_cart_universal(request):
+    """Clear all items from cart for both authenticated and guest users via AJAX."""
+    if request.user.is_authenticated:
+        # Clear database cart for authenticated users
+        try:
+            cart = Cart.objects.get(user=request.user)
+            cart.items.all().delete()
+            return JsonResponse({
+                'success': True,
+                'message': 'Cart cleared successfully',
+                'cart_total_items': 0,
+                'cart_total_price': 0.00
+            })
+        except Cart.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'No cart found'
+            })
+    else:
+        # Clear session cart for guest users
+        if 'cart' in request.session:
+            del request.session['cart']
+            request.session.modified = True
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Cart cleared successfully',
+            'cart_count': 0,
+            'cart_total': 0.00
+        })
+
+
+def update_cart_item_universal(request, item_id):
+    """Universal cart item update that works for both authenticated and guest users."""
+    if request.user.is_authenticated:
+        # Use database cart for authenticated users
+        return update_cart_item(request, item_id)
+    else:
+        # Use session cart for guest users
+        return update_session_cart_item(request, item_id)
+
+
+@require_http_methods(["POST"])
+def remove_from_cart_universal(request, item_id):
+    """Universal cart item removal that works for both authenticated and guest users."""
+    if request.user.is_authenticated:
+        # Use database cart for authenticated users
+        return remove_from_cart(request, item_id)
+    else:
+        # Use session cart for guest users
+        return remove_from_session_cart(request, item_id)
+
+
+def remove_from_session_cart(request, part_id):
+    """Remove item from session cart for guest users via AJAX."""
+    try:
+        # Use filter instead of get_object_or_404 to avoid Http404 exception
+        part = Part.objects.filter(id=part_id, is_active=True).first()
+        
+        if not part:
+            return JsonResponse({
+                'success': False,
+                'message': 'Part not found'
+            })
+        
+        cart = get_cart(request)
+        
+        if str(part_id) in cart:
+            del cart[str(part_id)]
+            request.session['cart'] = cart
+            request.session.modified = True
+            
+            # Always return JSON response
+            return JsonResponse({
+                'success': True,
+                'message': f'Removed {part.name} from cart',
+                'cart_count': get_cart_count(request),
+                'cart_total': float(get_cart_total(request))
+            })
+        else:
+            # Item not found in cart
+            return JsonResponse({
+                'success': False,
+                'message': 'Item not found in cart'
+            })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': 'An error occurred while removing from cart'
+        })
+
+
+def update_session_cart_item(request, part_id):
+    """Update quantity of a session cart item via AJAX for guest users."""
+    try:
+        part = get_object_or_404(Part, id=part_id)
+        quantity = int(request.POST.get('quantity', 1))
+        
+        if quantity <= 0:
+            return JsonResponse({
+                'success': False,
+                'message': 'Invalid quantity'
+            })
+        
+        cart = get_cart(request)
+        part_id_str = str(part_id)
+        
+        if part_id_str in cart:
+            # Check stock availability
+            if quantity > part.quantity:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Only {part.quantity} items available in stock'
+                })
+            
+            # Update quantity
+            cart[part_id_str]['quantity'] = quantity
+            request.session['cart'] = cart
+            request.session.modified = True
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Quantity updated successfully',
+                'cart_count': get_cart_count(request),
+                'cart_total': float(get_cart_total(request))
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Item not found in cart'
+            })
+            
+    except Part.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Part not found'
+        })
+    except ValueError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid quantity value'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': 'An error occurred while updating cart'
+        })
 
 
 def cart_count_api(request):
@@ -2106,7 +2359,7 @@ def checkout(request):
     
     if not cart:
         messages.error(request, 'Your cart is empty.')
-        return redirect('parts:view_cart')
+        return redirect('parts:cart_view')
     
     cart_total = get_cart_total(request)
     
@@ -2423,10 +2676,21 @@ def add_to_cart_authenticated(request, part_id):
 def remove_from_cart(request, item_id):
     """Remove an item from the user's cart via AJAX."""
     try:
-        cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
+        # Use filter instead of get_object_or_404 to avoid Http404 exception
+        cart_item = CartItem.objects.filter(id=item_id, cart__user=request.user).first()
+        
+        if not cart_item:
+            return JsonResponse({
+                'success': False,
+                'message': 'Cart item not found'
+            })
+        
         part_name = cart_item.part.name
         cart = cart_item.cart
         cart_item.delete()
+        
+        # Get updated cart totals after deletion
+        cart.refresh_from_db()
         
         return JsonResponse({
             'success': True,
@@ -2435,11 +2699,6 @@ def remove_from_cart(request, item_id):
             'cart_total_price': float(cart.total_price)
         })
         
-    except CartItem.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'message': 'Cart item not found'
-        })
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -2557,18 +2816,93 @@ def cart_view(request):
 
 
 def checkout_step1_order_summary(request):
-    """Step 1: Order Summary - Display cart items and allow discount code application."""
+    """Step 1: Order Summary - Display cart items and allow discount code application.
+    Works for both authenticated and guest users."""
     
-    try:
-        cart = Cart.objects.get(user=request.user)
-        cart_items = cart.items.all()
-        
-        if not cart_items.exists():
+    # Handle Buy Now order_id parameter
+    order_id = request.GET.get('order_id')
+    if order_id:
+        try:
+            order = Order.objects.get(id=order_id)
+            if request.user.is_authenticated and order.customer != request.user:
+                messages.error(request, 'Invalid order access.')
+                return redirect('parts:cart_view')
+            
+            # Create checkout data from order
+            checkout_data = {
+                'items_total': str(order.total_price - order.shipping_cost - order.tax_amount),
+                'discount_amount': '0.00',
+                'discount_code': None,
+                'buy_now_order_id': order_id,
+            }
+            request.session['checkout_data'] = checkout_data
+            return redirect('parts:checkout_step2')
+            
+        except Order.DoesNotExist:
+            messages.error(request, 'Order not found.')
+            return redirect('parts:cart_view')
+    
+    # Initialize variables to avoid UnboundLocalError
+    cart = None
+    cart_items = None
+    cart_items_data = []
+    items_total = Decimal('0.00')
+    shipping_cost = Decimal('0.00')
+    tax_amount = Decimal('0.00')
+    discount_amount = Decimal('0.00')
+    discount_code = None
+    grand_total = Decimal('0.00')
+    
+    # Handle both authenticated and guest users
+    if request.user.is_authenticated:
+        try:
+            cart = Cart.objects.get(user=request.user)
+            cart_items = cart.items.all()
+            
+            if not cart_items.exists():
+                messages.warning(request, 'Your cart is empty.')
+                return redirect('parts:cart_view')
+            
+            # Use database cart data
+            items_total = cart.total_price
+            cart_items_data = cart_items
+            
+        except Cart.DoesNotExist:
+            messages.warning(request, 'Your cart is empty.')
+            return redirect('parts:cart_view')
+    else:
+        # Handle guest users with session cart
+        cart = get_cart(request)
+        if not cart:
             messages.warning(request, 'Your cart is empty.')
             return redirect('parts:cart_view')
         
-        # Calculate totals
-        items_total = cart.total_price
+        # Convert session cart to items format
+        cart_items_data = []
+        items_total = Decimal('0.00')
+        
+        for item_id, item_data in cart.items():
+            try:
+                part = Part.objects.get(id=item_id, is_active=True)
+                item_total = part.price * item_data['quantity']
+                items_total += item_total
+                
+                # Create a mock cart item object for template compatibility
+                cart_items_data.append({
+                    'part': part,
+                    'quantity': item_data['quantity'],
+                    'price': part.price,
+                    'total_price': item_total,
+                    'get_total_price': lambda: item_total,  # For template compatibility
+                })
+            except Part.DoesNotExist:
+                continue
+        
+        if not cart_items_data:
+            messages.warning(request, 'Your cart is empty.')
+            return redirect('parts:cart_view')
+        
+        # Calculate totals - items_total is already calculated above
         shipping_cost = Decimal('0.00')  # Will be calculated in step 2
         tax_amount = Decimal('0.00')  # Will be calculated based on location
         discount_amount = Decimal('0.00')
@@ -2639,7 +2973,7 @@ def checkout_step1_order_summary(request):
         
         context = {
             'cart': cart,
-            'cart_items': cart_items,
+            'cart_items': cart_items_data,  # Use the unified data structure
             'items_total': items_total,
             'shipping_cost': shipping_cost,
             'tax_amount': tax_amount,
@@ -2651,119 +2985,165 @@ def checkout_step1_order_summary(request):
         }
         
         return render(request, 'parts/checkout/step1_order_summary.html', context)
-        
-    except Cart.DoesNotExist:
-        messages.warning(request, 'Your cart is empty.')
-        return redirect('parts:cart_view')
 
-
-@login_required
 def checkout_step2_shipping_info(request):
-    """Step 2: Shipping Information - Collect contact and shipping details."""
+    """Step 2: Shipping Information - Collect contact and shipping details.
+    Works for both authenticated and guest users."""
     
     # Check if step 1 is completed
     if 'checkout_data' not in request.session:
         messages.warning(request, 'Please complete the order summary first.')
         return redirect('parts:checkout_step1')
     
-    try:
-        cart = Cart.objects.get(user=request.user)
-        if not cart.items.exists():
-            messages.warning(request, 'Your cart is empty.')
+    # Get checkout data for both user types
+    checkout_data = request.session['checkout_data']
+    items_total = Decimal(checkout_data['items_total'])
+    discount_amount = Decimal(checkout_data['discount_amount'])
+    
+    # Handle both authenticated and guest users
+    # Check if this is a buy now order
+    buy_now_order = None
+    if checkout_data.get('buy_now_order_id'):
+        try:
+            buy_now_order = Order.objects.get(id=checkout_data['buy_now_order_id'])
+            # For buy now orders, we don't need a cart
+            cart = None
+        except Order.DoesNotExist:
+            messages.error(request, 'Order not found.')
             return redirect('parts:cart_view')
+    else:
+        # Regular cart checkout flow
+        if request.user.is_authenticated:
+            try:
+                cart = Cart.objects.get(user=request.user)
+                if not cart.items.exists():
+                    messages.warning(request, 'Your cart is empty.')
+                    return redirect('parts:cart_view')
+            except Cart.DoesNotExist:
+                messages.warning(request, 'Your cart is empty.')
+                return redirect('parts:cart_view')
+        else:
+            # Check guest cart
+            cart = get_cart(request)
+            if not cart:
+                messages.warning(request, 'Your cart is empty.')
+                return redirect('parts:cart_view')
+    
+    cities = SaudiCity.objects.filter(is_active=True).order_by('name')
+    
+    if request.method == 'POST':
+        # Collect shipping information - map template field names to our data structure
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        city_id = request.POST.get('city')
+        area = request.POST.get('area')  # This is city_area_id in template
+        address = request.POST.get('address', '').strip()
+        building = request.POST.get('building', '').strip()
+        apartment = request.POST.get('apartment', '').strip()
+        additional_info = request.POST.get('additional_info', '').strip()
         
-        checkout_data = request.session['checkout_data']
-        items_total = Decimal(checkout_data['items_total'])
-        discount_amount = Decimal(checkout_data['discount_amount'])
+        # Map template fields to our internal structure
+        contact_name = f"{first_name} {last_name}".strip()
+        mobile_number = phone
+        city_area_id = area
+        landmark = additional_info
+        comments = additional_info
         
-        cities = SaudiCity.objects.filter(is_active=True).order_by('name')
+        # Build full address with building and apartment info
+        full_address = address
+        if building:
+            full_address += f", Building: {building}"
+        if apartment:
+            full_address += f", Apartment: {apartment}"
         
-        if request.method == 'POST':
-            # Collect shipping information
-            contact_name = request.POST.get('contact_name', '').strip()
-            mobile_number = request.POST.get('mobile_number', '').strip()
-            city_id = request.POST.get('city')
-            city_area_id = request.POST.get('city_area')
-            address = request.POST.get('address', '').strip()
-            landmark = request.POST.get('landmark', '').strip()
-            comments = request.POST.get('comments', '').strip()
-            
-            # Validation
-            errors = []
-            if not contact_name:
-                errors.append('Contact name is required.')
-            if not mobile_number:
-                errors.append('Mobile number is required.')
-            if not city_id:
-                errors.append('City selection is required.')
-            if not address:
-                errors.append('Address is required.')
-            
-            if errors:
-                for error in errors:
-                    messages.error(request, error)
-            else:
+        # Validation
+        errors = []
+        if not contact_name:
+            errors.append('Contact name is required.')
+        if not mobile_number:
+            errors.append('Mobile number is required.')
+        if not city_id:
+            errors.append('City selection is required.')
+        if not city_area_id:
+            errors.append('Area selection is required.')
+        if not address:
+            errors.append('Address is required.')
+        
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        else:
+            try:
+                city = SaudiCity.objects.get(id=city_id, is_active=True)
+                city_area = None
+                if city_area_id:
+                    city_area = CityArea.objects.get(id=city_area_id, city=city, is_active=True)
+                
+                # Calculate shipping cost
+                shipping_cost = Decimal('0.00')
                 try:
-                    city = SaudiCity.objects.get(id=city_id, is_active=True)
-                    city_area = None
-                    if city_area_id:
-                        city_area = CityArea.objects.get(id=city_area_id, city=city, is_active=True)
-                    
-                    # Calculate shipping cost
-                    shipping_cost = Decimal('0.00')
-                    try:
-                        shipping_rate = ShippingRate.objects.get(city=city, is_active=True)
-                        shipping_cost = shipping_rate.calculate_shipping_cost(items_total)
-                    except ShippingRate.DoesNotExist:
-                        shipping_cost = Decimal('25.00')  # Default shipping cost
-                    
-                    # Calculate tax (15% VAT in Saudi Arabia)
-                    tax_rate = Decimal('0.15')
-                    tax_amount = (items_total + shipping_cost - discount_amount) * tax_rate
-                    
-                    grand_total = items_total + shipping_cost + tax_amount - discount_amount
-                    
-                    # Update checkout data
-                    checkout_data.update({
-                        'contact_name': contact_name,
-                        'mobile_number': mobile_number,
-                        'city_id': city_id,
-                        'city_name': city.name,
-                        'city_area_id': city_area_id,
-                        'city_area_name': city_area.name if city_area else '',
-                        'address': address,
-                        'landmark': landmark,
-                        'comments': comments,
-                        'shipping_cost': str(shipping_cost),
-                        'tax_amount': str(tax_amount),
-                        'grand_total': str(grand_total),
-                    })
-                    request.session['checkout_data'] = checkout_data
-                    
-                    return redirect('parts:checkout_step3')
-                    
-                except (SaudiCity.DoesNotExist, CityArea.DoesNotExist):
-                    messages.error(request, 'Invalid city or area selection.')
-        
-        context = {
-            'cart': cart,
-            'cities': cities,
-            'items_total': items_total,
-            'discount_amount': discount_amount,
-            'step': 2,
-            'title': 'Checkout - Shipping Information'
-        }
-        
-        return render(request, 'parts/checkout/step2_shipping_info.html', context)
-        
-    except Cart.DoesNotExist:
-        messages.warning(request, 'Your cart is empty.')
-        return redirect('parts:cart_view')
+                    shipping_rate = ShippingRate.objects.get(city=city, is_active=True)
+                    shipping_cost = shipping_rate.calculate_shipping_cost(items_total)
+                except ShippingRate.DoesNotExist:
+                    shipping_cost = Decimal('25.00')  # Default shipping cost
+                
+                # Calculate tax (15% VAT in Saudi Arabia)
+                tax_rate = Decimal('0.15')
+                tax_amount = (items_total + shipping_cost - discount_amount) * tax_rate
+                
+                grand_total = items_total + shipping_cost + tax_amount - discount_amount
+                
+                # Update checkout data
+                checkout_data.update({
+                    'contact_name': contact_name,
+                    'mobile_number': mobile_number,
+                    'email': email,
+                    'city_id': city_id,
+                    'city_name': city.name,
+                    'city_area_id': city_area_id,
+                    'city_area_name': city_area.name if city_area else '',
+                    'address': full_address,
+                    'landmark': landmark,
+                    'comments': comments,
+                    'shipping_cost': str(shipping_cost),
+                    'tax_amount': str(tax_amount),
+                    'grand_total': str(grand_total),
+                })
+                request.session['checkout_data'] = checkout_data
+                
+                return redirect('parts:checkout_step3')
+                
+            except (SaudiCity.DoesNotExist, CityArea.DoesNotExist):
+                messages.error(request, 'Invalid city or area selection.')
+    
+    # Get city areas for each city to populate the area dropdown
+    city_areas = {}
+    for city in cities:
+        areas = CityArea.objects.filter(city=city, is_active=True).order_by('name')
+        city_areas[city.id] = [{'id': area.id, 'name': area.name} for area in areas]
+    
+    context = {
+        'cart': cart,
+        'cities': cities,
+        'city_areas': city_areas,
+        'checkout_data': {
+            'items_total': str(items_total),
+            'discount_amount': str(discount_amount),
+            'grand_total': str(items_total - discount_amount),  # Simple total without shipping/tax for display
+        },
+        'step': 2,
+        'title': 'Checkout - Shipping Information'
+    }
+    
+    return render(request, 'parts/checkout/step2_shipping_info.html', context)
 
 
-@login_required
 def checkout_step3_payment_method(request):
     """Step 3: Payment Method - Select payment method and complete order."""
+    import logging
+    logger = logging.getLogger(__name__)
     
     # Check if previous steps are completed
     if 'checkout_data' not in request.session:
@@ -2778,17 +3158,37 @@ def checkout_step3_payment_method(request):
         return redirect('parts:checkout_step2')
     
     try:
-        cart = Cart.objects.get(user=request.user)
-        if not cart.items.exists():
-            messages.warning(request, 'Your cart is empty.')
-            return redirect('parts:cart_view')
+        # Handle both authenticated and guest users
+        # Check if this is a buy now order
+        buy_now_order = None
+        if checkout_data.get('buy_now_order_id'):
+            try:
+                buy_now_order = Order.objects.get(id=checkout_data['buy_now_order_id'])
+                # For buy now orders, we don't need a cart
+                cart = None
+            except Order.DoesNotExist:
+                messages.error(request, 'Order not found.')
+                return redirect('parts:cart_view')
+        else:
+            # Regular cart checkout flow
+            if request.user.is_authenticated:
+                cart = Cart.objects.get(user=request.user)
+                if not cart.items.exists():
+                    messages.warning(request, 'Your cart is empty.')
+                    return redirect('parts:cart_view')
+            else:
+                # Check guest cart
+                cart = get_cart(request)
+                if not cart:
+                    messages.warning(request, 'Your cart is empty.')
+                    return redirect('parts:cart_view')
         
         # Get totals from checkout data
         items_total = Decimal(checkout_data['items_total'])
-        shipping_cost = Decimal(checkout_data['shipping_cost'])
-        tax_amount = Decimal(checkout_data['tax_amount'])
+        shipping_cost = Decimal(checkout_data.get('shipping_cost', '0.00'))
+        tax_amount = Decimal(checkout_data.get('tax_amount', '0.00'))
         discount_amount = Decimal(checkout_data['discount_amount'])
-        grand_total = Decimal(checkout_data['grand_total'])
+        grand_total = items_total + shipping_cost + tax_amount - discount_amount
         
         if request.method == 'POST':
             payment_method = request.POST.get('payment_method')
@@ -2796,31 +3196,86 @@ def checkout_step3_payment_method(request):
             if payment_method in ['cash_on_delivery', 'bank_transfer']:
                 try:
                     with transaction.atomic():
-                        # Create order
-                        order = Order.objects.create(
-                            user=request.user,
-                            total_price=grand_total,
-                            shipping_cost=shipping_cost,
-                            tax_amount=tax_amount,
-                            status='pending',
-                            payment_method=payment_method,
-                            payment_status='pending' if payment_method == 'bank_transfer' else 'cash_on_delivery'
-                        )
+                        logger.info(f"Processing payment for order: buy_now_order={buy_now_order is not None}, payment_method={payment_method}")
                         
-                        # Create order items
-                        for cart_item in cart.items.all():
-                            OrderItem.objects.create(
-                                order=order,
-                                part=cart_item.part,
-                                quantity=cart_item.quantity,
-                                price=cart_item.part.price
-                            )
+                        # Handle buy now orders vs regular cart orders
+                        if buy_now_order:
+                            # Update existing buy now order
+                            order = buy_now_order
+                            order.payment_method = payment_method
+                            order.payment_status = 'pending'
+                            order.status = 'pending'
+                            order.shipping_cost = shipping_cost
+                            order.tax_amount = tax_amount
+                            order.total_price = grand_total
                             
-                            # Update part inventory
-                            cart_item.part.quantity -= cart_item.quantity
-                            cart_item.part.save()
+                            # Update customer info if authenticated
+                            if request.user.is_authenticated:
+                                order.customer = request.user
+                            
+                            order.save()
+                            logger.info(f"Updated buy now order: order_id={order.id}, payment_method={payment_method}")
+                        else:
+                            # Create new order for regular cart checkout
+                            order_data = {
+                                'total_price': grand_total,
+                                'shipping_cost': shipping_cost,
+                                'tax_amount': tax_amount,
+                                'status': 'pending',
+                                'payment_method': payment_method,
+                                'payment_status': 'pending'
+                            }
+                            
+                            # Set customer or guest information
+                            if request.user.is_authenticated:
+                                order_data['customer'] = request.user
+                            else:
+                                order_data['guest_name'] = checkout_data.get('contact_name', 'Guest Customer')
+                                order_data['guest_email'] = checkout_data.get('email', '')
+                                order_data['guest_phone'] = checkout_data.get('mobile_number', '')
+                                order_data['guest_address'] = checkout_data.get('address', '')
+                            
+                            # Create the order
+                            order = Order.objects.create(**order_data)
                         
-                        # Create shipping information
+                        # Create order items (only for regular cart orders)
+                        if not buy_now_order:
+                            if request.user.is_authenticated:
+                                # Database cart for authenticated users
+                                for cart_item in cart.items.all():
+                                    OrderItem.objects.create(
+                                        order=order,
+                                        part=cart_item.part,
+                                        quantity=cart_item.quantity,
+                                        price=cart_item.part.price
+                                    )
+                                    
+                                    # Update part inventory
+                                    cart_item.part.quantity -= cart_item.quantity
+                                    cart_item.part.save()
+                            else:
+                                # Session cart for guest users
+                                for part_id, item_data in cart.items():
+                                    try:
+                                        part = Part.objects.get(id=part_id, is_active=True)
+                                        quantity = item_data['quantity']
+                                        
+                                        # Create order item
+                                        OrderItem.objects.create(
+                                            order=order,
+                                            part=part,
+                                            quantity=quantity,
+                                            price=part.price
+                                        )
+                                        
+                                        # Update part inventory
+                                        part.quantity -= quantity
+                                        part.save()
+                                    except Part.DoesNotExist:
+                                        logger.warning(f"Part {part_id} not found for guest cart item")
+                                        continue
+                        
+                        # Create shipping information (for both buy now and regular orders)
                         city = SaudiCity.objects.get(id=checkout_data['city_id'])
                         city_area = None
                         if checkout_data.get('city_area_id'):
@@ -2850,20 +3305,34 @@ def checkout_step3_payment_method(request):
                             discount_code.used_count += 1
                             discount_code.save()
                         
-                        # Clear cart and session data
-                        cart.clear()
+                        # Clear cart and session data for regular orders only
+                        if not buy_now_order:
+                            if request.user.is_authenticated and cart:
+                                # Clear database cart for authenticated users
+                                cart.clear()
+                            elif not request.user.is_authenticated:
+                                # Clear session cart for guest users
+                                if 'cart' in request.session:
+                                    del request.session['cart']
+                                    request.session.modified = True
+                        
+                        # Clear checkout session data
                         if 'checkout_data' in request.session:
                             del request.session['checkout_data']
                         if 'applied_discount_code' in request.session:
                             del request.session['applied_discount_code']
                         
+                        logger.info(f"Order completed successfully: order_id={order.id}, order_number={order.order_number}")
                         messages.success(request, f'Order #{order.order_number} placed successfully!')
                         return redirect('parts:order_confirmation', order_number=order.order_number)
                         
                 except Exception as e:
+                    logger.error(f"Order processing failed: {str(e)}", exc_info=True)
                     messages.error(request, f'Error processing order: {str(e)}')
+                    return redirect('parts:checkout_step3')
             else:
                 messages.error(request, 'Please select a valid payment method.')
+                return redirect('parts:checkout_step3')
         
         context = {
             'cart': cart,
@@ -2884,18 +3353,27 @@ def checkout_step3_payment_method(request):
         return redirect('parts:cart_view')
 
 
-@login_required
 def order_confirmation(request, order_number):
-    """Order confirmation page."""
+    """Order confirmation page for both authenticated and guest users."""
     try:
-        order = Order.objects.get(order_number=order_number, customer=request.user)
+        if request.user.is_authenticated:
+            order = Order.objects.get(order_number=order_number, customer=request.user)
+        else:
+            # For guest users, check if the order was created in this session
+            order = Order.objects.get(order_number=order_number)
+            # Additional security: check if order was created recently and matches session
+            if not order.guest_email or order.created_at < timezone.now() - timedelta(hours=24):
+                messages.error(request, 'Order not found or access denied.')
+                return redirect('parts:cart_view')
         
         context = {
-            'order': order,
+            'order_number': order.order_number,
+            'email': order.customer_email if order.customer_email else order.guest_email,
+            'total': order.total_price,
             'title': f'Order Confirmation - {order.order_number}'
         }
         
-        return render(request, 'parts/checkout/order_confirmation.html', context)
+        return render(request, 'parts/order_confirmation.html', context)
         
     except Order.DoesNotExist:
         messages.error(request, 'Order not found.')
@@ -2985,9 +3463,9 @@ class MyOrdersView(LoginRequiredMixin, ListView):
         ).select_related(
             'customer', 'shipping_info'
         ).prefetch_related(
-            'order_items__part',
-            'order_items__part__brand',
-            'order_items__part__category',
+            'items__part',
+            'items__part__brand',
+            'items__part__category',
             'status_history'
         ).order_by('-created_at')
     
@@ -3071,7 +3549,7 @@ class OrderDetailView(LoginRequiredMixin, DetailView):
         user = self.request.user
         if user.role == UserRole.SELLER:
             # Check if this dealer has any parts in this order
-            dealer_parts_in_order = order.order_items.filter(part__dealer=user).exists()
+            dealer_parts_in_order = order.items.filter(part__dealer=user).exists()
             if not dealer_parts_in_order and order.user != user:
                 raise PermissionDenied("You don't have permission to view this order.")
         
@@ -3082,11 +3560,11 @@ class OrderDetailView(LoginRequiredMixin, DetailView):
         context['title'] = f'Order #{self.object.order_number}'
         
         # Get order items with related data
-        context['order_items'] = self.object.order_items.select_related(
+        context['order_items'] = self.object.items.select_related(
             'part', 'part__brand', 'part__category'
         )
         
         # Get status history
-        context['status_history'] = self.object.status_history.order_by('-created_at')
+        context['status_history'] = self.object.status_history.order_by('-timestamp')
         
         return context

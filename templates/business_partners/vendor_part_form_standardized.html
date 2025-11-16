@@ -1,0 +1,417 @@
+{% extends 'business_partners/vendor_layout_standard.html' %}
+{% load static %}
+
+{% block title %}{{ action }} Part - {{ vendor_profile.business_partner.company_name }}{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="ym-breadcrumb-item"><a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-breadcrumb-link">Dashboard</a></li>
+    <li class="ym-breadcrumb-item"><a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-breadcrumb-link">My Parts</a></li>
+    <li class="ym-breadcrumb-item ym-active">{{ action }} Part</li>
+{% endblock %}
+
+{% block page_header_actions %}
+    <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-btn ym-btn-outline-secondary ym-btn-sm">
+        <i class="fas fa-arrow-left"></i> Back to Parts
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="ym-card">
+    <div class="ym-card-header">
+        <h4 class="ym-mb-0">{{ action }} Part</h4>
+        <p class="ym-text-muted ym-mb-0">{{ action|lower }} your part information</p>
+    </div>
+    <div class="ym-card-body">
+        <form method="post" enctype="multipart/form-data" class="ym-form ym-form-validation" id="partForm">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="ym-alert ym-alert-danger ym-mb-4">
+                <div class="ym-alert-content">
+                    <h6 class="ym-alert-title">Please correct the errors below:</h6>
+                    <ul class="ym-mb-0">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ field|title }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="ym-row">
+                <!-- Basic Information -->
+                <div class="ym-col-lg-6">
+                    <div class="ym-card ym-border-light">
+                        <div class="ym-card-header">
+                            <h6 class="ym-mb-0">Basic Information</h6>
+                        </div>
+                        <div class="ym-card-body">
+                            <div class="ym-form-group">
+                                <label for="{{ form.parts_number.id_for_label }}" class="ym-form-label">
+                                    Part Number <span class="ym-text-danger">*</span>
+                                </label>
+                                {{ form.parts_number }}
+                                {% if form.parts_number.errors %}
+                                    <div class="ym-form-error">{{ form.parts_number.errors.0 }}</div>
+                                {% endif %}
+                                <div class="ym-form-text">Unique part identifier</div>
+                            </div>
+                            
+                            <div class="ym-form-group">
+                                <label for="{{ form.description.id_for_label }}" class="ym-form-label">
+                                    Description <span class="ym-text-danger">*</span>
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="ym-form-error">{{ form.description.errors.0 }}</div>
+                                {% endif %}
+                                <div class="ym-form-text">Detailed part description</div>
+                            </div>
+                            
+                            <div class="ym-form-group">
+                                <label for="{{ form.category.id_for_label }}" class="ym-form-label">
+                                    Category <span class="ym-text-danger">*</span>
+                                </label>
+                                {{ form.category }}
+                                {% if form.category.errors %}
+                                    <div class="ym-form-error">{{ form.category.errors.0 }}</div>
+                                {% endif %}
+                                <div class="ym-form-text">Part category</div>
+                            </div>
+                            
+                            <div class="ym-form-group">
+                                <label for="{{ form.brand.id_for_label }}" class="ym-form-label">
+                                    Brand <span class="ym-text-danger">*</span>
+                                </label>
+                                {{ form.brand }}
+                                {% if form.brand.errors %}
+                                    <div class="ym-form-error">{{ form.brand.errors.0 }}</div>
+                                {% endif %}
+                                <div class="ym-form-text">Part brand or manufacturer</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pricing and Inventory -->
+                <div class="ym-col-lg-6">
+                    <div class="ym-card ym-border-light">
+                        <div class="ym-card-header">
+                            <h6 class="ym-mb-0">Pricing and Inventory</h6>
+                        </div>
+                        <div class="ym-card-body">
+                            <div class="ym-form-group">
+                                <label for="{{ form.price.id_for_label }}" class="ym-form-label">
+                                    Price <span class="ym-text-danger">*</span>
+                                </label>
+                                {{ form.price }}
+                                {% if form.price.errors %}
+                                    <div class="ym-form-error">{{ form.price.errors.0 }}</div>
+                                {% endif %}
+                                <div class="ym-form-text">Unit price in USD</div>
+                            </div>
+                            
+                            <div class="ym-form-group">
+                                <label for="{{ form.quantity.id_for_label }}" class="ym-form-label">
+                                    Quantity <span class="ym-text-danger">*</span>
+                                </label>
+                                {{ form.quantity }}
+                                {% if form.quantity.errors %}
+                                    <div class="ym-form-error">{{ form.quantity.errors.0 }}</div>
+                                {% endif %}
+                                <div class="ym-form-text">Current stock quantity</div>
+                            </div>
+                            
+                            <div class="ym-form-group">
+                                <label for="{{ form.safety_stock.id_for_label }}" class="ym-form-label">
+                                    Safety Stock
+                                </label>
+                                {{ form.safety_stock }}
+                                {% if form.safety_stock.errors %}
+                                    <div class="ym-form-error">{{ form.safety_stock.errors.0 }}</div>
+                                {% endif %}
+                                <div class="ym-form-text">Minimum stock level before reorder</div>
+                            </div>
+                            
+                            <div class="ym-form-group">
+                                <label for="{{ form.reorder_point.id_for_label }}" class="ym-form-label">
+                                    Reorder Point
+                                </label>
+                                {{ form.reorder_point }}
+                                {% if form.reorder_point.errors %}
+                                    <div class="ym-form-error">{{ form.reorder_point.errors.0 }}</div>
+                                {% endif %}
+                                <div class="ym-form-text">Stock level that triggers reorder</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Additional Fields -->
+            <div class="ym-row">
+                <div class="ym-col-lg-6">
+                    <div class="ym-card ym-border-light">
+                        <div class="ym-card-header">
+                            <h6 class="ym-mb-0">Additional Details</h6>
+                        </div>
+                        <div class="ym-card-body">
+                            <div class="ym-form-group">
+                                <label for="{{ form.material_group.id_for_label }}" class="ym-form-label">
+                                    Material Group
+                                </label>
+                                {{ form.material_group }}
+                                {% if form.material_group.errors %}
+                                    <div class="ym-form-error">{{ form.material_group.errors.0 }}</div>
+                                {% endif %}
+                                <div class="ym-form-text">Material classification group</div>
+                            </div>
+                            
+                            <div class="ym-form-group">
+                                <label for="{{ form.abc_indicator.id_for_label }}" class="ym-form-label">
+                                    ABC Indicator
+                                </label>
+                                {{ form.abc_indicator }}
+                                {% if form.abc_indicator.errors %}
+                                    <div class="ym-form-error">{{ form.abc_indicator.errors.0 }}</div>
+                                {% endif %}
+                                <div class="ym-form-text">ABC classification (A=High value, C=Low value)</div>
+                            </div>
+                            
+                            <div class="ym-form-group">
+                                <label for="{{ form.unit_of_measure.id_for_label }}" class="ym-form-label">
+                                    Unit of Measure
+                                </label>
+                                {{ form.unit_of_measure }}
+                                {% if form.unit_of_measure.errors %}
+                                    <div class="ym-form-error">{{ form.unit_of_measure.errors.0 }}</div>
+                                {% endif %}
+                                <div class="ym-form-text">Unit of measurement (EA, KG, etc.)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ym-col-lg-6">
+                    <div class="ym-card ym-border-light">
+                        <div class="ym-card-header">
+                            <h6 class="ym-mb-0">Status and Settings</h6>
+                        </div>
+                        <div class="ym-card-body">
+                            <div class="ym-form-group">
+                                <div class="ym-form-check">
+                                    {{ form.is_active }}
+                                    <label for="{{ form.is_active.id_for_label }}" class="ym-form-check-label">
+                                        Active
+                                    </label>
+                                </div>
+                                <div class="ym-form-text">Make part available for sale</div>
+                            </div>
+                            
+                            <div class="ym-form-group">
+                                <div class="ym-form-check">
+                                    {{ form.is_featured }}
+                                    <label for="{{ form.is_featured.id_for_label }}" class="ym-form-check-label">
+                                        Featured
+                                    </label>
+                                </div>
+                                <div class="ym-form-text">Highlight this part in listings</div>
+                            </div>
+                            
+                            <div class="ym-form-group">
+                                <label for="{{ form.image.id_for_label }}" class="ym-form-label">
+                                    Part Image
+                                </label>
+                                {{ form.image }}
+                                {% if form.image.errors %}
+                                    <div class="ym-form-error">{{ form.image.errors.0 }}</div>
+                                {% endif %}
+                                <div class="ym-form-text">Upload part image (optional)</div>
+                                {% if part and part.image %}
+                                    <div class="ym-mt-2">
+                                        <img src="{{ part.image.url }}" alt="Current part image" class="ym-img-thumbnail" style="max-width: 150px;">
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="ym-form-actions">
+                <button type="submit" class="ym-btn ym-btn-primary" id="submitBtn">
+                    <i class="fas fa-save"></i> {{ action }} Part
+                </button>
+                <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-btn ym-btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Form validation and submission handling
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('partForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Real-time validation
+    const requiredFields = form.querySelectorAll('[required]');
+    requiredFields.forEach(field => {
+        field.addEventListener('blur', function() {
+            validateField(this);
+        });
+        
+        field.addEventListener('input', function() {
+            clearFieldError(this);
+        });
+    });
+    
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (validateForm()) {
+            // Show loading state
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            submitBtn.disabled = true;
+            
+            // Submit form
+            this.submit();
+        }
+    });
+    
+    // Field validation functions
+    function validateField(field) {
+        const value = field.value.trim();
+        let isValid = true;
+        let errorMessage = '';
+        
+        // Required field validation
+        if (field.hasAttribute('required') && !value) {
+            isValid = false;
+            errorMessage = 'This field is required.';
+        }
+        
+        // Part number validation
+        if (field.name === 'parts_number' && value) {
+            if (value.length < 3) {
+                isValid = false;
+                errorMessage = 'Part number must be at least 3 characters.';
+            }
+        }
+        
+        // Price validation
+        if (field.name === 'price' && value) {
+            const price = parseFloat(value);
+            if (isNaN(price) || price < 0) {
+                isValid = false;
+                errorMessage = 'Price must be a positive number.';
+            }
+        }
+        
+        // Quantity validation
+        if (field.name === 'quantity' && value) {
+            const quantity = parseInt(value);
+            if (isNaN(quantity) || quantity < 0) {
+                isValid = false;
+                errorMessage = 'Quantity must be a non-negative integer.';
+            }
+        }
+        
+        // Safety stock validation
+        if (field.name === 'safety_stock' && value) {
+            const safetyStock = parseInt(value);
+            if (isNaN(safetyStock) || safetyStock < 0) {
+                isValid = false;
+                errorMessage = 'Safety stock must be a non-negative integer.';
+            }
+        }
+        
+        if (!isValid) {
+            showFieldError(field, errorMessage);
+        } else {
+            clearFieldError(field);
+        }
+        
+        return isValid;
+    }
+    
+    function validateForm() {
+        let isValid = true;
+        const requiredFields = form.querySelectorAll('[required]');
+        
+        requiredFields.forEach(field => {
+            if (!validateField(field)) {
+                isValid = false;
+            }
+        });
+        
+        // Cross-field validation
+        const price = parseFloat(form.querySelector('[name="price"]').value) || 0;
+        const quantity = parseInt(form.querySelector('[name="quantity"]').value) || 0;
+        
+        if (price > 0 && quantity === 0) {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show('Warning: Part has price but zero quantity. Are you sure?', 'warning');
+            }
+        }
+        
+        return isValid;
+    }
+    
+    function showFieldError(field, message) {
+        clearFieldError(field);
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'ym-form-error';
+        errorDiv.textContent = message;
+        
+        field.parentNode.appendChild(errorDiv);
+        field.classList.add('ym-form-control-error');
+    }
+    
+    function clearFieldError(field) {
+        const existingError = field.parentNode.querySelector('.ym-form-error');
+        if (existingError) {
+            existingError.remove();
+        }
+        field.classList.remove('ym-form-control-error');
+    }
+    
+    // Auto-save functionality
+    let autoSaveTimeout;
+    const autoSaveFields = form.querySelectorAll('input[type="text"], input[type="number"], textarea');
+    
+    autoSaveFields.forEach(field => {
+        field.addEventListener('input', function() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                if (window.VendorSystem && window.VendorSystem.analytics) {
+                    window.VendorSystem.analytics.track('form_auto_save', {
+                        form_id: 'partForm',
+                        field_name: field.name,
+                        action: '{{ action|lower }}'
+                    });
+                }
+            }, 5000); // Auto-save after 5 seconds of inactivity
+        });
+    });
+    
+    // Track form interaction
+    if (window.VendorSystem && window.VendorSystem.analytics) {
+        window.VendorSystem.analytics.track('form_viewed', {
+            form_id: 'partForm',
+            action: '{{ action|lower }}',
+            page: 'part_form'
+        });
+    }
+});
+</script>
+{% endblock %}

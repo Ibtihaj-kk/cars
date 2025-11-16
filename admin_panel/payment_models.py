@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from decimal import Decimal
@@ -32,7 +32,7 @@ class CommissionType(models.TextChoices):
 class VendorPayment(models.Model):
     """Model for tracking vendor payments and commissions."""
     
-    vendor = models.ForeignKey('vendors.Vendor', on_delete=models.CASCADE, related_name='payments')
+    vendor = models.ForeignKey('business_partners.BusinessPartner', on_delete=models.CASCADE, related_name='payments')
     payment_reference = models.CharField(max_length=100, unique=True)
     
     # Payment details
@@ -49,7 +49,7 @@ class VendorPayment(models.Model):
     status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING)
     
     # Related listings (for commission calculation)
-    related_listings = models.ManyToManyField('listings.Listing', blank=True, related_name='payments')
+    related_listings = models.ManyToManyField('listings.VehicleListing', blank=True, related_name='payments')
     
     # Payment dates
     payment_date = models.DateTimeField(null=True, blank=True)
@@ -64,7 +64,7 @@ class VendorPayment(models.Model):
     # System fields
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     
     class Meta:
         ordering = ['-created_at']
@@ -106,7 +106,7 @@ class CommissionRule(models.Model):
     # Applicability
     is_active = models.BooleanField(default=True)
     applies_to_all_vendors = models.BooleanField(default=True)
-    specific_vendors = models.ManyToManyField('vendors.Vendor', blank=True, related_name='commission_rules')
+    specific_vendors = models.ManyToManyField('business_partners.BusinessPartner', blank=True, related_name='commission_rules')
     
     # Date range
     effective_from = models.DateField(default=timezone.now)
@@ -114,7 +114,7 @@ class CommissionRule(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     
     class Meta:
         ordering = ['-created_at']
@@ -151,7 +151,7 @@ class PaymentBatch(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     
     class Meta:
         ordering = ['-created_at']
@@ -180,7 +180,7 @@ class PaymentHistory(models.Model):
     
     # Additional information
     notes = models.TextField(blank=True)
-    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -195,7 +195,7 @@ class PaymentHistory(models.Model):
 class VendorBalance(models.Model):
     """Model for tracking vendor account balances."""
     
-    vendor = models.OneToOneField('vendors.Vendor', on_delete=models.CASCADE, related_name='balance')
+    vendor = models.OneToOneField('business_partners.BusinessPartner', on_delete=models.CASCADE, related_name='balance')
     
     # Current balance
     current_balance = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))

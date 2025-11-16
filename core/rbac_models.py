@@ -22,7 +22,8 @@ class Permission(models.Model):
         on_delete=models.CASCADE, 
         null=True, 
         blank=True,
-        help_text="Associated Django model (optional)"
+        help_text="Associated Django model (optional)",
+        related_name='core_permissions'
     )
     module = models.CharField(
         max_length=50,

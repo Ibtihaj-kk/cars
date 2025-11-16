@@ -8,7 +8,7 @@
 <style>
 .parts-container {
     max-width: 1400px;
-    margin: 0 auto;
+    margin: 100px auto;
     padding: 20px;
 }
 
@@ -292,20 +292,7 @@
 {% block content %}
 <div class="parts-container">
     <!-- Search Bar Only -->
-    <div class="search-sort-bar">
-        <form method="GET" class="row g-3 align-items-end">
-            <div class="col-md-12">
-                <label for="search" class="form-label">Search Parts</label>
-                <input type="text" class="form-control" id="search" name="search" 
-                       value="{{ request.GET.search }}" placeholder="Search by name, description, or brand..."
-                       hx-get="{% url 'parts:part_list' %}"
-                       hx-target="#parts-results"
-                       hx-trigger="keyup changed delay:500ms"
-                       hx-indicator="#loading-indicator"
-                       hx-include="#filterForm">
-            </div>
-        </form>
-    </div>
+
 
     <!-- Note: Vehicle Compatibility Filter -->
     <!-- TODO: Vehicle compatibility filter is not yet implemented in the Part model. -->

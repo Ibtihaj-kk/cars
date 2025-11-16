@@ -443,8 +443,9 @@ AXES_ENABLE_ACCESS_FAILURE_LOG = False
 AXES_NEVER_LOCKOUT_WHITELIST = True
 AXES_NEVER_LOCKOUT_GET = True
 
-# Authentication backends - Temporarily removed Axes backend to resolve session_hash issue
+# Authentication backends - Updated to use AxesStandaloneBackend
 AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 

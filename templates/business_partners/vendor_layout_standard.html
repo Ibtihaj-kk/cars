@@ -1,0 +1,422 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="ym-font-sans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% block page_description %}Cars Portal Vendor Portal - Manage your inventory, orders, and business operations{% endblock %}">
+    
+    <title>{% block page_title %}Cars Portal Vendor Portal{% endblock %}</title>
+    
+    <!-- Standardized CSS -->
+    <link rel="stylesheet" href="{% static 'css/vendor-design-system.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-responsive.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-interactive.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-loading-states.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-compatibility.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-accessibility.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-buttons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-forms.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-navigation.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-header-footer.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-cards.css' %}">
+    
+    {% block extra_css %}{% endblock %}
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
+    
+    <!-- Preload critical fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="ym-bg-gray-50 ym-text-gray-900">
+    <!-- Skip to main content link for accessibility -->
+    <a href="#main-content" class="ym-skip-link">Skip to main content</a>
+    
+    <!-- Loading overlay -->
+    <div id="global-loading-overlay" class="ym-loading-overlay ym-hidden" role="status" aria-live="polite">
+        <div class="ym-loading-overlay-content">
+            <div class="ym-spinner ym-spinner-lg ym-spinner-primary" aria-hidden="true"></div>
+            <p class="ym-loading-overlay-text">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation Overlay -->
+    <div id="mobile-nav-overlay" class="ym-mobile-nav-overlay ym-hidden" aria-hidden="true"></div>
+
+    <!-- Standardized Vendor Header -->
+    <header class="ym-vendor-header" role="banner">
+        <div class="ym-container ym-mx-auto ym-px-4">
+            <div class="ym-header-content">
+                <!-- Logo and Brand -->
+                <div class="ym-header-brand">
+                    <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-brand-link" aria-label="Cars Portal Vendor Portal Home">
+                        <img src="{% static 'images/logos/cars-portal-logo.png' %}" alt="Cars Portal" class="ym-brand-logo">
+                        <span class="ym-brand-text">Vendor Portal</span>
+                    </a>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <nav class="ym-desktop-nav" role="navigation" aria-label="Main navigation">
+                    <ul class="ym-nav-list">
+                        <li class="ym-nav-item">
+                            <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-nav-link {% if request.resolver_match.url_name == 'vendor_dashboard' %}ym-active{% endif %}">
+                                <span class="ym-nav-icon">📊</span>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="ym-nav-item">
+                            <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-nav-link {% if 'parts' in request.path %}ym-active{% endif %}">
+                                <span class="ym-nav-icon">🔧</span>
+                                Parts
+                            </a>
+                        </li>
+                        <li class="ym-nav-item">
+                            <a href="{% url 'business_partners:vendor_orders_list' %}" class="ym-nav-link {% if 'orders' in request.path %}ym-active{% endif %}">
+                                <span class="ym-nav-icon">📦</span>
+                                Orders
+                            </a>
+                        </li>
+                        <li class="ym-nav-item">
+                            <a href="{% url 'business_partners:vendor_inventory_list' %}" class="ym-nav-link {% if 'inventory' in request.path %}ym-active{% endif %}">
+                                <span class="ym-nav-icon">📋</span>
+                                Inventory
+                            </a>
+                        </li>
+                        <li class="ym-nav-item">
+                            <a href="{% url 'business_partners:vendor_order_analytics' %}" class="ym-nav-link {% if 'analytics' in request.path %}ym-active{% endif %}">
+                                <span class="ym-nav-icon">📈</span>
+                                Analytics
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+
+                <!-- User Menu -->
+                <div class="ym-header-user-menu">
+                    <div class="ym-user-dropdown">
+                        <button class="ym-user-dropdown-trigger" 
+                                aria-expanded="false" 
+                                aria-haspopup="true"
+                                aria-label="User menu">
+                            <span class="ym-user-avatar">👤</span>
+                            <span class="ym-user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+                            <span class="ym-user-dropdown-icon">▼</span>
+                        </button>
+                        
+                        <div class="ym-user-dropdown-menu" role="menu" aria-hidden="true">
+                            <a href="{% url 'business_partners:vendor_profile_settings' %}" class="ym-user-dropdown-item" role="menuitem">
+                                <span class="ym-user-dropdown-icon">⚙️</span>
+                                Profile Settings
+                            </a>
+                            <a href="{% url 'business_partners:vendor_2fa_setup' %}" class="ym-user-dropdown-item" role="menuitem">
+                                <span class="ym-user-dropdown-icon">🔐</span>
+                                Security
+                            </a>
+                            <div class="ym-user-dropdown-divider"></div>
+                            <form method="post" action="{% url 'business_partners:vendor_logout' %}" class="ym-logout-form">
+                                {% csrf_token %}
+                                <button type="submit" class="ym-user-dropdown-item ym-logout-button" role="menuitem">
+                                    <span class="ym-user-dropdown-icon">🚪</span>
+                                    Logout
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile Menu Toggle -->
+                <button class="ym-mobile-menu-toggle" 
+                        aria-label="Toggle mobile menu"
+                        aria-expanded="false"
+                        aria-controls="mobile-nav">
+                    <span class="ym-mobile-menu-icon"></span>
+                    <span class="ym-mobile-menu-icon"></span>
+                    <span class="ym-mobile-menu-icon"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <nav id="mobile-nav" class="ym-mobile-nav" role="navigation" aria-label="Mobile navigation" aria-hidden="true">
+        <div class="ym-mobile-nav-header">
+            <h3 class="ym-mobile-nav-title">Menu</h3>
+            <button class="ym-mobile-nav-close" aria-label="Close mobile menu">✕</button>
+        </div>
+        <ul class="ym-mobile-nav-list">
+            <li class="ym-mobile-nav-item">
+                <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-mobile-nav-link {% if request.resolver_match.url_name == 'vendor_dashboard' %}ym-active{% endif %}">
+                    <span class="ym-mobile-nav-icon">📊</span>
+                    Dashboard
+                </a>
+            </li>
+            <li class="ym-mobile-nav-item">
+                <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-mobile-nav-link {% if 'parts' in request.path %}ym-active{% endif %}">
+                    <span class="ym-mobile-nav-icon">🔧</span>
+                    Parts
+                </a>
+            </li>
+            <li class="ym-mobile-nav-item">
+                <a href="{% url 'business_partners:vendor_orders_list' %}" class="ym-mobile-nav-link {% if 'orders' in request.path %}ym-active{% endif %}">
+                    <span class="ym-mobile-nav-icon">📦</span>
+                    Orders
+                </a>
+            </li>
+            <li class="ym-mobile-nav-item">
+                <a href="{% url 'business_partners:vendor_inventory_list' %}" class="ym-mobile-nav-link {% if 'inventory' in request.path %}ym-active{% endif %}">
+                    <span class="ym-mobile-nav-icon">📋</span>
+                    Inventory
+                </a>
+            </li>
+            <li class="ym-mobile-nav-item">
+                <a href="{% url 'business_partners:vendor_order_analytics' %}" class="ym-mobile-nav-link {% if 'analytics' in request.path %}ym-active{% endif %}">
+                    <span class="ym-mobile-nav-icon">📈</span>
+                    Analytics
+                </a>
+            </li>
+        </ul>
+        <div class="ym-mobile-nav-footer">
+            <a href="{% url 'business_partners:vendor_profile_settings' %}" class="ym-mobile-nav-link">
+                <span class="ym-mobile-nav-icon">⚙️</span>
+                Profile Settings
+            </a>
+            <form method="post" action="{% url 'business_partners:vendor_logout' %}" class="ym-logout-form">
+                {% csrf_token %}
+                <button type="submit" class="ym-mobile-nav-link ym-logout-button">
+                    <span class="ym-mobile-nav-icon">🚪</span>
+                    Logout
+                </button>
+            </form>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb Navigation -->
+    <nav class="ym-breadcrumb" aria-label="Breadcrumb">
+        <div class="ym-container ym-mx-auto ym-px-4">
+            <ol class="ym-breadcrumb-list" itemscope itemtype="https://schema.org/BreadcrumbList">
+                <li class="ym-breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                    <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-breadcrumb-link" itemprop="item">
+                        <span itemprop="name">Dashboard</span>
+                    </a>
+                    <meta itemprop="position" content="1">
+                </li>
+                {% block breadcrumb_items %}{% endblock %}
+            </ol>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="main-content" class="ym-main-content" role="main">
+        <!-- Page Header -->
+        <div class="ym-page-header">
+            <div class="ym-container ym-mx-auto ym-px-4">
+                <div class="ym-page-header-content">
+                    <div class="ym-page-header-text">
+                        <h1 class="ym-page-title">{% block page_header_title %}Vendor Portal{% endblock %}</h1>
+                        {% if page_header_subtitle %}
+                        <p class="ym-page-subtitle">{{ page_header_subtitle }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="ym-page-header-actions">
+                        {% block page_header_actions %}{% endblock %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="ym-content-area">
+            <div class="ym-container ym-mx-auto ym-px-4">
+                <!-- Success/Error Messages -->
+                {% if messages %}
+                <div class="ym-messages-container" role="alert" aria-live="polite">
+                    {% for message in messages %}
+                    <div class="ym-message ym-message-{{ message.tags }}" data-message-type="{{ message.tags }}">
+                        <div class="ym-message-content">
+                            <span class="ym-message-icon">
+                                {% if message.tags == 'success' %}✅{% elif message.tags == 'error' %}❌{% elif message.tags == 'warning' %}⚠️{% else %}ℹ️{% endif %}
+                            </span>
+                            <span class="ym-message-text">{{ message }}</span>
+                        </div>
+                        <button class="ym-message-close" aria-label="Close message">✕</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Page Content -->
+                <div class="ym-page-content">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="ym-vendor-footer" role="contentinfo">
+        <div class="ym-container ym-mx-auto ym-px-4">
+            <div class="ym-footer-content">
+                <div class="ym-footer-section">
+                    <h3 class="ym-footer-title">Support</h3>
+                    <ul class="ym-footer-links">
+                        <li><a href="#" class="ym-footer-link">Help Center</a></li>
+                        <li><a href="#" class="ym-footer-link">Contact Support</a></li>
+                        <li><a href="#" class="ym-footer-link">Documentation</a></li>
+                    </ul>
+                </div>
+                <div class="ym-footer-section">
+                    <h3 class="ym-footer-title">Account</h3>
+                    <ul class="ym-footer-links">
+                        <li><a href="#" class="ym-footer-link">Profile Settings</a></li>
+                        <li><a href="#" class="ym-footer-link">Billing</a></li>
+                        <li><a href="#" class="ym-footer-link">API Keys</a></li>
+                    </ul>
+                </div>
+                <div class="ym-footer-section">
+                    <h3 class="ym-footer-title">Legal</h3>
+                    <ul class="ym-footer-links">
+                        <li><a href="#" class="ym-footer-link">Terms of Service</a></li>
+                        <li><a href="#" class="ym-footer-link">Privacy Policy</a></li>
+                        <li><a href="#" class="ym-footer-link">Cookie Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="ym-footer-bottom">
+                <p class="ym-footer-copyright">&copy; {% now "Y" %} Cars Portal. All rights reserved.</p>
+                <p class="ym-footer-version">Version 2.0</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Standardized JavaScript -->
+    <script src="{% static 'js/vendor-navigation.js' %}"></script>
+    <script src="{% static 'js/vendor-header-navigation.js' %}"></script>
+    <script src="{% static 'js/vendor-form-validation.js' %}"></script>
+    <script src="{% static 'js/vendor-utils.js' %}"></script>
+    
+    <!-- System Connector - Links all vendor pages together -->
+    <script src="{% static 'js/vendor-system-connector.js' %}"></script>
+    
+    <!-- Dashboard-specific fixes and enhancements -->
+    <script src="{% static 'js/vendor-dashboard-fixes.js' %}"></script>
+    <script src="{% static 'js/vendor-api-error-handler.js' %}"></script>
+    <script src="{% static 'js/vendor-performance-optimizer.js' %}"></script>
+    
+    <!-- Analytics System -->
+    <script src="{% static 'js/vendor-analytics.js' %}"></script>
+    
+    <!-- Global JavaScript Configuration -->
+    <script>
+        // Global configuration object
+        window.VendorPortal = {
+            config: {
+                apiBaseUrl: '{{ API_BASE_URL|default:"/api/vendors/" }}',
+                csrfToken: '{{ csrf_token }}',
+                userId: '{{ request.user.id|default:"" }}',
+                vendorId: '{{ request.user.vendor.id|default:"" }}',
+                debug: {{ DEBUG|default:"false"|lower }}
+            },
+            utils: {
+                showLoading: function(message = 'Loading...') {
+                    const overlay = document.getElementById('global-loading-overlay');
+                    const text = overlay.querySelector('.ym-loading-overlay-text');
+                    text.textContent = message;
+                    overlay.classList.remove('ym-hidden');
+                    document.body.style.overflow = 'hidden';
+                },
+                hideLoading: function() {
+                    const overlay = document.getElementById('global-loading-overlay');
+                    overlay.classList.add('ym-hidden');
+                    document.body.style.overflow = '';
+                },
+                showMessage: function(message, type = 'info') {
+                    const messageContainer = document.querySelector('.ym-messages-container') || createMessageContainer();
+                    const messageElement = createMessageElement(message, type);
+                    messageContainer.appendChild(messageElement);
+                    
+                    // Auto-remove after 5 seconds
+                    setTimeout(() => {
+                        messageElement.remove();
+                    }, 5000);
+                },
+                handleApiError: function(error) {
+                    console.error('API Error:', error);
+                    let message = 'An error occurred. Please try again.';
+                    
+                    if (error.response) {
+                        message = error.response.data?.message || message;
+                    } else if (error.request) {
+                        message = 'Network error. Please check your connection.';
+                    }
+                    
+                    this.showMessage(message, 'error');
+                }
+            }
+        };
+
+        // Create message container if it doesn't exist
+        function createMessageContainer() {
+            const container = document.createElement('div');
+            container.className = 'ym-messages-container';
+            container.setAttribute('role', 'alert');
+            container.setAttribute('aria-live', 'polite');
+            document.querySelector('.ym-page-content').prepend(container);
+            return container;
+        }
+
+        // Create message element
+        function createMessageElement(message, type) {
+            const element = document.createElement('div');
+            element.className = `ym-message ym-message-${type}`;
+            element.innerHTML = `
+                <div class="ym-message-content">
+                    <span class="ym-message-icon">${getMessageIcon(type)}</span>
+                    <span class="ym-message-text">${message}</span>
+                </div>
+                <button class="ym-message-close" aria-label="Close message">✕</button>
+            `;
+            
+            // Add close functionality
+            element.querySelector('.ym-message-close').addEventListener('click', () => {
+                element.remove();
+            });
+            
+            return element;
+        }
+
+        // Get message icon based on type
+        function getMessageIcon(type) {
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            return icons[type] || icons.info;
+        }
+
+        // Initialize message close buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            // Close message buttons
+            document.querySelectorAll('.ym-message-close').forEach(button => {
+                button.addEventListener('click', function() {
+                    this.closest('.ym-message').remove();
+                });
+            });
+
+            // Auto-remove messages after 5 seconds
+            setTimeout(() => {
+                document.querySelectorAll('.ym-message').forEach(message => {
+                    message.remove();
+                });
+            }, 5000);
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

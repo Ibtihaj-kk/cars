@@ -1,688 +1,1238 @@
-{% extends 'parts/base.html' %}
+{% extends "business_partners/vendor_base_modern.html" %}
 {% load static %}
 
-{% block title %}Vendor Dashboard - {{ vendor_profile.business_partner.company_name }}{% endblock %}
+{% block title %}Vendor Dashboard - Cars Portal{% endblock %}
+
+
+    {% csrf_token %}
 
 {% block extra_css %}
-<style>
-    .dashboard-card {
-        background: #fff;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        transition: transform 0.3s ease;
-    }
+    <link rel="stylesheet" href="{% static 'css/vendor-design-system.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-buttons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-dashboard-modern.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-dashboard-responsive.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-dashboard-animations.css' %}">
     
-    .dashboard-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    }
-    
-    .stat-card {
-        text-align: center;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-    
-    .stat-card.success-card {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    }
-    
-    .stat-card.danger-card {
-        background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
-        animation: pulse 2s infinite;
-    }
-    
-    .stat-card.info-card {
-        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-    }
-    
-    .stat-card.warning-card {
-        background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
-    }
-    
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.8; }
-        100% { opacity: 1; }
-    }
-    
-    .stat-number {
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-    }
-    
-    .stat-label {
-        font-size: 1rem;
-        opacity: 0.9;
-        margin: 0;
-    }
-    
-    .quick-action-btn {
-        display: block;
-        padding: 0.75rem 1rem;
-        margin-bottom: 0.5rem;
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
-        text-decoration: none;
-        color: #495057;
-        transition: all 0.3s ease;
-    }
-    
-    .quick-action-btn:hover {
-        background: #e9ecef;
-        border-color: #adb5bd;
-        color: #212529;
-        text-decoration: none;
-    }
-    
-    .recent-parts-table {
-        font-size: 0.9rem;
-    }
-    
-    .category-chart {
-        margin-top: 1rem;
-    }
-    
-    .category-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.75rem;
-        padding: 0.5rem;
-        background: #f8f9fa;
-        border-radius: 5px;
-    }
-    
-    .category-bar {
-        height: 6px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
-        border-radius: 3px;
-        margin-top: 0.25rem;
-    }
-    
-    .alert-card {
-        background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
-        border: 1px solid #fdcb6e;
-    }
-    
-    .recent-alerts {
-        max-height: 300px;
-        overflow-y: auto;
-    }
-    
-    .alert-item {
-        background: #f8f9fa;
-        border-radius: 5px;
-        padding: 0.75rem;
-        margin-bottom: 0.5rem;
-        transition: all 0.3s ease;
-        border-left: 4px solid transparent;
-    }
-    
-    .alert-item:hover {
-        background: #e9ecef;
-        transform: translateX(2px);
-    }
-    
-    .alert-item.priority-critical {
-        border-left-color: #dc3545 !important;
-    }
-    
-    .alert-item.priority-high {
-        border-left-color: #fd7e14 !important;
-    }
-    
-    .alert-item.priority-medium {
-        border-left-color: #ffc107 !important;
-    }
-    
-    .alert-item.priority-low {
-        border-left-color: #28a745 !important;
-    }
-
-    .alert-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-    }
-
-    .alert-details {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-    }
-
-    .alert-actions {
-        display: flex;
-        gap: 0.5rem;
-        margin-top: 8px;
-    }
-
-    .alert-actions .btn {
-        margin-right: 5px;
-        font-size: 0.75rem;
-        padding: 2px 6px;
-    }
-
-    /* Notification Toast Styles */
-    .notification-toast {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        padding: 16px;
-        min-width: 300px;
-        z-index: 1050;
-        transform: translateX(400px);
-        transition: transform 0.3s ease;
-        border-left: 4px solid #007bff;
-    }
-
-    .notification-toast.show {
-        transform: translateX(0);
-    }
-
-    .notification-toast.notification-success {
-        border-left-color: #28a745;
-    }
-
-    .notification-toast.notification-error {
-        border-left-color: #dc3545;
-    }
-
-    .notification-toast.notification-warning {
-        border-left-color: #ffc107;
-    }
-
-    .notification-content {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .notification-content i {
-        font-size: 1.2rem;
-    }
-
-    .notification-toast.notification-success .notification-content i {
-        color: #28a745;
-    }
-
-    .notification-toast.notification-error .notification-content i {
-        color: #dc3545;
-    }
-
-    .notification-toast.notification-warning .notification-content i {
-        color: #ffc107;
-    }
-
-    .notification-close {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        background: none;
-        border: none;
-        color: #6c757d;
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 4px;
-        transition: color 0.2s ease;
-    }
-
-    .notification-close:hover {
-        color: #343a40;
-    }
-
-    /* Auto-refresh toggle styling */
-    .auto-refresh-toggle {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 10;
-    }
-
-    .auto-refresh-toggle .form-check {
-        margin: 0;
-    }
-
-    .auto-refresh-toggle .form-check-input {
-        width: 36px;
-        height: 20px;
-        margin-top: 0;
-    }
-
-    .auto-refresh-toggle .form-check-label {
-        font-size: 0.8rem;
-        margin-left: 8px;
-        color: #6c757d;
-    }
-
-    /* Refresh indicator */
-    .refresh-indicator {
-        text-align: center;
-        padding: 20px;
-        color: #6c757d;
-        font-size: 0.9rem;
-    }
-
-    .refresh-indicator i {
-        margin-right: 8px;
-    }
-
-    /* Stock monitoring widget */
-    .stock-monitoring-widget {
-        position: relative;
-        overflow: visible;
-    }
-
-    /* Critical alerts card pulse animation */
-    @keyframes pulse {
-        0% {
-            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    <style>
+        /* Professional Dashboard Enhancements */
+        .dashboard-header-modern {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 32px 24px;
+            margin-bottom: 32px;
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(102, 126, 234, 0.3);
         }
-        70% {
-            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
-        }
-        100% {
-            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-        }
-    }
 
-    .danger-card.pulse {
-        animation: pulse 2s infinite;
-    }
-    
-    .stock-monitoring-widget {
-        position: relative;
-    }
-    
-    .refresh-indicator {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        font-size: 0.8rem;
-        color: #6c757d;
-    }
-    
-    .auto-refresh-toggle {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-    }
-    
-    .notification-toast {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        min-width: 300px;
-    }
-</style>
+        .dashboard-header-modern h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+            letter-spacing: -0.025em;
+        }
+
+        .dashboard-header-modern p {
+            font-size: 1.125rem;
+            opacity: 0.9;
+            margin: 0;
+            position: relative;
+            z-index: 1;
+            font-weight: 400;
+        }
+
+        .stats-grid-modern {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transform: translateY(-4px);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .stat-card.success::before {
+            background: linear-gradient(90deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .stat-card.warning::before {
+            background: linear-gradient(90deg, #fdcb6e 0%, #e17055 100%);
+        }
+
+        .stat-card.danger::before {
+            background: linear-gradient(90deg, #eb3349 0%, #f45c43 100%);
+        }
+
+        .stat-card.info::before {
+            background: linear-gradient(90deg, #74b9ff 0%, #0984e3 100%);
+        }
+
+        .stat-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 4px;
+            line-height: 1.2;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .stat-change {
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-change.positive {
+            color: #10b981;
+        }
+
+        .stat-change.negative {
+            color: #ef4444;
+        }
+
+        /* Professional Card Styles */
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            background: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 20px 24px;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            color: #111827;
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: -0.025em;
+        }
+
+        .card-subtitle {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-top: 4px;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        .card-footer {
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            padding: 16px 24px;
+        }
+
+        /* Professional Button Styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            gap: 6px;
+            min-height: 40px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 10px 15px -3px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(17, 153, 142, 0.3);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 10px 15px -3px rgba(17, 153, 142, 0.4);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-accent {
+            background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(253, 203, 110, 0.3);
+        }
+
+        .btn-accent:hover {
+            box-shadow: 0 10px 15px -3px rgba(253, 203, 110, 0.4);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+        }
+
+        .btn-ghost:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.8rem;
+        }
+
+        /* Professional Table Styles */
+        .table-modern {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .table-modern th {
+            background: #f9fafb;
+            padding: 16px 20px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .table-modern td {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #4b5563;
+            font-size: 0.95rem;
+        }
+
+        .table-modern tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        .table-modern tbody tr:hover {
+            background-color: #f9fafb;
+            cursor: pointer;
+        }
+
+        .table-modern tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Professional Grid Layout */
+        .grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        .grid-cols-1 {
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+        }
+
+        .lg\:grid-cols-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .lg\:col-span-2 {
+            grid-column: span 2 / span 2;
+        }
+
+        .h-full {
+            height: 100%;
+        }
+
+        .space-y-3 > * + * {
+            margin-top: 12px;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-gray-500 {
+            color: #6b7280;
+        }
+
+        .py-8 {
+            padding-top: 32px;
+            padding-bottom: 32px;
+        }
+
+        .mr-2 {
+            margin-right: 8px;
+        }
+
+        .ml-2 {
+            margin-left: 8px;
+        }
+
+        /* Professional Animations */
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .animate-slide-in-left {
+            animation: slideInLeft 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Professional Loading State */
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-center {
+            justify-content: center;
+        }
+
+        .py-12 {
+            padding-top: 48px;
+            padding-bottom: 48px;
+        }
+
+        .text-4xl {
+            font-size: 2.25rem;
+        }
+
+        .text-primary {
+            color: #667eea;
+        }
+
+        .mb-4 {
+            margin-bottom: 16px;
+        }
+
+        .text-gray-600 {
+            color: #4b5563;
+        }
+
+        /* Table Responsive */
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 12px;
+        }
+
+        /* Card Footer */
+        .card-footer {
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            padding: 16px 24px;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .status-badge.pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-badge.completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.processing {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-badge.cancelled {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
 {% endblock %}
 
-{% block content %}
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-0">Vendor Dashboard</h1>
-                    <p class="text-muted mb-0">Welcome back, {{ vendor_profile.business_partner.company_name }}</p>
+{% block vendor_content %}
+    <!-- Professional Dashboard Header -->
+    <div class="dashboard-header-modern animate-fade-in">
+        <h1>Welcome back, {{ request.user.first_name }}!</h1>
+        <p>Here's what's happening with your business today.</p>
+    </div>
+    
+    <!-- Loading State -->
+    <div id="dashboard-loading" class="flex items-center justify-center py-12">
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-primary mb-4"></i>
+            <p class="text-gray-600">Loading dashboard data...</p>
+        </div>
+    </div>
+    
+    <!-- Dashboard Content -->
+    <div id="dashboard-content" style="display: none;">
+    
+    <!-- Professional Stats Grid -->
+    <div class="stats-grid-modern">
+        <div class="stat-card success animate-slide-in-left">
+            <div class="stat-value" id="total-revenue">AED 0</div>
+            <div class="stat-label">Total Revenue</div>
+            <div class="stat-change positive" id="revenue-change">
+                <i class="fas fa-arrow-up"></i>
+                <span>+0% from last month</span>
+            </div>
+        </div>
+        
+        <div class="stat-card info animate-slide-in-left" style="animation-delay: 0.1s;">
+            <div class="stat-value" id="active-orders">0</div>
+            <div class="stat-label">Active Orders</div>
+            <div class="stat-change positive" id="orders-change">
+                <i class="fas fa-arrow-up"></i>
+                <span>+0 new today</span>
+            </div>
+        </div>
+        
+        <div class="stat-card warning animate-slide-in-left" style="animation-delay: 0.2s;">
+            <div class="stat-value" id="inventory-items">0</div>
+            <div class="stat-label">Inventory Items</div>
+            <div class="stat-change positive" id="inventory-change">
+                <i class="fas fa-arrow-up"></i>
+                <span>0 low stock</span>
+            </div>
+        </div>
+        
+        <div class="stat-card danger animate-slide-in-left" style="animation-delay: 0.3s;">
+            <div class="stat-value" id="customer-rating">0.0</div>
+            <div class="stat-label">Customer Rating</div>
+            <div class="stat-change positive" id="rating-change">
+                <i class="fas fa-arrow-up"></i>
+                <span>+0 this week</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div class="lg:col-span-2">
+            <div class="card animate-fade-in">
+                <div class="card-header">
+                    <h2 class="card-title">Recent Orders</h2>
+                    <p class="card-subtitle">Latest customer orders and their status</p>
                 </div>
-                <div>
-                    <a href="{% url 'business_partners:vendor_part_create' %}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add New Part
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table-modern">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-orders-tbody">
+                                <tr>
+                                    <td colspan="5" class="text-center text-gray-500 py-8">
+                                        <i class="fas fa-spinner fa-spin mr-2"></i>Loading orders...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'business_partners:vendor_orders_list' %}" class="ym-btn ym-btn-primary ym-btn-sm">
+                        View All Orders
+                        <i class="fas fa-arrow-right ml-2"></i>
                     </a>
                 </div>
             </div>
         </div>
-    </div>
-
-{% block vendor_content %}
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-lg-6 mb-4">
-            <div class="dashboard-card stat-card stock-monitoring-widget">
-                <div class="auto-refresh-toggle">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="auto-refresh-toggle" checked>
-                        <label class="form-check-label" for="auto-refresh-toggle">Auto</label>
-                    </div>
+        
+        <div class="animate-fade-in" style="animation-delay: 0.2s;">
+            <div class="card h-full">
+                <div class="card-header">
+                    <h2 class="card-title">Quick Actions</h2>
+                    <p class="card-subtitle">Common tasks and shortcuts</p>
                 </div>
-                <div class="stat-icon">
-                    <i class="fas fa-cubes"></i>
-                </div>
-                <h3 class="stat-number">{{ stats.total_parts|default:"0" }}</h3>
-                <p class="stat-label">Total Parts</p>
-                <div class="stat-change positive">
-                    <i class="fas fa-arrow-up"></i> +12% from last month
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-lg-6 mb-4">
-            <div class="dashboard-card stat-card success-card">
-                <div class="stat-icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <h3 class="stat-number">{{ stats.active_parts|default:"0" }}</h3>
-                <p class="stat-label">Active Parts</p>
-                <div class="stat-change positive">
-                    <i class="fas fa-arrow-up"></i> +8% from last month
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-lg-6 mb-4">
-            <div class="dashboard-card stat-card danger-card critical-alerts-card">
-                <div class="stat-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <h3 class="stat-number alert-count">{{ stats.critical_notifications|default:"0" }}</h3>
-                <p class="stat-label">Critical Alerts</p>
-                {% if stats.critical_notifications > 0 %}
-                <div class="stat-change negative">
-                    <i class="fas fa-exclamation-circle"></i> Immediate attention required
-                </div>
-                {% else %}
-                <div class="stat-change positive">
-                    <i class="fas fa-check-circle"></i> All good
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        <div class="col-xl-3 col-lg-6 mb-4">
-            <div class="dashboard-card stat-card info-card inventory-health-card">
-                <div class="stat-icon">
-                    <i class="fas fa-heartbeat"></i>
-                </div>
-                <h3 class="stat-number health-percentage">{{ stats.inventory_health_percentage|default:"100" }}%</h3>
-                <p class="stat-label health-status">{{ stats.health_status|default:"Excellent" }}</p>
-                <div class="stat-change positive">
-                    <i class="fas fa-chart-line"></i> Inventory Health
-                </div>
-            </div>
-        </div>
-                <div class="stat-icon">
-                    <i class="fas fa-times-circle"></i>
-                </div>
-                <h3 class="stat-number">{{ stats.out_of_stock|default:"0" }}</h3>
-                <p class="stat-label">Out of Stock</p>
-                <div class="stat-change negative">
-                    <i class="fas fa-arrow-down"></i> -3% from last month
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Enhanced Inventory Management Stats -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="dashboard-card stat-card info-card">
-                <h2 class="stat-number">{{ stats.below_safety_stock }}</h2>
-                <p class="stat-label">Below Safety Stock</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="dashboard-card stat-card warning-card">
-                <h2 class="stat-number">{{ stats.needs_reorder }}</h2>
-                <p class="stat-label">Needs Reorder</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="dashboard-card stat-card success-card">
-                <h2 class="stat-number">{{ stats.inventory_health|floatformat:1 }}%</h2>
-                <p class="stat-label">Inventory Health</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="dashboard-card stat-card">
-                <h2 class="stat-number">{{ stats.healthy_stock_count }}</h2>
-                <p class="stat-label">Healthy Stock Items</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Additional Stats -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="dashboard-card stat-card info-card">
-                <h2 class="stat-number">${{ stats.total_value|floatformat:2 }}</h2>
-                <p class="stat-label">Total Inventory Value</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="dashboard-card stat-card">
-                <h2 class="stat-number">${{ stats.avg_price|floatformat:2 }}</h2>
-                <p class="stat-label">Average Part Price</p>
-            </div>
-        </div>
-        <div class="col-md-4">
-                    <div class="dashboard-card stat-card {% if stats.critical_notifications > 0 %}danger-card{% else %}success-card{% endif %}">
-                        <h2 class="stat-number">{{ stats.critical_notifications }}</h2>
-                        <p class="stat-label">Critical Alerts</p>
-                        {% if stats.critical_notifications > 0 %}
-                        <small class="text-danger">Requires immediate attention</small>
-                        {% endif %}
-                    </div>
-                </div>
-    </div>
-
-    <div class="row">
-        <!-- Quick Actions -->
-        <div class="col-md-3">
-            <div class="dashboard-card">
-                <h5 class="mb-3">Quick Actions</h5>
-                <a href="{% url 'business_partners:vendor_parts_list' %}" class="quick-action-btn">
-                    <i class="fas fa-list"></i> Manage Parts
-                </a>
-                <a href="{% url 'business_partners:vendor_part_create' %}" class="quick-action-btn">
-                    <i class="fas fa-plus"></i> Add New Part
-                </a>
-                <a href="{% url 'business_partners:vendor_reorder_notifications' %}" class="quick-action-btn">
-                    <i class="fas fa-bell"></i> Reorder Notifications
-                    {% if stats.needs_reorder > 0 %}
-                        <span class="badge bg-danger ms-2">{{ stats.needs_reorder }}</span>
-                    {% endif %}
-                </a>
-                <a href="{% url 'business_partners:vendor_parts_bulk_update' %}" class="quick-action-btn">
-                    <i class="fas fa-edit"></i> Bulk Update
-                </a>
-                <a href="{% url 'business_partners:vendor_parts_export_csv' %}" class="quick-action-btn">
-                    <i class="fas fa-download"></i> Export CSV
-                </a>
-                <a href="{% url 'business_partners:vendor_inventory_alerts' %}" class="quick-action-btn">
-                    <i class="fas fa-exclamation-triangle"></i> Inventory Alerts
-                </a>
-            </div>
-        </div>
-
-        <!-- Recent Parts -->
-        <div class="col-md-6">
-            <div class="dashboard-card">
-                <h5 class="mb-3">Recent Parts</h5>
-                {% if recent_parts %}
-                    <div class="table-responsive recent-parts-table">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Part Number</th>
-                                    <th>Description</th>
-                                    <th>Price</th>
-                                    <th>Stock</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for part in recent_parts %}
-                                <tr>
-                                    <td>
-                                        <a href="{% url 'business_partners:vendor_part_detail' part.id %}" class="text-decoration-none">
-                                            {{ part.parts_number }}
-                                        </a>
-                                    </td>
-                                    <td>{{ part.material_description|truncatechars:30 }}</td>
-                                    <td>${{ part.price|floatformat:2 }}</td>
-                                    <td>
-                                        <span class="badge {% if part.quantity == 0 %}badge-danger{% elif part.quantity <= 10 %}badge-warning{% else %}badge-success{% endif %}">
-                                            {{ part.quantity }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge {% if part.is_active %}badge-success{% else %}badge-secondary{% endif %}">
-                                            {% if part.is_active %}Active{% else %}Inactive{% endif %}
-                                        </span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="text-center mt-3">
-                        <a href="{% url 'business_partners:vendor_parts_list' %}" class="btn btn-outline-primary btn-sm">
-                            View All Parts
+                <div class="card-body">
+                    <div class="space-y-3">
+                        <a href="{% url 'business_partners:vendor_part_create' %}" class="ym-btn ym-btn-primary ym-btn-block">
+                            <i class="fas fa-plus mr-2"></i>
+                            Add New Product
+                        </a>
+                        <a href="{% url 'business_partners:vendor_parts_import' %}" class="ym-btn ym-btn-outline-primary ym-btn-block">
+                            <i class="fas fa-upload mr-2"></i>
+                            Bulk Import
+                        </a>
+                        <a href="{% url 'business_partners:vendor_order_reports' %}" class="ym-btn ym-btn-gradient-success ym-btn-block">
+                            <i class="fas fa-chart-bar mr-2"></i>
+                            Generate Report
+                        </a>
+                        <button class="ym-btn ym-btn-secondary ym-btn-block">
+                            <i class="fas fa-envelope mr-2"></i>
+                            Send Newsletter
+                        </button>
+                        <a href="{% url 'business_partners:vendor_profile_settings' %}" class="ym-btn ym-btn-ghost ym-btn-block">
+                            <i class="fas fa-cog mr-2"></i>
+                            Settings
                         </a>
                     </div>
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No parts added yet</p>
-                        <a href="{% url 'business_partners:vendor_part_create' %}" class="btn btn-primary">
-                            Add Your First Part
-                        </a>
-                    </div>
-                {% endif %}
+                </div>
             </div>
         </div>
-
-        <!-- Stock Alerts Widget -->
-        <div class="col-md-3">
-            <div class="dashboard-card">
-                <div class="dashboard-header d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">
-                        <i class="fas fa-bell text-warning me-2"></i>
-                        Recent Stock Alerts
-                    </h5>
-                    <button class="btn btn-sm btn-outline-secondary refresh-alerts" title="Refresh alerts">
-                        <i class="fas fa-sync-alt"></i>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="card animate-fade-in" style="animation-delay: 0.3s;">
+            <div class="card-header">
+                <h2 class="card-title">Sales Performance</h2>
+                <p class="card-subtitle">Monthly sales trends and insights</p>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <div class="flex items-center justify-center h-full bg-gray-50 rounded-lg">
+                        <div class="text-center">
+                            <i class="fas fa-chart-line text-4xl text-gray-400 mb-3"></i>
+                            <p class="text-gray-500">Sales chart will be displayed here</p>
+                            <p class="text-sm text-gray-400 mt-1">Connect your analytics service</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-gray-500">Last updated: 5 minutes ago</span>
+                    <button class="ym-btn ym-btn-ghost ym-btn-sm">
+                        <i class="fas fa-sync-alt mr-1"></i>
+                        Refresh
                     </button>
                 </div>
-                {% if recent_notifications %}
-                    <div class="recent-alerts" id="recent-alerts-container">
-                        <div class="refresh-indicator" style="display: none;">
-                            <i class="fas fa-spinner fa-spin"></i> Loading...
-                        </div>
-                        {% for notification in recent_notifications %}
-                        <div class="alert-item border-start border-3 border-{{ notification.get_priority_display|lower }} ps-3 mb-3" data-notification-id="{{ notification.id }}">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <strong>{{ notification.part.name|truncatechars:25 }}</strong>
-                                    <br>
-                                    <small class="text-muted">Stock: {{ notification.current_stock }}</small>
-                                </div>
-                                <span class="badge bg-{{ notification.get_priority_display|lower }}">{{ notification.get_priority_display }}</span>
-                            </div>
-                            <small class="text-muted">{{ notification.created_at|timesince }} ago</small>
-                            <div class="mt-1 alert-actions">
-                                <a href="{% url 'business_partners:vendor_reorder_notification_detail' notification.id %}" class="btn btn-sm btn-outline-primary">
-                                    View
-                                </a>
-                                <button class="btn btn-sm btn-outline-success mark-ordered" data-notification-id="{{ notification.id }}">Mark Ordered</button>
-                            </div>
-                        </div>
-                        {% endfor %}
+            </div>
+        </div>
+        
+        <div class="card animate-fade-in" style="animation-delay: 0.4s;">
+            <div class="card-header">
+                <h2 class="card-title">Top Products</h2>
+                <p class="card-subtitle">Best performing products this month</p>
+            </div>
+            <div class="card-body">
+                <div class="space-y-4" id="top-products-container">
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>Loading top products...
                     </div>
-                    <div class="text-center mt-3">
-                        <a href="{% url 'business_partners:vendor_reorder_notifications' %}" class="btn btn-outline-primary btn-sm">
-                            View All Alerts
-                        </a>
-                    </div>
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                        <p class="text-muted small">No recent stock alerts</p>
-                        <small class="text-muted">All inventory levels are healthy</small>
-                    </div>
-                {% endif %}
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-btn ym-btn-primary ym-btn-sm">
+                    View All Products
+                    <i class="fas fa-arrow-right ml-2"></i>
+                </a>
             </div>
         </div>
     </div>
-
-    <!-- Alerts Section -->
-    {% if stats.out_of_stock > 0 or stats.low_stock > 0 or stats.below_safety_stock > 0 %}
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="dashboard-card alert-card">
-                <h5 class="mb-3">
-                    <i class="fas fa-exclamation-triangle text-warning"></i>
-                    Inventory Alerts
-                </h5>
-                <div class="row">
-                    {% if stats.out_of_stock > 0 %}
-                    <div class="col-md-4">
-                        <div class="alert alert-danger">
-                            <strong>{{ stats.out_of_stock }}</strong> parts are out of stock
-                            <a href="{% url 'business_partners:vendor_inventory_alerts' %}" class="alert-link">View Details</a>
-                        </div>
-                    </div>
-                    {% endif %}
-                    {% if stats.low_stock > 0 %}
-                    <div class="col-md-4">
-                        <div class="alert alert-warning">
-                            <strong>{{ stats.low_stock }}</strong> parts have low stock
-                            <a href="{% url 'business_partners:vendor_inventory_alerts' %}" class="alert-link">View Details</a>
-                        </div>
-                    </div>
-                    {% endif %}
-                    {% if stats.below_safety_stock > 0 %}
-                    <div class="col-md-4">
-                        <div class="alert alert-info">
-                            <strong>{{ stats.below_safety_stock }}</strong> parts below safety stock
-                            <a href="{% url 'business_partners:vendor_reorder_notifications' %}" class="alert-link">View Notifications</a>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-                
-                {% if stats.needs_reorder > 0 %}
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <div class="alert alert-primary">
-                            <i class="fas fa-bell me-2"></i>
-                            <strong>{{ stats.needs_reorder }}</strong> items need reordering
-                            <a href="{% url 'business_partners:vendor_reorder_notifications' %}" class="btn btn-primary btn-sm ms-3">
-                                <i class="fas fa-eye me-1"></i>View Reorder Notifications
-                            </a>
-                        </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="card animate-fade-in" style="animation-delay: 0.5s;">
+            <div class="card-header">
+                <h2 class="card-title">Recent Customers</h2>
+                <p class="card-subtitle">New customers this week</p>
+            </div>
+            <div class="card-body">
+                <div class="space-y-3" id="recent-customers-container">
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>Loading recent customers...
                     </div>
                 </div>
-                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="#" class="ym-btn ym-btn-ghost ym-btn-sm">
+                    View All Customers
+                    <i class="fas fa-users ml-2"></i>
+                </a>
+            </div>
+        </div>
+        
+        <div class="card animate-fade-in" style="animation-delay: 0.6s;">
+            <div class="card-header">
+                <h2 class="card-title">Low Stock Alert</h2>
+                <p class="card-subtitle">Items running low on inventory</p>
+            </div>
+            <div class="card-body">
+                <div class="space-y-3" id="low-stock-container">
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>Loading stock alerts...
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'business_partners:vendor_inventory_list' %}" class="ym-btn ym-btn-error ym-btn-sm">
+                    Restock Now
+                    <i class="fas fa-truck ml-2"></i>
+                </a>
+            </div>
+        </div>
+        
+        <div class="card animate-fade-in" style="animation-delay: 0.7s;">
+            <div class="card-header">
+                <h2 class="card-title">Performance</h2>
+                <p class="card-subtitle">Key performance indicators</p>
+            </div>
+            <div class="card-body">
+                <div class="space-y-4" id="performance-metrics-container">
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>Loading performance metrics...
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'business_partners:vendor_order_analytics' %}" class="ym-btn ym-btn-gradient-success ym-btn-sm">
+                    View Analytics
+                    <i class="fas fa-chart-line ml-2"></i>
+                </a>
             </div>
         </div>
     </div>
-    {% endif %}
-</div>
-{% endblock vendor_content %}
-{% endblock %}
+    </div>
+    {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/vendor_stock_monitoring.js' %}"></script>
-<script>
-    // Auto-refresh dashboard every 5 minutes (fallback)
-    setTimeout(function() {
-        location.reload();
-    }, 300000);
-    
-    // Add tooltips to stat cards
-    $(document).ready(function() {
-        $('[data-toggle="tooltip"]').tooltip();
-    });
-</script>
+    <script id="dashboard-api-urls"
+        data-stats-url="{% url 'business_partners:api_vendor_dashboard_stats' %}"
+        data-orders-url="{% url 'business_partners:api_vendor_recent_orders' %}"
+        data-products-url="{% url 'business_partners:api_vendor_top_products' %}"
+        data-customers-url="{% url 'business_partners:api_vendor_recent_customers' %}"
+        data-low-stock-url="{% url 'business_partners:api_vendor_low_stock' %}"
+        data-performance-url="{% url 'business_partners:api_vendor_sales_performance' %}"
+    ></script>
+
+    <script>
+        // Modern Dashboard JavaScript
+        window.isFetchingDashboard = false; // Global flag
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get API URLs from the script tag
+            const apiUrls = document.getElementById('dashboard-api-urls').dataset;
+            
+            // Initialize animations
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                        observer.unobserve(entry.target); // Animate only once
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.animate-fade-in, .animate-slide-in-left').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+                observer.observe(el);
+            });
+            
+            // FIX: Removed JS-based hover effects for .stat-card. Now handled by CSS.
+            
+            // Quick action buttons
+            document.querySelectorAll('.card .btn').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    // Don't prevent default for links, only for buttons
+                    if (button.tagName === 'BUTTON') {
+                        e.preventDefault();
+                        
+                        const originalText = this.innerHTML;
+                        this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Loading...';
+                        this.disabled = true;
+                        
+                        setTimeout(() => {
+                            this.innerHTML = originalText;
+                            this.disabled = false;
+                            
+                            if (window.ModernDashboardUtils && typeof window.ModernDashboardUtils.showNotification === 'function') {
+                                window.ModernDashboardUtils.showNotification('Action completed successfully!', 'success');
+                            }
+                        }, 1500);
+                    }
+                });
+            });
+            
+            // FIX: Removed JS-based hover/click for table rows. Now handled by CSS.
+            // Click handling can be added back here if it needs to do more than navigate.
+            
+            // FIX: Call fetch directly. The 1s delay was arbitrary.
+            fetchDashboardData(apiUrls);
+        
+            // Refresh data every 5 minutes
+            setInterval(() => {
+                if (!window.isFetchingDashboard) {
+                    fetchDashboardData(apiUrls);
+                }
+            }, 300000); // 5 minutes
+            
+            console.log('Modern Vendor Dashboard initialized successfully!');
+        });
+        
+        // Fetch ALL dashboard data from API
+        async function fetchDashboardData(apiUrls) {
+            if (window.isFetchingDashboard) return;
+            window.isFetchingDashboard = true;
+            
+            try {
+                console.log('Fetching all dashboard data...');
+                
+                // Get CSRF token from cookie or meta tag
+                function getCSRFToken() {
+                    // Try to get from meta tag first
+                    const meta = document.querySelector('meta[name="csrf-token"]');
+                    if (meta) return meta.content;
+                    
+                    // Try to get from cookie
+                    const cookieValue = document.cookie
+                        .split('; ')
+                        .find(row => row.startsWith('csrftoken='));
+                    return cookieValue ? cookieValue.split('=')[1] : '';
+                }
+                
+                const csrfToken = getCSRFToken();
+                
+                // Fetch options with authentication
+                const fetchOptions = {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                // Fetch all data in parallel
+                const [
+                    statsResponse, 
+                    ordersResponse, 
+                    productsResponse,
+                    customersResponse,
+                    lowStockResponse,
+                    performanceResponse
+                ] = await Promise.all([
+                    fetch(apiUrls.statsUrl, fetchOptions),
+                    fetch(apiUrls.ordersUrl, fetchOptions),
+                    fetch(apiUrls.productsUrl, fetchOptions),
+                    fetch(apiUrls.customersUrl, fetchOptions),
+                    fetch(apiUrls.lowStockUrl, fetchOptions),
+                    fetch(apiUrls.performanceUrl, fetchOptions)
+                ]);
+
+                // Process all data with error handling
+                try {
+                    if (statsResponse.ok) {
+                        const statsData = await statsResponse.json();
+                        if (statsData.success !== false) updateDashboardStats(statsData);
+                    }
+                } catch (e) {
+                    console.error('Error processing stats data:', e);
+                }
+                
+                try {
+                    if (ordersResponse.ok) {
+                        const ordersData = await ordersResponse.json();
+                        if (ordersData.success !== false) updateRecentOrders(ordersData);
+                    }
+                } catch (e) {
+                    console.error('Error processing orders data:', e);
+                }
+                
+                try {
+                    if (productsResponse.ok) {
+                        const productsData = await productsResponse.json();
+                        if (productsData.success !== false) updateTopProducts(productsData);
+                    }
+                } catch (e) {
+                    console.error('Error processing products data:', e);
+                }
+                
+                try {
+                    if (customersResponse.ok) {
+                        const customersData = await customersResponse.json();
+                        if (customersData.success !== false) updateRecentCustomers(customersData);
+                    }
+                } catch (e) {
+                    console.error('Error processing customers data:', e);
+                }
+                
+                try {
+                    if (lowStockResponse.ok) {
+                        const lowStockData = await lowStockResponse.json();
+                        if (lowStockData.success !== false) updateLowStockAlerts(lowStockData);
+                    }
+                } catch (e) {
+                    console.error('Error processing low stock data:', e);
+                }
+                
+                try {
+                    if (performanceResponse.ok) {
+                        const performanceData = await performanceResponse.json();
+                        if (performanceData.success !== false) updatePerformanceMetrics(performanceData);
+                    }
+                } catch (e) {
+                    console.error('Error processing performance data:', e);
+                }
+
+                // Hide loading and show content
+                document.getElementById('dashboard-loading').style.display = 'none';
+                document.getElementById('dashboard-content').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+                document.getElementById('dashboard-loading').innerHTML = `
+                    <div class="text-center text-red-600">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <p class="text-gray-600">Failed to load dashboard data</p>
+                        <button onclick="retryDashboardData(event)" class="ym-btn ym-btn-primary ym-mt-4">
+                            <i class="fas fa-sync-alt mr-2"></i>Retry
+                        </button>
+                    </div>
+                `;
+            } finally {
+                window.isFetchingDashboard = false;
+            }
+        }
+        
+        // Update dashboard stats
+        function updateDashboardStats(data) {
+            document.getElementById('total-revenue').textContent = `AED ${data.total_revenue?.toLocaleString() || '0'}`;
+            document.getElementById('active-orders').textContent = data.active_orders || '0';
+            document.getElementById('inventory-items').textContent = data.inventory_items || '0';
+            document.getElementById('customer-rating').textContent = data.customer_rating?.toFixed(1) || '0.0';
+            
+            // Update change indicators
+            if (data.revenue_change !== undefined) {
+                const el = document.getElementById('revenue-change');
+                const isPositive = data.revenue_change >= 0;
+                el.className = `stat-change ${isPositive ? 'positive' : 'negative'}`;
+                el.innerHTML = `
+                    <i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i>
+                    <span>${isPositive ? '+' : ''}${data.revenue_change}% from last month</span>
+                `;
+            }
+            
+            if (data.orders_change !== undefined) {
+                const el = document.getElementById('orders-change');
+                const isPositive = data.orders_change >= 0;
+                el.className = `stat-change ${isPositive ? 'positive' : 'negative'}`;
+                el.innerHTML = `
+                    <i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i>
+                    <span>${isPositive ? '+' : ''}${data.orders_change} new today</span>
+                `;
+            }
+            
+            if (data.low_stock_count !== undefined) {
+                const el = document.getElementById('inventory-change');
+                // FIX: Logic corrected. More low stock items is NEGATIVE (bad).
+                const isNegative = data.low_stock_count > 0;
+                el.className = `stat-change ${isNegative ? 'negative' : 'positive'}`;
+                el.innerHTML = `
+                    <i class="fas fa-arrow-${isNegative ? 'down' : 'up'}"></i>
+                    <span>${data.low_stock_count} low stock</span>
+                `;
+            }
+            
+            if (data.rating_change !== undefined) {
+                const el = document.getElementById('rating-change');
+                const isPositive = data.rating_change >= 0;
+                el.className = `stat-change ${isPositive ? 'positive' : 'negative'}`;
+                el.innerHTML = `
+                    <i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i>
+                    <span>${isPositive ? '+' : ''}${data.rating_change.toFixed(1)} this week</span>
+                `;
+            }
+        }
+        
+        // Update recent orders
+        function updateRecentOrders(data) {
+            const tbody = document.getElementById('recent-orders-tbody');
+            if (!data || !data.orders || data.orders.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-gray-500 py-8">
+                            <i class="fas fa-shopping-cart text-4xl mb-4 text-gray-300"></i>
+                            <p>No recent orders found</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = data.orders.map(order => `
+                <tr>
+                    <td><span class="font-mono text-sm">#${order.order_number || 'N/A'}</span></td>
+                    <td>
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-primary-gradient rounded-full flex items-center justify-center text-white text-xs font-semibold mr-3">
+                                ${(order.customer_name || 'N/A').charAt(0)}
+                            </div>
+                            <span class="font-medium">${order.customer_name || 'N/A'}</span>
+                        </div>
+                    </td>
+                    <td><span class="font-semibold">AED ${(order.total_price || 0).toLocaleString()}</span></td>
+                    <td>
+                        <span class="px-2 py-1 text-xs rounded-full ${getStatusClass(order.status || 'pending')}">
+                            ${order.status || 'pending'}
+                        </span>
+                    </td>
+                    <td><span class="text-sm text-gray-600">${formatDate(order.created_at || new Date())}</span></td>
+                </tr>
+            `).join('');
+        }
+        
+        // Update top products
+        function updateTopProducts(data) {
+            const container = document.getElementById('top-products-container');
+            if (!data.products || data.products.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-box text-4xl mb-4 text-gray-300"></i>
+                        <p>No products found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = data.products.map(product => {
+                // FIX: Add null checking for product properties
+                const name = product?.name || 'Unknown Product';
+                const total_sold = product?.total_sold || 0;
+                const revenue = product?.revenue || 0;
+                const growth = product?.growth || 0;
+                
+                return `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center min-w-0">
+                        <div class="w-10 h-10 bg-secondary-gradient rounded-lg flex items-center justify-center text-white font-semibold text-sm mr-3 flex-shrink-0">
+                            ${name.charAt(0)}
+                        </div>
+                        <div class="min-w-0">
+                            <div class="font-medium text-gray-900 truncate">${name}</div>
+                            <div class="text-sm text-gray-500">${total_sold} sales</div>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0 ml-2">
+                        <div class="font-semibold text-gray-900">AED ${revenue?.toLocaleString()}</div>
+                        <div class="text-sm ${growth >= 0 ? 'text-green-600' : 'text-red-600'}">
+                            ${growth >= 0 ? '+' : ''}${growth}%
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        // --- FIX: Added new function ---
+        // Update recent customers
+        function updateRecentCustomers(data) {
+            const container = document.getElementById('recent-customers-container');
+            if (!data.customers || data.customers.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-users text-4xl mb-4 text-gray-300"></i>
+                        <p>No recent customers</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = data.customers.map(customer => {
+                // FIX: Add null checking for customer properties
+                const initials = customer?.initials || '?';
+                const name = customer?.name || 'Unknown Customer';
+                const order_count = customer?.order_count || 0;
+                const joined_at = customer?.joined_at || new Date();
+                
+                return `
+                <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="w-10 h-10 bg-primary-gradient rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                        ${initials}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-gray-900 truncate">${name}</p>
+                        <p class="text-sm text-gray-500">${order_count} ${order_count === 1 ? 'order' : 'orders'}</p>
+                    </div>
+                    <span class="text-sm text-gray-400 flex-shrink-0">${formatDate(joined_at)}</span>
+                </div>
+            `}).join('');
+        }
+
+        // --- FIX: Added new function ---
+        // Update low stock alerts
+        function updateLowStockAlerts(data) {
+            const container = document.getElementById('low-stock-container');
+            if (!data.items || data.items.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-check-circle text-4xl mb-4 text-green-400"></i>
+                        <p>All items are in stock</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const alertLevels = {
+                'critical': { 'bg': 'bg-red-50', 'border': 'border-red-200', 'icon': 'fa-exclamation-triangle', 'iconColor': 'text-red-500', 'textColor': 'text-red-900', 'levelColor': 'text-red-600' },
+                'low': { 'bg': 'bg-orange-50', 'border': 'border-orange-200', 'icon': 'fa-exclamation-circle', 'iconColor': 'text-orange-500', 'textColor': 'text-orange-900', 'levelColor': 'text-orange-600' },
+                'warning': { 'bg': 'bg-yellow-50', 'border': 'border-yellow-200', 'icon': 'fa-info-circle', 'iconColor': 'text-yellow-500', 'textColor': 'text-yellow-900', 'levelColor': 'text-yellow-600' }
+            };
+
+            container.innerHTML = data.items.map(item => {
+                // FIX: Add null checking for item properties
+                const name = item?.name || 'Unknown Item';
+                const stock_left = item?.stock_left || 0;
+                const level = alertLevels[item?.level] || alertLevels['warning'];
+                
+                return `
+                <div class="flex items-center justify-between p-2 rounded-lg ${level.bg} ${level.border}">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <i class="fas ${level.icon} ${level.iconColor}"></i>
+                        <span class="font-medium ${level.textColor} truncate">${name}</span>
+                    </div>
+                    <span class="text-sm font-semibold ${level.levelColor} flex-shrink-0 ml-2">${stock_left} left</span>
+                </div>
+                `
+            }).join('');
+        }
+
+        // --- FIX: Added new function ---
+        // Update performance metrics
+        function updatePerformanceMetrics(data) {
+            const container = document.getElementById('performance-metrics-container');
+            if (!data.metrics || data.metrics.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-chart-pie text-4xl mb-4 text-gray-300"></i>
+                        <p>No performance data available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const barColors = ['bg-primary-gradient', 'bg-secondary-gradient', 'bg-info-gradient'];
+
+            container.innerHTML = data.metrics.map((metric, index) => {
+                // FIX: Add null checking for metric properties
+                const name = metric?.name || 'Unknown Metric';
+                const value = metric?.value || 'N/A';
+                const change = metric?.change || 0;
+                const percentage = metric?.percentage || 0;
+                
+                return `
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-sm text-gray-600">${name}</span>
+                        <div class="text-right">
+                            <span class="font-semibold text-gray-900">${value}</span>
+                            <span class="text-xs ${change >= 0 ? 'text-green-600' : 'text-red-600'} ml-1">
+                                ${change >= 0 ? '+' : ''}${change}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="${barColors[index % barColors.length]} h-2 rounded-full" style="width: ${percentage}%; transition: width 1s ease-out;"></div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+        
+        // Retry function with rate limiting
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        function retryDashboardData(event) {
+            // Stop button from submitting if in a form
+            event.preventDefault(); 
+            
+            if (retryCount < maxRetries) {
+                retryCount++;
+                console.log(`Retrying dashboard data fetch (attempt ${retryCount}/${maxRetries})...`);
+                
+                document.getElementById('dashboard-loading').innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin text-4xl text-primary mb-4"></i>
+                        <p class="text-gray-600">Loading dashboard data...</p>
+                        <p class="text-sm text-gray-500 mt-2">Attempt ${retryCount} of ${maxRetries}</p>
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    const apiUrls = document.getElementById('dashboard-api-urls').dataset;
+                    fetchDashboardData(apiUrls);
+                }, 1000 * retryCount); // Backoff
+            } else {
+                document.getElementById('dashboard-loading').innerHTML = `
+                    <div class="text-center text-red-600">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <p class="text-gray-600">Unable to load dashboard data after ${maxRetries} attempts</p>
+                        <p class="text-sm text-gray-500 mt-2">Please refresh the page or contact support</p>
+                        <button onclick="location.reload()" class="ym-btn ym-btn-primary ym-mt-4">
+                            <i class="fas fa-sync-alt mr-2"></i>Refresh Page
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Helper functions
+        function getStatusClass(status) {
+            const statusClasses = {
+                'pending': 'bg-yellow-100 text-yellow-800',
+                'confirmed': 'bg-blue-100 text-blue-800',
+                'processing': 'bg-purple-100 text-purple-800',
+                'shipped': 'bg-indigo-100 text-indigo-800',
+                'delivered': 'bg-green-100 text-green-800',
+                'cancelled': 'bg-red-100 text-red-800',
+                'refunded': 'bg-gray-100 text-gray-800'
+            };
+            return statusClasses[status.toLowerCase()] || 'bg-gray-100 text-gray-800';
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            try {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diffTime = now - date; // Difference in milliseconds
+                
+                const diffSeconds = Math.floor(diffTime / 1000);
+                const diffMinutes = Math.floor(diffSeconds / 60);
+                const diffHours = Math.floor(diffMinutes / 60);
+                const diffDays = Math.floor(diffHours / 24);
+                
+                if (diffDays > 30) {
+                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                }
+                if (diffDays >= 7) {
+                    const weeks = Math.floor(diffDays / 7);
+                    return `${weeks}w ago`;
+                }
+                if (diffDays > 0) {
+                    return `${diffDays}d ago`;
+                }
+                if (diffHours > 0) {
+                    return `${diffHours}h ago`;
+                }
+                if (diffMinutes > 0) {
+                    return `${diffMinutes}m ago`;
+                }
+                return 'Just now';
+            } catch (e) {
+                console.error("Could not format date:", dateString, e);
+                return dateString;
+            }
+        }
+    </script>
 {% endblock %}

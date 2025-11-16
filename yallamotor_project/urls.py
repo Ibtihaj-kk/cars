@@ -54,7 +54,6 @@ urlpatterns = [
     path('business-partners/', include('business_partners.urls')),  # Vendor registration system
     path('parts/', include('parts.urls')),
     path('shop/', include('parts.urls')),  # Shop alias for parts
-    path('api/parts/', include('parts.urls')),  # API endpoint for parts
     path('', homepage_view, name='home'),
     path('api/filter-listings/', filter_listings_api, name='filter-listings'),
     path('search/', search_listings_view, name='search-listings'),

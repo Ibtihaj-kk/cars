@@ -1,0 +1,488 @@
+{% extends 'business_partners/vendor_layout_standard.html' %}
+{% load static %}
+
+{% block title %}{{ part.parts_number }} - {{ vendor_profile.business_partner.company_name }}{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="ym-breadcrumb-item"><a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-breadcrumb-link">Dashboard</a></li>
+    <li class="ym-breadcrumb-item"><a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-breadcrumb-link">My Parts</a></li>
+    <li class="ym-breadcrumb-item ym-active">{{ part.parts_number }}</li>
+{% endblock %}
+
+{% block page_header_actions %}
+    <div class="ym-btn-group">
+        {% if can_edit %}
+            <a href="{% url 'business_partners:vendor_part_edit' part.id %}" class="ym-btn ym-btn-primary ym-btn-sm">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            <button type="button" class="ym-btn ym-btn-danger ym-btn-sm" onclick="confirmDelete()">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+        {% endif %}
+        <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-btn ym-btn-outline-secondary ym-btn-sm">
+            <i class="fas fa-arrow-left"></i> Back to Parts
+        </a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="ym-grid">
+    <div class="ym-col-lg-8">
+        <!-- Part Information -->
+        <div class="ym-card ym-mb-4">
+            <div class="ym-card-header">
+                <div class="ym-d-flex ym-justify-content-between ym-align-items-center">
+                    <div>
+                        <h4 class="ym-mb-0">{{ part.parts_number }}</h4>
+                        <p class="ym-text-muted ym-mb-0">{{ part.description }}</p>
+                    </div>
+                    <div class="ym-text-right">
+                        {% if part.is_featured %}
+                            <span class="ym-badge ym-badge-warning ym-mb-2">
+                                <i class="fas fa-star"></i> Featured
+                            </span>
+                        {% endif %}
+                        <span class="ym-badge ym-badge-{{ part.is_active|yesno:'success,danger' }}">
+                            {{ part.is_active|yesno:'Active,Inactive' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="ym-card-body">
+                <div class="ym-row">
+                    <div class="ym-col-md-6">
+                        <h6 class="ym-text-muted">Basic Information</h6>
+                        <dl class="ym-dl-horizontal">
+                            <dt>Part Number:</dt>
+                            <dd>{{ part.parts_number }}</dd>
+                            
+                            <dt>Description:</dt>
+                            <dd>{{ part.description }}</dd>
+                            
+                            <dt>Category:</dt>
+                            <dd>{{ part.category.name|default:"N/A" }}</dd>
+                            
+                            <dt>Brand:</dt>
+                            <dd>{{ part.brand.name|default:"N/A" }}</dd>
+                            
+                            {% if part.material_group %}
+                            <dt>Material Group:</dt>
+                            <dd>{{ part.material_group }}</dd>
+                            {% endif %}
+                            
+                            {% if part.abc_indicator %}
+                            <dt>ABC Indicator:</dt>
+                            <dd>{{ part.abc_indicator }}</dd>
+                            {% endif %}
+                            
+                            {% if part.unit_of_measure %}
+                            <dt>Unit of Measure:</dt>
+                            <dd>{{ part.unit_of_measure }}</dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+                    <div class="ym-col-md-6">
+                        <h6 class="ym-text-muted">Pricing and Inventory</h6>
+                        <dl class="ym-dl-horizontal">
+                            <dt>Price:</dt>
+                            <dd>${{ part.price|floatformat:2 }}</dd>
+                            
+                            <dt>Quantity:</dt>
+                            <dd>
+                                {% if part.quantity > 0 %}
+                                    <span class="ym-text-success">{{ part.quantity }} units</span>
+                                {% else %}
+                                    <span class="ym-text-danger">Out of Stock</span>
+                                {% endif %}
+                            </dd>
+                            
+                            {% if part.safety_stock %}
+                            <dt>Safety Stock:</dt>
+                            <dd>{{ part.safety_stock }} units</dd>
+                            {% endif %}
+                            
+                            {% if part.reorder_point %}
+                            <dt>Reorder Point:</dt>
+                            <dd>{{ part.reorder_point }} units</dd>
+                            {% endif %}
+                            
+                            <dt>Inventory Status:</dt>
+                            <dd>
+                                {% if part.quantity == 0 %}
+                                    <span class="ym-badge ym-badge-danger">Out of Stock</span>
+                                {% elif part.safety_stock and part.quantity <= part.safety_stock %}
+                                    <span class="ym-badge ym-badge-warning">Low Stock</span>
+                                {% elif part.reorder_point and part.quantity <= part.reorder_point %}
+                                    <span class="ym-badge ym-badge-info">Reorder Recommended</span>
+                                {% else %}
+                                    <span class="ym-badge ym-badge-success">In Stock</span>
+                                {% endif %}
+                            </dd>
+                            
+                            <dt>Total Value:</dt>
+                            <dd>${{ part.total_value|floatformat:2 }}</dd>
+                        </dl>
+                    </div>
+                </div>
+                
+                {% if part.image %}
+                <div class="ym-mt-4">
+                    <h6 class="ym-text-muted">Part Image</h6>
+                    <img src="{{ part.image.url }}" alt="{{ part.parts_number }}" class="ym-img-fluid ym-rounded" style="max-height: 300px;">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Additional Fields -->
+        {% if visible_fields %}
+        <div class="ym-card ym-mb-4">
+            <div class="ym-card-header">
+                <h6 class="ym-mb-0">Additional Information</h6>
+            </div>
+            <div class="ym-card-body">
+                <div class="ym-row">
+                    {% for field_name, field_value in visible_fields.items %}
+                        {% if field_value %}
+                        <div class="ym-col-md-6">
+                            <strong>{{ field_name|title }}:</strong> {{ field_value }}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Activity Timeline -->
+        <div class="ym-card">
+            <div class="ym-card-header">
+                <h6 class="ym-mb-0">Recent Activity</h6>
+            </div>
+            <div class="ym-card-body">
+                <div class="ym-timeline">
+                    <div class="ym-timeline-item">
+                        <div class="ym-timeline-marker ym-bg-primary"></div>
+                        <div class="ym-timeline-content">
+                            <h6 class="ym-mb-1">Part Created</h6>
+                            <p class="ym-text-muted ym-mb-0">Created on {{ part.created_at|date:"F d, Y H:i" }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if part.updated_at != part.created_at %}
+                    <div class="ym-timeline-item">
+                        <div class="ym-timeline-marker ym-bg-info"></div>
+                        <div class="ym-timeline-content">
+                            <h6 class="ym-mb-1">Last Updated</h6>
+                            <p class="ym-text-muted ym-mb-0">Updated on {{ part.updated_at|date:"F d, Y H:i" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="ym-col-lg-4">
+        <!-- Quick Actions -->
+        <div class="ym-card ym-mb-4">
+            <div class="ym-card-header">
+                <h6 class="ym-mb-0">Quick Actions</h6>
+            </div>
+            <div class="ym-card-body">
+                <div class="ym-btn-group-vertical ym-w-100">
+                    {% if can_edit %}
+                        <a href="{% url 'business_partners:vendor_part_edit' part.id %}" class="ym-btn ym-btn-primary ym-mb-2">
+                            <i class="fas fa-edit"></i> Edit Part
+                        </a>
+                        <button type="button" class="ym-btn ym-btn-warning ym-mb-2" onclick="toggleFeatured()">
+                            <i class="fas fa-star"></i> {% if part.is_featured %}Remove Featured{% else %}Make Featured{% endif %}
+                        </button>
+                        <button type="button" class="ym-btn ym-btn-outline-danger ym-mb-2" onclick="confirmDelete()">
+                            <i class="fas fa-trash"></i> Delete Part
+                        </button>
+                    {% endif %}
+                    <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-btn ym-btn-outline-secondary">
+                        <i class="fas fa-list"></i> Back to Parts List
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Inventory Summary -->
+        <div class="ym-card ym-mb-4">
+            <div class="ym-card-header">
+                <h6 class="ym-mb-0">Inventory Summary</h6>
+            </div>
+            <div class="ym-card-body">
+                <div class="ym-d-flex ym-justify-content-between ym-align-items-center ym-mb-3">
+                    <span>Current Stock:</span>
+                    <strong class="{% if part.quantity > 0 %}ym-text-success{% else %}ym-text-danger{% endif %}">
+                        {{ part.quantity }} units
+                    </strong>
+                </div>
+                
+                <div class="ym-d-flex ym-justify-content-between ym-align-items-center ym-mb-3">
+                    <span>Total Value:</span>
+                    <strong>${{ part.total_value|floatformat:2 }}</strong>
+                </div>
+                
+                {% if part.safety_stock %}
+                <div class="ym-d-flex ym-justify-content-between ym-align-items-center">
+                    <span>Safety Stock:</span>
+                    <strong>{{ part.safety_stock }} units</strong>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Status Management -->
+        {% if can_edit %}
+        <div class="ym-card">
+            <div class="ym-card-header">
+                <h6 class="ym-mb-0">Status Management</h6>
+            </div>
+            <div class="ym-card-body">
+                <div class="ym-form-group">
+                    <div class="ym-form-check">
+                        <input type="checkbox" class="ym-form-check-input" id="partStatus" 
+                               {% if part.is_active %}checked{% endif %} onchange="toggleStatus()">
+                        <label class="ym-form-check-label" for="partStatus">
+                            Part is Active
+                        </label>
+                    </div>
+                </div>
+                
+                <button type="button" class="ym-btn ym-btn-outline-primary ym-w-100" onclick="updateInventory()">
+                    <i class="fas fa-boxes"></i> Update Inventory
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Part detail functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Track page view
+    if (window.VendorSystem && window.VendorSystem.analytics) {
+        window.VendorSystem.analytics.track('part_detail_viewed', {
+            part_id: '{{ part.id }}',
+            part_number: '{{ part.parts_number }}',
+            category: '{{ part.category.name|default:"" }}',
+            brand: '{{ part.brand.name|default:"" }}',
+            price: '{{ part.price }}',
+            quantity: '{{ part.quantity }}'
+        });
+    }
+});
+
+function confirmDelete() {
+    if (window.VendorSystem && window.VendorSystem.modals) {
+        window.VendorSystem.modals.confirm(
+            'Confirm Delete',
+            'Are you sure you want to delete part "{{ part.parts_number }}"? This action cannot be undone.',
+            function() {
+                deletePart();
+            }
+        );
+    } else {
+        if (confirm('Are you sure you want to delete this part? This action cannot be undone.')) {
+            deletePart();
+        }
+    }
+}
+
+function deletePart() {
+    if (window.VendorSystem && window.VendorSystem.notifications) {
+        window.VendorSystem.notifications.show('Deleting part...', 'info');
+    }
+    
+    fetch("{% url 'business_partners:vendor_part_delete' part.id %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.message, 'success');
+            } else {
+                alert(data.message);
+            }
+            
+            // Track deletion
+            if (window.VendorSystem && window.VendorSystem.analytics) {
+                window.VendorSystem.analytics.track('part_deleted', {
+                    part_id: '{{ part.id }}',
+                    part_number: '{{ part.parts_number }}'
+                });
+            }
+            
+            // Redirect to parts list after short delay
+            setTimeout(() => {
+                window.location.href = "{% url 'business_partners:vendor_parts_list' %}";
+            }, 1500);
+        } else {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.error || 'Failed to delete part', 'error');
+            } else {
+                alert(data.error || 'Failed to delete part');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting part:', error);
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('An error occurred while deleting the part.', 'error');
+        } else {
+            alert('An error occurred while deleting the part.');
+        }
+    });
+}
+
+function toggleFeatured() {
+    const action = {% if part.is_featured %}"unfeature"{% else %}"feature"{% endif %};
+    
+    if (window.VendorSystem && window.VendorSystem.notifications) {
+        window.VendorSystem.notifications.show('Updating featured status...', 'info');
+    }
+    
+    fetch("{% url 'business_partners:vendor_parts_bulk_action' %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            action: action,
+            part_ids: ['{{ part.id }}']
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.message, 'success');
+            } else {
+                alert(data.message);
+            }
+            
+            // Track the action
+            if (window.VendorSystem && window.VendorSystem.analytics) {
+                window.VendorSystem.analytics.track('part_featured_toggled', {
+                    part_id: '{{ part.id }}',
+                    action: action,
+                    previous_state: {{ part.is_featured|lower }}
+                });
+            }
+            
+            // Reload page to reflect changes
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.error || 'Failed to update featured status', 'error');
+            } else {
+                alert(data.error || 'Failed to update featured status');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error updating featured status:', error);
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('An error occurred while updating featured status.', 'error');
+        } else {
+            alert('An error occurred while updating featured status.');
+        }
+    });
+}
+
+function toggleStatus() {
+    const checkbox = document.getElementById('partStatus');
+    const isActive = checkbox.checked;
+    
+    if (window.VendorSystem && window.VendorSystem.notifications) {
+        window.VendorSystem.notifications.show('Updating status...', 'info');
+    }
+    
+    fetch("{% url 'business_partners:vendor_parts_bulk_action' %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            action: isActive ? 'activate' : 'deactivate',
+            part_ids: ['{{ part.id }}']
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show('Status updated successfully', 'success');
+            } else {
+                alert('Status updated successfully');
+            }
+            
+            // Track the action
+            if (window.VendorSystem && window.VendorSystem.analytics) {
+                window.VendorSystem.analytics.track('part_status_changed', {
+                    part_id: '{{ part.id }}',
+                    new_status: isActive,
+                    previous_status: {{ part.is_active|lower }}
+                });
+            }
+        } else {
+            // Revert checkbox if failed
+            checkbox.checked = !isActive;
+            
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.error || 'Failed to update status', 'error');
+            } else {
+                alert(data.error || 'Failed to update status');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error updating status:', error);
+        // Revert checkbox if failed
+        checkbox.checked = !isActive;
+        
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('An error occurred while updating status.', 'error');
+        } else {
+            alert('An error occurred while updating status.');
+        }
+    });
+}
+
+function updateInventory() {
+    // Redirect to inventory update page or show modal
+    if (window.VendorSystem && window.VendorSystem.notifications) {
+        window.VendorSystem.notifications.show('Inventory update functionality coming soon!', 'info');
+    } else {
+        alert('Inventory update functionality coming soon!');
+    }
+    
+    // Track the action
+    if (window.VendorSystem && window.VendorSystem.analytics) {
+        window.VendorSystem.analytics.track('inventory_update_requested', {
+            part_id: '{{ part.id }}',
+            current_quantity: '{{ part.quantity }}'
+        });
+    }
+}
+</script>
+{% endblock %}

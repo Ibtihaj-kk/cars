@@ -1,0 +1,343 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block title %}Checkout - Payment Method - Cars Portal{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+.checkout-container {
+    max-width: 1200px;
+    margin: 125px auto 50px;
+    padding: 20px;
+}
+
+.checkout-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.checkout-header h1 {
+    color: #333;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.checkout-progress {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+.progress-step {
+    display: flex;
+    align-items: center;
+    color: #999;
+    font-weight: 500;
+}
+
+.progress-step.active {
+    color: #007bff;
+}
+
+.progress-step.completed {
+    color: #28a745;
+}
+
+.progress-step .step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.progress-step.active .step-number {
+    background: #007bff;
+    color: white;
+}
+
+.progress-step.completed .step-number {
+    background: #28a745;
+    color: white;
+}
+
+.progress-line {
+    width: 50px;
+    height: 2px;
+    background: #e9ecef;
+    margin: 0 10px;
+}
+
+.payment-form {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.order-summary {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.order-summary h4 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    color: #666;
+}
+
+.summary-total {
+    font-weight: 600;
+    color: #333;
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+.payment-methods {
+    margin-bottom: 30px;
+}
+
+.payment-method {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.payment-method:hover {
+    border-color: #007bff;
+}
+
+.payment-method.selected {
+    border-color: #007bff;
+    background: #f8f9ff;
+}
+
+.payment-method input[type="radio"] {
+    margin-right: 10px;
+}
+
+.payment-method label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+
+.payment-method .method-icon {
+    font-size: 1.5rem;
+    margin-right: 10px;
+}
+
+.payment-method .method-description {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 5px;
+    margin-left: 30px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.btn-back {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: background 0.3s;
+}
+
+.btn-back:hover {
+    background: #5a6268;
+    color: white;
+}
+
+.btn-proceed {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    transition: background 0.3s;
+}
+
+.btn-proceed:hover {
+    background: #218838;
+}
+
+.btn-proceed:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .checkout-header h1 {
+        font-size: 2rem;
+    }
+    
+    .payment-form {
+        padding: 20px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .btn-back, .btn-proceed {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="checkout-container">
+    <div class="checkout-header">
+        <h1>Checkout</h1>
+        <div class="checkout-progress">
+            <div class="progress-step completed">
+                <div class="step-number">1</div>
+                <span>Order Summary</span>
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step completed">
+                <div class="step-number">2</div>
+                <span>Shipping</span>
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step active">
+                <div class="step-number">3</div>
+                <span>Payment</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="payment-form">
+        <form method="post" id="paymentForm">
+            {% csrf_token %}
+            
+            <div class="order-summary">
+                <h4>Order Summary</h4>
+                <div class="summary-item">
+                    <span>Items Total:</span>
+                    <span>${{ checkout_data.items_total|floatformat:2 }}</span>
+                </div>
+                {% if checkout_data.discount_amount > 0 %}
+                <div class="summary-item">
+                    <span>Discount:</span>
+                    <span>-${{ checkout_data.discount_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                <div class="summary-item">
+                    <span>Shipping:</span>
+                    <span>${{ checkout_data.shipping_cost|floatformat:2 }}</span>
+                </div>
+                <div class="summary-item">
+                    <span>Tax (15%):</span>
+                    <span>${{ checkout_data.tax_amount|floatformat:2 }}</span>
+                </div>
+                <div class="summary-item summary-total">
+                    <span>Total:</span>
+                    <span>${{ grand_total|floatformat:2 }}</span>
+                </div>
+            </div>
+
+            <div class="payment-methods">
+                <h4>Select Payment Method</h4>
+                
+                <div class="payment-method selected" onclick="selectPaymentMethod('cash_on_delivery')">
+                    <label>
+                        <input type="radio" name="payment_method" value="cash_on_delivery" checked>
+                        <span class="method-icon">💰</span>
+                        Cash on Delivery
+                    </label>
+                    <div class="method-description">
+                        Pay with cash when your order is delivered to your doorstep.
+                    </div>
+                </div>
+                
+                <div class="payment-method" onclick="selectPaymentMethod('bank_transfer')">
+                    <label>
+                        <input type="radio" name="payment_method" value="bank_transfer">
+                        <span class="method-icon">🏦</span>
+                        Bank Transfer
+                    </label>
+                    <div class="method-description">
+                        Transfer payment to our bank account. Order will be processed after payment confirmation.
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'parts:checkout_step2' %}" class="btn-back">
+                    <i class="fas fa-arrow-left"></i> Back to Shipping
+                </a>
+                <button type="submit" class="btn-proceed">
+                    Place Order <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function selectPaymentMethod(method) {
+    // Remove selected class from all payment methods
+    document.querySelectorAll('.payment-method').forEach(function(el) {
+        el.classList.remove('selected');
+    });
+    
+    // Add selected class to clicked payment method
+    const selectedMethod = document.querySelector('.payment-method input[value="' + method + '"]').closest('.payment-method');
+    selectedMethod.classList.add('selected');
+    
+    // Update radio button
+    document.querySelector('input[name="payment_method"][value="' + method + '"]').checked = true;
+}
+
+// Handle payment method selection
+document.addEventListener('DOMContentLoaded', function() {
+    // Ensure cash on delivery is selected by default
+    selectPaymentMethod('cash_on_delivery');
+});
+</script>
+{% endblock %}

@@ -395,7 +395,7 @@
             </div>
             
             <div class="vendor-nav-item">
-                <a href="{% url 'business_partners:vendor_inventory' %}" class="vendor-nav-link {% if 'vendor_inventory' in request.resolver_match.url_name %}active{% endif %}">
+                <a href="{% url 'business_partners:vendor_inventory_list' %}" class="vendor-nav-link {% if 'vendor_inventory' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="fas fa-warehouse vendor-nav-icon"></i>
                     <span class="vendor-nav-text">Inventory</span>
                 </a>
@@ -409,7 +409,7 @@
             </div>
             
             <div class="vendor-nav-item">
-                <a href="{% url 'business_partners:vendor_orders' %}" class="vendor-nav-link {% if 'vendor_orders' in request.resolver_match.url_name %}active{% endif %}">
+                <a href="{% url 'business_partners:vendor_orders_list' %}" class="vendor-nav-link {% if 'vendor_orders_list' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="fas fa-shopping-cart vendor-nav-icon"></i>
                     <span class="vendor-nav-text">Orders</span>
                     {% if pending_orders_count > 0 %}
@@ -419,7 +419,7 @@
             </div>
             
             <div class="vendor-nav-item">
-                <a href="{% url 'vendor_reorder_notifications' %}" class="vendor-nav-link {% if 'reorder' in request.resolver_match.url_name %}active{% endif %}">
+                <a href="{% url 'business_partners:vendor_reorder_notifications' %}" class="vendor-nav-link {% if 'reorder' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="fas fa-bell vendor-nav-icon"></i>
                     <span class="vendor-nav-text">Reorder Alerts</span>
                     {% if reorder_alerts_count > 0 %}
@@ -429,14 +429,14 @@
             </div>
             
             <div class="vendor-nav-item">
-                <a href="{% url 'business_partners:vendor_analytics' %}" class="vendor-nav-link {% if 'vendor_analytics' in request.resolver_match.url_name %}active{% endif %}">
+                <a href="{% url 'business_partners:vendor_order_analytics' %}" class="vendor-nav-link {% if 'vendor_order_analytics' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="fas fa-chart-bar vendor-nav-icon"></i>
                     <span class="vendor-nav-text">Analytics</span>
                 </a>
             </div>
             
             <div class="vendor-nav-item">
-                <a href="{% url 'business_partners:vendor_storefront' %}" class="vendor-nav-link {% if 'vendor_storefront' in request.resolver_match.url_name %}active{% endif %}">
+                <a href="{% url 'business_partners:vendor_store' vendor_slug=business_partner.slug %}" class="vendor-nav-link {% if 'vendor_store' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="fas fa-store vendor-nav-icon"></i>
                     <span class="vendor-nav-text">Storefront</span>
                 </a>
@@ -529,9 +529,9 @@
     <a class="dropdown-item" href="{% url 'business_partners:vendor_profile_settings' %}">
         <i class="fas fa-user me-2"></i>Profile Settings
     </a>
-    <a class="dropdown-item" href="{% url 'business_partners:vendor_storefront' %}">
-        <i class="fas fa-store me-2"></i>View Storefront
-    </a>
+    <a class="dropdown-item" href="{% url 'business_partners:vendor_store' vendor_slug=business_partner.slug %}">
+                        <i class="fas fa-store me-2"></i>View Storefront
+                    </a>
     <div class="dropdown-divider"></div>
     <a class="dropdown-item text-danger" href="{% url 'business_partners:vendor_logout' %}">
         <i class="fas fa-sign-out-alt me-2"></i>Logout

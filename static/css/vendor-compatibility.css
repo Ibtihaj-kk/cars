@@ -1,0 +1,221 @@
+/* Vendor Compatibility Styles */
+
+/* Cross-browser compatibility */
+.vendor-form-control {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+}
+
+.vendor-btn {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* Webkit scrollbar styling */
+.vendor-scrollable::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.vendor-scrollable::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.vendor-scrollable::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.vendor-scrollable::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Firefox scrollbar styling */
+.vendor-scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+/* IE11 compatibility */
+.vendor-flex {
+  display: -ms-flexbox;
+  display: flex;
+}
+
+.vendor-flex-column {
+  -ms-flex-direction: column;
+  flex-direction: column;
+}
+
+.vendor-flex-row {
+  -ms-flex-direction: row;
+  flex-direction: row;
+}
+
+.vendor-flex-wrap {
+  -ms-flex-wrap: wrap;
+  flex-wrap: wrap;
+}
+
+.vendor-flex-1 {
+  -ms-flex: 1;
+  flex: 1;
+}
+
+.vendor-grid {
+  display: -ms-grid;
+  display: grid;
+}
+
+/* Safari compatibility */
+.vendor-transform {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+.vendor-backface-hidden {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.vendor-preserve-3d {
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+}
+
+/* Mobile Safari compatibility */
+.vendor-mobile-safari-fix {
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+}
+
+/* Android browser compatibility */
+.vendor-android-fix {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  -webkit-user-modify: read-write-plaintext-only;
+}
+
+/* Windows Phone compatibility */
+.vendor-windows-phone-fix {
+  -ms-touch-action: manipulation;
+  touch-action: manipulation;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .vendor-form-control {
+    border-width: 2px;
+  }
+  
+  .vendor-btn {
+    border-width: 2px;
+  }
+  
+  .vendor-table th,
+  .vendor-table td {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .vendor-animated {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print compatibility */
+@media print {
+  .vendor-no-print {
+    display: none !important;
+  }
+  
+  .vendor-print-friendly {
+    color: black !important;
+    background: white !important;
+  }
+}
+
+/* Screen reader compatibility */
+.vendor-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.vendor-sr-only-focusable:focus {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  padding: inherit !important;
+  margin: inherit !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+}
+
+/* Color scheme compatibility */
+@media (prefers-color-scheme: dark) {
+  .vendor-dark-mode {
+    background-color: #1a1a1a;
+    color: #ffffff;
+  }
+  
+  .vendor-dark-mode .vendor-form-control {
+    background-color: #2d2d2d;
+    color: #ffffff;
+    border-color: #444;
+  }
+  
+  .vendor-dark-mode .vendor-btn-secondary {
+    background-color: #3d3d3d;
+    color: #ffffff;
+    border-color: #555;
+  }
+}
+
+/* Font loading compatibility */
+.vendor-font-loaded {
+  font-display: swap;
+}
+
+/* Image loading compatibility */
+.vendor-img {
+  max-width: 100%;
+  height: auto;
+  -ms-interpolation-mode: bicubic;
+}
+
+/* Video compatibility */
+.vendor-video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Audio compatibility */
+.vendor-audio {
+  width: 100%;
+}
+
+/* Canvas compatibility */
+.vendor-canvas {
+  max-width: 100%;
+  height: auto;
+}

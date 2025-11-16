@@ -1,0 +1,345 @@
+{% load static %}
+
+{% block title %}{% block vendor_title %}Vendor Dashboard{% endblock %} - Cars Portal{% endblock %}
+
+{% block extra_css %}
+<!-- Unified Design System -->
+<link rel="stylesheet" href="{% static 'css/vendor-design-system.css' %}">
+<!-- Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Inter Font -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ym-flex ym-min-h-screen">
+    <!-- Modern Sidebar -->
+    <div class="ym-sidebar" id="vendorSidebar">
+        <div class="ym-sidebar-header">
+            <div class="ym-sidebar-logo">
+                <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-flex ym-items-center ym-gap-3">
+                    <img src="{% static 'images/logos/carsportal-logo.png' %}" alt="Cars Portal" class="ym-h-8">
+                    <span class="ym-font-bold ym-text-lg">Vendor Portal</span>
+                </a>
+            </div>
+            <button class="ym-sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <nav class="ym-sidebar-nav" role="navigation" aria-label="Main navigation">
+            <div class="ym-sidebar-item">
+                <a href="{% url 'business_partners:vendor_dashboard' %}" 
+                   class="ym-sidebar-link {% if request.resolver_match.url_name == 'vendor_dashboard' %}ym-active{% endif %}"
+                   aria-current="{% if request.resolver_match.url_name == 'vendor_dashboard' %}page{% endif %}">
+                    <i class="fas fa-tachometer-alt ym-sidebar-icon" aria-hidden="true"></i>
+                    <span class="ym-sidebar-text">Dashboard</span>
+                </a>
+            </div>
+            
+            <div class="ym-sidebar-item">
+                <a href="{% url 'business_partners:vendor_parts_list' %}" 
+                   class="ym-sidebar-link {% if 'vendor_parts' in request.resolver_match.url_name %}ym-active{% endif %}"
+                   aria-current="{% if 'vendor_parts' in request.resolver_match.url_name %}page{% endif %}">
+                    <i class="fas fa-box ym-sidebar-icon" aria-hidden="true"></i>
+                    <span class="ym-sidebar-text">Parts Management</span>
+                </a>
+            </div>
+            
+            <div class="ym-sidebar-item">
+                <a href="{% url 'business_partners:vendor_inventory_list' %}" 
+                   class="ym-sidebar-link {% if 'vendor_inventory' in request.resolver_match.url_name %}ym-active{% endif %}"
+                   aria-current="{% if 'vendor_inventory' in request.resolver_match.url_name %}page{% endif %}">
+                    <i class="fas fa-warehouse ym-sidebar-icon" aria-hidden="true"></i>
+                    <span class="ym-sidebar-text">Inventory</span>
+                </a>
+            </div>
+            
+            <div class="ym-sidebar-item">
+                <a href="{% url 'business_partners:order_processing_dashboard' %}" 
+                   class="ym-sidebar-link {% if 'order_processing' in request.resolver_match.url_name %}ym-active{% endif %}"
+                   aria-current="{% if 'order_processing' in request.resolver_match.url_name %}page{% endif %}">
+                    <i class="fas fa-cogs ym-sidebar-icon" aria-hidden="true"></i>
+                    <span class="ym-sidebar-text">Order Processing</span>
+                </a>
+            </div>
+            
+            <div class="ym-sidebar-item">
+                <a href="{% url 'business_partners:vendor_orders_list' %}" 
+                   class="ym-sidebar-link {% if 'vendor_orders_list' in request.resolver_match.url_name %}ym-active{% endif %}"
+                   aria-current="{% if 'vendor_orders_list' in request.resolver_match.url_name %}page{% endif %}">
+                    <i class="fas fa-shopping-cart ym-sidebar-icon" aria-hidden="true"></i>
+                    <span class="ym-sidebar-text">Orders</span>
+                    {% if pending_orders_count > 0 %}
+                        <span class="ym-badge ym-badge-error ym-ml-auto">{{ pending_orders_count }}</span>
+                    {% endif %}
+                </a>
+            </div>
+            
+            <div class="ym-sidebar-item">
+                <a href="{% url 'business_partners:vendor_reorder_notifications' %}" 
+                   class="ym-sidebar-link {% if 'reorder' in request.resolver_match.url_name %}ym-active{% endif %}"
+                   aria-current="{% if 'reorder' in request.resolver_match.url_name %}page{% endif %}">
+                    <i class="fas fa-bell ym-sidebar-icon" aria-hidden="true"></i>
+                    <span class="ym-sidebar-text">Reorder Alerts</span>
+                    {% if reorder_alerts_count > 0 %}
+                        <span class="ym-badge ym-badge-warning ym-ml-auto">{{ reorder_alerts_count }}</span>
+                    {% endif %}
+                </a>
+            </div>
+            
+            <div class="ym-sidebar-item">
+                <a href="{% url 'business_partners:vendor_order_analytics' %}" 
+                   class="ym-sidebar-link {% if 'vendor_order_analytics' in request.resolver_match.url_name %}ym-active{% endif %}"
+                   aria-current="{% if 'vendor_order_analytics' in request.resolver_match.url_name %}page{% endif %}">
+                    <i class="fas fa-chart-bar ym-sidebar-icon" aria-hidden="true"></i>
+                    <span class="ym-sidebar-text">Analytics</span>
+                </a>
+            </div>
+            
+            <div class="ym-sidebar-item">
+                <a href="{% url 'business_partners:vendor_store' vendor_slug=business_partner.slug %}" 
+                   class="ym-sidebar-link {% if 'vendor_store' in request.resolver_match.url_name %}ym-active{% endif %}"
+                   aria-current="{% if 'vendor_store' in request.resolver_match.url_name %}page{% endif %}">
+                    <i class="fas fa-store ym-sidebar-icon" aria-hidden="true"></i>
+                    <span class="ym-sidebar-text">Storefront</span>
+                </a>
+            </div>
+            
+            <hr class="ym-my-4 ym-border-gray-200">
+            
+            <div class="ym-sidebar-item">
+                <a href="{% url 'business_partners:vendor_profile_settings' %}" 
+                   class="ym-sidebar-link {% if 'vendor_profile' in request.resolver_match.url_name %}ym-active{% endif %}"
+                   aria-current="{% if 'vendor_profile' in request.resolver_match.url_name %}page{% endif %}">
+                    <i class="fas fa-cog ym-sidebar-icon" aria-hidden="true"></i>
+                    <span class="ym-sidebar-text">Settings</span>
+                </a>
+            </div>
+            
+            <div class="ym-sidebar-item">
+                <a href="{% url 'business_partners:vendor_logout' %}" class="ym-sidebar-link">
+                    <i class="fas fa-sign-out-alt ym-sidebar-icon" aria-hidden="true"></i>
+                    <span class="ym-sidebar-text">Logout</span>
+                </a>
+            </div>
+        </nav>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="ym-main-content">
+        <!-- Top Bar -->
+        <div class="ym-top-bar">
+            <div class="ym-flex ym-items-center">
+                <button class="ym-btn ym-btn-ghost ym-btn-sm ym-mr-4" id="mobileMenuToggle" aria-label="Toggle mobile menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <nav class="ym-flex ym-items-center ym-gap-2 ym-text-sm" aria-label="Breadcrumb">
+                    <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-text-gray-600 hover:ym-text-gray-900 ym-transition-colors">
+                        <i class="fas fa-home me-1" aria-hidden="true"></i> Dashboard
+                    </a>
+                    {% block vendor_breadcrumb %}{% endblock %}
+                </nav>
+            </div>
+            
+            <div class="ym-flex ym-items-center ym-gap-4">
+                <!-- Notifications -->
+                <div class="ym-relative">
+                    <button class="ym-btn ym-btn-ghost ym-btn-sm" id="notificationBtn" aria-label="View notifications">
+                        <i class="fas fa-bell"></i>
+                        {% if unread_notifications_count > 0 %}
+                            <span class="ym-absolute -ym-top-1 -ym-right-1 ym-bg-error-500 ym-text-white ym-text-xs ym-rounded-full ym-w-5 ym-h-5 ym-flex ym-items-center ym-justify-center">
+                                {{ unread_notifications_count }}
+                            </span>
+                        {% endif %}
+                    </button>
+                </div>
+                
+                <!-- User Profile -->
+                <div class="ym-relative">
+                    <button class="ym-btn ym-btn-ghost ym-p-2 ym-rounded-lg" id="userProfile" aria-label="User menu">
+                        <div class="ym-flex ym-items-center ym-gap-3">
+                            <div class="ym-w-8 ym-h-8 ym-bg-primary-500 ym-rounded-full ym-flex ym-items-center ym-justify-center ym-text-white ym-font-semibold ym-text-sm">
+                                {{ user.first_name.0|upper }}{{ user.last_name.0|upper }}
+                            </div>
+                            <div class="ym-text-left ym-hidden md:ym-block">
+                                <div class="ym-text-sm ym-font-medium ym-text-gray-900">{{ user.first_name }} {{ user.last_name }}</div>
+                                <div class="ym-text-xs ym-text-gray-600">{{ vendor_profile.business_partner.company_name }}</div>
+                            </div>
+                            <i class="fas fa-chevron-down ym-text-gray-400 ym-text-xs"></i>
+                        </div>
+                    </button>
+                    
+                    <!-- User Dropdown -->
+                    <div class="ym-absolute ym-right-0 ym-mt-2 ym-w-56 ym-bg-white ym-rounded-lg ym-shadow-lg ym-border ym-border-gray-200 ym-z-50 ym-hidden" id="userDropdown">
+                        <div class="ym-py-2">
+                            <a href="{% url 'business_partners:vendor_profile_settings' %}" class="ym-flex ym-items-center ym-px-4 ym-py-2 ym-text-sm ym-text-gray-700 hover:ym-bg-gray-100">
+                                <i class="fas fa-user ym-mr-3 ym-text-gray-400"></i>
+                                Profile Settings
+                            </a>
+                            <a href="{% url 'business_partners:vendor_store' vendor_slug=business_partner.slug %}" class="ym-flex ym-items-center ym-px-4 ym-py-2 ym-text-sm ym-text-gray-700 hover:ym-bg-gray-100">
+                                <i class="fas fa-store ym-mr-3 ym-text-gray-400"></i>
+                                View Storefront
+                            </a>
+                            <hr class="ym-my-2 ym-border-gray-200">
+                            <a href="{% url 'business_partners:vendor_logout' %}" class="ym-flex ym-items-center ym-px-4 ym-py-2 ym-text-sm ym-text-error-600 hover:ym-bg-gray-100">
+                                <i class="fas fa-sign-out-alt ym-mr-3"></i>
+                                Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content Area -->
+        <div class="ym-content-area">
+            <!-- Page Header -->
+            <div class="ym-mb-8">
+                <h1 class="ym-text-3xl ym-font-bold ym-text-gray-900 ym-mb-2">
+                    {% block vendor_content_title %}Dashboard{% endblock %}
+                </h1>
+                <p class="ym-text-gray-600">
+                    {% block vendor_content_subtitle %}Welcome back, {{ user.first_name }}!{% endblock %}
+                </p>
+            </div>
+            
+            <!-- Messages -->
+            {% if messages %}
+                <div class="ym-mb-6">
+                    {% for message in messages %}
+                        <div class="ym-p-4 ym-mb-4 ym-rounded-lg ym-border {% if message.tags == 'error' %}ym-bg-error-50 ym-border-error-200 ym-text-error-800{% elif message.tags == 'warning' %}ym-bg-warning-50 ym-border-warning-200 ym-text-warning-800{% elif message.tags == 'success' %}ym-bg-success-50 ym-border-success-200 ym-text-success-800{% else %}ym-bg-info-50 ym-border-info-200 ym-text-info-800{% endif %}" role="alert">
+                            <div class="ym-flex">
+                                <div class="ym-flex-1">
+                                    <p class="ym-text-sm">{{ message }}</p>
+                                </div>
+                                <button type="button" class="ym-ml-4 ym-text-gray-400 hover:ym-text-gray-600" data-dismiss="alert" aria-label="Close">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <!-- Main Content -->
+            {% block vendor_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+
+<!-- Mobile Navigation -->
+<nav class="ym-mobile-nav md:ym-hidden">
+    <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-mobile-nav-item {% if request.resolver_match.url_name == 'vendor_dashboard' %}ym-active{% endif %}">
+        <i class="fas fa-tachometer-alt ym-mobile-nav-icon"></i>
+        <span class="ym-mobile-nav-text">Dashboard</span>
+    </a>
+    <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-mobile-nav-item {% if 'vendor_parts' in request.resolver_match.url_name %}ym-active{% endif %}">
+        <i class="fas fa-box ym-mobile-nav-icon"></i>
+        <span class="ym-mobile-nav-text">Parts</span>
+    </a>
+    <a href="{% url 'business_partners:vendor_inventory_list' %}" class="ym-mobile-nav-item {% if 'vendor_inventory' in request.resolver_match.url_name %}ym-active{% endif %}">
+        <i class="fas fa-warehouse ym-mobile-nav-icon"></i>
+        <span class="ym-mobile-nav-text">Inventory</span>
+    </a>
+    <a href="{% url 'business_partners:vendor_orders_list' %}" class="ym-mobile-nav-item {% if 'vendor_orders_list' in request.resolver_match.url_name %}ym-active{% endif %}">
+        <i class="fas fa-shopping-cart ym-mobile-nav-icon"></i>
+        <span class="ym-mobile-nav-text">Orders</span>
+    </a>
+</nav>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Sidebar toggle functionality
+    const sidebar = document.getElementById('vendorSidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const userProfile = document.getElementById('userProfile');
+    const userDropdown = document.getElementById('userDropdown');
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const notificationBtn = document.getElementById('notificationBtn');
+    
+    // Sidebar toggle
+    sidebarToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('ym-collapsed');
+        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('ym-collapsed'));
+    });
+    
+    // Mobile menu toggle
+    mobileMenuToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('ym-mobile-open');
+    });
+    
+    // Restore sidebar state
+    const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (isCollapsed) {
+        sidebar.classList.add('ym-collapsed');
+    }
+    
+    // User profile dropdown
+    userProfile.addEventListener('click', function(e) {
+        e.stopPropagation();
+        userDropdown.classList.toggle('ym-hidden');
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function() {
+        userDropdown.classList.add('ym-hidden');
+    });
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(e) {
+        if (window.innerWidth <= 1024 && 
+            !sidebar.contains(e.target) && 
+            sidebar.classList.contains('ym-mobile-open') &&
+            !mobileMenuToggle.contains(e.target)) {
+            sidebar.classList.remove('ym-mobile-open');
+        }
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 1024) {
+            sidebar.classList.remove('ym-mobile-open');
+        }
+    });
+    
+    // Notification button (placeholder for future implementation)
+    if (notificationBtn) {
+        notificationBtn.addEventListener('click', function() {
+            // TODO: Implement notification dropdown
+            console.log('Notifications clicked');
+        });
+    }
+    
+    // Auto-dismiss alerts after 5 seconds
+    const alerts = document.querySelectorAll('[role="alert"]');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 300);
+        }, 5000);
+    });
+    
+    // Add loading states for navigation links
+    const navLinks = document.querySelectorAll('.ym-sidebar-link, .ym-mobile-nav-item');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            // Add loading state
+            const originalContent = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner ym-animate-spin"></i>';
+            this.style.pointerEvents = 'none';
+            
+            // Restore after navigation
+            setTimeout(() => {
+                this.innerHTML = originalContent;
+                this.style.pointerEvents = 'auto';
+            }, 1000);
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -162,7 +162,7 @@ def vendor_dashboard(request):
         'top_categories': top_categories,
     }
     
-    return render(request, 'business_partners/vendor_dashboard.html', context)
+    return render(request, 'business_partners/vendor_dashboard_standardized.html', context)
 
 
 @vendor_required
@@ -271,7 +271,7 @@ def vendor_parts_list(request):
         'total_parts': parts_queryset.count(),
     }
     
-    return render(request, 'business_partners/vendor_parts_list.html', context)
+    return render(request, 'business_partners/vendor_parts_list_standardized.html', context)
 
 
 @vendor_required
@@ -301,7 +301,7 @@ def vendor_part_create(request):
         'action': 'Create',
     }
     
-    return render(request, 'business_partners/vendor_part_form.html', context)
+    return render(request, 'business_partners/vendor_part_form_standardized.html', context)
 
 
 @vendor_part_owner_required
@@ -335,7 +335,7 @@ def vendor_part_edit(request, part_id):
         'action': 'Edit',
     }
     
-    return render(request, 'business_partners/vendor_part_form.html', context)
+    return render(request, 'business_partners/vendor_part_form_standardized.html', context)
 
 
 @vendor_part_owner_required
@@ -364,7 +364,7 @@ def vendor_part_detail(request, part_id):
         'vendor_profile': vendor_profile,
     }
     
-    return render(request, 'business_partners/vendor_part_detail.html', context)
+    return render(request, 'business_partners/vendor_part_detail_standardized.html', context)
 
 
 @vendor_part_owner_required
@@ -582,8 +582,30 @@ def vendor_parts_export_csv(request):
             part.updated_at.strftime('%Y-%m-%d %H:%M:%S') if part.updated_at else '',
         ]
         writer.writerow(row)
+
+
+@login_required
+def vendor_responsive_test(request):
+    """Test responsive design for vendor dashboard navigation and footer."""
+    return render(request, 'business_partners/vendor_responsive_test.html')
     
-    return response
+
+
+
+@vendor_required
+def vendor_crud_test(request):
+    """
+    Comprehensive CRUD system test page for vendors.
+    Tests all CRUD operations with validation and AJAX functionality.
+    """
+    vendor_profile = get_vendor_profile(request.user)
+    
+    context = {
+        'vendor_profile': vendor_profile,
+        'business_partner': vendor_profile.business_partner,
+    }
+    
+    return render(request, 'business_partners/vendor_crud_test.html', context)
 
 
 @vendor_required

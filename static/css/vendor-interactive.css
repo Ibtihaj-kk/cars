@@ -1,0 +1,192 @@
+/* Vendor Interactive Elements */
+
+/* Interactive form elements */
+.vendor-form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+.vendor-btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.vendor-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.vendor-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Ripple effect on buttons */
+.vendor-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.vendor-btn:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Interactive cards */
+.vendor-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.vendor-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.vendor-card.selected {
+  border-color: #007bff;
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Interactive table rows */
+.vendor-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.vendor-table tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+  transform: scale(1.01);
+}
+
+.vendor-table tbody tr.selected {
+  background-color: rgba(0, 123, 255, 0.1);
+  border-left: 4px solid #007bff;
+}
+
+/* Interactive badges */
+.vendor-badge {
+  transition: all 0.2s ease;
+}
+
+.vendor-badge:hover {
+  transform: scale(1.1);
+  cursor: pointer;
+}
+
+/* Interactive progress bars */
+.vendor-progress {
+  transition: all 0.3s ease;
+}
+
+.vendor-progress:hover {
+  transform: scaleY(1.2);
+  cursor: pointer;
+}
+
+/* Interactive alerts */
+.vendor-alert {
+  transition: all 0.3s ease;
+}
+
+.vendor-alert:hover {
+  transform: translateX(5px);
+  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Interactive dropdowns */
+.vendor-dropdown-toggle {
+  transition: all 0.2s ease;
+}
+
+.vendor-dropdown-toggle:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+.vendor-dropdown-menu {
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Interactive tooltips */
+.vendor-tooltip {
+  position: relative;
+  cursor: help;
+}
+
+.vendor-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  font-size: 0.875rem;
+  z-index: 1000;
+}
+
+.vendor-tooltip:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-5px);
+}
+
+/* Interactive modals */
+.vendor-modal {
+  animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Interactive tabs */
+.vendor-tab {
+  transition: all 0.2s ease;
+}
+
+.vendor-tab:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.vendor-tab.active {
+  background-color: #007bff;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}

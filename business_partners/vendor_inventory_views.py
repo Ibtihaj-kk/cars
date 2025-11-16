@@ -137,7 +137,7 @@ def vendor_inventory_list(request):
         'sort_by': sort_by,
     }
     
-    return render(request, 'business_partners/vendor_inventory_list.html', context)
+    return render(request, 'business_partners/vendor_inventory_list_standardized.html', context)
 
 
 @login_required

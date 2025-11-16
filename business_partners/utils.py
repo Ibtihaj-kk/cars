@@ -12,7 +12,7 @@ def get_vendor_profile(user):
         business_partners = BusinessPartner.objects.filter(
             user=user,
             status='active',
-            businesspartnerrole__role_type='vendor'
+            roles__role_type='vendor'
         ).distinct()
         
         if not business_partners.exists():

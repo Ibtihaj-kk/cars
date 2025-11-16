@@ -1052,3 +1052,106 @@ class ReorderNotification(models.Model):
         self.review_notes = notes
         self.reviewed_at = timezone.now()
         self.save()
+
+
+class VendorPerformanceScore(models.Model):
+    """Model for storing vendor performance scores and metrics"""
+    
+    vendor = models.ForeignKey(
+        BusinessPartner,
+        on_delete=models.CASCADE,
+        related_name='performance_scores',
+        limit_choices_to={'type': 'vendor'}
+    )
+    
+    # Performance metrics
+    total_orders = models.PositiveIntegerField(default=0)
+    completed_orders = models.PositiveIntegerField(default=0)
+    on_time_delivery_rate = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0.00,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    quality_score = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0.00,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    average_rating = models.DecimalField(
+        max_digits=3, decimal_places=2, default=0.00,
+        validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    performance_score = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0.00,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    
+    # Period information
+    period_start = models.DateField()
+    period_end = models.DateField()
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Vendor Performance Score"
+        verbose_name_plural = "Vendor Performance Scores"
+        ordering = ['-created_at']
+        unique_together = ['vendor', 'period_start', 'period_end']
+        indexes = [
+            models.Index(fields=['vendor', '-created_at']),
+            models.Index(fields=['vendor', 'period_start', 'period_end']),
+            models.Index(fields=['performance_score', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.vendor.name} - {self.period_start} to {self.period_end} ({self.performance_score})"
+    
+    def save(self, *args, **kwargs):
+        # Ensure period_start is before period_end
+        if self.period_start > self.period_end:
+            self.period_start, self.period_end = self.period_end, self.period_start
+        super().save(*args, **kwargs)
+    
+    @property
+    def delivery_performance(self):
+        """Get delivery performance as a percentage"""
+        return f"{self.on_time_delivery_rate}%"
+    
+    @property
+    def quality_performance(self):
+        """Get quality performance as a percentage"""
+        return f"{self.quality_score}%"
+    
+    @property
+    def overall_performance(self):
+        """Get overall performance as a percentage"""
+        return f"{self.performance_score}%"
+    
+    def is_excellent(self):
+        """Check if performance is excellent (>= 90)"""
+        return self.performance_score >= 90.00
+    
+    def is_good(self):
+        """Check if performance is good (>= 75 and < 90)"""
+        return 75.00 <= self.performance_score < 90.00
+    
+    def is_needs_improvement(self):
+        """Check if performance needs improvement (>= 60 and < 75)"""
+        return 60.00 <= self.performance_score < 75.00
+    
+    def is_poor(self):
+        """Check if performance is poor (< 60)"""
+        return self.performance_score < 60.00
+    
+    def get_performance_grade(self):
+        """Get performance grade (A, B, C, D, F)"""
+        if self.performance_score >= 90:
+            return 'A'
+        elif self.performance_score >= 80:
+            return 'B'
+        elif self.performance_score >= 70:
+            return 'C'
+        elif self.performance_score >= 60:
+            return 'D'
+        else:
+            return 'F'

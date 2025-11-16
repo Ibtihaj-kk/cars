@@ -1,0 +1,740 @@
+{% load static %}
+
+<!-- Vendor Navigation Component -->
+<nav class="vendor-navbar">
+  <div class="nav-container">
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
+    
+    <!-- Brand/Logo -->
+    <div class="nav-brand">
+      <a href="{% url 'business_partners:dashboard' %}" class="brand-link">
+        <i class="fas fa-handshake brand-icon"></i>
+        <span class="brand-text">Vendor Portal</span>
+      </a>
+    </div>
+    
+    <!-- Navigation Links -->
+    <div class="nav-menu" id="nav-menu">
+      <div class="nav-section">
+        <h6 class="nav-section-title">Main Navigation</h6>
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a href="{% url 'business_partners:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+              <i class="fas fa-tachometer-alt nav-icon"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'business_partners:applications' %}" class="nav-link {% if 'application' in request.path %}active{% endif %}">
+              <i class="fas fa-file-alt nav-icon"></i>
+              <span>Applications</span>
+              {% if pending_applications_count > 0 %}
+              <span class="nav-badge badge-danger">{{ pending_applications_count }}</span>
+              {% endif %}
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'business_partners:vendors' %}" class="nav-link {% if 'vendor' in request.path and 'application' not in request.path %}active{% endif %}">
+              <i class="fas fa-users nav-icon"></i>
+              <span>Vendors</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'business_partners:documents' %}" class="nav-link {% if 'document' in request.path %}active{% endif %}">
+              <i class="fas fa-folder-open nav-icon"></i>
+              <span>Documents</span>
+              {% if pending_documents_count > 0 %}
+              <span class="nav-badge badge-warning">{{ pending_documents_count }}</span>
+              {% endif %}
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'business_partners:performance' %}" class="nav-link {% if 'performance' in request.path %}active{% endif %}">
+              <i class="fas fa-chart-line nav-icon"></i>
+              <span>Performance</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="nav-section">
+        <h6 class="nav-section-title">Quick Actions</h6>
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a href="{% url 'business_partners:application_create' %}" class="nav-link">
+              <i class="fas fa-plus-circle nav-icon"></i>
+              <span>New Application</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'business_partners:document_upload' %}" class="nav-link">
+              <i class="fas fa-upload nav-icon"></i>
+              <span>Upload Document</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'business_partners:reports' %}" class="nav-link">
+              <i class="fas fa-chart-bar nav-icon"></i>
+              <span>Reports</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="nav-section">
+        <h6 class="nav-section-title">Account</h6>
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a href="{% url 'business_partners:profile' %}" class="nav-link">
+              <i class="fas fa-user nav-icon"></i>
+              <span>Profile</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'business_partners:settings' %}" class="nav-link">
+              <i class="fas fa-cog nav-icon"></i>
+              <span>Settings</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'account_logout' %}" class="nav-link">
+              <i class="fas fa-sign-out-alt nav-icon"></i>
+              <span>Logout</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- User Profile Section -->
+    <div class="nav-profile">
+      <div class="profile-dropdown">
+        <button class="profile-toggle" id="profile-toggle">
+          <div class="profile-avatar">
+            {% if user.profile.avatar %}
+            <img src="{{ user.profile.avatar.url }}" alt="{{ user.get_full_name|default:user.username }}" class="avatar-img">
+            {% else %}
+            <div class="avatar-placeholder">
+              {{ user.get_full_name|default:user.username|first|upper }}
+            </div>
+            {% endif %}
+          </div>
+          <div class="profile-info">
+            <span class="profile-name">{{ user.get_full_name|default:user.username }}</span>
+            <span class="profile-role">{{ user.get_role_display|default:"User" }}</span>
+          </div>
+          <i class="fas fa-chevron-down profile-chevron"></i>
+        </button>
+        <div class="profile-dropdown-menu" id="profile-dropdown">
+          <a href="{% url 'business_partners:profile' %}" class="dropdown-item">
+            <i class="fas fa-user"></i>
+            View Profile
+          </a>
+          <a href="{% url 'account_change_password' %}" class="dropdown-item">
+            <i class="fas fa-key"></i>
+            Change Password
+          </a>
+          <div class="dropdown-divider"></div>
+          <a href="{% url 'account_logout' %}" class="dropdown-item">
+            <i class="fas fa-sign-out-alt"></i>
+            Sign Out
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Theme Toggle -->
+    <div class="nav-theme-toggle">
+      <button class="theme-toggle-btn" id="theme-toggle" aria-label="Toggle dark mode">
+        <i class="fas fa-sun light-icon"></i>
+        <i class="fas fa-moon dark-icon"></i>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile Navigation Backdrop -->
+<div class="mobile-nav-backdrop" id="mobile-nav-backdrop"></div>
+
+<style>
+/* Vendor Navigation Styles */
+.vendor-navbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  transition: all 0.3s ease;
+}
+
+.nav-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  height: 64px;
+}
+
+/* Brand Section */
+.nav-brand {
+  display: flex;
+  align-items: center;
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--gray-800);
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+}
+
+.brand-link:hover {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.brand-icon {
+  font-size: 1.5rem;
+  margin-right: 0.5rem;
+  color: var(--primary-color);
+}
+
+/* Navigation Menu */
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.nav-section {
+  position: relative;
+}
+
+.nav-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+  padding: 0 0.75rem;
+}
+
+.nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.nav-item {
+  position: relative;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  color: var(--gray-700);
+  text-decoration: none;
+  border-radius: var(--border-radius-sm);
+  transition: all 0.3s ease;
+  font-weight: 500;
+  position: relative;
+}
+
+.nav-link:hover {
+  color: var(--primary-color);
+  background-color: var(--primary-bg);
+  text-decoration: none;
+}
+
+.nav-link.active {
+  color: var(--primary-color);
+  background-color: var(--primary-bg);
+  font-weight: 600;
+}
+
+.nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--primary-color);
+  border-radius: 0 2px 2px 0;
+}
+
+.nav-icon {
+  margin-right: 0.5rem;
+  width: 16px;
+  text-align: center;
+}
+
+.nav-badge {
+  margin-left: auto;
+  font-size: 0.7rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+/* User Profile Section */
+.nav-profile {
+  display: flex;
+  align-items: center;
+}
+
+.profile-dropdown {
+  position: relative;
+}
+
+.profile-toggle {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--border-radius-md);
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 200px;
+}
+
+.profile-toggle:hover {
+  border-color: var(--primary-color);
+  background-color: var(--gray-50);
+}
+
+.profile-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--primary-color);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  text-align: left;
+}
+
+.profile-name {
+  font-weight: 600;
+  color: var(--gray-800);
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.profile-role {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  line-height: 1.2;
+}
+
+.profile-chevron {
+  margin-left: 0.5rem;
+  color: var(--gray-400);
+  transition: transform 0.3s ease;
+}
+
+.profile-dropdown.active .profile-chevron {
+  transform: rotate(180deg);
+}
+
+.profile-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  min-width: 200px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  z-index: 1050;
+}
+
+.profile-dropdown.active .profile-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  color: var(--gray-700);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border-radius: 0;
+}
+
+.dropdown-item:hover {
+  background-color: var(--gray-50);
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.dropdown-item i {
+  margin-right: 0.75rem;
+  width: 16px;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--gray-200);
+  margin: 0.5rem 0;
+}
+
+/* Theme Toggle */
+.nav-theme-toggle {
+  margin-left: 1rem;
+}
+
+.theme-toggle-btn {
+  background: none;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--border-radius-md);
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  width: 44px;
+  height: 36px;
+}
+
+.theme-toggle-btn:hover {
+  border-color: var(--primary-color);
+  background-color: var(--gray-50);
+}
+
+.theme-toggle-btn i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.3s ease;
+}
+
+.theme-toggle-btn .dark-icon {
+  opacity: 0;
+}
+
+/* Dark mode styles */
+body.dark-mode .theme-toggle-btn .light-icon {
+  opacity: 0;
+}
+
+body.dark-mode .theme-toggle-btn .dark-icon {
+  opacity: 1;
+}
+
+/* Mobile Navigation Toggle */
+.mobile-nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: var(--border-radius-sm);
+  transition: all 0.3s ease;
+  width: 44px;
+  height: 36px;
+  position: relative;
+}
+
+.mobile-nav-toggle:hover {
+  background-color: var(--gray-100);
+}
+
+.hamburger-line {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--gray-600);
+  margin: 4px auto;
+  transition: all 0.3s ease;
+  border-radius: 1px;
+}
+
+.mobile-nav-toggle.active .hamburger-line:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.mobile-nav-toggle.active .hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.mobile-nav-toggle.active .hamburger-line:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -6px);
+}
+
+/* Mobile Navigation Backdrop */
+.mobile-nav-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1029;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.mobile-nav-backdrop.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Mobile Styles */
+@media (max-width: 991px) {
+  .mobile-nav-toggle {
+    display: block;
+  }
+  
+  .nav-menu {
+    position: fixed;
+    top: 64px;
+    left: -100%;
+    width: 280px;
+    height: calc(100vh - 64px);
+    background: var(--white);
+    border-right: 1px solid var(--gray-200);
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem;
+    overflow-y: auto;
+    transition: left 0.3s ease;
+    z-index: 1030;
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .nav-menu.active {
+    left: 0;
+  }
+  
+  .nav-list {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .nav-link {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .nav-section-title {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .nav-profile {
+    margin-left: auto;
+  }
+  
+  .profile-toggle {
+    min-width: auto;
+    padding: 0.5rem;
+  }
+  
+  .profile-info {
+    display: none;
+  }
+  
+  .profile-chevron {
+    display: none;
+  }
+  
+  .nav-theme-toggle {
+    margin-left: 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .nav-container {
+    padding: 0 0.75rem;
+  }
+  
+  .brand-text {
+    display: none;
+  }
+  
+  .nav-menu {
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
+/* Dark mode support */
+body.dark-mode .vendor-navbar {
+  background: var(--dark-surface);
+  border-bottom-color: var(--dark-border);
+}
+
+body.dark-mode .nav-link {
+  color: var(--dark-text);
+}
+
+body.dark-mode .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--primary-color);
+}
+
+body.dark-mode .nav-link.active {
+  background-color: rgba(37, 99, 235, 0.2);
+}
+
+body.dark-mode .profile-toggle {
+  border-color: var(--dark-border);
+  color: var(--dark-text);
+}
+
+body.dark-mode .profile-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary-color);
+}
+
+body.dark-mode .nav-menu {
+  background: var(--dark-surface);
+  border-right-color: var(--dark-border);
+}
+
+body.dark-mode .theme-toggle-btn {
+  border-color: var(--dark-border);
+  color: var(--dark-text);
+}
+
+body.dark-mode .theme-toggle-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary-color);
+}
+
+body.dark-mode .dropdown-item {
+  color: var(--dark-text);
+}
+
+body.dark-mode .dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--primary-color);
+}
+
+body.dark-mode .profile-dropdown-menu {
+  background: var(--dark-surface);
+  border-color: var(--dark-border);
+}
+</style>
+
+<script>
+// Mobile Navigation Toggle
+document.addEventListener('DOMContentLoaded', function() {
+  const mobileToggle = document.getElementById('mobile-nav-toggle');
+  const navMenu = document.getElementById('nav-menu');
+  const backdrop = document.getElementById('mobile-nav-backdrop');
+  const profileToggle = document.getElementById('profile-toggle');
+  const profileDropdown = profileToggle?.closest('.profile-dropdown');
+  const themeToggle = document.getElementById('theme-toggle');
+  
+  // Mobile nav toggle
+  function toggleMobileNav() {
+    const isOpen = navMenu.classList.contains('active');
+    navMenu.classList.toggle('active');
+    mobileToggle.classList.toggle('active');
+    backdrop.classList.toggle('active');
+    document.body.style.overflow = isOpen ? '' : 'hidden';
+  }
+  
+  mobileToggle?.addEventListener('click', toggleMobileNav);
+  backdrop?.addEventListener('click', toggleMobileNav);
+  
+  // Profile dropdown toggle
+  profileToggle?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    profileDropdown?.classList.toggle('active');
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!profileDropdown?.contains(e.target)) {
+      profileDropdown?.classList.remove('active');
+    }
+  });
+  
+  // Theme toggle
+  themeToggle?.addEventListener('click', function() {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem('darkMode', isDark);
+    
+    // Show notification
+    if (typeof showNotification === 'function') {
+      showNotification('info', 'Theme Changed', isDark ? 'Dark mode enabled' : 'Light mode enabled');
+    }
+  });
+  
+  // Load saved theme preference
+  const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+  if (savedDarkMode) {
+    document.body.classList.add('dark-mode');
+  }
+  
+  // Close mobile nav when clicking on links
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', function() {
+      if (window.innerWidth <= 991) {
+        toggleMobileNav();
+      }
+    });
+  });
+  
+  // Handle window resize
+  window.addEventListener('resize', function() {
+    if (window.innerWidth > 991) {
+      navMenu.classList.remove('active');
+      mobileToggle.classList.remove('active');
+      backdrop.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+  });
+});
+</script>

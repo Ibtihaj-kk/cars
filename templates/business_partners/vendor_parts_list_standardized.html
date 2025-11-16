@@ -1,0 +1,839 @@
+{% extends 'business_partners/vendor_layout_standard.html' %}
+{% load static %}
+
+{% block title %}My Parts - {{ vendor_profile.business_partner.company_name }}{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="ym-breadcrumb-item"><a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-breadcrumb-link">Dashboard</a></li>
+    <li class="ym-breadcrumb-item ym-active">My Parts</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Custom styles for parts list */
+    .ym-parts-header {
+        background: linear-gradient(135deg, var(--ym-primary-600), var(--ym-primary-700));
+        color: white;
+        padding: var(--ym-spacing-6) 0;
+        margin-bottom: var(--ym-spacing-6);
+    }
+    
+    .ym-part-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: var(--ym-border-radius-sm);
+    }
+    
+    .ym-stock-badge {
+        font-size: var(--ym-font-size-xs);
+        padding: var(--ym-spacing-1) var(--ym-spacing-2);
+    }
+    
+    .ym-bulk-actions {
+        background: var(--ym-gray-100);
+        padding: var(--ym-spacing-4);
+        border-radius: var(--ym-border-radius-lg);
+        margin-bottom: var(--ym-spacing-4);
+        display: none;
+    }
+    
+    .ym-bulk-actions.show {
+        display: block;
+    }
+    
+    .ym-filter-section {
+        background: var(--ym-gray-100);
+        padding: var(--ym-spacing-4);
+        border-radius: var(--ym-border-radius-lg);
+        margin-bottom: var(--ym-spacing-4);
+    }
+    
+    .ym-advanced-filters {
+        display: none;
+    }
+    
+    .ym-advanced-filters.show {
+        display: block;
+    }
+    
+    .ym-action-buttons .ym-btn {
+        margin-right: var(--ym-spacing-1);
+        margin-bottom: var(--ym-spacing-1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="ym-parts-header">
+    <div class="ym-container">
+        <div class="ym-grid">
+            <div class="ym-col-md-8">
+                <h1 class="ym-h3 ym-mb-0">My Parts</h1>
+                <p class="ym-mb-0">Manage your parts inventory with full access to all Excel fields</p>
+            </div>
+            <div class="ym-col-md-4 ym-text-right">
+                <a href="{% url 'business_partners:vendor_part_create' %}" class="ym-btn ym-btn-light">
+                    <i class="fas fa-plus"></i> Add New Part
+                </a>
+                <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-btn ym-btn-outline-light">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ym-container-fluid">
+    <!-- Search and Filters -->
+    <div class="ym-card ym-mb-6">
+        <div class="ym-card-body">
+            <form method="get" id="searchForm">
+                <div class="ym-grid">
+                    <div class="ym-col-md-4">
+                        <div class="ym-form-group">
+                            <label for="search" class="ym-form-label">Search Parts</label>
+                            <input type="text" class="ym-form-control" name="search" id="search" 
+                                   placeholder="Part number, description, manufacturer..." 
+                                   value="{{ search_form.search.value|default:'' }}">
+                        </div>
+                    </div>
+                    <div class="ym-col-md-2">
+                        <div class="ym-form-group">
+                            <label for="category" class="ym-form-label">Category</label>
+                            {{ search_form.category }}
+                        </div>
+                    </div>
+                    <div class="ym-col-md-2">
+                        <div class="ym-form-group">
+                            <label for="brand" class="ym-form-label">Brand</label>
+                            {{ search_form.brand }}
+                        </div>
+                    </div>
+                    <div class="ym-col-md-2">
+                        <div class="ym-form-group">
+                            <label for="stock_status" class="ym-form-label">Stock Status</label>
+                            {{ search_form.stock_status }}
+                        </div>
+                    </div>
+                    <div class="ym-col-md-2">
+                        <div class="ym-form-group">
+                            <label class="ym-form-label">&nbsp;</label>
+                            <div>
+                                <button type="submit" class="ym-btn ym-btn-primary ym-btn-block">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Advanced Filters Toggle -->
+                <div class="ym-text-center ym-mt-4">
+                    <button type="button" class="ym-btn ym-btn-outline-secondary ym-btn-sm" id="toggleAdvanced">
+                        <i class="fas fa-filter"></i> Advanced Filters
+                    </button>
+                    <a href="?" class="ym-btn ym-btn-outline-secondary ym-btn-sm">
+                        <i class="fas fa-times"></i> Clear All
+                    </a>
+                </div>
+                
+                <!-- Advanced Filters -->
+                <div class="ym-advanced-filters ym-mt-4" id="advancedFilters">
+                    <div class="ym-filter-section">
+                        <h6 class="ym-mb-3">Status Filters</h6>
+                        <div class="ym-grid">
+                            <div class="ym-col-md-3">
+                                <div class="ym-form-group">
+                                    <label for="is_active" class="ym-form-label">Active Status</label>
+                                    {{ search_form.is_active }}
+                                </div>
+                            </div>
+                            <div class="ym-col-md-3">
+                                <div class="ym-form-group">
+                                    <label for="is_featured" class="ym-form-label">Featured Status</label>
+                                    {{ search_form.is_featured }}
+                                </div>
+                            </div>
+                            <div class="ym-col-md-3">
+                                <div class="ym-form-group">
+                                    <label for="min_price" class="ym-form-label">Min Price</label>
+                                    {{ search_form.min_price }}
+                                </div>
+                            </div>
+                            <div class="ym-col-md-3">
+                                <div class="ym-form-group">
+                                    <label for="max_price" class="ym-form-label">Max Price</label>
+                                    {{ search_form.max_price }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="ym-filter-section">
+                        <h6 class="ym-mb-3">Vendor-Specific Filters</h6>
+                        <div class="ym-grid">
+                            <div class="ym-col-md-3">
+                                <div class="ym-form-group">
+                                    <label for="material_type" class="ym-form-label">Material Type</label>
+                                    {{ search_form.material_type }}
+                                </div>
+                            </div>
+                            <div class="ym-col-md-3">
+                                <div class="ym-form-group">
+                                    <label for="plant" class="ym-form-label">Plant</label>
+                                    {{ search_form.plant }}
+                                </div>
+                            </div>
+                            <div class="ym-col-md-3">
+                                <div class="ym-form-group">
+                                    <label for="material_group" class="ym-form-label">Material Group</label>
+                                    {{ search_form.material_group }}
+                                </div>
+                            </div>
+                            <div class="ym-col-md-3">
+                                <div class="ym-form-group">
+                                    <label for="abc_indicator" class="ym-form-label">ABC Indicator</label>
+                                    {{ search_form.abc_indicator }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="ym-filter-section">
+                        <h6 class="ym-mb-3">Sorting</h6>
+                        <div class="ym-grid">
+                            <div class="ym-col-md-4">
+                                <div class="ym-form-group">
+                                    <label for="sort_by" class="ym-form-label">Sort By</label>
+                                    {{ search_form.sort_by }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="ym-bulk-actions" id="bulkActions">
+        <div class="ym-grid">
+            <div class="ym-col-md-4">
+                <span id="selectedCount">0</span> parts selected
+            </div>
+            <div class="ym-col-md-8 ym-text-right">
+                <!-- Quick Actions -->
+                <div class="ym-btn-group ym-btn-group-sm ym-mr-3" role="group">
+                    <button type="button" class="ym-btn ym-btn-success" onclick="performBulkAction('activate')" title="Activate Selected">
+                        <i class="fas fa-check"></i> Activate
+                    </button>
+                    <button type="button" class="ym-btn ym-btn-secondary" onclick="performBulkAction('deactivate')" title="Deactivate Selected">
+                        <i class="fas fa-times"></i> Deactivate
+                    </button>
+                    <button type="button" class="ym-btn ym-btn-warning" onclick="performBulkAction('feature')" title="Feature Selected">
+                        <i class="fas fa-star"></i> Feature
+                    </button>
+                    <button type="button" class="ym-btn ym-btn-outline-warning" onclick="performBulkAction('unfeature')" title="Remove Featured">
+                        <i class="far fa-star"></i> Unfeature
+                    </button>
+                </div>
+                
+                <!-- Advanced Actions -->
+                <div class="ym-btn-group ym-btn-group-sm ym-mr-3" role="group">
+                    <button type="button" class="ym-btn ym-btn-info" onclick="showPriceUpdateModal()" title="Update Prices">
+                        <i class="fas fa-dollar-sign"></i> Price
+                    </button>
+                    <button type="button" class="ym-btn ym-btn-primary" onclick="showStockUpdateModal()" title="Update Stock">
+                        <i class="fas fa-boxes"></i> Stock
+                    </button>
+                </div>
+                
+                <!-- Other Actions -->
+                <a href="{% url 'business_partners:vendor_parts_bulk_update' %}" class="ym-btn ym-btn-warning ym-btn-sm ym-mr-3" id="bulkUpdateBtn">
+                    <i class="fas fa-edit"></i> Advanced Update
+                </a>
+                <button type="button" class="ym-btn ym-btn-danger ym-btn-sm ym-mr-3" onclick="performBulkAction('delete')" id="bulkDeleteBtn">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+                <button type="button" class="ym-btn ym-btn-secondary ym-btn-sm" id="clearSelectionBtn">
+                    <i class="fas fa-times"></i> Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="ym-grid ym-mb-4">
+        <div class="ym-col-md-6">
+            <p class="ym-text-muted ym-mb-0">
+                Showing {{ parts.start_index }}-{{ parts.end_index }} of {{ total_parts }} parts
+            </p>
+        </div>
+        <div class="ym-col-md-6 ym-text-right">
+            <a href="{% url 'business_partners:vendor_parts_export_csv' %}" class="ym-btn ym-btn-outline-primary ym-btn-sm">
+                <i class="fas fa-download"></i> Export CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Parts Table -->
+    <div class="ym-card">
+        {% if parts %}
+        <div class="ym-table-responsive">
+            <table class="ym-table ym-table-hover ym-mb-0">
+                <thead>
+                    <tr>
+                        <th width="40">
+                            <input type="checkbox" id="selectAll" class="ym-form-check-input">
+                        </th>
+                        <th width="60">Image</th>
+                        <th>Part Number</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Brand</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                        <th width="150">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in parts %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="ym-form-check-input part-checkbox" value="{{ part.id }}">
+                        </td>
+                        <td>
+                            {% if part.image %}
+                                <img src="{{ part.image.url }}" alt="{{ part.parts_number }}" class="ym-part-image">
+                            {% else %}
+                                <div class="ym-part-image ym-bg-light ym-d-flex ym-align-items-center ym-justify-content-center">
+                                    <i class="fas fa-image ym-text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ part.parts_number }}</strong>
+                            {% if part.manufacturer_part_number %}
+                                <br><small class="ym-text-muted">MPN: {{ part.manufacturer_part_number }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ part.material_description|truncatechars:50 }}
+                            {% if part.material_description_ar %}
+                                <br><small class="ym-text-muted">{{ part.material_description_ar|truncatechars:30 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ part.category.name|default:"—" }}</td>
+                        <td>{{ part.brand.name|default:"—" }}</td>
+                        <td>
+                            <strong>${{ part.price|floatformat:2 }}</strong>
+                            {% if part.moving_average_price %}
+                                <br><small class="ym-text-muted">Avg: ${{ part.moving_average_price|floatformat:2 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="ym-badge ym-stock-badge {% if part.quantity == 0 %}ym-badge-danger{% elif part.quantity <= 10 %}ym-badge-warning{% else %}ym-badge-success{% endif %}">
+                                {{ part.quantity }}
+                            </span>
+                            {% if part.safety_stock %}
+                                <br><small class="ym-text-muted">Safety: {{ part.safety_stock }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="ym-badge {% if part.is_active %}ym-badge-success{% else %}ym-badge-secondary{% endif %}">
+                                {% if part.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                            {% if part.is_featured %}
+                                <br><span class="ym-badge ym-badge-info">Featured</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="ym-action-buttons">
+                                <a href="{% url 'business_partners:vendor_part_detail' part.id %}" 
+                                   class="ym-btn ym-btn-info ym-btn-sm" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'business_partners:vendor_part_edit' part.id %}" 
+                                   class="ym-btn ym-btn-primary ym-btn-sm" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="ym-btn ym-btn-danger ym-btn-sm delete-part" 
+                                        data-part-id="{{ part.id }}" 
+                                        data-part-number="{{ part.parts_number }}" 
+                                        title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="ym-text-center ym-py-5">
+            <i class="fas fa-search fa-3x ym-text-muted ym-mb-3"></i>
+            <h5>No parts found</h5>
+            <p class="ym-text-muted">Try adjusting your search criteria or add a new part.</p>
+            <a href="{% url 'business_partners:vendor_part_create' %}" class="ym-btn ym-btn-primary">
+                <i class="fas fa-plus"></i> Add New Part
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if parts.has_other_pages %}
+    <div class="ym-card">
+        <div class="ym-card-body">
+            <nav aria-label="Parts pagination">
+                <ul class="ym-pagination ym-justify-content-center ym-mb-0">
+                    {% if parts.has_previous %}
+                        <li class="ym-page-item">
+                            <a class="ym-page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ parts.previous_page_number }}">
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in parts.paginator.page_range %}
+                        {% if parts.number == num %}
+                            <li class="ym-page-item ym-active">
+                                <span class="ym-page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > parts.number|add:'-3' and num < parts.number|add:'3' %}
+                            <li class="ym-page-item">
+                                <a class="ym-page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if parts.has_next %}
+                        <li class="ym-page-item">
+                            <a class="ym-page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ parts.next_page_number }}">
+                                Next <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modals -->
+<!-- Price Update Modal -->
+<div class="ym-modal" id="priceUpdateModal" tabindex="-1" aria-labelledby="priceUpdateModalLabel" aria-hidden="true">
+    <div class="ym-modal-dialog">
+        <div class="ym-modal-content">
+            <div class="ym-modal-header">
+                <h5 class="ym-modal-title" id="priceUpdateModalLabel">
+                    <i class="fas fa-dollar-sign"></i> Update Prices
+                </h5>
+                <button type="button" class="ym-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="ym-modal-body">
+                <form id="priceUpdateForm">
+                    <div class="ym-form-group ym-mb-3">
+                        <label for="pricePercentage" class="ym-form-label">Price Adjustment (%)</label>
+                        <input type="number" class="ym-form-control" id="pricePercentage" step="0.1" placeholder="e.g., 10 for 10% increase, -5 for 5% decrease">
+                        <div class="ym-form-text">Enter positive number to increase prices, negative to decrease</div>
+                    </div>
+                    <div class="ym-alert ym-alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        This will update prices for <span id="priceUpdateCount">0</span> selected parts.
+                    </div>
+                </form>
+            </div>
+            <div class="ym-modal-footer">
+                <button type="button" class="ym-btn ym-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="ym-btn ym-btn-primary" onclick="applyPriceUpdate()">Update Prices</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Update Modal -->
+<div class="ym-modal" id="stockUpdateModal" tabindex="-1" aria-labelledby="stockUpdateModalLabel" aria-hidden="true">
+    <div class="ym-modal-dialog">
+        <div class="ym-modal-content">
+            <div class="ym-modal-header">
+                <h5 class="ym-modal-title" id="stockUpdateModalLabel">
+                    <i class="fas fa-boxes"></i> Update Stock
+                </h5>
+                <button type="button" class="ym-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="ym-modal-body">
+                <form id="stockUpdateForm">
+                    <div class="ym-form-group ym-mb-3">
+                        <label for="stockAction" class="ym-form-label">Action</label>
+                        <select class="ym-form-select" id="stockAction">
+                            <option value="set">Set to specific quantity</option>
+                            <option value="add">Add to current stock</option>
+                            <option value="subtract">Subtract from current stock</option>
+                        </select>
+                    </div>
+                    <div class="ym-form-group ym-mb-3">
+                        <label for="stockQuantity" class="ym-form-label">Quantity</label>
+                        <input type="number" class="ym-form-control" id="stockQuantity" min="0" placeholder="Enter quantity">
+                    </div>
+                    <div class="ym-alert ym-alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        This will update stock for <span id="stockUpdateCount">0</span> selected parts.
+                    </div>
+                </form>
+            </div>
+            <div class="ym-modal-footer">
+                <button type="button" class="ym-btn ym-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="ym-btn ym-btn-primary" onclick="applyStockUpdate()">Update Stock</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="ym-modal" id="deleteModal" tabindex="-1" role="dialog">
+    <div class="ym-modal-dialog" role="document">
+        <div class="ym-modal-content">
+            <div class="ym-modal-header">
+                <h5 class="ym-modal-title">Confirm Delete</h5>
+                <button type="button" class="ym-btn-close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="ym-modal-body">
+                <p>Are you sure you want to delete part <strong id="deletePartNumber"></strong>?</p>
+                <p class="ym-text-muted">This action cannot be undone.</p>
+            </div>
+            <div class="ym-modal-footer">
+                <button type="button" class="ym-btn ym-btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="ym-btn ym-btn-danger" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- System Integration -->
+<script>
+// Integrate with Vendor System Connector
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for VendorSystem to be available
+    if (window.VendorSystem) {
+        console.log('Parts List integrated with Vendor System Connector');
+        
+        // Add system connector integration for bulk actions
+        const bulkActionButtons = document.querySelectorAll('[onclick*="performBulkAction"]');
+        bulkActionButtons.forEach(button => {
+            const originalOnclick = button.getAttribute('onclick');
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const actionMatch = originalOnclick.match(/performBulkAction\(['"](\w+)['"]\)/);
+                if (actionMatch && window.VendorSystem.actions) {
+                    window.VendorSystem.actions.execute(actionMatch[1], this);
+                }
+            });
+        });
+        
+        // Add notification system integration
+        window.showPartsNotification = function(message, type = 'info') {
+            if (window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(message, type);
+            } else {
+                console.log(`Parts List ${type}: ${message}`);
+            }
+        };
+        
+        // Override the existing showMessage function
+        if (typeof showMessage === 'function') {
+            window.showMessage = window.showPartsNotification;
+        }
+    }
+});
+</script>
+
+<script>
+$(document).ready(function() {
+    // Toggle advanced filters
+    $('#toggleAdvanced').click(function() {
+        $('#advancedFilters').toggleClass('show');
+        $(this).find('i').toggleClass('fa-filter fa-filter-circle-xmark');
+    });
+    
+    // Select all checkbox
+    $('#selectAll').change(function() {
+        $('.part-checkbox').prop('checked', this.checked);
+        updateBulkActions();
+    });
+    
+    // Individual checkboxes
+    $('.part-checkbox').change(function() {
+        updateBulkActions();
+        
+        // Update select all checkbox
+        var totalCheckboxes = $('.part-checkbox').length;
+        var checkedCheckboxes = $('.part-checkbox:checked').length;
+        $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
+    });
+    
+    // Update bulk actions visibility
+    function updateBulkActions() {
+        var selectedCount = $('.part-checkbox:checked').length;
+        $('#selectedCount').text(selectedCount);
+        
+        if (selectedCount > 0) {
+            $('#bulkActions').addClass('show');
+        } else {
+            $('#bulkActions').removeClass('show');
+        }
+    }
+    
+    // Clear selection
+    $('#clearSelectionBtn').click(function() {
+        $('.part-checkbox, #selectAll').prop('checked', false);
+        updateBulkActions();
+    });
+    
+    // Delete part
+    $('.delete-part').click(function() {
+        var partId = $(this).data('part-id');
+        var partNumber = $(this).data('part-number');
+        
+        $('#deletePartNumber').text(partNumber);
+        $('#deleteModal').modal('show');
+        
+        $('#confirmDelete').off('click').on('click', function() {
+            $.ajax({
+                url: '{% url "business_partners:vendor_part_delete" 0 %}'.replace('0', partId),
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.error);
+                    }
+                },
+                error: function() {
+                    alert('An error occurred while deleting the part.');
+                }
+            });
+            
+            $('#deleteModal').modal('hide');
+        });
+    });
+    
+    // Auto-submit form on select change
+    $('.ym-form-control').change(function() {
+        if ($(this).attr('name') !== 'search') {
+            $('#searchForm').submit();
+        }
+    });
+});
+
+// Bulk operation functions
+function performBulkAction(action) {
+    var selectedParts = [];
+    $('.part-checkbox:checked').each(function() {
+        selectedParts.push($(this).val());
+    });
+    
+    if (selectedParts.length === 0) {
+        alert('Please select at least one part.');
+        return;
+    }
+    
+    // Handle special actions that need modals
+    if (action === 'update_price') {
+        $('#priceUpdateCount').text(selectedParts.length);
+        $('#priceUpdateModal').modal('show');
+        return;
+    }
+    
+    if (action === 'update_stock') {
+        $('#stockUpdateCount').text(selectedParts.length);
+        $('#stockUpdateModal').modal('show');
+        return;
+    }
+    
+    // Confirm destructive actions
+    if (action === 'delete') {
+        if (window.VendorSystem && window.VendorSystem.modals) {
+            window.VendorSystem.modals.confirm('Confirm Delete', `Are you sure you want to delete ${selectedParts.length} selected parts? This action cannot be undone.`, function() {
+                performBulkActionConfirmed(action, selectedParts);
+            });
+            return;
+        } else if (!confirm(`Are you sure you want to delete ${selectedParts.length} selected parts? This action cannot be undone.`)) {
+            return;
+        }
+    }
+    
+    // Perform the bulk action
+    performBulkActionConfirmed(action, selectedParts);
+}
+
+function performBulkActionConfirmed(action, selectedParts) {
+    $.ajax({
+        url: '{% url "business_partners:vendor_parts_bulk_action" %}',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        data: {
+            'action': action,
+            'part_ids': selectedParts
+        },
+        success: function(response) {
+            if (response.success) {
+                showMessage(response.message, 'success');
+                location.reload();
+            } else {
+                showMessage(response.error, 'error');
+            }
+        },
+        error: function() {
+            showMessage('An error occurred while performing the bulk action.', 'error');
+        }
+    });
+}
+
+function applyPriceUpdate() {
+    var percentage = $('#pricePercentage').val();
+    if (!percentage || percentage === '') {
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('Please enter a price adjustment percentage.', 'warning');
+        } else {
+            alert('Please enter a price adjustment percentage.');
+        }
+        return;
+    }
+    
+    var selectedParts = [];
+    $('.part-checkbox:checked').each(function() {
+        selectedParts.push($(this).val());
+    });
+    
+    $.ajax({
+        url: '{% url "business_partners:vendor_parts_bulk_action" %}',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        data: {
+            'action': 'update_price',
+            'part_ids': selectedParts,
+            'price_percentage': percentage
+        },
+        success: function(response) {
+            $('#priceUpdateModal').modal('hide');
+            if (response.success) {
+                showMessage(response.message, 'success');
+                location.reload();
+            } else {
+                showMessage(response.error, 'error');
+            }
+        },
+        error: function() {
+            showMessage('An error occurred while updating prices.', 'error');
+        }
+    });
+}
+
+function applyStockUpdate() {
+    var action = $('#stockAction').val();
+    var quantity = $('#stockQuantity').val();
+    
+    if (!quantity || quantity === '') {
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('Please enter a quantity.', 'warning');
+        } else {
+            alert('Please enter a quantity.');
+        }
+        return;
+    }
+    
+    var selectedParts = [];
+    $('.part-checkbox:checked').each(function() {
+        selectedParts.push($(this).val());
+    });
+    
+    $.ajax({
+        url: '{% url "business_partners:vendor_parts_bulk_action" %}',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        data: {
+            'action': 'update_stock',
+            'part_ids': selectedParts,
+            'stock_action': action,
+            'stock_quantity': quantity
+        },
+        success: function(response) {
+            $('#stockUpdateModal').modal('hide');
+            if (response.success) {
+                showMessage(response.message, 'success');
+                location.reload();
+            } else {
+                showMessage(response.error, 'error');
+            }
+        },
+        error: function() {
+            showMessage('An error occurred while updating stock.', 'error');
+        }
+    });
+}
+
+function showMessage(message, type) {
+    var alertClass = type === 'success' ? 'ym-alert-success' : 'ym-alert-danger';
+    var alertHtml = `<div class="ym-alert ${alertClass} ym-alert-dismissible fade show" role="alert">
+        ${message}
+        <button type="button" class="ym-btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>`;
+    
+    // Insert at the top of the content
+    $('.ym-container-fluid').prepend(alertHtml);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        $('.ym-alert').alert('close');
+    }, 5000);
+}
+
+// Modal functions
+function showPriceUpdateModal() {
+    var selectedCount = $('.part-checkbox:checked').length;
+    if (selectedCount === 0) {
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('Please select at least one part.', 'warning');
+        } else {
+            alert('Please select at least one part.');
+        }
+        return;
+    }
+    $('#priceUpdateCount').text(selectedCount);
+    $('#priceUpdateModal').modal('show');
+}
+
+function showStockUpdateModal() {
+    var selectedCount = $('.part-checkbox:checked').length;
+    if (selectedCount === 0) {
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('Please select at least one part.', 'warning');
+        } else {
+            alert('Please select at least one part.');
+        }
+        return;
+    }
+    $('#stockUpdateCount').text(selectedCount);
+    $('#stockUpdateModal').modal('show');
+}
+</script>
+{% endblock %}

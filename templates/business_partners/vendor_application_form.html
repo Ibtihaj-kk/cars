@@ -1,0 +1,1531 @@
+{% extends "admin_panel/base.html" %}
+{% load static %}
+
+{% block title %}Vendor Application{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/vendor-framework.css' %}">
+<link rel="stylesheet" href="{% static 'css/vendor-components.css' %}">
+<style>
+  /* Application form specific styles */
+  .application-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-6);
+  }
+  
+  .application-header {
+    text-align: center;
+    margin-bottom: var(--space-8);
+    animation: fadeIn 0.8s ease-out;
+  }
+  
+  .application-title {
+    font-size: var(--text-3xl);
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: var(--space-4);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .application-subtitle {
+    font-size: var(--text-lg);
+    color: var(--gray-600);
+    margin-bottom: var(--space-6);
+  }
+  
+  .progress-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--space-8);
+    position: relative;
+  }
+  
+  .progress-steps::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 50px;
+    right: 50px;
+    height: 2px;
+    background: var(--gray-200);
+    z-index: 1;
+  }
+  
+  .progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+  }
+  
+  .step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--gray-200);
+    color: var(--gray-600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    margin-bottom: var(--space-2);
+    transition: all var(--transition-normal);
+  }
+  
+  .step-circle.active {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+  }
+  
+  .step-circle.completed {
+    background: var(--success-color);
+    color: white;
+  }
+  
+  .step-label {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--gray-600);
+    text-align: center;
+    transition: color var(--transition-normal);
+  }
+  
+  .step-label.active {
+    color: var(--primary-color);
+    font-weight: 600;
+  }
+  
+  .form-section {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-md);
+    animation: slideUp 0.6s ease-out;
+    transition: all var(--transition-normal);
+  }
+  
+  .form-section:hover {
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .section-title {
+    font-size: var(--text-xl);
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: var(--space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  
+  .section-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: white;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-lg);
+  }
+  
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-6);
+  }
+  
+  .form-group {
+    position: relative;
+    margin-bottom: var(--space-6);
+  }
+  
+  .form-label {
+    display: block;
+    font-weight: 500;
+    color: var(--gray-700);
+    margin-bottom: var(--space-2);
+    font-size: var(--text-sm);
+  }
+  
+  .form-label.required::after {
+    content: ' *';
+    color: var(--error-color);
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: var(--space-4);
+    border: 2px solid var(--gray-300);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
+    transition: all var(--transition-normal);
+    background: white;
+  }
+  
+  .form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+    transform: translateY(-1px);
+  }
+  
+  .form-control.error {
+    border-color: var(--error-color);
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+  }
+  
+  .form-control.success {
+    border-color: var(--success-color);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+  }
+  
+  .input-icon {
+    position: absolute;
+    right: var(--space-4);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    transition: color var(--transition-normal);
+  }
+  
+  .form-control:focus ~ .input-icon {
+    color: var(--primary-color);
+  }
+  
+  .form-help {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+    margin-top: var(--space-2);
+    line-height: 1.4;
+  }
+  
+  .form-error {
+    font-size: var(--text-sm);
+    color: var(--error-color);
+    margin-top: var(--space-2);
+    display: none;
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  .form-error.show {
+    display: block;
+  }
+  
+  .file-upload-area {
+    border: 2px dashed var(--gray-300);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    text-align: center;
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    background: var(--gray-50);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .file-upload-area:hover {
+    border-color: var(--primary-color);
+    background: rgba(37, 99, 235, 0.05);
+  }
+  
+  .file-upload-area.dragover {
+    border-color: var(--primary-color);
+    background: rgba(37, 99, 235, 0.1);
+    transform: scale(1.02);
+  }
+  
+  .upload-icon {
+    font-size: var(--text-4xl);
+    color: var(--gray-400);
+    margin-bottom: var(--space-4);
+    transition: all var(--transition-normal);
+  }
+  
+  .file-upload-area:hover .upload-icon {
+    color: var(--primary-color);
+    transform: scale(1.1);
+  }
+  
+  .upload-text {
+    font-size: var(--text-lg);
+    font-weight: 500;
+    color: var(--gray-700);
+    margin-bottom: var(--space-2);
+  }
+  
+  .upload-hint {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+  }
+  
+  .file-input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
+  
+  .file-list {
+    margin-top: var(--space-4);
+  }
+  
+  .file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3);
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  .file-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  
+  .file-icon {
+    font-size: var(--text-xl);
+    color: var(--gray-600);
+  }
+  
+  .file-details {
+    flex: 1;
+  }
+  
+  .file-name {
+    font-weight: 500;
+    color: var(--gray-900);
+  }
+  
+  .file-size {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+  }
+  
+  .file-remove {
+    background: none;
+    border: none;
+    color: var(--error-color);
+    cursor: pointer;
+    padding: var(--space-1);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+  }
+  
+  .file-remove:hover {
+    background: var(--error-bg);
+    transform: scale(1.1);
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--gray-200);
+  }
+  
+  .btn-group {
+    display: flex;
+    gap: var(--space-4);
+  }
+  
+  .btn-prev,
+  .btn-next {
+    padding: var(--space-4) var(--space-6);
+    border-radius: var(--radius-lg);
+    font-weight: 500;
+    transition: all var(--transition-normal);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  
+  .btn-prev {
+    background: var(--gray-200);
+    color: var(--gray-700);
+  }
+  
+  .btn-prev:hover {
+    background: var(--gray-300);
+    transform: translateY(-1px);
+  }
+  
+  .btn-next {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: white;
+    box-shadow: var(--shadow-md);
+  }
+  
+  .btn-next:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .btn-next:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  .step-indicator {
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+  }
+  
+  .validation-summary {
+    background: var(--error-bg);
+    border: 1px solid var(--error-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-6);
+    display: none;
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  .validation-summary.show {
+    display: block;
+  }
+  
+  .validation-title {
+    font-weight: 600;
+    color: var(--error-color);
+    margin-bottom: var(--space-2);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  
+  .validation-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .validation-item {
+    padding: var(--space-1) 0;
+    color: var(--error-color);
+    font-size: var(--text-sm);
+  }
+  
+  .validation-item::before {
+    content: '•';
+    margin-right: var(--space-2);
+  }
+  
+  .success-message {
+    background: var(--success-bg);
+    border: 1px solid var(--success-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    text-align: center;
+    animation: scaleIn 0.5s ease-out;
+  }
+  
+  .success-icon {
+    font-size: var(--text-4xl);
+    color: var(--success-color);
+    margin-bottom: var(--space-4);
+    animation: bounce 1s infinite;
+  }
+  
+  .success-title {
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    color: var(--success-color);
+    margin-bottom: var(--space-2);
+  }
+  
+  .success-text {
+    color: var(--gray-600);
+    margin-bottom: var(--space-6);
+  }
+  
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+  
+  .loading-overlay.show {
+    display: flex;
+  }
+  
+  .loading-content {
+    text-align: center;
+  }
+  
+  .loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--gray-200);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto var(--space-4);
+  }
+  
+  .loading-text {
+    font-size: var(--text-lg);
+    color: var(--gray-600);
+  }
+  
+  /* Animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  @keyframes bounce {
+    0%, 20%, 53%, 80%, 100% {
+      transform: translate3d(0, 0, 0);
+    }
+    40%, 43% {
+      transform: translate3d(0, -8px, 0);
+    }
+    70% {
+      transform: translate3d(0, -4px, 0);
+    }
+    90% {
+      transform: translate3d(0, -2px, 0);
+    }
+  }
+  
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .application-container {
+      padding: var(--space-4);
+    }
+    
+    .application-title {
+      font-size: var(--text-2xl);
+    }
+    
+    .progress-steps {
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    
+    .progress-steps::before {
+      display: none;
+    }
+    
+    .form-section {
+      padding: var(--space-6);
+    }
+    
+    .form-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-4);
+    }
+    
+    .form-actions {
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    
+    .btn-group {
+      width: 100%;
+      justify-content: space-between;
+    }
+    
+    .file-upload-area {
+      padding: var(--space-6);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .application-container {
+      padding: var(--space-3);
+    }
+    
+    .form-section {
+      padding: var(--space-4);
+    }
+    
+    .btn-prev,
+    .btn-next {
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--text-sm);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="application-container">
+  <!-- Header -->
+  <div class="application-header">
+    <h1 class="application-title">Vendor Application</h1>
+    <p class="application-subtitle">Join our network of trusted business partners</p>
+  </div>
+
+  <!-- Progress Steps -->
+  <div class="progress-steps">
+    <div class="progress-step" data-step="1">
+      <div class="step-circle active">1</div>
+      <div class="step-label active">Company Info</div>
+    </div>
+    <div class="progress-step" data-step="2">
+      <div class="step-circle">2</div>
+      <div class="step-label">Contact Details</div>
+    </div>
+    <div class="progress-step" data-step="3">
+      <div class="step-circle">3</div>
+      <div class="step-label">Business Info</div>
+    </div>
+    <div class="progress-step" data-step="4">
+      <div class="step-circle">4</div>
+      <div class="step-label">Documents</div>
+    </div>
+    <div class="progress-step" data-step="5">
+      <div class="step-circle">5</div>
+      <div class="step-label">Review</div>
+    </div>
+  </div>
+
+  <!-- Validation Summary -->
+  <div class="validation-summary" id="validationSummary">
+    <div class="validation-title">
+      <i class="fas fa-exclamation-triangle"></i>
+      Please correct the following errors:
+    </div>
+    <ul class="validation-list" id="validationList"></ul>
+  </div>
+
+  <!-- Success Message (hidden by default) -->
+  <div class="success-message" id="successMessage" style="display: none;">
+    <div class="success-icon">🎉</div>
+    <div class="success-title">Application Submitted Successfully!</div>
+    <div class="success-text">
+      Thank you for your application. Our team will review your submission and contact you within 3-5 business days.
+    </div>
+    <a href="{% url 'business_partners:dashboard' %}" class="btn btn-primary">
+      <i class="fas fa-home"></i> Back to Dashboard
+    </a>
+  </div>
+
+  <!-- Application Form -->
+  <form id="vendorApplicationForm" method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    
+    <!-- Step 1: Company Information -->
+    <div class="form-section" id="step1">
+      <div class="section-title">
+        <div class="section-icon">🏢</div>
+        Company Information
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label required" for="company_name">Company Name</label>
+          <input type="text" class="form-control" id="company_name" name="company_name" required
+                 placeholder="Enter your company name">
+          <div class="form-error" id="company_name_error"></div>
+          <div class="form-help">Legal name of your company as it appears on official documents</div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required" for="business_type">Business Type</label>
+          <select class="form-control" id="business_type" name="business_type" required>
+            <option value="">Select business type</option>
+            <option value="corporation">Corporation</option>
+            <option value="llc">Limited Liability Company (LLC)</option>
+            <option value="partnership">Partnership</option>
+            <option value="sole_proprietorship">Sole Proprietorship</option>
+            <option value="non_profit">Non-Profit Organization</option>
+          </select>
+          <div class="form-error" id="business_type_error"></div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required" for="tax_id">Tax ID / EIN</label>
+          <input type="text" class="form-control" id="tax_id" name="tax_id" required
+                 placeholder="XX-XXXXXXX" pattern="[0-9]{2}-[0-9]{7}">
+          <div class="form-error" id="tax_id_error"></div>
+          <div class="form-help">Format: XX-XXXXXXX</div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required" for="registration_number">Registration Number</label>
+          <input type="text" class="form-control" id="registration_number" name="registration_number" required
+                 placeholder="Business registration number">
+          <div class="form-error" id="registration_number_error"></div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required" for="annual_revenue">Annual Revenue</label>
+          <select class="form-control" id="annual_revenue" name="annual_revenue" required>
+            <option value="">Select revenue range</option>
+            <option value="under_100k">Under $100,000</option>
+            <option value="100k_500k">$100,000 - $500,000</option>
+            <option value="500k_1m">$500,000 - $1,000,000</option>
+            <option value="1m_5m">$1,000,000 - $5,000,000</option>
+            <option value="over_5m">Over $5,000,000</option>
+          </select>
+          <div class="form-error" id="annual_revenue_error"></div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required" for="years_in_business">Years in Business</label>
+          <input type="number" class="form-control" id="years_in_business" name="years_in_business" required
+                 min="0" max="100" placeholder="Number of years">
+          <div class="form-error" id="years_in_business_error"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Contact Details -->
+    <div class="form-section" id="step2" style="display: none;">
+      <div class="section-title">
+        <div class="section-icon">📞</div>
+        Contact Information
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label required" for="contact_person">Contact Person</label>
+          <input type="text" class="form-control" id="contact_person" name="contact_person" required
+                 placeholder="Primary contact person">
+          <div class="form-error" id="contact_person_error"></div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required" for="contact_email">Contact Email</label>
+          <input type="email" class="form-control" id="contact_email" name="contact_email" required
+                 placeholder="contact@company.com">
+          <div class="form-error" id="contact_email_error"></div>
+          <div class="form-help">This will be used for all communications</div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required" for="contact_phone">Contact Phone</label>
+          <input type="tel" class="form-control" id="contact_phone" name="contact_phone" required
+                 placeholder="(XXX) XXX-XXXX" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}">
+          <div class="form-error" id="contact_phone_error"></div>
+          <div class="form-help">Format: XXX-XXX-XXXX</div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="website">Website</label>
+          <input type="url" class="form-control" id="website" name="website"
+                 placeholder="https://www.company.com">
+          <div class="form-error" id="website_error"></div>
+        </div>
+      </div>
+      
+      <div class="section-title" style="margin-top: var(--space-8);">
+        <div class="section-icon">📍</div>
+        Business Address
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label required" for="business_address">Street Address</label>
+          <input type="text" class="form-control" id="business_address" name="business_address" required
+                 placeholder="123 Business Street">
+          <div class="form-error" id="business_address_error"></div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="business_address2">Address Line 2</label>
+          <input type="text" class="form-control" id="business_address2" name="business_address2"
+                 placeholder="Suite, Unit, etc. (optional)">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required" for="business_city">City</label>
+          <input type="text" class="form-control" id="business_city" name="business_city" required
+                 placeholder="City">
+          <div class="form-error" id="business_city_error"></div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required" for="business_state">State/Province</label>
+          <input type="text" class="form-control" id="business_state" name="business_state" required
+                 placeholder="State">
+          <div class="form-error" id="business_state_error"></div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required" for="business_zip">ZIP/Postal Code</label>
+          <input type="text" class="form-control" id="business_zip" name="business_zip" required
+                 placeholder="XXXXX" pattern="[0-9]{5}">
+          <div class="form-error" id="business_zip_error"></div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label required" for="business_country">Country</label>
+          <select class="form-control" id="business_country" name="business_country" required>
+            <option value="">Select country</option>
+            <option value="US">United States</option>
+            <option value="CA">Canada</option>
+            <option value="UK">United Kingdom</option>
+            <option value="AU">Australia</option>
+            <option value="OTHER">Other</option>
+          </select>
+          <div class="form-error" id="business_country_error"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Business Information -->
+    <div class="form-section" id="step3" style="display: none;">
+      <div class="section-title">
+        <div class="section-icon">💼</div>
+        Business Details
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label required" for="business_description">Business Description</label>
+        <textarea class="form-control" id="business_description" name="business_description" required
+                  rows="4" placeholder="Describe your business, products, and services"></textarea>
+        <div class="form-error" id="business_description_error"></div>
+        <div class="form-help">Provide a detailed description of your business operations</div>
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label required" for="employee_count">Number of Employees</label>
+          <select class="form-control" id="employee_count" name="employee_count" required>
+            <option value="">Select employee count</option>
+            <option value="1_10">1-10</option>
+            <option value="11_50">11-50</option>
+            <option value="51_200">51-200</option>
+            <option value="201_500">201-500</option>
+            <option value="501_1000">501-1000</option>
+            <option value="over_1000">Over 1000</option>
+          </select>
+          <div class="form-error" id="employee_count_error"></div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="primary_services">Primary Services</label>
+          <input type="text" class="form-control" id="primary_services" name="primary_services"
+                 placeholder="e.g., Software Development, Consulting">
+          <div class="form-help">Comma-separated list of your main services</div>
+        </div>
+      </div>
+      
+      <div class="section-title" style="margin-top: var(--space-8);">
+        <div class="section-icon">🎯</div>
+        Partnership Details
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label required" for="partnership_goals">Partnership Goals</label>
+        <textarea class="form-control" id="partnership_goals" name="partnership_goals" required
+                  rows="3" placeholder="What are your goals for this partnership?"></textarea>
+        <div class="form-error" id="partnership_goals_error"></div>
+        <div class="form-help">Describe what you hope to achieve through this partnership</div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label" for="previous_partnerships">Previous Partnerships</label>
+        <textarea class="form-control" id="previous_partnerships" name="previous_partnerships"
+                  rows="3" placeholder="Describe any relevant previous partnerships"></textarea>
+        <div class="form-help">Optional: Share experience with similar partnerships</div>
+      </div>
+    </div>
+
+    <!-- Step 4: Documents -->
+    <div class="form-section" id="step4" style="display: none;">
+      <div class="section-title">
+        <div class="section-icon">📄</div>
+        Required Documents
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label required">Business Registration Certificate</label>
+        <div class="file-upload-area" id="registrationUpload">
+          <div class="upload-icon">📋</div>
+          <div class="upload-text">Drop files here or click to upload</div>
+          <div class="upload-hint">PDF, JPG, PNG (Max 5MB)</div>
+          <input type="file" class="file-input" id="registration_cert" name="registration_cert"
+                 accept=".pdf,.jpg,.jpeg,.png" required>
+        </div>
+        <div class="form-error" id="registration_cert_error"></div>
+        <div class="file-list" id="registrationList"></div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label required">Tax Certificate</label>
+        <div class="file-upload-area" id="taxUpload">
+          <div class="upload-icon">💰</div>
+          <div class="upload-text">Drop files here or click to upload</div>
+          <div class="upload-hint">PDF, JPG, PNG (Max 5MB)</div>
+          <input type="file" class="file-input" id="tax_cert" name="tax_cert"
+                 accept=".pdf,.jpg,.jpeg,.png" required>
+        </div>
+        <div class="form-error" id="tax_cert_error"></div>
+        <div class="file-list" id="taxList"></div>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Additional Documents</label>
+        <div class="file-upload-area" id="additionalUpload">
+          <div class="upload-icon">📎</div>
+          <div class="upload-text">Drop files here or click to upload</div>
+          <div class="upload-hint">Optional: Insurance, licenses, etc. (Max 5MB each)</div>
+          <input type="file" class="file-input" id="additional_docs" name="additional_docs"
+                 accept=".pdf,.jpg,.jpeg,.png" multiple>
+        </div>
+        <div class="file-list" id="additionalList"></div>
+      </div>
+    </div>
+
+    <!-- Step 5: Review -->
+    <div class="form-section" id="step5" style="display: none;">
+      <div class="section-title">
+        <div class="section-icon">👁️</div>
+        Review Your Application
+      </div>
+      
+      <div class="card">
+        <div class="card-body">
+          <h4 class="font-semibold mb-4">Company Information</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <strong>Company Name:</strong>
+              <div id="review_company_name" class="text-gray-600"></div>
+            </div>
+            <div>
+              <strong>Business Type:</strong>
+              <div id="review_business_type" class="text-gray-600"></div>
+            </div>
+            <div>
+              <strong>Tax ID:</strong>
+              <div id="review_tax_id" class="text-gray-600"></div>
+            </div>
+            <div>
+              <strong>Annual Revenue:</strong>
+              <div id="review_annual_revenue" class="text-gray-600"></div>
+            </div>
+          </div>
+          
+          <h4 class="font-semibold mb-4">Contact Information</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <strong>Contact Person:</strong>
+              <div id="review_contact_person" class="text-gray-600"></div>
+            </div>
+            <div>
+              <strong>Email:</strong>
+              <div id="review_contact_email" class="text-gray-600"></div>
+            </div>
+            <div>
+              <strong>Phone:</strong>
+              <div id="review_contact_phone" class="text-gray-600"></div>
+            </div>
+            <div>
+              <strong>Website:</strong>
+              <div id="review_website" class="text-gray-600"></div>
+            </div>
+          </div>
+          
+          <h4 class="font-semibold mb-4">Business Address</h4>
+          <div class="mb-6">
+            <div id="review_address" class="text-gray-600"></div>
+          </div>
+          
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">Important</h3>
+                <div class="mt-2 text-sm text-yellow-700">
+                  <p>Please review all information carefully before submitting. Once submitted, you will not be able to make changes to your application.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <div class="step-indicator">
+        Step <span id="currentStep">1</span> of <span id="totalSteps">5</span>
+      </div>
+      <div class="btn-group">
+        <button type="button" class="btn-prev" id="prevBtn" onclick="changeStep(-1)" style="display: none;">
+          <i class="fas fa-arrow-left"></i>
+          Previous
+        </button>
+        <button type="button" class="btn-next" id="nextBtn" onclick="changeStep(1)">
+          Next
+          <i class="fas fa-arrow-right"></i>
+        </button>
+        <button type="submit" class="btn-next" id="submitBtn" style="display: none;">
+          <i class="fas fa-paper-plane"></i>
+          Submit Application
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-content">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Submitting your application...</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Form state management
+  let currentStep = 1;
+  const totalSteps = 5;
+  const formData = {};
+  const uploadedFiles = {};
+
+  // Initialize form
+  document.addEventListener('DOMContentLoaded', function() {
+    setupEventListeners();
+    setupFileUploads();
+    updateStepDisplay();
+  });
+
+  // Setup event listeners
+  function setupEventListeners() {
+    // Real-time validation
+    const inputs = document.querySelectorAll('.form-control');
+    inputs.forEach(input => {
+      input.addEventListener('blur', function() {
+        validateField(this);
+      });
+      
+      input.addEventListener('input', function() {
+        clearError(this);
+      });
+    });
+
+    // Step navigation
+    document.querySelectorAll('.progress-step').forEach(step => {
+      step.addEventListener('click', function() {
+        const stepNumber = parseInt(this.dataset.step);
+        if (stepNumber <= currentStep || validateCurrentStep()) {
+          goToStep(stepNumber);
+        }
+      });
+    });
+
+    // Form submission
+    document.getElementById('vendorApplicationForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      submitForm();
+    });
+  }
+
+  // Setup file upload areas
+  function setupFileUploads() {
+    const uploadAreas = document.querySelectorAll('.file-upload-area');
+    uploadAreas.forEach(area => {
+      const fileInput = area.querySelector('.file-input');
+      
+      area.addEventListener('click', function() {
+        fileInput.click();
+      });
+      
+      area.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        area.classList.add('dragover');
+      });
+      
+      area.addEventListener('dragleave', function() {
+        area.classList.remove('dragover');
+      });
+      
+      area.addEventListener('drop', function(e) {
+        e.preventDefault();
+        area.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        handleFiles(fileInput, files);
+      });
+      
+      fileInput.addEventListener('change', function() {
+        handleFiles(fileInput, this.files);
+      });
+    });
+  }
+
+  // Handle file uploads
+  function handleFiles(input, files) {
+    const inputId = input.id;
+    const fileList = document.getElementById(inputId.replace('_cert', 'List').replace('_docs', 'List'));
+    
+    Array.from(files).forEach(file => {
+      if (validateFile(file)) {
+        addFileToList(fileList, file, inputId);
+        if (!uploadedFiles[inputId]) {
+          uploadedFiles[inputId] = [];
+        }
+        uploadedFiles[inputId].push(file);
+      }
+    });
+  }
+
+  // Validate file
+  function validateFile(file) {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    
+    if (file.size > maxSize) {
+      showError(null, 'File size must be less than 5MB');
+      return false;
+    }
+    
+    if (!allowedTypes.includes(file.type)) {
+      showError(null, 'Only PDF, JPG, and PNG files are allowed');
+      return false;
+    }
+    
+    return true;
+  }
+
+  // Add file to list
+  function addFileToList(fileList, file, inputId) {
+    const fileItem = document.createElement('div');
+    fileItem.className = 'file-item';
+    fileItem.innerHTML = `
+      <div class="file-info">
+        <div class="file-icon">${getFileIcon(file.type)}</div>
+        <div class="file-details">
+          <div class="file-name">${file.name}</div>
+          <div class="file-size">${formatFileSize(file.size)}</div>
+        </div>
+      </div>
+      <button type="button" class="file-remove" onclick="removeFile('${inputId}', '${file.name}')">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+    fileList.appendChild(fileItem);
+  }
+
+  // Get file icon
+  function getFileIcon(fileType) {
+    switch (fileType) {
+      case 'application/pdf':
+        return '📄';
+      case 'image/jpeg':
+      case 'image/jpg':
+      case 'image/png':
+        return '🖼️';
+      default:
+        return '📎';
+    }
+  }
+
+  // Format file size
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // Remove file
+  function removeFile(inputId, fileName) {
+    if (uploadedFiles[inputId]) {
+      uploadedFiles[inputId] = uploadedFiles[inputId].filter(file => file.name !== fileName);
+      updateFileList(inputId);
+    }
+  }
+
+  // Update file list
+  function updateFileList(inputId) {
+    const fileList = document.getElementById(inputId.replace('_cert', 'List').replace('_docs', 'List'));
+    fileList.innerHTML = '';
+    if (uploadedFiles[inputId]) {
+      uploadedFiles[inputId].forEach(file => {
+        addFileToList(fileList, file, inputId);
+      });
+    }
+  }
+
+  // Step navigation
+  function changeStep(direction) {
+    if (direction === 1 && !validateCurrentStep()) {
+      return;
+    }
+    
+    currentStep += direction;
+    updateStepDisplay();
+    
+    if (currentStep === 5) {
+      populateReview();
+    }
+  }
+
+  // Go to specific step
+  function goToStep(stepNumber) {
+    currentStep = stepNumber;
+    updateStepDisplay();
+    
+    if (currentStep === 5) {
+      populateReview();
+    }
+  }
+
+  // Update step display
+  function updateStepDisplay() {
+    // Hide all steps
+    for (let i = 1; i <= totalSteps; i++) {
+      const stepElement = document.getElementById(`step${i}`);
+      if (stepElement) {
+        stepElement.style.display = i === currentStep ? 'block' : 'none';
+      }
+    }
+    
+    // Update progress steps
+    document.querySelectorAll('.progress-step').forEach((step, index) => {
+      const stepNumber = index + 1;
+      const circle = step.querySelector('.step-circle');
+      const label = step.querySelector('.step-label');
+      
+      if (stepNumber < currentStep) {
+        circle.classList.add('completed');
+        circle.classList.remove('active');
+        label.classList.remove('active');
+      } else if (stepNumber === currentStep) {
+        circle.classList.add('active');
+        circle.classList.remove('completed');
+        label.classList.add('active');
+      } else {
+        circle.classList.remove('active', 'completed');
+        label.classList.remove('active');
+      }
+    });
+    
+    // Update buttons
+    document.getElementById('prevBtn').style.display = currentStep === 1 ? 'none' : 'block';
+    document.getElementById('nextBtn').style.display = currentStep === totalSteps ? 'none' : 'block';
+    document.getElementById('submitBtn').style.display = currentStep === totalSteps ? 'block' : 'none';
+    
+    // Update step indicator
+    document.getElementById('currentStep').textContent = currentStep;
+  }
+
+  // Validate current step
+  function validateCurrentStep() {
+    const currentStepElement = document.getElementById(`step${currentStep}`);
+    const inputs = currentStepElement.querySelectorAll('.form-control[required]');
+    let isValid = true;
+    const errors = [];
+    
+    inputs.forEach(input => {
+      if (!validateField(input)) {
+        isValid = false;
+        const fieldName = input.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const errorElement = document.getElementById(`${input.name}_error`);
+        if (errorElement && errorElement.textContent) {
+          errors.push(`${fieldName}: ${errorElement.textContent}`);
+        }
+      }
+    });
+    
+    // Show validation summary if there are errors
+    if (!isValid) {
+      showValidationSummary(errors);
+    } else {
+      hideValidationSummary();
+    }
+    
+    return isValid;
+  }
+
+  // Validate individual field
+  function validateField(field) {
+    const value = field.value.trim();
+    const fieldName = field.name;
+    let isValid = true;
+    let errorMessage = '';
+    
+    // Required field validation
+    if (field.hasAttribute('required') && !value) {
+      isValid = false;
+      errorMessage = 'This field is required';
+    }
+    
+    // Field-specific validation
+    if (value) {
+      switch (fieldName) {
+        case 'contact_email':
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(value)) {
+            isValid = false;
+            errorMessage = 'Please enter a valid email address';
+          }
+          break;
+          
+        case 'contact_phone':
+          const phoneRegex = /^[0-9]{3}-[0-9]{3}-[0-9]{4}$/;
+          if (!phoneRegex.test(value)) {
+            isValid = false;
+            errorMessage = 'Please enter a valid phone number (XXX-XXX-XXXX)';
+          }
+          break;
+          
+        case 'tax_id':
+          const taxRegex = /^[0-9]{2}-[0-9]{7}$/;
+          if (!taxRegex.test(value)) {
+            isValid = false;
+            errorMessage = 'Please enter a valid Tax ID (XX-XXXXXXX)';
+          }
+          break;
+          
+        case 'website':
+          const urlRegex = /^https?:\/\/.+/;
+          if (!urlRegex.test(value)) {
+            isValid = false;
+            errorMessage = 'Please enter a valid website URL';
+          }
+          break;
+          
+        case 'years_in_business':
+          const years = parseInt(value);
+          if (years < 0 || years > 100) {
+            isValid = false;
+            errorMessage = 'Please enter a valid number of years (0-100)';
+          }
+          break;
+      }
+    }
+    
+    if (isValid) {
+      field.classList.remove('error');
+      field.classList.add('success');
+      hideFieldError(field);
+    } else {
+      field.classList.add('error');
+      field.classList.remove('success');
+      showFieldError(field, errorMessage);
+    }
+    
+    return isValid;
+  }
+
+  // Show field error
+  function showFieldError(field, message) {
+    const errorElement = document.getElementById(`${field.name}_error`);
+    if (errorElement) {
+      errorElement.textContent = message;
+      errorElement.classList.add('show');
+    }
+  }
+
+  // Hide field error
+  function hideFieldError(field) {
+    const errorElement = document.getElementById(`${field.name}_error`);
+    if (errorElement) {
+      errorElement.classList.remove('show');
+    }
+  }
+
+  // Clear error
+  function clearError(field) {
+    field.classList.remove('error', 'success');
+    hideFieldError(field);
+  }
+
+  // Show error
+  function showError(field, message) {
+    if (field) {
+      field.classList.add('error');
+      showFieldError(field, message);
+    }
+  }
+
+  // Show validation summary
+  function showValidationSummary(errors) {
+    const summary = document.getElementById('validationSummary');
+    const list = document.getElementById('validationList');
+    
+    list.innerHTML = '';
+    errors.forEach(error => {
+      const item = document.createElement('li');
+      item.className = 'validation-item';
+      item.textContent = error;
+      list.appendChild(item);
+    });
+    
+    summary.classList.add('show');
+    summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Hide validation summary
+  function hideValidationSummary() {
+    const summary = document.getElementById('validationSummary');
+    summary.classList.remove('show');
+  }
+
+  // Populate review section
+  function populateReview() {
+    // Collect form data
+    const form = document.getElementById('vendorApplicationForm');
+    const formData = new FormData(form);
+    
+    // Populate review fields
+    document.getElementById('review_company_name').textContent = formData.get('company_name') || 'N/A';
+    document.getElementById('review_business_type').textContent = formData.get('business_type') || 'N/A';
+    document.getElementById('review_tax_id').textContent = formData.get('tax_id') || 'N/A';
+    document.getElementById('review_annual_revenue').textContent = formData.get('annual_revenue') || 'N/A';
+    document.getElementById('review_contact_person').textContent = formData.get('contact_person') || 'N/A';
+    document.getElementById('review_contact_email').textContent = formData.get('contact_email') || 'N/A';
+    document.getElementById('review_contact_phone').textContent = formData.get('contact_phone') || 'N/A';
+    document.getElementById('review_website').textContent = formData.get('website') || 'N/A';
+    
+    // Address
+    const address = `${formData.get('business_address')}, ${formData.get('business_city')}, ${formData.get('business_state')} ${formData.get('business_zip')}, ${formData.get('business_country')}`;
+    document.getElementById('review_address').textContent = address;
+  }
+
+  // Submit form
+  function submitForm() {
+    if (!validateCurrentStep()) {
+      return;
+    }
+    
+    // Show loading overlay
+    document.getElementById('loadingOverlay').classList.add('show');
+    
+    // Collect form data
+    const form = document.getElementById('vendorApplicationForm');
+    const formData = new FormData(form);
+    
+    // Add uploaded files
+    Object.keys(uploadedFiles).forEach(inputId => {
+      if (uploadedFiles[inputId]) {
+        uploadedFiles[inputId].forEach(file => {
+          formData.append(inputId, file);
+        });
+      }
+    });
+    
+    // Submit via AJAX
+    fetch('{% url "business_partners:vendor_application_create" %}', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById('loadingOverlay').classList.remove('show');
+      
+      if (data.success) {
+        // Show success message
+        document.getElementById('vendorApplicationForm').style.display = 'none';
+        document.querySelector('.progress-steps').style.display = 'none';
+        document.getElementById('successMessage').style.display = 'block';
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        // Show errors
+        if (data.errors) {
+          Object.keys(data.errors).forEach(field => {
+            const fieldElement = document.querySelector(`[name="${field}"]`);
+            if (fieldElement) {
+              showError(fieldElement, data.errors[field][0]);
+            }
+          });
+          
+          // Show validation summary
+          const errors = Object.values(data.errors).flat();
+          showValidationSummary(errors);
+        }
+      }
+    })
+    .catch(error => {
+      document.getElementById('loadingOverlay').classList.remove('show');
+      console.error('Error:', error);
+      alert('An error occurred while submitting your application. Please try again.');
+    });
+  }
+</script>
+{% endblock %}

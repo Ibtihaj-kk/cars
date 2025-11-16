@@ -59,7 +59,7 @@
         </div>
         <div class="alert-content">
             <strong>Welcome back!</strong> You already have a vendor account. 
-            <a href="{% url 'vendor_dashboard' %}" class="alert-link" style="color: white; text-decoration: underline;">Go to Dashboard</a>
+            <a href="{% url 'business_partners:vendor_dashboard' %}" class="alert-link" style="color: white; text-decoration: underline;">Go to Dashboard</a>
         </div>
         <button type="button" class="alert-close" data-dismiss="alert" aria-label="Close">
             <i class="fas fa-times"></i>
@@ -132,7 +132,7 @@
                 </div>
             </div>
             <div class="status-actions">
-                <a href="{% url 'vendor_dashboard' %}" class="btn btn-success-modern">
+                <a href="{% url 'business_partners:vendor_dashboard' %}" class="btn btn-success-modern">
                     <i class="fas fa-tachometer-alt"></i>
                     Go to Vendor Dashboard
                 </a>

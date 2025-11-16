@@ -8,7 +8,7 @@
 <style>
 .order-detail-container {
     max-width: 1000px;
-    margin: 0 auto;
+    margin: 125px auto;
     padding: 20px;
 }
 
@@ -428,12 +428,12 @@
                 <div class="status-timeline">
                     {% for status in status_history %}
                     <div class="status-item">
-                        <div class="status-icon {% if forloop.first %}current{% elif status.created_at %}completed{% endif %}">
+                        <div class="status-icon {% if forloop.first %}current{% elif status.timestamp %}completed{% endif %}">
                             <i class="fas fa-check"></i>
                         </div>
                         <div class="status-content">
                             <div class="status-title">{{ status.get_status_display|default:status.status|title }}</div>
-                            <div class="status-date">{{ status.created_at|date:"M d, Y g:i A" }}</div>
+                            <div class="status-date">{{ status.timestamp|date:"M d, Y g:i A" }}</div>
                             {% if status.notes %}
                                 <div class="status-notes">{{ status.notes }}</div>
                             {% endif %}

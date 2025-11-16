@@ -35,6 +35,10 @@ def admin_login_view(request):
     """
     Admin panel login view with enhanced security features.
     """
+    # Clear any existing messages to prevent duplicates
+    storage = messages.get_messages(request)
+    storage.used = True
+    
     # Redirect if already authenticated admin
     if request.user.is_authenticated and _is_admin_user(request.user):
         return redirect('admin_panel:dashboard')
@@ -49,7 +53,7 @@ def admin_login_view(request):
         'max_attempts': getattr(settings, 'ADMIN_MAX_LOGIN_ATTEMPTS', 5),
     }
     
-    return render(request, 'admin_panel/auth/login.html', context)
+    return render(request, 'admin_panel/auth/login_new.html', context)
 
 
 def _handle_login_post(request):

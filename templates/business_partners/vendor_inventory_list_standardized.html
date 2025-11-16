@@ -1,0 +1,794 @@
+{% extends 'business_partners/vendor_layout_standard.html' %}
+{% load static %}
+
+{% block title %}Inventory Management - {{ vendor_profile.business_partner.company_name }}{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="ym-breadcrumb-item"><a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-breadcrumb-link">Dashboard</a></li>
+    <li class="ym-breadcrumb-item ym-active">Inventory</li>
+{% endblock %}
+
+{% block page_header_actions %}
+    <div class="ym-btn-group">
+        <a href="{% url 'business_partners:vendor_parts_create' %}" class="ym-btn ym-btn-primary ym-btn-sm">
+            <i class="fas fa-plus"></i> Add New Part
+        </a>
+        <button type="button" class="ym-btn ym-btn-outline-secondary ym-btn-sm" onclick="exportInventory()">
+            <i class="fas fa-download"></i> Export
+        </button>
+    </div>
+{% endblock %}
+
+{% block content %}
+<!-- Inventory Statistics -->
+<div class="ym-grid ym-mb-6">
+    <div class="ym-col-xl-3 ym-col-md-6 ym-mb-4">
+        <div class="ym-card ym-border-left-primary">
+            <div class="ym-card-body">
+                <div class="ym-d-flex ym-align-items-center">
+                    <div class="ym-flex-grow-1">
+                        <div class="ym-text-xs ym-font-weight-bold ym-text-primary ym-text-uppercase ym-mb-1">
+                            Total Parts
+                        </div>
+                        <div class="ym-h5 ym-mb-0 ym-font-weight-bold ym-text-gray-800">{{ total_parts }}</div>
+                    </div>
+                    <div class="ym-text-primary">
+                        <i class="fas fa-boxes fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="ym-col-xl-3 ym-col-md-6 ym-mb-4">
+        <div class="ym-card ym-border-left-success">
+            <div class="ym-card-body">
+                <div class="ym-d-flex ym-align-items-center">
+                    <div class="ym-flex-grow-1">
+                        <div class="ym-text-xs ym-font-weight-bold ym-text-success ym-text-uppercase ym-mb-1">
+                            In Stock
+                        </div>
+                        <div class="ym-h5 ym-mb-0 ym-font-weight-bold ym-text-gray-800">{{ stock_stats.in_stock }}</div>
+                    </div>
+                    <div class="ym-text-success">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="ym-col-xl-3 ym-col-md-6 ym-mb-4">
+        <div class="ym-card ym-border-left-warning">
+            <div class="ym-card-body">
+                <div class="ym-d-flex ym-align-items-center">
+                    <div class="ym-flex-grow-1">
+                        <div class="ym-text-xs ym-font-weight-bold ym-text-warning ym-text-uppercase ym-mb-1">
+                            Low Stock
+                        </div>
+                        <div class="ym-h5 ym-mb-0 ym-font-weight-bold ym-text-gray-800">{{ stock_stats.low_stock }}</div>
+                    </div>
+                    <div class="ym-text-warning">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="ym-col-xl-3 ym-col-md-6 ym-mb-4">
+        <div class="ym-card ym-border-left-info">
+            <div class="ym-card-body">
+                <div class="ym-d-flex ym-align-items-center">
+                    <div class="ym-flex-grow-1">
+                        <div class="ym-text-xs ym-font-weight-bold ym-text-info ym-text-uppercase ym-mb-1">
+                            Total Value
+                        </div>
+                        <div class="ym-h5 ym-mb-0 ym-font-weight-bold ym-text-gray-800">${{ total_value|floatformat:2 }}</div>
+                    </div>
+                    <div class="ym-text-info">
+                        <i class="fas fa-dollar-sign fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="ym-card ym-mb-6">
+    <div class="ym-card-header">
+        <h6 class="ym-mb-0">Filters and Search</h6>
+    </div>
+    <div class="ym-card-body">
+        <form method="get" class="ym-form" id="inventoryFilterForm">
+            <div class="ym-row">
+                <div class="ym-col-md-4">
+                    <div class="ym-form-group">
+                        <label for="search" class="ym-form-label">Search</label>
+                        <input type="text" class="ym-form-control" id="search" name="search" 
+                               value="{{ search_query }}" placeholder="Part number, description...">
+                    </div>
+                </div>
+                
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group">
+                        <label for="category" class="ym-form-label">Category</label>
+                        <select class="ym-form-control" id="category" name="category">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group">
+                        <label for="brand" class="ym-form-label">Brand</label>
+                        <select class="ym-form-control" id="brand" name="brand">
+                            <option value="">All Brands</option>
+                            {% for brand in brands %}
+                                <option value="{{ brand.id }}" {% if brand_filter == brand.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ brand.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="ym-col-md-2">
+                    <div class="ym-form-group">
+                        <label for="stock_status" class="ym-form-label">Stock Status</label>
+                        <select class="ym-form-control" id="stock_status" name="stock_status">
+                            <option value="">All</option>
+                            <option value="in_stock" {% if stock_status == "in_stock" %}selected{% endif %}>In Stock</option>
+                            <option value="low_stock" {% if stock_status == "low_stock" %}selected{% endif %}>Low Stock</option>
+                            <option value="out_of_stock" {% if stock_status == "out_of_stock" %}selected{% endif %}>Out of Stock</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ym-row">
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group">
+                        <label for="price_min" class="ym-form-label">Min Price</label>
+                        <input type="number" class="ym-form-control" id="price_min" name="price_min" 
+                               value="{{ price_min }}" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group">
+                        <label for="price_max" class="ym-form-label">Max Price</label>
+                        <input type="number" class="ym-form-control" id="price_max" name="price_max" 
+                               value="{{ price_max }}" step="0.01" placeholder="9999.99">
+                    </div>
+                </div>
+                
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group">
+                        <label for="sort_by" class="ym-form-label">Sort By</label>
+                        <select class="ym-form-control" id="sort_by" name="sort_by">
+                            <option value="-created_at" {% if sort_by == "-created_at" %}selected{% endif %}>Newest First</option>
+                            <option value="created_at" {% if sort_by == "created_at" %}selected{% endif %}>Oldest First</option>
+                            <option value="parts_number" {% if sort_by == "parts_number" %}selected{% endif %}>Part Number</option>
+                            <option value="-price" {% if sort_by == "-price" %}selected{% endif %}>Price (High to Low)</option>
+                            <option value="price" {% if sort_by == "price" %}selected{% endif %}>Price (Low to High)</option>
+                            <option value="quantity" {% if sort_by == "quantity" %}selected{% endif %}>Quantity (Low to High)</option>
+                            <option value="-quantity" {% if sort_by == "-quantity" %}selected{% endif %}>Quantity (High to Low)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="ym-col-md-3">
+                    <div class="ym-form-group ym-mt-4">
+                        <button type="submit" class="ym-btn ym-btn-primary ym-w-100">
+                            <i class="fas fa-filter"></i> Apply Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Inventory Table -->
+<div class="ym-card ym-mb-6">
+    <div class="ym-card-header ym-d-flex ym-justify-content-between ym-align-items-center">
+        <h6 class="ym-m-0">Inventory Items</h6>
+        <div class="ym-text-muted">
+            Showing {{ parts.start_index }}-{{ parts.end_index }} of {{ parts.paginator.count }} items
+        </div>
+    </div>
+    <div class="ym-card-body ym-p-0">
+        <div class="ym-table-responsive">
+            <table class="ym-table ym-table-hover ym-mb-0" id="inventoryTable">
+                <thead class="ym-thead-light">
+                    <tr>
+                        <th width="40">
+                            <input type="checkbox" id="selectAll" class="ym-form-check-input">
+                        </th>
+                        <th>Part Number</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Brand</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Value</th>
+                        <th>Status</th>
+                        <th width="120">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in parts %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="part-checkbox ym-form-check-input" value="{{ part.id }}">
+                        </td>
+                        <td>
+                            <a href="{% url 'business_partners:vendor_part_detail' part.id %}" class="ym-font-weight-bold">
+                                {{ part.parts_number }}
+                            </a>
+                        </td>
+                        <td>
+                            <div class="ym-text-truncate" style="max-width: 200px;" title="{{ part.description }}">
+                                {{ part.description }}
+                            </div>
+                        </td>
+                        <td>{{ part.category.name|default:"-" }}</td>
+                        <td>{{ part.brand.name|default:"-" }}</td>
+                        <td>${{ part.price|floatformat:2 }}</td>
+                        <td>
+                            {% if part.quantity > 0 %}
+                                <span class="ym-text-success">{{ part.quantity }}</span>
+                            {% else %}
+                                <span class="ym-text-danger">0</span>
+                            {% endif %}
+                        </td>
+                        <td>${{ part.total_value|floatformat:2 }}</td>
+                        <td>
+                            {% if part.quantity == 0 %}
+                                <span class="ym-badge ym-badge-danger">Out of Stock</span>
+                            {% elif part.safety_stock and part.quantity <= part.safety_stock %}
+                                <span class="ym-badge ym-badge-warning">Low Stock</span>
+                            {% else %}
+                                <span class="ym-badge ym-badge-success">In Stock</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="ym-btn-group ym-btn-group-sm">
+                                <a href="{% url 'business_partners:vendor_part_detail' part.id %}" class="ym-btn ym-btn-outline-primary" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'business_partners:vendor_part_edit' part.id %}" class="ym-btn ym-btn-outline-secondary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="ym-btn ym-btn-outline-danger" onclick="quickStockUpdate({{ part.id }}, '{{ part.parts_number }}')" title="Update Stock">
+                                    <i class="fas fa-boxes"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="ym-text-center">
+                            <div class="ym-empty-state">
+                                <i class="fas fa-boxes fa-3x ym-text-muted ym-mb-3"></i>
+                                <h6>No inventory items found</h6>
+                                <p class="ym-text-muted">Try adjusting your filters or search terms</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions -->
+<div class="ym-bulk-actions ym-card ym-mb-4" id="bulkActions" style="display: none;">
+    <div class="ym-card-body">
+        <div class="ym-d-flex ym-justify-content-between ym-align-items-center">
+            <div>
+                <span id="selectedCount">0</span> items selected
+            </div>
+            <div class="ym-btn-group">
+                <button type="button" class="ym-btn ym-btn-warning ym-btn-sm" onclick="bulkStockUpdate()">
+                    <i class="fas fa-boxes"></i> Update Stock
+                </button>
+                <button type="button" class="ym-btn ym-btn-info ym-btn-sm" onclick="bulkPriceUpdate()">
+                    <i class="fas fa-dollar-sign"></i> Update Prices
+                </button>
+                <button type="button" class="ym-btn ym-btn-success ym-btn-sm" onclick="bulkActivate()">
+                    <i class="fas fa-check"></i> Activate
+                </button>
+                <button type="button" class="ym-btn ym-btn-secondary ym-btn-sm" onclick="bulkDeactivate()">
+                    <i class="fas fa-times"></i> Deactivate
+                </button>
+                <button type="button" class="ym-btn ym-btn-outline-secondary ym-btn-sm" onclick="clearSelection()">
+                    <i class="fas fa-times"></i> Clear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if parts.has_other_pages %}
+<nav aria-label="Inventory pagination" class="ym-mb-6">
+    <ul class="ym-pagination ym-justify-content-center">
+        {% if parts.has_previous %}
+            <li class="ym-page-item">
+                <a class="ym-page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ parts.previous_page_number }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="ym-page-item ym-disabled">
+                <span class="ym-page-link" aria-hidden="true">&laquo;</span>
+            </li>
+        {% endif %}
+        
+        {% for num in parts.paginator.page_range %}
+            {% if parts.number == num %}
+                <li class="ym-page-item ym-active">
+                    <span class="ym-page-link">{{ num }}</span>
+                </li>
+            {% elif num > parts.number|add:'-3' and num < parts.number|add:'3' %}
+                <li class="ym-page-item">
+                    <a class="ym-page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if parts.has_next %}
+            <li class="ym-page-item">
+                <a class="ym-page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ parts.next_page_number }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="ym-page-item ym-disabled">
+                <span class="ym-page-link" aria-hidden="true">&raquo;</span>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Inventory management functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize selection functionality
+    initializeSelection();
+    
+    // Track page view
+    if (window.VendorSystem && window.VendorSystem.analytics) {
+        window.VendorSystem.analytics.track('inventory_page_viewed', {
+            total_parts: '{{ total_parts }}',
+            search_query: '{{ search_query }}',
+            stock_status: '{{ stock_status }}',
+            category_filter: '{{ category_filter }}',
+            brand_filter: '{{ brand_filter }}'
+        });
+    }
+});
+
+function initializeSelection() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.part-checkbox');
+    const bulkActions = document.getElementById('bulkActions');
+    
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateBulkActions();
+    });
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateBulkActions();
+            updateSelectAllState();
+        });
+    });
+}
+
+function updateBulkActions() {
+    const selectedCount = document.querySelectorAll('.part-checkbox:checked').length;
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCountElement = document.getElementById('selectedCount');
+    
+    selectedCountElement.textContent = selectedCount;
+    
+    if (selectedCount > 0) {
+        bulkActions.style.display = 'block';
+    } else {
+        bulkActions.style.display = 'none';
+    }
+}
+
+function updateSelectAllState() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.part-checkbox');
+    const checkedCount = document.querySelectorAll('.part-checkbox:checked').length;
+    
+    if (checkedCount === 0) {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+    } else if (checkedCount === checkboxes.length) {
+        selectAll.checked = true;
+        selectAll.indeterminate = false;
+    } else {
+        selectAll.checked = false;
+        selectAll.indeterminate = true;
+    }
+}
+
+function clearSelection() {
+    document.getElementById('selectAll').checked = false;
+    document.querySelectorAll('.part-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateBulkActions();
+}
+
+function getSelectedParts() {
+    return Array.from(document.querySelectorAll('.part-checkbox:checked')).map(cb => cb.value);
+}
+
+function quickStockUpdate(partId, partNumber) {
+    const newQuantity = prompt(`Update stock for ${partNumber}:\n\nEnter new quantity:`);
+    
+    if (newQuantity === null) return;
+    
+    const quantity = parseInt(newQuantity);
+    if (isNaN(quantity) || quantity < 0) {
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('Please enter a valid non-negative quantity.', 'error');
+        } else {
+            alert('Please enter a valid non-negative quantity.');
+        }
+        return;
+    }
+    
+    if (window.VendorSystem && window.VendorSystem.notifications) {
+        window.VendorSystem.notifications.show('Updating stock...', 'info');
+    }
+    
+    fetch("{% url 'business_partners:vendor_inventory_update' 0 %}".replace('0', partId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            action: 'set',
+            quantity: quantity
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show('Stock updated successfully!', 'success');
+            } else {
+                alert('Stock updated successfully!');
+            }
+            
+            // Track the action
+            if (window.VendorSystem && window.VendorSystem.analytics) {
+                window.VendorSystem.analytics.track('inventory_quick_update', {
+                    part_id: partId,
+                    new_quantity: quantity,
+                    action: 'set'
+                });
+            }
+            
+            // Reload page to reflect changes
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.error || 'Failed to update stock', 'error');
+            } else {
+                alert(data.error || 'Failed to update stock');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error updating stock:', error);
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('An error occurred while updating stock.', 'error');
+        } else {
+            alert('An error occurred while updating stock.');
+        }
+    });
+}
+
+function bulkStockUpdate() {
+    const selectedParts = getSelectedParts();
+    if (selectedParts.length === 0) {
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('Please select at least one part.', 'warning');
+        } else {
+            alert('Please select at least one part.');
+        }
+        return;
+    }
+    
+    const adjustment = prompt(`Bulk stock update for ${selectedParts.length} parts:\n\nEnter quantity adjustment (positive to add, negative to subtract):`);
+    
+    if (adjustment === null) return;
+    
+    const quantity = parseInt(adjustment);
+    if (isNaN(quantity)) {
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('Please enter a valid number.', 'error');
+        } else {
+            alert('Please enter a valid number.');
+        }
+        return;
+    }
+    
+    if (window.VendorSystem && window.VendorSystem.notifications) {
+        window.VendorSystem.notifications.show('Updating stock for selected parts...', 'info');
+    }
+    
+    fetch("{% url 'business_partners:vendor_inventory_bulk_update' %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            action: quantity > 0 ? 'add' : 'subtract',
+            quantity: Math.abs(quantity),
+            part_ids: selectedParts
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.message, 'success');
+            } else {
+                alert(data.message);
+            }
+            
+            // Track the action
+            if (window.VendorSystem && window.VendorSystem.analytics) {
+                window.VendorSystem.analytics.track('inventory_bulk_update', {
+                    part_count: selectedParts.length,
+                    quantity_adjustment: quantity,
+                    action: quantity > 0 ? 'add' : 'subtract'
+                });
+            }
+            
+            // Clear selection and reload
+            clearSelection();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.error || 'Failed to update stock', 'error');
+            } else {
+                alert(data.error || 'Failed to update stock');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error updating stock:', error);
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('An error occurred while updating stock.', 'error');
+        } else {
+            alert('An error occurred while updating stock.');
+        }
+    });
+}
+
+function bulkPriceUpdate() {
+    const selectedParts = getSelectedParts();
+    if (selectedParts.length === 0) {
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('Please select at least one part.', 'warning');
+        } else {
+            alert('Please select at least one part.');
+        }
+        return;
+    }
+    
+    const percentage = prompt(`Bulk price update for ${selectedParts.length} parts:\n\nEnter percentage adjustment (e.g., 10 for 10% increase, -5 for 5% decrease):`);
+    
+    if (percentage === null) return;
+    
+    const pricePercentage = parseFloat(percentage);
+    if (isNaN(pricePercentage)) {
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('Please enter a valid number.', 'error');
+        } else {
+            alert('Please enter a valid number.');
+        }
+        return;
+    }
+    
+    if (window.VendorSystem && window.VendorSystem.notifications) {
+        window.VendorSystem.notifications.show('Updating prices for selected parts...', 'info');
+    }
+    
+    fetch("{% url 'business_partners:vendor_parts_bulk_action' %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            action: 'update_price',
+            part_ids: selectedParts,
+            price_percentage: pricePercentage
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.message, 'success');
+            } else {
+                alert(data.message);
+            }
+            
+            // Track the action
+            if (window.VendorSystem && window.VendorSystem.analytics) {
+                window.VendorSystem.analytics.track('inventory_bulk_price_update', {
+                    part_count: selectedParts.length,
+                    price_percentage: pricePercentage
+                });
+            }
+            
+            // Clear selection and reload
+            clearSelection();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.error || 'Failed to update prices', 'error');
+            } else {
+                alert(data.error || 'Failed to update prices');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error updating prices:', error);
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('An error occurred while updating prices.', 'error');
+        } else {
+            alert('An error occurred while updating prices.');
+        }
+    });
+}
+
+function bulkActivate() {
+    performBulkAction('activate', 'Activating selected parts...', 'Activated successfully!');
+}
+
+function bulkDeactivate() {
+    performBulkAction('deactivate', 'Deactivating selected parts...', 'Deactivated successfully!');
+}
+
+function performBulkAction(action, loadingMessage, successMessage) {
+    const selectedParts = getSelectedParts();
+    if (selectedParts.length === 0) {
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('Please select at least one part.', 'warning');
+        } else {
+            alert('Please select at least one part.');
+        }
+        return;
+    }
+    
+    if (window.VendorSystem && window.VendorSystem.notifications) {
+        window.VendorSystem.notifications.show(loadingMessage, 'info');
+    }
+    
+    fetch("{% url 'business_partners:vendor_parts_bulk_action' %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            action: action,
+            part_ids: selectedParts
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.message || successMessage, 'success');
+            } else {
+                alert(data.message || successMessage);
+            }
+            
+            // Track the action
+            if (window.VendorSystem && window.VendorSystem.analytics) {
+                window.VendorSystem.analytics.track('inventory_bulk_action', {
+                    part_count: selectedParts.length,
+                    action: action
+                });
+            }
+            
+            // Clear selection and reload
+            clearSelection();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            if (window.VendorSystem && window.VendorSystem.notifications) {
+                window.VendorSystem.notifications.show(data.error || 'Action failed', 'error');
+            } else {
+                alert(data.error || 'Action failed');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error performing bulk action:', error);
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show('An error occurred while performing the action.', 'error');
+        } else {
+            alert('An error occurred while performing the action.');
+        }
+    });
+}
+
+function exportInventory() {
+    if (window.VendorSystem && window.VendorSystem.notifications) {
+        window.VendorSystem.notifications.show('Preparing export...', 'info');
+    }
+    
+    // Get current filter parameters
+    const params = new URLSearchParams(window.location.search);
+    const exportUrl = "{% url 'business_partners:vendor_inventory_export' %}" + '?' + params.toString();
+    
+    // Track the export
+    if (window.VendorSystem && window.VendorSystem.analytics) {
+        window.VendorSystem.analytics.track('inventory_export', {
+            export_type: 'csv',
+            filters: Object.fromEntries(params)
+        });
+    }
+    
+    // Redirect to export URL
+    window.location.href = exportUrl;
+}
+
+// Auto-submit form on filter change
+document.getElementById('inventoryFilterForm').addEventListener('change', function(e) {
+    if (e.target.tagName === 'SELECT' || (e.target.type === 'number' && e.target.value !== '')) {
+        this.submit();
+    }
+});
+
+// Submit form on Enter key in search field
+document.getElementById('search').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('inventoryFilterForm').submit();
+    }
+});
+</script>
+{% endblock %}

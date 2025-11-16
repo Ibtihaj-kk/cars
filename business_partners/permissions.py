@@ -226,6 +226,45 @@ class IsVendorProfileOwnerOrAdmin(permissions.BasePermission):
         return False
 
 
+class IsVendorManager(permissions.BasePermission):
+    """
+    Permission class for vendor management operations.
+    Allows access to users who can manage vendor applications and vendor profiles.
+    """
+    
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # Admin/staff always have access
+        if request.user.is_staff or request.user.is_superuser:
+            return True
+        
+        # Check if user has vendor management permissions
+        # This would typically check for specific permissions in your RBAC system
+        # For now, we'll check if user has any business partner with vendor role
+        business_partner = get_business_partner_for_user(request.user)
+        if business_partner:
+            return business_partner.roles.filter(role_type='vendor').exists()
+        return False
+    
+    def has_object_permission(self, request, view, obj):
+        # Admin/staff can access all objects
+        if request.user.is_staff or request.user.is_superuser:
+            return True
+        
+        # For vendor applications and business partners, check ownership
+        if hasattr(obj, 'user'):
+            return obj.user == request.user
+        
+        # For vendor profiles, check if user owns the business partner
+        if hasattr(obj, 'business_partner'):
+            business_partner = get_business_partner_for_user(request.user)
+            if business_partner:
+                return obj.business_partner == business_partner
+        return False
+
+
 def get_vendor_profile(user):
     """
     Helper function to get vendor profile for a user.

@@ -59,7 +59,10 @@
         </span>
         <span class="navbar-divider">|</span>
         <a href="/selling.html" class="sell-car-button">Sell My Car</a>
-        <a href="{% url 'parts:cart_view' %}" class="navbar-cart"><ion-icon name="cart"></ion-icon></a>
+        <a href="{% url 'parts:cart_view' %}" class="navbar-cart">
+          <ion-icon name="cart"></ion-icon>
+          <span class="cart-count" data-cart-count>0</span>
+        </a>
 
         <!-- User Profile Dropdown  -->
         <div class="navbar-user-profile-dropdown">

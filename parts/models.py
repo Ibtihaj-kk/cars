@@ -1097,6 +1097,25 @@ class Order(models.Model):
     tracking_number = models.CharField(max_length=100, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
     
+    # Payment Information
+    PAYMENT_METHOD_CHOICES = [
+        ('cash_on_delivery', 'Cash on Delivery'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('credit_card', 'Credit Card'),
+        ('paypal', 'PayPal'),
+    ]
+    
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+    ]
+    
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, blank=True, null=True)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1282,11 +1301,15 @@ class OrderItem(models.Model):
         unique_together = ['order', 'part']
     
     def __str__(self):
-        return f"{self.part.name} x {self.quantity}"
+        part_name = self.part.name if self.part else "Unknown Part"
+        quantity = self.quantity if self.quantity is not None else 0
+        return f"{part_name} x {quantity}"
     
     @property
     def total_price(self):
-        return self.quantity * self.price
+        if self.quantity is not None and self.price is not None:
+            return self.quantity * self.price
+        return 0
 
 
 class Review(models.Model):

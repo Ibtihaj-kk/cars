@@ -163,8 +163,6 @@ class VendorPartForm(forms.ModelForm):
         # Set initial values for new parts
         if not self.instance.pk:
             self.fields['is_active'].initial = True
-            if self.vendor:
-                self.fields['vendor'].initial = self.vendor
     
     def clean_parts_number(self):
         """Validate parts number uniqueness for the vendor"""
@@ -1268,6 +1266,15 @@ class VendorPartForm(forms.ModelForm):
                 'data-section': 'status'
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        vendor = kwargs.pop('vendor', None)
+        super().__init__(*args, **kwargs)
+        
+        # Filter category and brand choices based on vendor if provided
+        if vendor:
+            # Filter categories and brands based on vendor's parts if needed
+            pass
 
 
 class VendorPartSearchForm(forms.Form):

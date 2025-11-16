@@ -10,6 +10,7 @@ from . import auth_views
 from . import vendor_order_views
 from . import vendor_inventory_views
 from . import order_processing_views
+from . import api_views
 from .stock_monitoring_api import stock_monitoring_api
 
 app_name = 'business_partners'
@@ -239,6 +240,35 @@ urlpatterns = [
          {'endpoint': 'mark-ordered'}, 
          name='api_stock_monitoring_mark_ordered'),
     
+    # Dashboard API Endpoints
+    path('api/vendor/dashboard/stats/', 
+         api_views.get_vendor_dashboard_stats, 
+         name='api_vendor_dashboard_stats'),
+    
+    path('api/vendor/dashboard/recent-orders/', 
+         api_views.get_recent_orders, 
+         name='api_vendor_recent_orders'),
+    
+    path('api/vendor/dashboard/top-products/', 
+         api_views.get_top_products, 
+         name='api_vendor_top_products'),
+    
+    path('api/vendor/dashboard/sales-performance/', 
+         api_views.get_sales_performance, 
+         name='api_vendor_sales_performance'),
+    
+    path('api/vendor/dashboard/notifications/', 
+         api_views.get_notifications, 
+         name='api_vendor_notifications'),
+    
+    path('api/vendor/dashboard/recent-customers/', 
+         api_views.get_recent_customers, 
+         name='api_vendor_recent_customers'),
+    
+    path('api/vendor/dashboard/low-stock/', 
+         api_views.get_low_stock_items, 
+         name='api_vendor_low_stock'),
+    
     # Vendor Order Management
     path('vendor/orders/', 
          vendor_order_views.VendorOrderListView.as_view(), 
@@ -266,4 +296,14 @@ urlpatterns = [
     path('order-processing/<int:order_id>/action/', order_processing_views.process_order_action, name='process_order_action'),
     path('order-processing/bulk-action/', order_processing_views.bulk_order_processing, name='bulk_order_processing'),
     path('order-processing/api/<int:order_id>/', order_processing_views.order_processing_api, name='order_processing_api'),
+    
+    # CRUD System Test
+    path('vendor/crud-test/', 
+         vendor_views.vendor_crud_test, 
+         name='vendor_crud_test'),
+    
+    # Responsive Design Test
+    path('vendor/responsive-test/', 
+         vendor_views.vendor_responsive_test, 
+         name='vendor_responsive_test'),
 ]
