@@ -61,10 +61,21 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
         # Get vendor profile
         vendor_profile = get_vendor_profile(self.request.user)
         if vendor_profile:
+            # Add vendor profile to context for template
+            context['vendor_profile'] = vendor_profile
             # Order statistics for this vendor
             vendor_orders = self.get_queryset()
             
             context['total_orders'] = vendor_orders.count()
+            
+            # Status counts for dashboard cards
+            context['status_counts'] = {
+                'pending': vendor_orders.filter(status='pending').count(),
+                'processing': vendor_orders.filter(status='processing').count(),
+                'completed': vendor_orders.filter(status='delivered').count(),  # Using 'delivered' as 'completed'
+            }
+            
+            # Keep individual counts for backward compatibility
             context['pending_orders'] = vendor_orders.filter(status='pending').count()
             context['confirmed_orders'] = vendor_orders.filter(status='confirmed').count()
             context['processing_orders'] = vendor_orders.filter(status='processing').count()
@@ -85,7 +96,14 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
             # Status filter from URL
             status_filter = self.request.GET.get('status')
             if status_filter:
-                context['current_status_filter'] = status_filter
+                context['status_filter'] = status_filter  # Changed from current_status_filter to match template
+            
+            # Filter parameters for form persistence
+            context['search_query'] = self.request.GET.get('search', '')
+            context['date_from'] = self.request.GET.get('date_from', '')
+            context['date_to'] = self.request.GET.get('date_to', '')
+            context['min_amount'] = self.request.GET.get('min_amount', '')
+            context['max_amount'] = self.request.GET.get('max_amount', '')
         
         return context
 
@@ -93,7 +111,7 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
 class VendorOrderDetailView(LoginRequiredMixin, DetailView):
     """Detailed view of an order for vendors (only shows their parts)."""
     model = Order
-    template_name = 'business_partners/vendor_order_detail_standardized.html'
+    template_name = 'business_partners/vendor_order_detail.html'
     context_object_name = 'order'
     
     def get_object(self):
@@ -128,7 +146,7 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
         
         context['vendor_items'] = vendor_items
         context['vendor_items_total'] = vendor_items.aggregate(
-            total=Sum('total_price')
+            total=Sum(F('quantity') * F('price'))
         )['total'] or 0
         
         # Get order status history
@@ -277,7 +295,7 @@ def vendor_order_analytics(request):
     
     # Daily order trends
     daily_orders = vendor_orders.extra(
-        select={'day': 'date(created_at)'}
+        select={'day': 'date(parts_order.created_at)'}
     ).values('day').annotate(
         order_count=Count('id'),
         revenue=Sum(F('items__quantity') * F('items__price'))
@@ -309,7 +327,7 @@ def vendor_order_analytics(request):
         'top_parts': top_parts,
         'recent_orders': recent_orders,
         'average_order_value': vendor_orders.aggregate(
-            avg=Avg('items__total_price')
+            avg=Avg(F('items__quantity') * F('items__price'))
         )['avg'] or 0,
     }
     
@@ -370,7 +388,7 @@ def vendor_order_reports(request):
         for order in vendor_orders:
             vendor_items_total = order.items.filter(
                 part__vendor=vendor_profile.business_partner
-            ).aggregate(total=Sum('total_price'))['total'] or 0
+            ).aggregate(total=Sum(F('quantity') * F('price')))['total'] or 0
             
             writer.writerow([
                 order.order_number,

@@ -1,0 +1,251 @@
+/* Vendor Accessibility Features */
+
+/* Focus indicators */
+.vendor-focus:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+.vendor-focus-visible:focus-visible {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+/* High contrast focus */
+.vendor-focus-high-contrast:focus {
+  outline: 3px solid #000;
+  outline-offset: 2px;
+}
+
+/* Skip links */
+.vendor-skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #000;
+  color: #fff;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+  z-index: 1000;
+  transition: top 0.3s ease;
+}
+
+.vendor-skip-link:focus {
+  top: 0;
+}
+
+/* Screen reader text */
+.vendor-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.vendor-sr-only-focusable:focus {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  padding: inherit !important;
+  margin: inherit !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+}
+
+/* Color contrast */
+.vendor-text-high-contrast {
+  color: #000;
+  background-color: #fff;
+}
+
+.vendor-bg-high-contrast {
+  background-color: #fff;
+  color: #000;
+}
+
+/* Font sizing */
+.vendor-text-resizable {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+@media (min-width: 768px) {
+  .vendor-text-resizable {
+    font-size: 1.125rem;
+  }
+}
+
+/* Keyboard navigation */
+.vendor-keyboard-nav *:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+/* ARIA labels */
+.vendor-aria-label[aria-label]::before {
+  content: attr(aria-label);
+}
+
+/* Form accessibility */
+.vendor-form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.vendor-form-required::after {
+  content: ' *';
+  color: #dc3545;
+}
+
+.vendor-form-error {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.vendor-form-success {
+  color: #28a745;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Table accessibility */
+.vendor-table caption {
+  caption-side: top;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
+.vendor-table th {
+  scope: col;
+  text-align: left;
+  font-weight: 600;
+}
+
+.vendor-table th[scope="row"] {
+  text-align: left;
+  font-weight: 600;
+}
+
+/* Button accessibility */
+.vendor-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vendor-btn:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+.vendor-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Link accessibility */
+.vendor-link {
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.vendor-link:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+.vendor-link:hover {
+  color: #0056b3;
+  text-decoration: none;
+}
+
+/* Image accessibility */
+.vendor-img {
+  max-width: 100%;
+  height: auto;
+}
+
+.vendor-img[alt] {
+  border: 2px solid transparent;
+}
+
+.vendor-img[alt]:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+/* Video accessibility */
+.vendor-video {
+  max-width: 100%;
+  height: auto;
+}
+
+.vendor-video[controls] {
+  min-height: 44px;
+}
+
+/* Audio accessibility */
+.vendor-audio {
+  width: 100%;
+  min-height: 44px;
+}
+
+/* Animation accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .vendor-animated {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .vendor-high-contrast {
+    border-width: 2px !important;
+  }
+  
+  .vendor-high-contrast-text {
+    color: #000 !important;
+    background-color: #fff !important;
+  }
+}
+
+/* Color blindness */
+.vendor-color-blind-friendly {
+  background: linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000),
+              linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+}
+
+/* Screen reader only */
+.vendor-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

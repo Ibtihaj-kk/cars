@@ -1,0 +1,533 @@
+/************************************************************
+ * Vendor Modern Responsive Design System
+ * Enhanced responsive design with mobile-first approach
+ ************************************************************/
+
+/* =========================================================
+   1. MODERN HEADER & NAVIGATION RESPONSIVENESS
+   ========================================================= */
+
+/* Enhanced Header Modern Design */
+.ym-header-modern {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.ym-header-modern.scrolled {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+}
+
+/* Enhanced Header Content */
+.ym-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    gap: 1rem;
+}
+
+/* =========================================================
+   2. ENHANCED LOGO RESPONSIVENESS
+   ========================================================= */
+
+/* Responsive Brand Container */
+.ym-brand-responsive {
+    flex-shrink: 0;
+}
+
+.ym-brand-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    transition: transform 0.2s ease;
+}
+
+.ym-brand-link:hover {
+    transform: scale(1.02);
+}
+
+/* Modern Logo Container */
+.ym-brand-logo-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* SVG Logo - Scalable and Responsive */
+/* SVG Logo - Scalable and Responsive */
+.ym-brand-logo-svg {
+    width: clamp(120px, 15vw, 200px);
+    height: auto;
+    max-height: 40px;
+    object-fit: contain;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    display: none; /* Hidden by default, shown if SVG fails */
+}
+
+/* Fallback PNG Logo */
+.ym-brand-logo-fallback {
+    width: clamp(120px, 15vw, 200px);
+    height: auto;
+    max-height: 40px;
+    object-fit: contain;
+    display: none; /* Hidden by default, shown if SVG fails */
+}
+
+/* Original Logo - Responsive */
+.ym-brand-logo-original {
+    width: clamp(120px, 15vw, 200px);
+    height: auto;
+    max-height: 40px;
+    object-fit: contain;
+    transition: all 0.3s ease;
+    filter: brightness(0) invert(1); /* Make logo white for dark background */
+}
+
+/* Enhanced Brand Text */
+.ym-brand-text-responsive {
+    font-size: clamp(0.875rem, 2.5vw, 1.125rem);
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+    transition: color 0.3s ease;
+}
+
+.ym-header-modern.scrolled .ym-brand-text-responsive {
+    color: var(--ym-primary-700);
+}
+
+/* Logo Responsive Breakpoints */
+@media (max-width: 768px) {
+    .ym-brand-logo-svg {
+        width: clamp(100px, 20vw, 140px);
+        max-height: 32px;
+    }
+    
+    .ym-brand-text-responsive {
+        font-size: clamp(0.75rem, 3vw, 0.875rem);
+    }
+}
+
+@media (max-width: 480px) {
+    .ym-brand-logo-container {
+        margin-right: 0.5rem;
+    }
+    
+    .ym-brand-logo-svg {
+        width: clamp(80px, 25vw, 120px);
+        max-height: 28px;
+    }
+    
+    .ym-brand-text-responsive {
+        display: none; /* Hide text on very small screens */
+    }
+}
+
+/* =========================================================
+   3. ENHANCED NAVIGATION RESPONSIVENESS
+   ========================================================= */
+
+/* Modern Navigation Container */
+.ym-nav-modern {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    justify-content: center;
+}
+
+/* Enhanced Navigation List */
+.ym-nav-list-enhanced {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Enhanced Navigation Items */
+.ym-nav-item-enhanced {
+    position: relative;
+}
+
+/* Enhanced Navigation Links */
+.ym-nav-link-enhanced {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.ym-header-modern.scrolled .ym-nav-link-enhanced {
+    color: var(--ym-gray-700);
+}
+
+/* Navigation Link Hover Effects */
+.ym-nav-link-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.ym-nav-link-enhanced:hover::before {
+    left: 100%;
+}
+
+.ym-nav-link-enhanced:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.ym-header-modern.scrolled .ym-nav-link-enhanced:hover {
+    background: var(--ym-primary-50);
+    color: var(--ym-primary-700);
+}
+
+/* Active Navigation State */
+.ym-nav-link-enhanced.ym-active {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.ym-header-modern.scrolled .ym-nav-link-enhanced.ym-active {
+    background: var(--ym-primary-100);
+    color: var(--ym-primary-700);
+}
+
+/* Modern Navigation Icons */
+.ym-nav-icon-modern {
+    font-size: 1.125rem;
+    transition: transform 0.2s ease;
+}
+
+.ym-nav-link-enhanced:hover .ym-nav-icon-modern {
+    transform: scale(1.1);
+}
+
+/* Navigation Text */
+.ym-nav-text {
+    white-space: nowrap;
+}
+
+/* =========================================================
+   4. ENHANCED USER MENU RESPONSIVENESS
+   ========================================================= */
+
+.ym-user-menu-responsive {
+    position: relative;
+    margin-left: auto;
+}
+
+.ym-user-dropdown-modern {
+    position: relative;
+}
+
+.ym-user-dropdown-trigger-enhanced {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.75rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.ym-header-modern.scrolled .ym-user-dropdown-trigger-enhanced {
+    background: var(--ym-gray-50);
+    border-color: var(--ym-gray-200);
+    color: var(--ym-gray-700);
+}
+
+.ym-user-dropdown-trigger-enhanced:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.ym-user-avatar-modern {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: var(--ym-primary-500);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: transform 0.2s ease;
+}
+
+.ym-user-dropdown-trigger-enhanced:hover .ym-user-avatar-modern {
+    transform: scale(1.05);
+}
+
+.ym-user-name-responsive {
+    font-size: 0.875rem;
+    font-weight: 500;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ym-dropdown-icon-modern {
+    font-size: 0.75rem;
+    transition: transform 0.3s ease;
+}
+
+.ym-user-dropdown-trigger-enhanced[aria-expanded="true"] .ym-dropdown-icon-modern {
+    transform: rotate(180deg);
+}
+
+/* =========================================================
+   5. ENHANCED MOBILE MENU TOGGLE
+   ========================================================= */
+
+.ym-mobile-menu-toggle-enhanced {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+}
+
+.ym-header-modern.scrolled .ym-mobile-menu-toggle-enhanced {
+    background: var(--ym-gray-50);
+    border-color: var(--ym-gray-200);
+}
+
+.ym-mobile-menu-toggle-enhanced:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+.ym-menu-icon-line {
+    width: 1.5rem;
+    height: 0.125rem;
+    background: white;
+    margin: 0.125rem 0;
+    transition: all 0.3s ease;
+    border-radius: 1px;
+}
+
+.ym-header-modern.scrolled .ym-menu-icon-line {
+    background: var(--ym-gray-700);
+}
+
+/* Mobile Menu Toggle Animation */
+.ym-mobile-menu-toggle-enhanced.active .ym-menu-icon-line:nth-child(1) {
+    transform: rotate(45deg) translate(0.375rem, 0.375rem);
+}
+
+.ym-mobile-menu-toggle-enhanced.active .ym-menu-icon-line:nth-child(2) {
+    opacity: 0;
+}
+
+.ym-mobile-menu-toggle-enhanced.active .ym-menu-icon-line:nth-child(3) {
+    transform: rotate(-45deg) translate(0.375rem, -0.375rem);
+}
+
+.ym-mobile-menu-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* =========================================================
+   6. RESPONSIVE BREAKPOINTS
+   ========================================================= */
+
+/* Tablet and Mobile Navigation */
+@media (max-width: 992px) {
+    .ym-nav-modern {
+        display: none;
+    }
+    
+    .ym-mobile-menu-toggle-enhanced {
+        display: flex;
+        margin-left: 1rem;
+    }
+    
+    .ym-user-name-responsive {
+        display: none;
+    }
+    
+    .ym-header-content {
+        padding: 0.5rem 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .ym-user-dropdown-trigger-enhanced {
+        padding: 0.625rem;
+    }
+    
+    .ym-user-name-responsive {
+        display: none;
+    }
+    
+    .ym-header-content {
+        gap: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .ym-mobile-menu-toggle-enhanced {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+    
+    .ym-menu-icon-line {
+        width: 1.25rem;
+    }
+    
+    .ym-user-dropdown-trigger-enhanced {
+        padding: 0.5rem;
+    }
+    
+    .ym-user-avatar-modern {
+        width: 1.75rem;
+        height: 1.75rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* =========================================================
+   7. HIGH DPI DISPLAY SUPPORT
+   ========================================================= */
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .ym-brand-logo-svg {
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+    }
+    
+    .ym-nav-link-enhanced {
+        font-weight: 600;
+    }
+    
+    .ym-user-dropdown-trigger-enhanced {
+        border-width: 0.5px;
+    }
+}
+
+/* =========================================================
+   8. REDUCED MOTION SUPPORT
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .ym-nav-link-enhanced,
+    .ym-user-dropdown-trigger-enhanced,
+    .ym-mobile-menu-toggle-enhanced,
+    .ym-brand-link {
+        transition: none;
+    }
+    
+    .ym-nav-link-enhanced::before {
+        display: none;
+    }
+}
+
+/* =========================================================
+   SWIPE INDICATOR STYLES
+   ========================================================= */
+
+.ym-swipe-indicator {
+    position: fixed;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    background: rgba(var(--ym-primary-600), 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 999;
+    pointer-events: none;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: opacity var(--ym-animation-normal) var(--ym-ease-out);
+}
+
+.ym-swipe-indicator-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ym-swipe-indicator-text::before {
+    content: "👆";
+    font-size: 14px;
+    animation: swipeHand 1.5s infinite;
+}
+
+@keyframes swipeHand {
+    0% { transform: translateX(0); }
+    50% { transform: translateX(5px); }
+    100% { transform: translateX(0); }
+}
+
+/* Hide swipe indicator on larger screens */
+@media (min-width: 768px) {
+    .ym-swipe-indicator {
+        display: none !important;
+    }
+}
+
+/* =========================================================
+   MOBILE MENU BADGE
+   ========================================================= */
+
+.ym-mobile-menu-badge-enhanced {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background: var(--ym-primary-500);
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}

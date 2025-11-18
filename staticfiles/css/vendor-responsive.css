@@ -1,0 +1,102 @@
+/* Vendor Responsive Design System */
+
+/* Mobile First Responsive Design */
+@media (max-width: 576px) {
+  .vendor-dashboard .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .vendor-parts-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .vendor-form-sections {
+    padding: 1rem;
+  }
+  
+  .vendor-actions-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .vendor-table-responsive {
+    overflow-x: auto;
+  }
+}
+
+@media (min-width: 577px) and (max-width: 768px) {
+  .vendor-dashboard .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .vendor-parts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 769px) and (max-width: 992px) {
+  .vendor-dashboard .dashboard-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .vendor-parts-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 993px) {
+  .vendor-dashboard .dashboard-stats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .vendor-parts-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Touch-friendly interactions */
+@media (hover: none) and (pointer: coarse) {
+  .vendor-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .vendor-form-control {
+    min-height: 44px;
+  }
+  
+  .vendor-checkbox,
+  .vendor-radio {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .vendor-icon {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Print styles */
+@media print {
+  .vendor-no-print {
+    display: none !important;
+  }
+  
+  .vendor-print-only {
+    display: block !important;
+  }
+  
+  .vendor-table {
+    border: 1px solid #000;
+  }
+  
+  .vendor-table th,
+  .vendor-table td {
+    border: 1px solid #000;
+    padding: 0.5rem;
+  }
+}

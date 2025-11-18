@@ -21,6 +21,11 @@
     <link rel="stylesheet" href="{% static 'css/vendor-header-footer.css' %}">
     <link rel="stylesheet" href="{% static 'css/vendor-cards.css' %}">
     
+    <!-- Enhanced Responsive & Animation CSS -->
+    <link rel="stylesheet" href="{% static 'css/vendor-modern-responsive.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-animations.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-logo-responsive.css' %}">
+    
     {% block extra_css %}{% endblock %}
     
     <!-- Favicon -->
@@ -33,8 +38,7 @@
 </head>
 
 <body class="ym-bg-gray-50 ym-text-gray-900">
-    <!-- Skip to main content link for accessibility -->
-    <a href="#main-content" class="ym-skip-link">Skip to main content</a>
+    
     
     <!-- Loading overlay -->
     <div id="global-loading-overlay" class="ym-loading-overlay ym-hidden" role="status" aria-live="polite">
@@ -45,66 +49,74 @@
     </div>
 
     <!-- Mobile Navigation Overlay -->
-    <div id="mobile-nav-overlay" class="ym-mobile-nav-overlay ym-hidden" aria-hidden="true"></div>
+    <div id="mobile-nav-overlay" class="ym-mobile-nav-overlay ym-hidden" aria-hidden="true" data-mobile-overlay></div>
+    
+    <!-- Touch Swipe Indicator -->
+    <div class="ym-swipe-indicator ym-swipe-indicator-left" aria-hidden="true" data-swipe-indicator>
+        <span class="ym-swipe-indicator-text">Swipe to open menu</span>
+    </div>
 
-    <!-- Standardized Vendor Header -->
-    <header class="ym-vendor-header" role="banner">
+    <!-- Enhanced Vendor Header with Modern Design -->
+    <header class="ym-vendor-header ym-header-modern" role="banner">
         <div class="ym-container ym-mx-auto ym-px-4">
             <div class="ym-header-content">
-                <!-- Logo and Brand -->
-                <div class="ym-header-brand">
+                <!-- Logo and Brand - Enhanced Responsive Design -->
+                <div class="ym-header-brand ym-brand-responsive">
                     <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-brand-link" aria-label="Cars Portal Vendor Portal Home">
-                        <img src="{% static 'images/logos/cars-portal-logo.png' %}" alt="Cars Portal" class="ym-brand-logo">
-                        <span class="ym-brand-text">Vendor Portal</span>
+                        <!-- Original Responsive Logo -->
+                        <div class="ym-brand-logo-container">
+                            <img src="{% static 'images/logos/cars-portal-logo.png' %}" alt="Cars Portal" class="ym-brand-logo-original" loading="lazy">
+                        </div>
                     </a>
                 </div>
 
-                <!-- Desktop Navigation -->
-                <nav class="ym-desktop-nav" role="navigation" aria-label="Main navigation">
-                    <ul class="ym-nav-list">
-                        <li class="ym-nav-item">
-                            <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-nav-link {% if request.resolver_match.url_name == 'vendor_dashboard' %}ym-active{% endif %}">
-                                <span class="ym-nav-icon">📊</span>
-                                Dashboard
+                <!-- Enhanced Desktop Navigation -->
+                <nav class="ym-desktop-nav ym-nav-modern" role="navigation" aria-label="Main navigation">
+                    <ul class="ym-nav-list ym-nav-list-enhanced">
+                        <li class="ym-nav-item ym-nav-item-enhanced">
+                            <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-nav-link ym-nav-link-enhanced {% if request.resolver_match.url_name == 'vendor_dashboard' %}ym-active{% endif %}">
+                                <span class="ym-nav-icon ym-nav-icon-modern">📊</span>
+                                <span class="ym-nav-text">Dashboard</span>
                             </a>
                         </li>
-                        <li class="ym-nav-item">
-                            <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-nav-link {% if 'parts' in request.path %}ym-active{% endif %}">
-                                <span class="ym-nav-icon">🔧</span>
-                                Parts
+                        <li class="ym-nav-item ym-nav-item-enhanced">
+                            <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-nav-link ym-nav-link-enhanced {% if 'parts' in request.path %}ym-active{% endif %}">
+                                <span class="ym-nav-icon ym-nav-icon-modern">🔧</span>
+                                <span class="ym-nav-text">Parts</span>
                             </a>
                         </li>
-                        <li class="ym-nav-item">
-                            <a href="{% url 'business_partners:vendor_orders_list' %}" class="ym-nav-link {% if 'orders' in request.path %}ym-active{% endif %}">
-                                <span class="ym-nav-icon">📦</span>
-                                Orders
+                        <li class="ym-nav-item ym-nav-item-enhanced">
+                            <a href="{% url 'business_partners:vendor_orders_list' %}" class="ym-nav-link ym-nav-link-enhanced {% if 'orders' in request.path %}ym-active{% endif %}">
+                                <span class="ym-nav-icon ym-nav-icon-modern">📦</span>
+                                <span class="ym-nav-text">Orders</span>
                             </a>
                         </li>
-                        <li class="ym-nav-item">
-                            <a href="{% url 'business_partners:vendor_inventory_list' %}" class="ym-nav-link {% if 'inventory' in request.path %}ym-active{% endif %}">
-                                <span class="ym-nav-icon">📋</span>
-                                Inventory
+                        <li class="ym-nav-item ym-nav-item-enhanced">
+                            <a href="{% url 'business_partners:vendor_inventory_list' %}" class="ym-nav-link ym-nav-link-enhanced {% if 'inventory' in request.path %}ym-active{% endif %}">
+                                <span class="ym-nav-icon ym-nav-icon-modern">📋</span>
+                                <span class="ym-nav-text">Inventory</span>
                             </a>
                         </li>
-                        <li class="ym-nav-item">
-                            <a href="{% url 'business_partners:vendor_order_analytics' %}" class="ym-nav-link {% if 'analytics' in request.path %}ym-active{% endif %}">
-                                <span class="ym-nav-icon">📈</span>
-                                Analytics
+                        <li class="ym-nav-item ym-nav-item-enhanced">
+                            <a href="{% url 'business_partners:vendor_order_analytics' %}" class="ym-nav-link ym-nav-link-enhanced {% if 'analytics' in request.path %}ym-active{% endif %}">
+                                <span class="ym-nav-icon ym-nav-icon-modern">📈</span>
+                                <span class="ym-nav-text">Analytics</span>
                             </a>
                         </li>
                     </ul>
                 </nav>
 
-                <!-- User Menu -->
-                <div class="ym-header-user-menu">
-                    <div class="ym-user-dropdown">
-                        <button class="ym-user-dropdown-trigger" 
+                <!-- Enhanced User Menu -->
+                <div class="ym-header-user-menu ym-user-menu-responsive">
+                    <div class="ym-user-dropdown ym-user-dropdown-modern">
+                        <button class="ym-user-dropdown-trigger ym-user-dropdown-trigger-enhanced" 
                                 aria-expanded="false" 
                                 aria-haspopup="true"
-                                aria-label="User menu">
-                            <span class="ym-user-avatar">👤</span>
-                            <span class="ym-user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
-                            <span class="ym-user-dropdown-icon">▼</span>
+                                aria-label="User menu"
+                                data-dropdown-trigger>
+                            <span class="ym-user-avatar ym-user-avatar-modern">👤</span>
+                            <span class="ym-user-name ym-user-name-responsive">{{ request.user.get_full_name|default:request.user.username }}</span>
+                            <span class="ym-user-dropdown-icon ym-dropdown-icon-modern">▼</span>
                         </button>
                         
                         <div class="ym-user-dropdown-menu" role="menu" aria-hidden="true">
@@ -128,91 +140,91 @@
                     </div>
                 </div>
 
-                <!-- Mobile Menu Toggle -->
-                <button class="ym-mobile-menu-toggle" 
+                <!-- Enhanced Mobile Menu Toggle -->
+                <button class="ym-mobile-menu-toggle ym-mobile-menu-toggle-enhanced" 
                         aria-label="Toggle mobile menu"
                         aria-expanded="false"
-                        aria-controls="mobile-nav">
-                    <span class="ym-mobile-menu-icon"></span>
-                    <span class="ym-mobile-menu-icon"></span>
-                    <span class="ym-mobile-menu-icon"></span>
+                        aria-controls="mobile-nav"
+                        data-mobile-toggle
+                        data-analytics-event="mobile_menu_toggle">
+                    <span class="ym-mobile-menu-icon ym-menu-icon-line"></span>
+                    <span class="ym-mobile-menu-icon ym-menu-icon-line"></span>
+                    <span class="ym-mobile-menu-icon ym-menu-icon-line"></span>
+                    <span class="ym-mobile-menu-text sr-only">Menu</span>
+                    <span class="ym-mobile-menu-badge ym-mobile-menu-badge-enhanced" aria-hidden="true"></span>
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- Mobile Navigation -->
-    <nav id="mobile-nav" class="ym-mobile-nav" role="navigation" aria-label="Mobile navigation" aria-hidden="true">
-        <div class="ym-mobile-nav-header">
-            <h3 class="ym-mobile-nav-title">Menu</h3>
-            <button class="ym-mobile-nav-close" aria-label="Close mobile menu">✕</button>
+    <!-- Enhanced Mobile Navigation -->
+    <nav id="mobile-nav" class="ym-mobile-nav ym-mobile-nav-enhanced" role="navigation" aria-label="Mobile navigation" aria-hidden="true" data-mobile-nav>
+        <div class="ym-mobile-nav-header ym-mobile-nav-header-modern">
+            <div class="ym-mobile-nav-brand">
+                <svg class="ym-mobile-nav-logo" viewBox="0 0 150 30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <text x="0" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="var(--ym-primary-600)">
+                        Cars Portal
+                    </text>
+                </svg>
+            </div>
+            <button class="ym-mobile-nav-close ym-mobile-nav-close-modern" aria-label="Close mobile menu" data-mobile-close data-analytics-event="mobile_menu_close">
+                <span class="ym-close-icon" aria-hidden="true">✕</span>
+            </button>
         </div>
-        <ul class="ym-mobile-nav-list">
-            <li class="ym-mobile-nav-item">
-                <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-mobile-nav-link {% if request.resolver_match.url_name == 'vendor_dashboard' %}ym-active{% endif %}">
-                    <span class="ym-mobile-nav-icon">📊</span>
-                    Dashboard
+        <div class="ym-mobile-nav-content">
+            <ul class="ym-mobile-nav-list ym-mobile-nav-list-enhanced">
+                <li class="ym-mobile-nav-item ym-mobile-nav-item-enhanced">
+                    <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-mobile-nav-link ym-mobile-nav-link-enhanced {% if request.resolver_match.url_name == 'vendor_dashboard' %}ym-active{% endif %}">
+                        <span class="ym-mobile-nav-icon ym-mobile-nav-icon-modern">📊</span>
+                        <span class="ym-mobile-nav-text">Dashboard</span>
+                    </a>
+                </li>
+                <li class="ym-mobile-nav-item ym-mobile-nav-item-enhanced">
+                    <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-mobile-nav-link ym-mobile-nav-link-enhanced {% if 'parts' in request.path %}ym-active{% endif %}">
+                        <span class="ym-mobile-nav-icon ym-mobile-nav-icon-modern">🔧</span>
+                        <span class="ym-mobile-nav-text">Parts</span>
+                    </a>
+                </li>
+                <li class="ym-mobile-nav-item ym-mobile-nav-item-enhanced">
+                    <a href="{% url 'business_partners:vendor_orders_list' %}" class="ym-mobile-nav-link ym-mobile-nav-link-enhanced {% if 'orders' in request.path %}ym-active{% endif %}">
+                        <span class="ym-mobile-nav-icon ym-mobile-nav-icon-modern">📦</span>
+                        <span class="ym-mobile-nav-text">Orders</span>
+                    </a>
+                </li>
+                <li class="ym-mobile-nav-item ym-mobile-nav-item-enhanced">
+                    <a href="{% url 'business_partners:vendor_inventory_list' %}" class="ym-mobile-nav-link ym-mobile-nav-link-enhanced {% if 'inventory' in request.path %}ym-active{% endif %}">
+                        <span class="ym-mobile-nav-icon ym-mobile-nav-icon-modern">📋</span>
+                        <span class="ym-mobile-nav-text">Inventory</span>
+                    </a>
+                </li>
+                <li class="ym-mobile-nav-item ym-mobile-nav-item-enhanced">
+                    <a href="{% url 'business_partners:vendor_order_analytics' %}" class="ym-mobile-nav-link ym-mobile-nav-link-enhanced {% if 'analytics' in request.path %}ym-active{% endif %}">
+                        <span class="ym-mobile-nav-icon ym-mobile-nav-icon-modern">📈</span>
+                        <span class="ym-mobile-nav-text">Analytics</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="ym-mobile-nav-footer ym-mobile-nav-footer-modern">
+                <a href="{% url 'business_partners:vendor_profile_settings' %}" class="ym-mobile-nav-link ym-mobile-nav-link-enhanced">
+                    <span class="ym-mobile-nav-icon ym-mobile-nav-icon-modern">⚙️</span>
+                    <span class="ym-mobile-nav-text">Profile Settings</span>
                 </a>
-            </li>
-            <li class="ym-mobile-nav-item">
-                <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-mobile-nav-link {% if 'parts' in request.path %}ym-active{% endif %}">
-                    <span class="ym-mobile-nav-icon">🔧</span>
-                    Parts
-                </a>
-            </li>
-            <li class="ym-mobile-nav-item">
-                <a href="{% url 'business_partners:vendor_orders_list' %}" class="ym-mobile-nav-link {% if 'orders' in request.path %}ym-active{% endif %}">
-                    <span class="ym-mobile-nav-icon">📦</span>
-                    Orders
-                </a>
-            </li>
-            <li class="ym-mobile-nav-item">
-                <a href="{% url 'business_partners:vendor_inventory_list' %}" class="ym-mobile-nav-link {% if 'inventory' in request.path %}ym-active{% endif %}">
-                    <span class="ym-mobile-nav-icon">📋</span>
-                    Inventory
-                </a>
-            </li>
-            <li class="ym-mobile-nav-item">
-                <a href="{% url 'business_partners:vendor_order_analytics' %}" class="ym-mobile-nav-link {% if 'analytics' in request.path %}ym-active{% endif %}">
-                    <span class="ym-mobile-nav-icon">📈</span>
-                    Analytics
-                </a>
-            </li>
-        </ul>
-        <div class="ym-mobile-nav-footer">
-            <a href="{% url 'business_partners:vendor_profile_settings' %}" class="ym-mobile-nav-link">
-                <span class="ym-mobile-nav-icon">⚙️</span>
-                Profile Settings
-            </a>
-            <form method="post" action="{% url 'business_partners:vendor_logout' %}" class="ym-logout-form">
-                {% csrf_token %}
-                <button type="submit" class="ym-mobile-nav-link ym-logout-button">
-                    <span class="ym-mobile-nav-icon">🚪</span>
-                    Logout
-                </button>
-            </form>
+                <form method="post" action="{% url 'business_partners:vendor_logout' %}" class="ym-logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="ym-mobile-nav-link ym-mobile-nav-link-enhanced ym-logout-button">
+                        <span class="ym-mobile-nav-icon ym-mobile-nav-icon-modern">🚪</span>
+                        <span class="ym-mobile-nav-text">Logout</span>
+                    </button>
+                </form>
+            </div>
         </div>
     </nav>
 
-    <!-- Breadcrumb Navigation -->
-    <nav class="ym-breadcrumb" aria-label="Breadcrumb">
-        <div class="ym-container ym-mx-auto ym-px-4">
-            <ol class="ym-breadcrumb-list" itemscope itemtype="https://schema.org/BreadcrumbList">
-                <li class="ym-breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-                    <a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-breadcrumb-link" itemprop="item">
-                        <span itemprop="name">Dashboard</span>
-                    </a>
-                    <meta itemprop="position" content="1">
-                </li>
-                {% block breadcrumb_items %}{% endblock %}
-            </ol>
-        </div>
-    </nav>
 
     <!-- Main Content Area -->
     <main id="main-content" class="ym-main-content" role="main">
         <!-- Page Header -->
-        <div class="ym-page-header">
+        <!-- <div class="ym-page-header">
             <div class="ym-container ym-mx-auto ym-px-4">
                 <div class="ym-page-header-content">
                     <div class="ym-page-header-text">
@@ -226,11 +238,11 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> -->
 
         <!-- Content Area -->
         <div class="ym-content-area">
-            <div class="ym-container ym-mx-auto ym-px-4">
+            <div class="{% block container_class %}ym-container ym-mx-auto{% endblock %} ym-px-4">
                 <!-- Success/Error Messages -->
                 {% if messages %}
                 <div class="ym-messages-container" role="alert" aria-live="polite">
@@ -293,21 +305,23 @@
     </footer>
 
     <!-- Standardized JavaScript -->
-    <script src="{% static 'js/vendor-navigation.js' %}"></script>
-    <script src="{% static 'js/vendor-header-navigation.js' %}"></script>
-    <script src="{% static 'js/vendor-form-validation.js' %}"></script>
-    <script src="{% static 'js/vendor-utils.js' %}"></script>
+    <script src="{% static 'js/vendor-navigation.js' %}?v=1.0"></script>
+    <script src="{% static 'js/vendor-header-navigation.js' %}?v=1.0"></script>
+    <script src="{% static 'js/vendor-mobile-navigation.js' %}?v=1.1"></script>
+    <script src="{% static 'js/vendor-scroll-animations.js' %}?v=1.0"></script>
+    <script src="{% static 'js/vendor-form-validation.js' %}?v=1.0"></script>
+    <script src="{% static 'js/vendor-utils.js' %}?v=1.0"></script>
     
     <!-- System Connector - Links all vendor pages together -->
-    <script src="{% static 'js/vendor-system-connector.js' %}"></script>
+    <script src="{% static 'js/vendor-system-connector.js' %}?v=1.0"></script>
     
     <!-- Dashboard-specific fixes and enhancements -->
-    <script src="{% static 'js/vendor-dashboard-fixes.js' %}"></script>
-    <script src="{% static 'js/vendor-api-error-handler.js' %}"></script>
-    <script src="{% static 'js/vendor-performance-optimizer.js' %}"></script>
+    <script src="{% static 'js/vendor-dashboard-fixes.js' %}?v=1.0"></script>
+    <script src="{% static 'js/vendor-api-error-handler.js' %}?v=1.0"></script>
+    <script src="{% static 'js/vendor-performance-optimizer.js' %}?v=1.0"></script>
     
-    <!-- Analytics System -->
-    <script src="{% static 'js/vendor-analytics.js' %}"></script>
+    <!-- Analytics and Tracking -->
+    <script src="{% static 'js/vendor-analytics.js' %}?v=1.0"></script>
     
     <!-- Global JavaScript Configuration -->
     <script>

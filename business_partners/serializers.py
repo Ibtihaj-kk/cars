@@ -2,11 +2,10 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
     VendorApplication, BusinessPartner, BusinessPartnerRole,
-    ReorderNotification
+    ReorderNotification, VendorAuditLog
 )
 from .document_models import VendorDocument, DocumentCategory
 from .workflow_engine import VendorComplianceCheck
-from .audit_logger import VendorAuditLog
 
 
 class VendorApplicationSerializer(serializers.ModelSerializer):

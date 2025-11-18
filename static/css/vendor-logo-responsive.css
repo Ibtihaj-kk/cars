@@ -1,0 +1,304 @@
+/************************************************************
+ * Vendor Logo Responsive Design
+ * Advanced logo scaling and responsive behavior
+ ************************************************************/
+
+/* =========================================================
+   1. LOGO CONTAINER & SVG SCALING
+   ========================================================= */
+
+.ym-brand-logo-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* SVG Logo with Advanced Scaling */
+.ym-brand-logo-svg {
+    width: clamp(100px, 12vw, 180px);
+    height: auto;
+    max-height: 36px;
+    object-fit: contain;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    will-change: transform, filter;
+}
+
+/* Fallback PNG Logo */
+.ym-brand-logo-fallback {
+    width: clamp(100px, 12vw, 180px);
+    height: auto;
+    max-height: 36px;
+    object-fit: contain;
+    display: none;
+    transition: all 0.3s ease;
+}
+
+/* Logo Hover Effects */
+.ym-brand-link:hover .ym-brand-logo-svg {
+    transform: scale(1.02);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+}
+
+/* =========================================================
+   2. RESPONSIVE BREAKPOINTS FOR LOGO
+   ========================================================= */
+
+/* Large Desktop (1200px+) */
+@media (min-width: 1200px) {
+    .ym-brand-logo-svg {
+        width: clamp(140px, 10vw, 200px);
+        max-height: 40px;
+    }
+    
+    .ym-brand-logo-fallback {
+        width: clamp(140px, 10vw, 200px);
+        max-height: 40px;
+    }
+}
+
+/* Desktop (992px - 1199px) */
+@media (min-width: 992px) and (max-width: 1199px) {
+    .ym-brand-logo-svg {
+        width: clamp(120px, 11vw, 160px);
+        max-height: 36px;
+    }
+    
+    .ym-brand-logo-fallback {
+        width: clamp(120px, 11vw, 160px);
+        max-height: 36px;
+    }
+}
+
+/* Tablet (768px - 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+    .ym-brand-logo-svg {
+        width: clamp(100px, 15vw, 140px);
+        max-height: 32px;
+    }
+    
+    .ym-brand-logo-fallback {
+        width: clamp(100px, 15vw, 140px);
+        max-height: 32px;
+    }
+}
+
+/* Mobile Landscape (576px - 767px) */
+@media (min-width: 576px) and (max-width: 767px) {
+    .ym-brand-logo-svg {
+        width: clamp(90px, 18vw, 120px);
+        max-height: 28px;
+    }
+    
+    .ym-brand-logo-fallback {
+        width: clamp(90px, 18vw, 120px);
+        max-height: 28px;
+    }
+    
+    .ym-brand-logo-container {
+        margin-right: 0.5rem;
+    }
+}
+
+/* Mobile Portrait (480px - 575px) */
+@media (min-width: 480px) and (max-width: 575px) {
+    .ym-brand-logo-svg {
+        width: clamp(80px, 22vw, 110px);
+        max-height: 26px;
+    }
+    
+    .ym-brand-logo-fallback {
+        width: clamp(80px, 22vw, 110px);
+        max-height: 26px;
+    }
+    
+    .ym-brand-logo-container {
+        margin-right: 0.25rem;
+    }
+}
+
+/* Small Mobile (320px - 479px) */
+@media (max-width: 479px) {
+    .ym-brand-logo-svg {
+        width: clamp(70px, 25vw, 100px);
+        max-height: 24px;
+    }
+    
+    .ym-brand-logo-fallback {
+        width: clamp(70px, 25vw, 100px);
+        max-height: 24px;
+    }
+    
+    .ym-brand-logo-container {
+        margin-right: 0.125rem;
+    }
+}
+
+/* =========================================================
+   3. HIGH DPI & RETINA DISPLAY SUPPORT
+   ========================================================= */
+
+/* 2x Retina Displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .ym-brand-logo-svg {
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+    }
+    
+    .ym-brand-logo-fallback {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+}
+
+/* 3x Super Retina Displays */
+@media (-webkit-min-device-pixel-ratio: 3), (min-resolution: 288dpi) {
+    .ym-brand-logo-svg {
+        filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
+    }
+}
+
+/* =========================================================
+   4. ORIENTATION-SPECIFIC ADJUSTMENTS
+   ========================================================= */
+
+/* Landscape Orientation */
+@media (orientation: landscape) and (max-width: 768px) {
+    .ym-brand-logo-svg {
+        width: clamp(85px, 12vw, 120px);
+        max-height: 26px;
+    }
+    
+    .ym-brand-logo-fallback {
+        width: clamp(85px, 12vw, 120px);
+        max-height: 26px;
+    }
+}
+
+/* Portrait Orientation */
+@media (orientation: portrait) and (max-width: 768px) {
+    .ym-brand-logo-svg {
+        width: clamp(75px, 20vw, 110px);
+        max-height: 24px;
+    }
+    
+    .ym-brand-logo-fallback {
+        width: clamp(75px, 20vw, 110px);
+        max-height: 24px;
+    }
+}
+
+/* =========================================================
+   5. ACCESSIBILITY & REDUCED MOTION
+   ========================================================= */
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .ym-brand-logo-svg,
+    .ym-brand-logo-fallback {
+        transition: none;
+    }
+    
+    .ym-brand-link:hover .ym-brand-logo-svg {
+        transform: none;
+    }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .ym-brand-logo-svg {
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+}
+
+/* Focus Visible for Accessibility */
+.ym-brand-link:focus-visible {
+    outline: 2px solid var(--ym-primary-500);
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+
+/* =========================================================
+   6. DARK MODE SUPPORT
+   ========================================================= */
+
+@media (prefers-color-scheme: dark) {
+    .ym-brand-logo-svg {
+        filter: drop-shadow(0 2px 4px rgba(255, 255, 255, 0.1));
+    }
+    
+    .ym-brand-link:hover .ym-brand-logo-svg {
+        filter: drop-shadow(0 4px 8px rgba(255, 255, 255, 0.15));
+    }
+}
+
+/* =========================================================
+   7. PRINT STYLES
+   ========================================================= */
+
+@media print {
+    .ym-brand-logo-svg,
+    .ym-brand-logo-fallback {
+        filter: none !important;
+        max-width: 120px !important;
+        max-height: 30px !important;
+    }
+    
+    .ym-brand-link:hover .ym-brand-logo-svg {
+        transform: none !important;
+    }
+}
+
+/* =========================================================
+   8. LOADING STATES & PERFORMANCE
+   ========================================================= */
+
+/* Logo Loading State */
+.ym-brand-logo-container.loading .ym-brand-logo-svg {
+    opacity: 0.6;
+    animation: logoPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Smooth Loading Transition */
+.ym-brand-logo-svg,
+.ym-brand-logo-fallback {
+    transition: opacity 0.3s ease, transform 0.3s ease, filter 0.3s ease;
+}
+
+/* Container Performance Optimization */
+.ym-brand-logo-container {
+    contain: layout style;
+    will-change: transform;
+}
+
+/* =========================================================
+   9. FALLBACK MECHANISM
+   ========================================================= */
+
+/* Show fallback if SVG is not supported */
+.no-svg .ym-brand-logo-svg {
+    display: none;
+}
+
+.no-svg .ym-brand-logo-fallback {
+    display: block;
+}
+
+/* Show fallback on SVG load error */
+.ym-brand-logo-svg[data-error] {
+    display: none;
+}
+
+.ym-brand-logo-svg[data-error] + .ym-brand-logo-fallback {
+    display: block;
+}

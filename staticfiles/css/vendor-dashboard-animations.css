@@ -1,0 +1,514 @@
+/* Modern Animations and Micro-interactions */
+/* Enhanced user experience with smooth animations */
+
+/* Keyframe Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(77, 120, 188, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(77, 120, 188, 0);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200px 0;
+    }
+    100% {
+        background-position: calc(200px + 100%) 0;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 500px;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 500px;
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+        max-height: 0;
+    }
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes bounceIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    70% {
+        transform: scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Enhanced Card Animations */
+.card {
+    animation: fadeInUp 0.6s ease-out;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, box-shadow;
+}
+
+.card:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+    animation: fadeInLeft 0.8s ease-out 0.1s both;
+}
+
+.card-title {
+    animation: fadeInRight 0.8s ease-out 0.2s both;
+}
+
+/* Enhanced Stat Card Animations */
+.stat-card {
+    animation: scaleIn 0.5s ease-out;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    will-change: transform, box-shadow;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.6s;
+}
+
+.stat-card:hover::before {
+    left: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card.success {
+    animation: bounceIn 0.8s ease-out;
+}
+
+.stat-card.warning {
+    animation: bounceIn 0.8s ease-out 0.1s both;
+}
+
+.stat-card.danger {
+    animation: bounceIn 0.8s ease-out 0.2s both;
+}
+
+.stat-card.info {
+    animation: bounceIn 0.8s ease-out 0.3s both;
+}
+
+.stat-value {
+    animation: fadeInUp 0.8s ease-out 0.3s both;
+}
+
+.stat-label {
+    animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+
+.stat-change {
+    animation: fadeInUp 0.8s ease-out 0.5s both;
+}
+
+/* Enhanced Button Animations */
+.btn {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, box-shadow;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+    animation: pulseGlow 2s infinite;
+}
+
+.btn-success {
+    animation: pulseGlow 2.5s infinite;
+    animation-delay: 0.5s;
+}
+
+/* Enhanced Sidebar Animations */
+.vendor-sidebar-modern {
+    animation: fadeInLeft 0.8s ease-out;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vendor-nav-link-modern {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vendor-nav-link-modern::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: width 0.6s;
+}
+
+.vendor-nav-link-modern:hover::before {
+    width: 100%;
+}
+
+.vendor-nav-link-modern.active {
+    animation: pulseGlow 3s infinite;
+}
+
+/* Enhanced Table Animations */
+.table-modern {
+    animation: fadeInUp 0.8s ease-out;
+}
+
+.table-modern tbody tr {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, background-color;
+}
+
+.table-modern tbody tr:hover {
+    transform: translateX(4px);
+    background-color: rgba(77, 120, 188, 0.05);
+}
+
+.table-modern tbody tr:nth-child(even) {
+    animation: fadeInLeft 0.6s ease-out;
+}
+
+.table-modern tbody tr:nth-child(odd) {
+    animation: fadeInRight 0.6s ease-out;
+}
+
+/* Enhanced Progress Bar Animations */
+.progress {
+    animation: fadeInUp 0.8s ease-out;
+    overflow: hidden;
+}
+
+.progress-bar {
+    animation: slideDown 0.8s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+/* Enhanced Badge Animations */
+.badge {
+    animation: bounceIn 0.6s ease-out;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.badge:hover {
+    transform: scale(1.1);
+}
+
+/* Enhanced Notification Animations */
+.notification-modern {
+    animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notification-modern:hover {
+    transform: translateX(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.notification-modern.dismiss {
+    animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced Loading States */
+.loading-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+.loading-pulse {
+    animation: pulseGlow 1.5s infinite;
+}
+
+/* Enhanced Form Animations */
+.form-group {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.form-control {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: border-color, box-shadow;
+}
+
+.form-control:focus {
+    animation: pulseGlow 2s infinite;
+    transform: scale(1.02);
+}
+
+/* Enhanced Chart Animations */
+.chart-container {
+    animation: fadeInUp 0.8s ease-out;
+}
+
+.chart-bar {
+    animation: scaleIn 0.6s ease-out;
+    transform-origin: bottom;
+}
+
+.chart-line {
+    animation: fadeInLeft 1s ease-out;
+}
+
+/* Enhanced Icon Animations */
+.icon-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+.icon-pulse {
+    animation: pulseGlow 2s infinite;
+}
+
+.icon-bounce {
+    animation: bounceIn 1s ease-out;
+}
+
+/* Enhanced Hover Effects */
+.hover-lift {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.hover-scale {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-scale:hover {
+    transform: scale(1.05);
+}
+
+.hover-glow {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-glow:hover {
+    box-shadow: 0 0 30px rgba(77, 120, 188, 0.3);
+}
+
+/* Enhanced Entrance Animations */
+.animate-in {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-in-delay-1 {
+    animation: fadeInUp 0.6s ease-out 0.1s both;
+}
+
+.animate-in-delay-2 {
+    animation: fadeInUp 0.6s ease-out 0.2s both;
+}
+
+.animate-in-delay-3 {
+    animation: fadeInUp 0.6s ease-out 0.3s both;
+}
+
+.animate-in-delay-4 {
+    animation: fadeInUp 0.6s ease-out 0.4s both;
+}
+
+.animate-in-delay-5 {
+    animation: fadeInUp 0.6s ease-out 0.5s both;
+}
+
+/* Enhanced Staggered Animations */
+.stagger-children > * {
+    animation: fadeInUp 0.6s ease-out;
+    animation-fill-mode: both;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
+
+/* Enhanced Micro-interactions */
+.micro-interaction {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.micro-interaction:hover {
+    transform: scale(1.02);
+}
+
+.micro-interaction:active {
+    transform: scale(0.98);
+}
+
+/* Enhanced Focus Animations */
+.focus-animate:focus {
+    animation: pulseGlow 2s infinite;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(77, 120, 188, 0.3);
+}
+
+/* Enhanced Scroll Animations */
+.scroll-animate {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scroll-animate.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Enhanced Parallax Effects */
+.parallax-slow {
+    transform: translateY(0);
+    transition: transform 0.1s ease-out;
+}
+
+.parallax-fast {
+    transform: translateY(0);
+    transition: transform 0.05s ease-out;
+}

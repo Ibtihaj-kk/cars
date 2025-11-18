@@ -23,6 +23,8 @@ import base64
 from .models import BusinessPartner, VendorProfile
 from .permissions import get_vendor_profile
 from .forms import VendorLoginForm, VendorPasswordResetForm, Vendor2FAForm
+from .rate_limiting import rate_limit_operation
+from .audit_logger import VendorAuditLogger
 
 User = get_user_model()
 
@@ -43,6 +45,7 @@ class VendorLoginView(View):
         form = VendorLoginForm()
         return render(request, self.template_name, {'form': form})
     
+    @method_decorator(rate_limit_operation('login'))
     def post(self, request):
         form = VendorLoginForm(request.POST)
         if form.is_valid():
@@ -100,6 +103,7 @@ class Vendor2FAVerifyView(View):
         except (User.DoesNotExist, VendorProfile.DoesNotExist):
             return redirect('business_partners:vendor_login')
     
+    @method_decorator(rate_limit_operation('login'))
     def post(self, request):
         if 'pre_2fa_user_id' not in request.session:
             return redirect('business_partners:vendor_login')
@@ -184,6 +188,7 @@ class Vendor2FASetupView(View):
         })
     
     @method_decorator(login_required)
+    @method_decorator(rate_limit_operation('2fa_setup'))
     def post(self, request):
         if '2fa_setup_secret' not in request.session:
             return redirect('business_partners:vendor_2fa_setup')
@@ -227,6 +232,7 @@ class VendorPasswordResetRequestView(View):
         form = VendorPasswordResetForm()
         return render(request, self.template_name, {'form': form})
     
+    @method_decorator(rate_limit_operation('password_reset'))
     def post(self, request):
         form = VendorPasswordResetForm(request.POST)
         if form.is_valid():
@@ -302,6 +308,7 @@ class VendorPasswordResetConfirmView(View):
             messages.error(request, 'Password reset link is invalid or has expired.')
             return redirect('business_partners:vendor_password_reset_request')
     
+    @method_decorator(rate_limit_operation('password_reset_confirm'))
     def post(self, request, uidb64, token):
         password = request.POST.get('password')
         password_confirm = request.POST.get('password_confirm')

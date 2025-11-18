@@ -1,21 +1,51 @@
 {% extends 'business_partners/vendor_layout_standard.html' %}
 {% load static %}
 
-{% block title %}My Parts - {{ vendor_profile.business_partner.company_name }}{% endblock %}
-
+{% block page_title %}My Parts - {{ vendor_profile.business_partner.company_name }}{% endblock %}
 {% block breadcrumb_items %}
-    <li class="ym-breadcrumb-item"><a href="{% url 'business_partners:vendor_dashboard' %}" class="ym-breadcrumb-link">Dashboard</a></li>
-    <li class="ym-breadcrumb-item ym-active">My Parts</li>
+    <li class="ym-breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <span class="ym-breadcrumb-separator" aria-hidden="true">/</span>
+        <span class="ym-breadcrumb-link ym-text-gray-900" itemprop="item">
+            <span itemprop="name">My Parts</span>
+        </span>
+        <meta itemprop="position" content="2">
+    </li>
 {% endblock %}
 
 {% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/vendor-dashboard-modern.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-dashboard-responsive.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vendor-dashboard-animations.css' %}">
+    
 <style>
-    /* Custom styles for parts list */
-    .ym-parts-header {
-        background: linear-gradient(135deg, var(--ym-primary-600), var(--ym-primary-700));
+    /* Professional Parts List Enhancements */
+    .parts-header-modern {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: var(--ym-spacing-6) 0;
-        margin-bottom: var(--ym-spacing-6);
+        padding: 32px 24px;
+        margin-bottom: 32px;
+        border-radius: 16px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 20px 25px -5px rgba(102, 126, 234, 0.3);
+    }
+
+    .parts-header-modern h1 {
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        position: relative;
+        z-index: 1;
+        letter-spacing: -0.025em;
+    }
+
+    .parts-header-modern p {
+        font-size: 1.125rem;
+        opacity: 0.9;
+        margin: 0;
+        position: relative;
+        z-index: 1;
+        font-weight: 400;
     }
     
     .ym-part-image {
@@ -61,17 +91,396 @@
         margin-right: var(--ym-spacing-1);
         margin-bottom: var(--ym-spacing-1);
     }
+    
+    /* Professional Card Styles */
+    .card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header {
+        background: #ffffff;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 20px 24px;
+        border-radius: 16px 16px 0 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .card-title {
+        color: #111827;
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0;
+        letter-spacing: -0.025em;
+    }
+
+    .card-subtitle {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-top: 4px;
+    }
+
+    .card-body {
+        padding: 24px;
+    }
+
+    .card-footer {
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+        padding: 16px 24px;
+    }
+    
+    /* Modern Button Enhancements */
+    .ym-btn {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 8px;
+        font-weight: 500;
+        padding: 8px 16px;
+    }
+    
+    .ym-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .ym-btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    
+    .ym-btn-primary:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    }
+    
+    /* Enhanced Table Styling */
+    .table-modern th {
+        background: #f9fafb;
+        color: #374151;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        padding: 16px 24px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .table-modern td {
+        padding: 16px 24px;
+        border-bottom: 1px solid #f3f4f6;
+        vertical-align: middle;
+    }
+    
+    .table-modern tbody tr:hover {
+        background-color: #f9fafb;
+        transition: background-color 0.2s ease;
+    }
+    
+    /* Modern Select Box Styling */
+    .ym-form-control,
+    .ym-form-select {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 0.875rem;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        background-color: #ffffff;
+        color: #374151;
+        width: 100%;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 12px center;
+        background-repeat: no-repeat;
+        background-size: 16px 16px;
+        padding-right: 40px;
+    }
+    
+    .ym-form-control:focus,
+    .ym-form-select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        background-color: #ffffff;
+    }
+    
+    .ym-form-control:hover,
+    .ym-form-select:hover {
+        border-color: #9ca3af;
+    }
+    
+    .ym-form-group {
+        margin-bottom: 16px;
+    }
+    
+    .ym-form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+    
+    /* Modern Modal Styling */
+    .ym-modal {
+        backdrop-filter: blur(4px);
+    }
+    
+    .ym-modal-dialog {
+        margin: 1.75rem auto;
+        transform: scale(0.95);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .ym-modal.show .ym-modal-dialog {
+        transform: scale(1);
+    }
+    
+    .ym-modal-content {
+        border-radius: 16px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+    }
+    
+    .ym-modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-bottom: none;
+        padding: 24px;
+        position: relative;
+    }
+    
+    .ym-modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .ym-modal-header .ym-btn-close {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 8px;
+        padding: 8px;
+        color: white;
+        opacity: 0.8;
+        transition: all 0.2s ease;
+    }
+    
+    .ym-modal-header .ym-btn-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    
+    .ym-modal-body {
+        padding: 32px 24px;
+        background: #ffffff;
+    }
+    
+    .ym-modal-footer {
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+        padding: 20px 24px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+    
+    /* Enhanced Alert Styling */
+    .ym-alert {
+        border-radius: 12px;
+        padding: 16px 20px;
+        border: none;
+        font-weight: 500;
+    }
+    
+    .ym-alert-info {
+        background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+        color: #0c4a6e;
+        border-left: 4px solid #0ea5e9;
+    }
+    
+    /* Enhanced Form Text */
+    .ym-form-text {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-top: 6px;
+        font-style: italic;
+    }
+    
+    /* Modern Input Enhancement */
+    .ym-modal input.ym-form-control {
+        background: #ffffff;
+        border: 2px solid #e5e7eb;
+        font-size: 1rem;
+        padding: 14px 18px;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+    
+    .ym-modal input.ym-form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+        transform: translateY(-1px);
+    }
+    
+    .ym-modal input.ym-form-control::placeholder {
+        color: #9ca3af;
+        font-style: italic;
+    }
+    
+    /* Modern Button Styling */
+    .ym-btn {
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .ym-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .ym-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .ym-btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .ym-btn-primary:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a3f9a 100%);
+    }
+    
+    .ym-btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+    }
+    
+    .ym-btn-secondary:hover {
+        background: #e5e7eb;
+        color: #1f2937;
+    }
+    
+    /* CSS Grid System for Layout */
+    .ym-container-fluid {
+        width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+        margin-right: auto;
+        margin-left: auto;
+    }
+    
+    .ym-row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+    
+    .ym-col-md-3 {
+        position: relative;
+        width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    .ym-col-md-9 {
+        position: relative;
+        width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    @media (min-width: 768px) {
+        .ym-col-md-3 {
+            flex: 0 0 25%;
+            max-width: 25%;
+        }
+        
+        .ym-col-md-9 {
+            flex: 0 0 75%;
+            max-width: 75%;
+        }
+    }
+    
+    @media (max-width: 767px) {
+        .ym-col-md-3,
+        .ym-col-md-9 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
+    
+    /* Vertical Filter Styling */
+    .filter-card {
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+    }
+    
+    .filter-card .card-body {
+        padding: 20px;
+    }
+    
+    .filter-card .ym-form-group {
+        margin-bottom: 20px;
+        display: block;
+    }
+    
+    .filter-card .ym-form-control,
+    .filter-card .ym-form-select {
+        width: 100%;
+        box-sizing: border-box;
+        display: block;
+    }
+    
+    .filter-card .ym-btn {
+        width: 100%;
+        margin-bottom: 10px;
+        display: block;
+    }
+    
+    .filter-card label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="ym-parts-header">
+<!-- Modern Page Header -->
+<div class="parts-header-modern">
     <div class="ym-container">
         <div class="ym-grid">
             <div class="ym-col-md-8">
-                <h1 class="ym-h3 ym-mb-0">My Parts</h1>
-                <p class="ym-mb-0">Manage your parts inventory with full access to all Excel fields</p>
+                <h1 class="ym-mb-0">My Parts</h1>
+                <p>Manage your parts inventory with full access to all Excel fields</p>
             </div>
             <div class="ym-col-md-4 ym-text-right">
                 <a href="{% url 'business_partners:vendor_part_create' %}" class="ym-btn ym-btn-light">
@@ -86,203 +495,251 @@
 </div>
 
 <div class="ym-container-fluid">
-    <!-- Search and Filters -->
-    <div class="ym-card ym-mb-6">
-        <div class="ym-card-body">
-            <form method="get" id="searchForm">
-                <div class="ym-grid">
-                    <div class="ym-col-md-4">
-                        <div class="ym-form-group">
+    <!-- Two Column Layout: Filters (Left) + Table (Right) -->
+    <div class="ym-row">
+        <!-- Left Column: Vertical Filters -->
+        <div class="ym-col-md-3">
+            <div class="card ym-mb-4 filter-card">
+                <div class="card-header">
+                    <h5 class="card-title">Search & Filter Parts</h5>
+                    <p class="card-subtitle">Find parts using multiple search criteria</p>
+                </div>
+                <div class="card-body">
+                    <form method="get" id="searchForm">
+                        <!-- Search Input -->
+                        <div class="ym-form-group ym-mb-3">
                             <label for="search" class="ym-form-label">Search Parts</label>
                             <input type="text" class="ym-form-control" name="search" id="search" 
                                    placeholder="Part number, description, manufacturer..." 
                                    value="{{ search_form.search.value|default:'' }}">
                         </div>
-                    </div>
-                    <div class="ym-col-md-2">
-                        <div class="ym-form-group">
+                        
+                        <!-- Category Filter -->
+                        <div class="ym-form-group ym-mb-3">
                             <label for="category" class="ym-form-label">Category</label>
-                            {{ search_form.category }}
+                            <select name="category" id="category" class="ym-form-select">
+                                {% for value, label in search_form.fields.category.choices %}
+                                    <option value="{{ value }}" {% if search_form.category.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                    </div>
-                    <div class="ym-col-md-2">
-                        <div class="ym-form-group">
+                        
+                        <!-- Brand Filter -->
+                        <div class="ym-form-group ym-mb-3">
                             <label for="brand" class="ym-form-label">Brand</label>
-                            {{ search_form.brand }}
+                            <select name="brand" id="brand" class="ym-form-select">
+                                {% for value, label in search_form.fields.brand.choices %}
+                                    <option value="{{ value }}" {% if search_form.brand.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                    </div>
-                    <div class="ym-col-md-2">
-                        <div class="ym-form-group">
+                        
+                        <!-- Stock Status Filter -->
+                        <div class="ym-form-group ym-mb-3">
                             <label for="stock_status" class="ym-form-label">Stock Status</label>
-                            {{ search_form.stock_status }}
+                            <select name="stock_status" id="stock_status" class="ym-form-select">
+                                {% for value, label in search_form.fields.stock_status.choices %}
+                                    <option value="{{ value }}" {% if search_form.stock_status.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Advanced Filters Toggle -->
+                        <div class="ym-form-group ym-mb-3">
+                            <button type="button" class="ym-btn ym-btn-outline-secondary ym-btn-sm ym-w-100" id="toggleAdvanced">
+                                <i class="fas fa-filter"></i> Advanced Filters
+                            </button>
+                        </div>
+                        
+                        <!-- Search Button -->
+                        <div class="ym-form-group ym-mb-3">
+                            <button type="submit" class="ym-btn ym-btn-primary ym-w-100">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                        
+                        <!-- Clear All Button -->
+                        <div class="ym-form-group">
+                            <a href="?" class="ym-btn ym-btn-outline-secondary ym-btn-sm ym-w-100">
+                                <i class="fas fa-times"></i> Clear All
+                            </a>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Advanced Filters (Inside Filter Card) -->
+                <div class="ym-advanced-filters ym-mt-4" id="advancedFilters">
+                    <div class="ym-filter-section ym-mb-4">
+                        <h6 class="ym-mb-3 ym-text-primary">Status Filters</h6>
+                        <div class="ym-form-group ym-mb-3">
+                            <label for="is_active" class="ym-form-label">Active Status</label>
+                            <select name="is_active" id="is_active" class="ym-form-select">
+                                {% for value, label in search_form.fields.is_active.choices %}
+                                    <option value="{{ value }}" {% if search_form.is_active.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="ym-form-group ym-mb-3">
+                            <label for="is_featured" class="ym-form-label">Featured Status</label>
+                            <select name="is_featured" id="is_featured" class="ym-form-select">
+                                {% for value, label in search_form.fields.is_featured.choices %}
+                                    <option value="{{ value }}" {% if search_form.is_featured.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                     </div>
-                    <div class="ym-col-md-2">
+                    
+                    <div class="ym-filter-section ym-mb-4">
+                        <h6 class="ym-mb-3 ym-text-primary">Price Range</h6>
+                        <div class="ym-form-group ym-mb-3">
+                            <label for="min_price" class="ym-form-label">Min Price</label>
+                            <input type="number" name="min_price" id="min_price" class="ym-form-control" 
+                                   value="{{ search_form.min_price.value|default:'' }}" placeholder="0.00" step="0.01">
+                        </div>
                         <div class="ym-form-group">
-                            <label class="ym-form-label">&nbsp;</label>
-                            <div>
-                                <button type="submit" class="ym-btn ym-btn-primary ym-btn-block">
-                                    <i class="fas fa-search"></i> Search
-                                </button>
-                            </div>
+                            <label for="max_price" class="ym-form-label">Max Price</label>
+                            <input type="number" name="max_price" id="max_price" class="ym-form-control" 
+                                   value="{{ search_form.max_price.value|default:'' }}" placeholder="9999.99" step="0.01">
+                        </div>
+                    </div>
+                    
+                    <div class="ym-filter-section ym-mb-4">
+                        <h6 class="ym-mb-3 ym-text-primary">Vendor-Specific</h6>
+                        <div class="ym-form-group ym-mb-3">
+                            <label for="material_type" class="ym-form-label">Material Type</label>
+                            <select name="material_type" id="material_type" class="ym-form-select">
+                                {% for value, label in search_form.fields.material_type.choices %}
+                                    <option value="{{ value }}" {% if search_form.material_type.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="ym-form-group ym-mb-3">
+                            <label for="plant" class="ym-form-label">Plant</label>
+                            <select name="plant" id="plant" class="ym-form-select">
+                                {% for value, label in search_form.fields.plant.choices %}
+                                    <option value="{{ value }}" {% if search_form.plant.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="ym-form-group ym-mb-3">
+                            <label for="material_group" class="ym-form-label">Material Group</label>
+                            <select name="material_group" id="material_group" class="ym-form-select">
+                                {% for value, label in search_form.fields.material_group.choices %}
+                                    <option value="{{ value }}" {% if search_form.material_group.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="ym-form-group">
+                            <label for="abc_indicator" class="ym-form-label">ABC Indicator</label>
+                            <select name="abc_indicator" id="abc_indicator" class="ym-form-select">
+                                {% for value, label in search_form.fields.abc_indicator.choices %}
+                                    <option value="{{ value }}" {% if search_form.abc_indicator.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="ym-filter-section">
+                        <h6 class="ym-mb-3 ym-text-primary">Sorting</h6>
+                        <div class="ym-form-group">
+                            <label for="sort_by" class="ym-form-label">Sort By</label>
+                            <select name="sort_by" id="sort_by" class="ym-form-select">
+                                {% for value, label in search_form.fields.sort_by.choices %}
+                                    <option value="{{ value }}" {% if search_form.sort_by.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Advanced Filters Toggle -->
-                <div class="ym-text-center ym-mt-4">
-                    <button type="button" class="ym-btn ym-btn-outline-secondary ym-btn-sm" id="toggleAdvanced">
-                        <i class="fas fa-filter"></i> Advanced Filters
+            </div>
+        </div>
+        
+        <!-- Right Column: Table and Results -->
+        <div class="ym-col-md-9">
+
+            <!-- Bulk Actions -->
+            <div class="ym-bulk-actions ym-mb-4" id="bulkActions">
+                <div class="ym-grid">
+                    <div class="ym-col-md-4">
+                        <div class="ym-btn-group ym-btn-group-sm" role="group">
+                            <button type="button" class="ym-btn ym-btn-primary" onclick="showPriceUpdateModal()" title="Update Prices">
+                                <i class="fas fa-dollar-sign"></i> Price
+                            </button>
+                            <button type="button" class="ym-btn ym-btn-primary" onclick="showStockUpdateModal()" title="Update Stock">
+                                <i class="fas fa-boxes"></i> Stock
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ym-col-md-8 ym-text-right">
+                        <div class="ym-btn-group ym-btn-group-sm ym-mr-3" role="group">
+                            <a href="{% url 'business_partners:vendor_parts_export' %}" class="ym-btn ym-btn-outline-primary ym-btn-sm">
+                                <i class="fas fa-file-excel"></i> Export Excel
+                            </a>
+                            <a href="{% url 'business_partners:vendor_parts_export_csv' %}" class="ym-btn ym-btn-outline-primary ym-btn-sm">
+                                <i class="fas fa-download"></i> Export CSV
+                            </a>
+                        </div>
+                        <a href="{% url 'business_partners:vendor_part_create' %}" class="ym-btn ym-btn-success ym-btn-sm">
+                            <i class="fas fa-plus"></i> Add New Part
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bulk Actions Row -->
+            <div class="ym-grid ym-mb-3">
+                <div class="ym-col-md-4">
+                    <span id="selectedCount">0</span> parts selected
+                </div>
+                <div class="ym-col-md-8 ym-text-right">
+                    <!-- Quick Actions -->
+                    <div class="ym-btn-group ym-btn-group-sm ym-mr-3" role="group">
+                        <button type="button" class="ym-btn ym-btn-success" onclick="performBulkAction('activate')" title="Activate Selected">
+                            <i class="fas fa-check"></i> Activate
+                        </button>
+                        <button type="button" class="ym-btn ym-btn-secondary" onclick="performBulkAction('deactivate')" title="Deactivate Selected">
+                            <i class="fas fa-times"></i> Deactivate
+                        </button>
+                        <button type="button" class="ym-btn ym-btn-warning" onclick="performBulkAction('feature')" title="Feature Selected">
+                            <i class="fas fa-star"></i> Feature
+                        </button>
+                        <button type="button" class="ym-btn ym-btn-outline-warning" onclick="performBulkAction('unfeature')" title="Remove Featured">
+                            <i class="far fa-star"></i> Unfeature
+                        </button>
+                    </div>
+                    
+                    <!-- Other Actions -->
+                    <a href="{% url 'business_partners:vendor_parts_bulk_update' %}" class="ym-btn ym-btn-warning ym-btn-sm ym-mr-3" id="bulkUpdateBtn">
+                        <i class="fas fa-edit"></i> Advanced Update
+                    </a>
+                    <button type="button" class="ym-btn ym-btn-danger ym-btn-sm ym-mr-3" onclick="performBulkAction('delete')" id="bulkDeleteBtn">
+                        <i class="fas fa-trash"></i> Delete
                     </button>
-                    <a href="?" class="ym-btn ym-btn-outline-secondary ym-btn-sm">
-                        <i class="fas fa-times"></i> Clear All
+                    <button type="button" class="ym-btn ym-btn-secondary ym-btn-sm" id="clearSelectionBtn">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Results Summary -->
+            <div class="ym-grid ym-mb-4">
+                <div class="ym-col-md-6">
+                    <p class="ym-text-muted ym-mb-0">
+                        Showing {{ parts.start_index }}-{{ parts.end_index }} of {{ total_parts }} parts
+                    </p>
+                </div>
+                <div class="ym-col-md-6 ym-text-right">
+                    <a href="{% url 'business_partners:vendor_parts_export_csv' %}" class="ym-btn ym-btn-outline-primary ym-btn-sm">
+                        <i class="fas fa-download"></i> Export CSV
                     </a>
                 </div>
-                
-                <!-- Advanced Filters -->
-                <div class="ym-advanced-filters ym-mt-4" id="advancedFilters">
-                    <div class="ym-filter-section">
-                        <h6 class="ym-mb-3">Status Filters</h6>
-                        <div class="ym-grid">
-                            <div class="ym-col-md-3">
-                                <div class="ym-form-group">
-                                    <label for="is_active" class="ym-form-label">Active Status</label>
-                                    {{ search_form.is_active }}
-                                </div>
-                            </div>
-                            <div class="ym-col-md-3">
-                                <div class="ym-form-group">
-                                    <label for="is_featured" class="ym-form-label">Featured Status</label>
-                                    {{ search_form.is_featured }}
-                                </div>
-                            </div>
-                            <div class="ym-col-md-3">
-                                <div class="ym-form-group">
-                                    <label for="min_price" class="ym-form-label">Min Price</label>
-                                    {{ search_form.min_price }}
-                                </div>
-                            </div>
-                            <div class="ym-col-md-3">
-                                <div class="ym-form-group">
-                                    <label for="max_price" class="ym-form-label">Max Price</label>
-                                    {{ search_form.max_price }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="ym-filter-section">
-                        <h6 class="ym-mb-3">Vendor-Specific Filters</h6>
-                        <div class="ym-grid">
-                            <div class="ym-col-md-3">
-                                <div class="ym-form-group">
-                                    <label for="material_type" class="ym-form-label">Material Type</label>
-                                    {{ search_form.material_type }}
-                                </div>
-                            </div>
-                            <div class="ym-col-md-3">
-                                <div class="ym-form-group">
-                                    <label for="plant" class="ym-form-label">Plant</label>
-                                    {{ search_form.plant }}
-                                </div>
-                            </div>
-                            <div class="ym-col-md-3">
-                                <div class="ym-form-group">
-                                    <label for="material_group" class="ym-form-label">Material Group</label>
-                                    {{ search_form.material_group }}
-                                </div>
-                            </div>
-                            <div class="ym-col-md-3">
-                                <div class="ym-form-group">
-                                    <label for="abc_indicator" class="ym-form-label">ABC Indicator</label>
-                                    {{ search_form.abc_indicator }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="ym-filter-section">
-                        <h6 class="ym-mb-3">Sorting</h6>
-                        <div class="ym-grid">
-                            <div class="ym-col-md-4">
-                                <div class="ym-form-group">
-                                    <label for="sort_by" class="ym-form-label">Sort By</label>
-                                    {{ search_form.sort_by }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Bulk Actions -->
-    <div class="ym-bulk-actions" id="bulkActions">
-        <div class="ym-grid">
-            <div class="ym-col-md-4">
-                <span id="selectedCount">0</span> parts selected
             </div>
-            <div class="ym-col-md-8 ym-text-right">
-                <!-- Quick Actions -->
-                <div class="ym-btn-group ym-btn-group-sm ym-mr-3" role="group">
-                    <button type="button" class="ym-btn ym-btn-success" onclick="performBulkAction('activate')" title="Activate Selected">
-                        <i class="fas fa-check"></i> Activate
-                    </button>
-                    <button type="button" class="ym-btn ym-btn-secondary" onclick="performBulkAction('deactivate')" title="Deactivate Selected">
-                        <i class="fas fa-times"></i> Deactivate
-                    </button>
-                    <button type="button" class="ym-btn ym-btn-warning" onclick="performBulkAction('feature')" title="Feature Selected">
-                        <i class="fas fa-star"></i> Feature
-                    </button>
-                    <button type="button" class="ym-btn ym-btn-outline-warning" onclick="performBulkAction('unfeature')" title="Remove Featured">
-                        <i class="far fa-star"></i> Unfeature
-                    </button>
-                </div>
-                
-                <!-- Advanced Actions -->
-                <div class="ym-btn-group ym-btn-group-sm ym-mr-3" role="group">
-                    <button type="button" class="ym-btn ym-btn-info" onclick="showPriceUpdateModal()" title="Update Prices">
-                        <i class="fas fa-dollar-sign"></i> Price
-                    </button>
-                    <button type="button" class="ym-btn ym-btn-primary" onclick="showStockUpdateModal()" title="Update Stock">
-                        <i class="fas fa-boxes"></i> Stock
-                    </button>
-                </div>
-                
-                <!-- Other Actions -->
-                <a href="{% url 'business_partners:vendor_parts_bulk_update' %}" class="ym-btn ym-btn-warning ym-btn-sm ym-mr-3" id="bulkUpdateBtn">
-                    <i class="fas fa-edit"></i> Advanced Update
-                </a>
-                <button type="button" class="ym-btn ym-btn-danger ym-btn-sm ym-mr-3" onclick="performBulkAction('delete')" id="bulkDeleteBtn">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-                <button type="button" class="ym-btn ym-btn-secondary ym-btn-sm" id="clearSelectionBtn">
-                    <i class="fas fa-times"></i> Clear
-                </button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Results Summary -->
-    <div class="ym-grid ym-mb-4">
-        <div class="ym-col-md-6">
-            <p class="ym-text-muted ym-mb-0">
-                Showing {{ parts.start_index }}-{{ parts.end_index }} of {{ total_parts }} parts
-            </p>
-        </div>
-        <div class="ym-col-md-6 ym-text-right">
-            <a href="{% url 'business_partners:vendor_parts_export_csv' %}" class="ym-btn ym-btn-outline-primary ym-btn-sm">
-                <i class="fas fa-download"></i> Export CSV
-            </a>
-        </div>
-    </div>
-
-    <!-- Parts Table -->
-    <div class="ym-card">
-        {% if parts %}
-        <div class="ym-table-responsive">
-            <table class="ym-table ym-table-hover ym-mb-0">
+            <!-- Parts Table -->
+            <div class="card">
+                {% if parts %}
+                <div class="ym-table-responsive">
+                    <table class="table-modern ym-mb-0">
                 <thead>
                     <tr>
                         <th width="40">
@@ -371,26 +828,26 @@
                     </tr>
                     {% endfor %}
                 </tbody>
-            </table>
+                </table>
+            </div>
+            {% else %}
+            <div class="ym-text-center ym-py-5">
+                <i class="fas fa-search fa-3x ym-text-muted ym-mb-3"></i>
+                <h5>No parts found</h5>
+                <p class="ym-text-muted">Try adjusting your search criteria or add a new part.</p>
+                <a href="{% url 'business_partners:vendor_part_create' %}" class="ym-btn ym-btn-primary">
+                    <i class="fas fa-plus"></i> Add New Part
+                </a>
+            </div>
+            {% endif %}
         </div>
-        {% else %}
-        <div class="ym-text-center ym-py-5">
-            <i class="fas fa-search fa-3x ym-text-muted ym-mb-3"></i>
-            <h5>No parts found</h5>
-            <p class="ym-text-muted">Try adjusting your search criteria or add a new part.</p>
-            <a href="{% url 'business_partners:vendor_part_create' %}" class="ym-btn ym-btn-primary">
-                <i class="fas fa-plus"></i> Add New Part
-            </a>
-        </div>
-        {% endif %}
-    </div>
 
-    <!-- Pagination -->
-    {% if parts.has_other_pages %}
-    <div class="ym-card">
-        <div class="ym-card-body">
-            <nav aria-label="Parts pagination">
-                <ul class="ym-pagination ym-justify-content-center ym-mb-0">
+        <!-- Pagination -->
+        {% if parts.has_other_pages %}
+        <div class="card ym-mt-3">
+            <div class="card-body">
+                <nav aria-label="Parts pagination">
+                    <ul class="ym-pagination ym-justify-content-center ym-mb-0">
                     {% if parts.has_previous %}
                         <li class="ym-page-item">
                             <a class="ym-page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ parts.previous_page_number }}">
@@ -434,24 +891,30 @@
                 <h5 class="ym-modal-title" id="priceUpdateModalLabel">
                     <i class="fas fa-dollar-sign"></i> Update Prices
                 </h5>
-                <button type="button" class="ym-btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="ym-btn-close" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
             <div class="ym-modal-body">
                 <form id="priceUpdateForm">
-                    <div class="ym-form-group ym-mb-3">
+                    <div class="ym-form-group ym-mb-4">
                         <label for="pricePercentage" class="ym-form-label">Price Adjustment (%)</label>
                         <input type="number" class="ym-form-control" id="pricePercentage" step="0.1" placeholder="e.g., 10 for 10% increase, -5 for 5% decrease">
                         <div class="ym-form-text">Enter positive number to increase prices, negative to decrease</div>
                     </div>
-                    <div class="ym-alert ym-alert-info">
+                    <div class="ym-alert ym-alert-info ym-mb-0">
                         <i class="fas fa-info-circle"></i>
                         This will update prices for <span id="priceUpdateCount">0</span> selected parts.
                     </div>
                 </form>
             </div>
             <div class="ym-modal-footer">
-                <button type="button" class="ym-btn ym-btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="ym-btn ym-btn-primary" onclick="applyPriceUpdate()">Update Prices</button>
+                <button type="button" class="ym-btn ym-btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="ym-btn ym-btn-primary" onclick="applyPriceUpdate()">
+                    <i class="fas fa-check"></i> Update Prices
+                </button>
             </div>
         </div>
     </div>

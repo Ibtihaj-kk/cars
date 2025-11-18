@@ -1,0 +1,109 @@
+# Core Django Framework
+Django
+djangorestframework
+python-dotenv
+
+# Database
+psycopg2-binary
+
+# Image Processing & Media
+Pillow
+
+# Excel Processing
+openpyxl
+
+# API Documentation
+drf-yasg
+
+# Authentication & Security
+django-allauth
+djoser
+django-otp
+django-two-factor-auth
+django-phonenumber-field
+django-rest-passwordreset
+djangorestframework-simplejwt
+pyotp
+qrcode
+
+# Filtering & Search
+django-filter
+
+# CORS & Security
+django-cors-headers
+django-ratelimit
+django-axes
+django-csp
+
+# Form Styling
+django-crispy-forms
+crispy-bootstrap4
+
+# Production & Deployment
+gunicorn
+whitenoise
+
+# Cloud Storage & Media
+django-storages
+boto3
+cloudinary
+
+# Task Queue & Background Jobs
+celery
+django-celery-beat
+django-celery-results
+redis
+django-redis
+
+# Utilities & Dependencies
+requests
+python-dateutil
+pytz
+PyYAML
+django-formtools
+django-timezone-field
+
+# Social Authentication
+social-auth-app-django
+social-auth-core
+
+# Additional Dependencies
+amqp
+asgiref
+billiard
+botocore
+certifi
+cffi
+charset-normalizer
+click
+click-didyoumean
+click-plugins
+click-repl
+colorama
+cron-descriptor
+cryptography
+defusedxml
+django-daisy
+idna
+inflection
+jmespath
+kombu
+oauthlib
+packaging
+prompt-toolkit
+pycparser
+PyJWT
+pypng
+python-crontab
+python3-openid
+requests-oauthlib
+s3transfer
+setuptools
+six
+sqlparse
+typing-extensions
+tzdata
+uritemplate
+urllib3
+vine
+wcwidth

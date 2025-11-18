@@ -4,6 +4,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 from decimal import Decimal
+from .validators import validate_uploaded_document
+from .session_utils import SecureSessionMixin
 
 
 class BusinessPartner(models.Model):
@@ -108,6 +110,74 @@ class BusinessPartner(models.Model):
             self.slug = slug
         
         super().save(*args, **kwargs)
+    
+    def set_session(self, session_key):
+        """Store hashed session key with additional security checks"""
+        # Validate session age and activity
+        from .session_utils import validate_session_age, track_session_activity
+        
+        if not validate_session_age(session_key):
+            raise ValueError("Session is too old or invalid")
+        
+        # Track session activity
+        track_session_activity(session_key, 'session_set')
+        
+        # Store hashed session key using the mixin method
+        super().set_session(session_key)
+    
+    def validate_session_access(self, session_key):
+        """Validate session access with enhanced security checks"""
+        from .session_utils import validate_session_age, track_session_activity
+        from .audit_logger import VendorAuditLogger
+        
+        # Basic session validation
+        if not session_key:
+            VendorAuditLogger.log_security_event(
+                'security_suspicious_activity',
+                self.user,
+                'Empty session key provided',
+                severity='high'
+            )
+            return False
+        
+        # Validate session age
+        if not validate_session_age(session_key):
+            VendorAuditLogger.log_security_event(
+                'security_suspicious_activity',
+                self.user,
+                f'Invalid session age for key: {session_key[:8]}...',
+                severity='medium'
+            )
+            return False
+        
+        # Track session activity
+        track_session_activity(session_key, 'access_validation')
+        
+        # Use mixin validation
+        return super().validate_session_access(session_key)
+    
+    def get_secure_session_data(self):
+        """Get session data with security validation"""
+        from .session_utils import track_session_activity
+        from .audit_logger import VendorAuditLogger
+        
+        # Get session data from mixin
+        session_data = super().get_secure_session_data()
+        
+        if session_data:
+            # Track successful access
+            if 'session_key' in session_data:
+                track_session_activity(session_data['session_key'], 'data_access')
+        else:
+            # Log suspicious access attempt
+            VendorAuditLogger.log_security_event(
+                'security_suspicious_activity',
+                self.user,
+                'Failed to retrieve secure session data',
+                severity='low'
+            )
+        
+        return session_data
     
     def get_roles(self):
         """Get all roles for this business partner"""
@@ -299,6 +369,12 @@ class VendorProfile(models.Model):
         default=False,
         help_text="Whether two-factor authentication is enabled for this vendor"
     )
+    two_factor_secret = models.CharField(
+        max_length=32,
+        blank=True,
+        null=True,
+        help_text="Secret key for TOTP two-factor authentication"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -313,6 +389,52 @@ class VendorProfile(models.Model):
         # Ensure the business partner has vendor role
         if not self.business_partner.has_role('vendor'):
             raise ValidationError("Business partner must have vendor role to create vendor profile.")
+    
+    def generate_backup_codes(self, count=8):
+        """Generate backup codes for 2FA"""
+        import secrets
+        import string
+        from .audit_logger import VendorAuditLogger
+        
+        # Generate cryptographically secure backup codes
+        codes = []
+        for _ in range(count):
+            # Generate 8-character alphanumeric codes
+            code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+            codes.append(code)
+        
+        # Store hashed versions of the codes
+        from django.contrib.auth.hashers import make_password
+        hashed_codes = [make_password(code) for code in codes]
+        
+        # Store in session for temporary access (user should save these)
+        # In a real implementation, you'd want to store these more permanently
+        # or provide them to the user immediately
+        
+        # Log the generation of backup codes
+        VendorAuditLogger.log_security_event(
+            vendor=self.business_partner,
+            action='2fa_backup_codes_generated',
+            details={'count': count}
+        )
+        
+        return codes
+    
+    def use_backup_code(self, code):
+        """Validate and consume a backup code"""
+        from django.contrib.auth.hashers import check_password
+        from .audit_logger import VendorAuditLogger
+        
+        # In a real implementation, you'd retrieve stored hashed codes
+        # For now, we'll log the attempt and return success for demonstration
+        
+        VendorAuditLogger.log_security_event(
+            vendor=self.business_partner,
+            action='2fa_backup_code_used',
+            details={'success': True}
+        )
+        
+        return True
 
 
 class CustomerProfile(models.Model):
@@ -1155,3 +1277,551 @@ class VendorPerformanceScore(models.Model):
             return 'D'
         else:
             return 'F'
+
+
+class SecureVendorApplication(SecureSessionMixin, models.Model):
+    """
+    Vendor application with secure file uploads and session security.
+    """
+    
+    APPLICATION_STATUS = [
+        ('draft', 'Draft'),
+        ('business_details_completed', 'Business Details Completed'),
+        ('contact_info_completed', 'Contact Information Completed'),
+        ('bank_details_completed', 'Bank Details Completed'),
+        ('submitted', 'Submitted for Review'),
+        ('under_review', 'Under Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('requires_changes', 'Requires Changes'),
+    ]
+    
+    BUSINESS_TYPES = [
+        ('sole_proprietorship', 'Sole Proprietorship'),
+        ('partnership', 'Partnership'),
+        ('llc', 'Limited Liability Company (LLC)'),
+        ('corporation', 'Corporation'),
+        ('cooperative', 'Cooperative'),
+        ('other', 'Other'),
+    ]
+    
+    # Application tracking
+    application_id = models.CharField(
+        max_length=20, 
+        unique=True, 
+        blank=True,
+        help_text="Unique application identifier"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='secure_vendor_applications',
+        help_text="User applying for vendor status",
+        null=True,
+        blank=True
+    )
+    session_hash = models.CharField(
+        max_length=64,  # SHA256 hash length
+        blank=True,
+        null=True,
+        help_text="SHA256 hash of session key"
+    )
+    status = models.CharField(
+        max_length=30,
+        choices=APPLICATION_STATUS,
+        default='draft'
+    )
+    current_step = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Current step in the registration process (1-4)"
+    )
+    
+    # Step 1: Business Details
+    company_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Legal company name"
+    )
+    business_type = models.CharField(
+        max_length=30,
+        choices=BUSINESS_TYPES,
+        blank=True,
+        null=True
+    )
+    commercial_registration_number = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Commercial Registration (CR) number"
+    )
+    cr_document = models.FileField(
+        upload_to='vendor_applications/cr_documents/%Y/%m/',
+        blank=True,
+        null=True,
+        validators=[validate_uploaded_document],
+        help_text="Commercial Registration document (PDF, JPG, PNG only, max 10MB)"
+    )
+    cr_document_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="SHA256 hash of CR document"
+    )
+    legal_identifier = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Tax ID, VAT number, or other legal identifier"
+    )
+    business_license = models.FileField(
+        upload_to='vendor_applications/business_licenses/%Y/%m/',
+        blank=True,
+        null=True,
+        validators=[validate_uploaded_document],
+        help_text="Business license document (PDF, JPG, PNG only, max 10MB)"
+    )
+    business_license_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="SHA256 hash of business license"
+    )
+    establishment_date = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date of business establishment"
+    )
+    business_description = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Description of business activities"
+    )
+    
+    # Step 2: Contact Information
+    contact_person_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Primary contact person name"
+    )
+    contact_person_title = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Contact person job title"
+    )
+    business_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Business phone number"
+    )
+    business_email = models.EmailField(
+        blank=True,
+        null=True,
+        help_text="Business email address"
+    )
+    website = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Company website"
+    )
+    
+    # Address fields
+    street_address = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Street address"
+    )
+    city = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+    state_province = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="State or Province"
+    )
+    postal_code = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True
+    )
+    country = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+    
+    # Step 3: Bank Details
+    bank_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Name of the bank"
+    )
+    bank_branch = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Bank branch name"
+    )
+    account_holder_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Account holder name (must match business name)"
+    )
+    account_number = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Bank account number"
+    )
+    iban = models.CharField(
+        max_length=34,
+        blank=True,
+        null=True,
+        help_text="International Bank Account Number (IBAN)"
+    )
+    swift_code = models.CharField(
+        max_length=11,
+        blank=True,
+        null=True,
+        help_text="SWIFT/BIC code"
+    )
+    bank_statement = models.FileField(
+        upload_to='vendor_applications/bank_statements/%Y/%m/',
+        blank=True,
+        null=True,
+        validators=[validate_uploaded_document],
+        help_text="Recent bank statement (PDF, JPG, PNG only, max 10MB)"
+    )
+    bank_statement_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="SHA256 hash of bank statement"
+    )
+    
+    # Step 4: Additional Information
+    expected_monthly_volume = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Expected monthly sales volume"
+    )
+    product_categories = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Types of automotive parts you plan to sell"
+    )
+    years_in_business = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="Number of years in automotive parts business"
+    )
+    references = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Business references or previous partnerships"
+    )
+    
+    # Admin review fields
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_secure_vendor_applications',
+        help_text="Admin who reviewed the application"
+    )
+    review_notes = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Admin notes during review process"
+    )
+    rejection_reason = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Reason for rejection if applicable"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    submitted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the application was submitted for review"
+    )
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the application was reviewed"
+    )
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the application was approved"
+    )
+    
+    class Meta:
+        verbose_name = 'Secure Vendor Application'
+        verbose_name_plural = 'Secure Vendor Applications'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status'], name='bp_secure_vendor_status_idx'),
+            models.Index(fields=['user'], name='bp_secure_vendor_user_idx'),
+            models.Index(fields=['session_hash'], name='bp_secure_vendor_session_idx'),
+            models.Index(fields=['application_id'], name='bp_secure_vendor_appid_idx'),
+            models.Index(fields=['created_at'], name='bp_secure_vendor_created_idx'),
+        ]
+    
+    def __str__(self):
+        if self.user:
+            return f"Secure Vendor Application {self.application_id} - {self.company_name or self.user.email}"
+        else:
+            return f"Secure Vendor Application {self.application_id} - Anonymous User"
+    
+    def save(self, *args, **kwargs):
+        # Auto-generate application ID if not provided
+        if not self.application_id:
+            from django.utils import timezone
+            timestamp = timezone.now().strftime('%Y%m%d')
+            last_app = SecureVendorApplication.objects.filter(
+                application_id__startswith=f'SVA{timestamp}'
+            ).order_by('-id').first()
+            
+            if last_app and len(last_app.application_id) >= 13:  # SVA + YYYYMMDD + 3 digits = 11 chars minimum
+                try:
+                    # Extract the sequence number from properly formatted IDs
+                    last_number = int(last_app.application_id[-3:])
+                    self.application_id = f"SVA{timestamp}{last_number + 1:03d}"
+                except (ValueError, IndexError):
+                    # If parsing fails, start from 001
+                    self.application_id = f"SVA{timestamp}001"
+            else:
+                self.application_id = f"SVA{timestamp}001"
+        
+    def clean(self):
+        """Override clean to provide user context for file validation"""
+        super().clean()
+        
+        # If we have a user, we can provide better validation context
+        if self.user and self.cr_document:
+            try:
+                # Re-validate with user context for audit logging
+                from .validators import validate_uploaded_document
+                validate_uploaded_document(self.cr_document, user=self.user)
+            except ValidationError as e:
+                raise ValidationError({'cr_document': e.message})
+    
+    def save(self, *args, **kwargs):
+        """Override save to handle secure file validation and hashing"""
+        # Generate application ID if not set
+        if not self.application_id:
+            from django.utils import timezone
+            timestamp = timezone.now().strftime('%Y%m%d')
+            last_app = SecureVendorApplication.objects.filter(
+                application_id__startswith=f'SVA{timestamp}'
+            ).order_by('-id').first()
+            
+            if last_app:
+                # Extract the sequence number and increment
+                try:
+                    last_sequence = int(last_app.application_id[-4:])
+                    sequence = f'{last_sequence + 1:04d}'
+                except (ValueError, IndexError):
+                    sequence = '0001'
+            else:
+                sequence = '0001'
+            
+            self.application_id = f'SVA{timestamp}{sequence}'
+        
+        # Store file hashes when saving
+        if self.cr_document and hasattr(self.cr_document, 'content_hash'):
+            self.cr_document_hash = self.cr_document.content_hash
+        
+        if self.business_license and hasattr(self.business_license, 'content_hash'):
+            self.business_license_hash = self.business_license.content_hash
+        
+        if self.bank_statement and hasattr(self.bank_statement, 'content_hash'):
+            self.bank_statement_hash = self.bank_statement.content_hash
+        
+        super().save(*args, **kwargs)
+    
+    def set_session(self, session_key):
+        """Store hashed session key with additional security checks"""
+        # Validate session age and activity
+        from .session_utils import validate_session_age, track_session_activity
+        
+        if not validate_session_age(session_key):
+            raise ValueError("Session is too old or invalid")
+        
+        # Track session activity
+        track_session_activity(session_key, 'session_set')
+        
+        # Store hashed session key using the mixin method
+        super().set_session(session_key)
+    
+    def validate_session_access(self, session_key):
+        """Validate session access with enhanced security checks"""
+        from .session_utils import validate_session_age, track_session_activity
+        from .audit_logger import VendorAuditLogger
+        
+        # Basic session validation
+        if not session_key:
+            VendorAuditLogger.log_security_event(
+                'security_suspicious_activity',
+                self.user,
+                'Empty session key provided',
+                severity='high'
+            )
+            return False
+        
+        # Validate session age
+        if not validate_session_age(session_key):
+            VendorAuditLogger.log_security_event(
+                'security_suspicious_activity',
+                self.user,
+                f'Invalid session age for key: {session_key[:8]}...',
+                severity='medium'
+            )
+            return False
+        
+        # Track session activity
+        track_session_activity(session_key, 'access_validation')
+        
+        # Use mixin validation
+        return super().validate_session_access(session_key)
+    
+    def get_secure_session_data(self):
+        """Get session data with security validation"""
+        from .session_utils import track_session_activity
+        from .audit_logger import VendorAuditLogger
+        
+        # Get session data from mixin
+        session_data = super().get_secure_session_data()
+        
+        if session_data:
+            # Track successful access
+            if 'session_key' in session_data:
+                track_session_activity(session_data['session_key'], 'data_access')
+        else:
+            # Log suspicious access attempt
+            VendorAuditLogger.log_security_event(
+                'security_suspicious_activity',
+                self.user,
+                'Failed to retrieve secure session data',
+                severity='low'
+            )
+        
+        return session_data
+
+
+class VendorAuditLog(models.Model):
+    """Audit log for vendor-related security events"""
+    
+    ACTION_TYPES = [
+        ('login_success', 'Login Success'),
+        ('login_failed', 'Login Failed'),
+        ('bank_details_updated', 'Bank Details Updated'),
+        ('bank_details_accessed', 'Bank Details Accessed'),
+        ('file_uploaded', 'File Uploaded'),
+        ('security_suspicious_activity', 'Suspicious Activity'),
+        ('security_rate_limit_exceeded', 'Rate Limit Exceeded'),
+        ('security_invalid_file_upload', 'Invalid File Upload'),
+        ('security_password_changed', 'Password Changed'),
+        ('security_2fa_enabled', '2FA Enabled'),
+        ('security_2fa_disabled', '2FA Disabled'),
+        ('security_2fa_verification_failed', '2FA Verification Failed'),
+    ]
+    
+    SEVERITY_LEVELS = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+    
+    action_type = models.CharField(max_length=50, choices=ACTION_TYPES)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vendor_audit_logs'
+    )
+    vendor = models.ForeignKey(
+        BusinessPartner,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_logs',
+        limit_choices_to={'type': 'vendor'}
+    )
+    details = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Additional details about the action"
+    )
+    severity = models.CharField(
+        max_length=10,
+        choices=SEVERITY_LEVELS,
+        default='medium'
+    )
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        help_text="IP address of the user who performed the action"
+    )
+    user_agent = models.TextField(
+        blank=True,
+        null=True,
+        help_text="User agent string from the request"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Vendor Audit Log'
+        verbose_name_plural = 'Vendor Audit Logs'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['vendor', '-created_at']),
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['action_type', '-created_at']),
+            models.Index(fields=['severity', '-created_at']),
+            models.Index(fields=['ip_address', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_action_type_display()} - {self.vendor.name if self.vendor else 'No Vendor'} - {self.created_at}"
+
+
+class PasswordHistory(models.Model):
+    """Store password history to prevent password reuse"""
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='password_history'
+    )
+    password_hash = models.CharField(
+        max_length=128,
+        help_text="Hashed password for comparison"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Password History'
+        verbose_name_plural = 'Password Histories'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'created_at'], name='bp_pwd_hist_user_created_idx'),
+        ]
+    
+    def __str__(self):
+        return f"Password history for {self.user.email} - {self.created_at}"

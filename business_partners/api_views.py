@@ -15,11 +15,10 @@ import logging
 
 from .models import (
     VendorApplication, BusinessPartner, BusinessPartnerRole,
-    ReorderNotification
+    ReorderNotification, VendorAuditLog
 )
 from .document_models import VendorDocument, DocumentCategory
 from .workflow_engine import VendorComplianceCheck
-from .audit_logger import VendorAuditLog
 from .serializers import (
     VendorApplicationListSerializer, VendorApplicationSerializer, 
     VendorApplicationReviewSerializer, BusinessPartnerSerializer,
@@ -34,6 +33,13 @@ from .error_handlers import (
 )
 from .audit_logger import VendorAuditLogger
 from .permissions import IsVendorManager
+from .rate_limiting import (
+    rate_limit_operation, 
+    VENDOR_APPLICATION_RATE_LIMITS,
+    VENDOR_RATE_LIMITS,
+    FILE_UPLOAD_RATE_LIMITS,
+    apply_rate_limits_to_viewset
+)
 
 from parts.models import Part, Category, Inventory, InventoryTransaction, Order, OrderItem
 
@@ -78,6 +84,7 @@ class VendorApplicationViewSet(viewsets.ModelViewSet):
         
         return queryset.order_by('-created_at')
     
+    @rate_limit_operation('application_create')
     @handle_vendor_api_errors
     def create(self, request, *args, **kwargs):
         """Create a new vendor application with validation and audit logging."""
@@ -106,6 +113,7 @@ class VendorApplicationViewSet(viewsets.ModelViewSet):
             logger.error(f"Error creating vendor application: {str(e)}", exc_info=True)
             raise
     
+    @rate_limit_operation('application_update')
     @handle_vendor_api_errors
     def update(self, request, *args, **kwargs):
         """Update vendor application with audit logging."""
@@ -190,6 +198,7 @@ class VendorViewSet(viewsets.ModelViewSet):
         return queryset.order_by('-created_at')
     
     @action(detail=True, methods=['get'])
+    @rate_limit_operation('performance_view')
     @handle_vendor_api_errors
     def performance(self, request, pk=None):
         """Get vendor performance metrics and scores for a specified period."""
@@ -851,20 +860,29 @@ def get_vendor_dashboard_stats(request):
         total_inventory_value = Decimal('0.00')
         
         for part in vendor_parts:
-            inventory = part.inventory
-            if inventory:
-                if inventory.quantity == 0:
-                    out_of_stock += 1
-                elif inventory.quantity <= inventory.reorder_point:
-                    low_stock += 1
-                
-                if inventory.quantity < inventory.safety_stock:
-                    below_safety_stock += 1
-                
-                if inventory.needs_reorder:
-                    reorder_recommendations += 1
-                
-                total_inventory_value += inventory.quantity * part.price
+            # Check if inventory exists before accessing it
+            try:
+                inventory = part.inventory
+                if inventory:
+                    if inventory.stock == 0:
+                        out_of_stock += 1
+                    elif inventory.stock <= inventory.reorder_level:
+                        low_stock += 1
+                    
+                    # Use part's safety_stock field, not inventory's
+                    safety_stock = getattr(part, 'safety_stock', 0)
+                    if inventory.stock < safety_stock:
+                        below_safety_stock += 1
+                    
+                    # Check if needs_reorder method exists
+                    if hasattr(inventory, 'needs_reorder') and callable(getattr(inventory, 'needs_reorder')):
+                        if inventory.needs_reorder():
+                            reorder_recommendations += 1
+                    
+                    total_inventory_value += inventory.stock * part.price
+            except Part.inventory.RelatedObjectDoesNotExist:
+                # Part doesn't have inventory record, skip it
+                continue
         
         # Calculate average price
         average_price = vendor_parts.aggregate(
@@ -1042,7 +1060,7 @@ def get_top_products(request):
                 'total_sold': product.total_sold or 0,
                 'total_revenue': float(product.total_revenue or 0),
                 'growth': round(growth, 1),
-                'stock_status': product.inventory.get_stock_status_display() if hasattr(product, 'inventory') else 'Unknown',
+                'stock_status': product.inventory.get_stock_status_display() if hasattr(product, 'inventory') and hasattr(product.inventory, 'get_stock_status_display') else 'Unknown',
                 'image_url': product.images.first().image.url if product.images.exists() else ''
             })
         

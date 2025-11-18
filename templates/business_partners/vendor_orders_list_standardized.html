@@ -10,12 +10,7 @@
 
 {% block page_header_actions %}
     <div class="ym-btn-group">
-        <a href="{% url 'business_partners:vendor_order_create' %}" class="ym-btn ym-btn-primary ym-btn-sm">
-            <i class="fas fa-plus"></i> New Order
-        </a>
-        <button type="button" class="ym-btn ym-btn-outline-secondary ym-btn-sm" onclick="exportOrders()">
-            <i class="fas fa-download"></i> Export
-        </button>
+        <!-- Export functionality not available -->
     </div>
 {% endblock %}
 
@@ -214,8 +209,13 @@
                         </td>
                         <td>
                             <div>
-                                <div class="ym-font-weight-bold">{{ order.customer_name }}</div>
-                                <div class="ym-text-muted ym-text-sm">{{ order.customer_email }}</div>
+                                {% if order.customer %}
+                                    <div class="ym-font-weight-bold">{{ order.customer.get_full_name|default:order.customer.username }}</div>
+                                    <div class="ym-text-muted ym-text-sm">{{ order.customer.email }}</div>
+                                {% else %}
+                                    <div class="ym-font-weight-bold">{{ order.guest_name|default:"Guest Customer" }}</div>
+                                    <div class="ym-text-muted ym-text-sm">{{ order.guest_email|default:"" }}</div>
+                                {% endif %}
                             </div>
                         </td>
                         <td>
@@ -228,7 +228,7 @@
                             <span class="ym-badge ym-badge-secondary">{{ order.items.count }} items</span>
                         </td>
                         <td>
-                            <span class="ym-font-weight-bold">${{ order.total_amount|floatformat:2 }}</span>
+                            <span class="ym-font-weight-bold">${{ order.total_price|floatformat:2 }}</span>
                         </td>
                         <td>
                             {% if order.status == 'pending' %}
@@ -250,9 +250,6 @@
                                 </a>
                                 <button type="button" class="ym-btn ym-btn-outline-secondary" onclick="updateOrderStatus({{ order.id }}, '{{ order.order_number }}', '{{ order.status }}')" title="Update Status">
                                     <i class="fas fa-edit"></i>
-                                </button>
-                                <button type="button" class="ym-btn ym-btn-outline-danger" onclick="deleteOrder({{ order.id }}, '{{ order.order_number }}')" title="Delete">
-                                    <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </td>
@@ -353,7 +350,7 @@ function updateOrderStatus(orderId, orderNumber, currentStatus) {
         window.VendorSystem.notifications.show('Updating order status...', 'info');
     }
     
-    fetch("{% url 'business_partners:vendor_order_status_update' 0 %}".replace('0', orderId), {
+    fetch("{% url 'business_partners:vendor_update_order_status' 0 %}".replace('0', orderId), {
         method: 'POST',
         headers: {
             'X-CSRFToken': '{{ csrf_token }}',
@@ -404,80 +401,11 @@ function updateOrderStatus(orderId, orderNumber, currentStatus) {
     });
 }
 
-function deleteOrder(orderId, orderNumber) {
-    if (!confirm(`Are you sure you want to delete order ${orderNumber}?\n\nThis action cannot be undone.`)) {
-        return;
-    }
-    
-    if (window.VendorSystem && window.VendorSystem.notifications) {
-        window.VendorSystem.notifications.show('Deleting order...', 'info');
-    }
-    
-    fetch("{% url 'business_partners:vendor_order_delete' 0 %}".replace('0', orderId), {
-        method: 'DELETE',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            if (window.VendorSystem && window.VendorSystem.notifications) {
-                window.VendorSystem.notifications.show('Order deleted successfully!', 'success');
-            } else {
-                alert('Order deleted successfully!');
-            }
-            
-            // Track the action
-            if (window.VendorSystem && window.VendorSystem.analytics) {
-                window.VendorSystem.analytics.track('order_deleted', {
-                    order_id: orderId,
-                    order_number: orderNumber
-                });
-            }
-            
-            // Reload page to reflect changes
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        } else {
-            if (window.VendorSystem && window.VendorSystem.notifications) {
-                window.VendorSystem.notifications.show(data.error || 'Failed to delete order', 'error');
-            } else {
-                alert(data.error || 'Failed to delete order');
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Error deleting order:', error);
-        if (window.VendorSystem && window.VendorSystem.notifications) {
-            window.VendorSystem.notifications.show('An error occurred while deleting the order.', 'error');
-        } else {
-            alert('An error occurred while deleting the order.');
-        }
-    });
-}
-
+// Export functionality not available
 function exportOrders() {
     if (window.VendorSystem && window.VendorSystem.notifications) {
-        window.VendorSystem.notifications.show('Preparing export...', 'info');
+        window.VendorSystem.notifications.show('Export functionality not available', 'warning');
     }
-    
-    // Get current filter parameters
-    const params = new URLSearchParams(window.location.search);
-    const exportUrl = "{% url 'business_partners:vendor_orders_export' %}" + '?' + params.toString();
-    
-    // Track the export
-    if (window.VendorSystem && window.VendorSystem.analytics) {
-        window.VendorSystem.analytics.track('orders_export', {
-            export_type: 'csv',
-            filters: Object.fromEntries(params)
-        });
-    }
-    
-    // Redirect to export URL
-    window.location.href = exportUrl;
 }
 
 // Auto-submit form on filter change

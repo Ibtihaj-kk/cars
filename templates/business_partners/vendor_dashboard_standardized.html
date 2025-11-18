@@ -15,6 +15,8 @@
     </li>
 {% endblock %}
 
+{% block container_class %}ym-w-full{% endblock %}
+
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/vendor-dashboard-modern.css' %}">
     <link rel="stylesheet" href="{% static 'css/vendor-dashboard-responsive.css' %}">
@@ -54,7 +56,7 @@
 
         .stats-grid-modern {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 24px;
             margin-bottom: 32px;
         }
@@ -435,8 +437,8 @@
             </div>
         </div>
         
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 ym-mb-8">
-            <div class="lg:col-span-2">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 ym-mb-8">
+            <div class="lg:col-span-3">
                 <div class="card animate-fade-in">
                     <div class="card-header">
                         <h2 class="card-title">Recent Orders</h2>
@@ -512,7 +514,7 @@
             </div>
         </div>
         
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 ym-mb-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 ym-mb-8">
             <div class="card animate-fade-in" style="animation-delay: 0.3s;">
                 <div class="card-header">
                     <h2 class="card-title">Sales Performance</h2>
@@ -722,8 +724,18 @@
                 });
             });
             
-            // Call fetch directly. The 1s delay was arbitrary.
+            // Initialize dashboard data loading
+            console.log('=== INITIALIZING DASHBOARD DATA LOADING ===');
+            console.log('API URLs:', apiUrls);
+            
+            // Call fetch directly
             fetchDashboardData(apiUrls);
+            
+            // Also load vendor dashboard fixes
+            if (window.VendorDashboard && window.VendorDashboard.init) {
+                console.log('Loading vendor dashboard fixes...');
+                window.VendorDashboard.init();
+            }
         
             // Refresh data every 5 minutes
             setInterval(() => {
@@ -863,58 +875,68 @@
         
         // Update dashboard stats
         function updateDashboardStats(data) {
-            document.getElementById('total-revenue').textContent = `AED ${data.total_revenue?.toLocaleString() || '0'}`;
-            document.getElementById('active-orders').textContent = data.active_orders || '0';
-            document.getElementById('inventory-items').textContent = data.inventory_items || '0';
-            document.getElementById('customer-rating').textContent = data.customer_rating?.toFixed(1) || '0.0';
+            console.log('=== updateDashboardStats called ===');
+            console.log('Stats data received:', data);
             
-            // Update change indicators
-            if (data.revenue_change !== undefined) {
+            // Map API field names to JavaScript expectations
+            console.log('Setting total-revenue:', data.total_inventory_value);
+            document.getElementById('total-revenue').textContent = `AED ${data.total_inventory_value?.toLocaleString() || '0'}`;
+            
+            console.log('Setting active-orders:', data.active_parts);
+            document.getElementById('active-orders').textContent = data.active_parts || '0';
+            
+            console.log('Setting inventory-items:', data.total_parts);
+            document.getElementById('inventory-items').textContent = data.total_parts || '0';
+            
+            console.log('Setting customer-rating:', data.average_price);
+            document.getElementById('customer-rating').textContent = data.average_price?.toFixed(1) || '0.0';
+            
+            console.log('=== Stats updated successfully ===');
+            
+            // Update change indicators with API field mapping
+            if (data.total_inventory_value !== undefined) {
                 const el = document.getElementById('revenue-change');
-                const isPositive = data.revenue_change >= 0;
-                el.className = `stat-change ${isPositive ? 'positive' : 'negative'}`;
                 el.innerHTML = `
-                    <i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i>
-                    <span>${isPositive ? '+' : ''}${data.revenue_change}% from last month</span>
+                    <i class="fas fa-info-circle"></i>
+                    <span>Current inventory value</span>
                 `;
             }
             
-            if (data.orders_change !== undefined) {
+            if (data.active_parts !== undefined) {
                 const el = document.getElementById('orders-change');
-                const isPositive = data.orders_change >= 0;
-                el.className = `stat-change ${isPositive ? 'positive' : 'negative'}`;
                 el.innerHTML = `
-                    <i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i>
-                    <span>${isPositive ? '+' : ''}${data.orders_change} new today</span>
+                    <i class="fas fa-info-circle"></i>
+                    <span>${data.active_parts} active parts</span>
                 `;
             }
             
-            if (data.low_stock_count !== undefined) {
+            if (data.low_stock !== undefined) {
                 const el = document.getElementById('inventory-change');
-                // Logic corrected. More low stock items is NEGATIVE (bad).
-                const isNegative = data.low_stock_count > 0;
+                const isNegative = data.low_stock > 0;
                 el.className = `stat-change ${isNegative ? 'negative' : 'positive'}`;
                 el.innerHTML = `
                     <i class="fas fa-arrow-${isNegative ? 'down' : 'up'}"></i>
-                    <span>${data.low_stock_count} low stock</span>
+                    <span>${data.low_stock} low stock items</span>
                 `;
             }
             
-            if (data.rating_change !== undefined) {
+            if (data.average_price !== undefined) {
                 const el = document.getElementById('rating-change');
-                const isPositive = data.rating_change >= 0;
-                el.className = `stat-change ${isPositive ? 'positive' : 'negative'}`;
                 el.innerHTML = `
-                    <i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i>
-                    <span>${isPositive ? '+' : ''}${data.rating_change.toFixed(1)} this week</span>
+                    <i class="fas fa-info-circle"></i>
+                    <span>Avg price: AED ${data.average_price.toFixed(2)}</span>
                 `;
             }
         }
         
         // Update recent orders
         function updateRecentOrders(data) {
+            console.log('=== updateRecentOrders called ===');
+            console.log('Orders data:', data);
+            
             const tbody = document.getElementById('recent-orders-tbody');
             if (!data || !data.orders || data.orders.length === 0) {
+                console.log('No orders data found');
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="5" class="text-center text-gray-500 py-8">
@@ -1025,8 +1047,12 @@
 
         // Update low stock alerts
         function updateLowStockAlerts(data) {
+            console.log('=== updateLowStockAlerts called ===');
+            console.log('Low stock data:', data);
+            
             const container = document.getElementById('low-stock-container');
             if (!data.items || data.items.length === 0) {
+                console.log('No low stock items found');
                 container.innerHTML = `
                     <div class="text-center text-gray-500 py-8">
                         <i class="fas fa-check-circle text-4xl mb-4 text-green-400"></i>
@@ -1035,6 +1061,8 @@
                 `;
                 return;
             }
+            
+            console.log('Found', data.items.length, 'low stock items');
 
             const alertLevels = {
                 'critical': { 'bg': 'bg-red-50', 'border': 'border-red-200', 'icon': 'fa-exclamation-triangle', 'iconColor': 'text-red-500', 'textColor': 'text-red-900', 'levelColor': 'text-red-600' },

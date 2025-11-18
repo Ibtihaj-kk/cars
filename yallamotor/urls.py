@@ -12,7 +12,7 @@ urlpatterns = [
     path('api/analytics/', include('analytics.urls')),
     path('api/compliance/', include('core.compliance_urls')),
     path('api/performance/', include('admin_panel.performance_urls')),
-    path('api/vendors/', include('business_partners.api_urls')),
+    path('api/vendors/', include('business_partners.urls')),
     path('', include('core.urls')),
 ]
 

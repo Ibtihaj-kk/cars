@@ -15,6 +15,369 @@
     </a>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+/* Tab Navigation Styles */
+.ym-tab-navigation {
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 2rem;
+}
+
+.ym-tab-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.ym-tab {
+    background: transparent;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 0.5rem 0.5rem 0 0;
+    transition: all 0.2s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ym-tab:hover {
+    color: #374151;
+    background-color: #f9fafb;
+}
+
+.ym-tab.ym-active {
+    color: #1f2937;
+    background-color: #ffffff;
+    border-bottom: 3px solid #3b82f6;
+}
+
+.ym-tab.ym-active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #ffffff;
+}
+
+.ym-tab-panel {
+    display: none !important;
+}
+
+.ym-tab-panel.ym-active {
+    display: block !important;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Form Progress Indicator */
+.ym-progress-container {
+    margin-bottom: 2rem;
+}
+
+.ym-progress-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.ym-progress-step {
+    text-align: center;
+    flex: 1;
+}
+
+.ym-progress-step.ym-active {
+    color: #3b82f6;
+    font-weight: 500;
+}
+
+/* Enhanced Form Styles */
+.ym-form-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.ym-form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.ym-form-label .ym-text-danger {
+    color: #dc2626;
+}
+
+/* Style all form inputs, selects, and textareas */
+.ym-form-control,
+.ym-form-group input,
+.ym-form-group select,
+.ym-form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background-color: #ffffff;
+    font-family: inherit;
+}
+
+.ym-form-control:focus,
+.ym-form-group input:focus,
+.ym-form-group select:focus,
+.ym-form-group textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.ym-form-control.ym-form-control-error,
+.ym-form-group input.ym-form-control-error,
+.ym-form-group select.ym-form-control-error,
+.ym-form-group textarea.ym-form-control-error {
+    border-color: #dc2626;
+}
+
+.ym-form-control.ym-form-control-error:focus,
+.ym-form-group input.ym-form-control-error:focus,
+.ym-form-group select.ym-form-control-error:focus,
+.ym-form-group textarea.ym-form-control-error:focus {
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.ym-form-text {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+.ym-form-error {
+    font-size: 0.75rem;
+    color: #dc2626;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.ym-form-error::before {
+    content: '⚠';
+    font-size: 0.875rem;
+}
+
+/* Checkbox and Radio Styles */
+.ym-form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.ym-form-check-input {
+    width: 1.125rem;
+    height: 1.125rem;
+    accent-color: #3b82f6;
+}
+
+.ym-form-check-label {
+    font-size: 0.875rem;
+    color: #374151;
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+/* Select Field Styles */
+.ym-form-control[type="select"],
+.ym-form-group select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    cursor: pointer;
+}
+
+/* Input Group Styles */
+.ym-input-group {
+    display: flex;
+    align-items: stretch;
+}
+
+.ym-input-group-text {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    background-color: #f9fafb;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem 0 0 0.5rem;
+    border-right: none;
+}
+
+.ym-input-group input {
+    border-radius: 0 0.5rem 0.5rem 0;
+    border-left: none;
+}
+
+.ym-input-group input:focus {
+    border-left-color: #3b82f6;
+}
+
+/* Form Actions */
+.ym-form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.ym-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.ym-btn-primary {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.ym-btn-primary:hover {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+
+.ym-btn-secondary {
+    background-color: #f9fafb;
+    color: #374151;
+    border-color: #d1d5db;
+}
+
+.ym-btn-secondary:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.ym-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Loading State */
+.ym-btn .fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .ym-tab-list {
+        flex-direction: column;
+    }
+    
+    .ym-tab {
+        justify-content: flex-start;
+        border-radius: 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .ym-tab.ym-active {
+        border-bottom: none;
+        border-left: 3px solid #3b82f6;
+    }
+    
+    .ym-form-actions {
+        flex-direction: column;
+    }
+    
+    .ym-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Card Styles */
+.ym-card {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+}
+
+.ym-card-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+
+.ym-card-body {
+    padding: 1.5rem;
+}
+
+.ym-card ym-border-light {
+    border: 1px solid #e5e7eb;
+}
+
+/* Alert Styles */
+.ym-alert {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.ym-alert-danger {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+}
+
+.ym-alert-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.ym-alert-content ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="ym-card">
     <div class="ym-card-header">
@@ -22,17 +385,19 @@
         <p class="ym-text-muted ym-mb-0">{{ action|lower }} your part information</p>
     </div>
     <div class="ym-card-body">
-        <form method="post" enctype="multipart/form-data" class="ym-form ym-form-validation" id="partForm">
+        <form method="post" enctype="multipart/form-data" class="ym-form ym-form-validation" id="partForm" {% if part %}action="{% url 'business_partners:vendor_part_edit' part.id %}"{% else %}action="{% url 'business_partners:vendor_part_create' %}"{% endif %} novalidate>
             {% csrf_token %}
             
             {% if form.errors %}
-            <div class="ym-alert ym-alert-danger ym-mb-4">
+            <div class="ym-alert ym-alert-danger ym-mb-6">
                 <div class="ym-alert-content">
-                    <h6 class="ym-alert-title">Please correct the errors below:</h6>
+                    <h6 class="ym-alert-title">
+                        <i class="fas fa-exclamation-triangle"></i> Please correct the errors below:
+                    </h6>
                     <ul class="ym-mb-0">
                         {% for field, errors in form.errors.items %}
                             {% for error in errors %}
-                                <li>{{ field|title }}: {{ error }}</li>
+                                <li><strong>{{ field|title }}:</strong> {{ error }}</li>
                             {% endfor %}
                         {% endfor %}
                     </ul>
@@ -40,209 +405,851 @@
             </div>
             {% endif %}
             
-            <div class="ym-row">
-                <!-- Basic Information -->
-                <div class="ym-col-lg-6">
-                    <div class="ym-card ym-border-light">
-                        <div class="ym-card-header">
-                            <h6 class="ym-mb-0">Basic Information</h6>
+            <!-- Form Progress Indicator -->
+            <div class="ym-progress-container ym-mb-6">
+                <div class="ym-progress ym-progress-sm">
+                    <div class="ym-progress-bar" id="formProgressBar" role="progressbar" style="width: 20%"></div>
+                </div>
+                <div class="ym-progress-steps">
+                    <span class="ym-progress-step ym-active" data-step="1">Basic Info</span>
+                    <span class="ym-progress-step" data-step="2">Pricing & Inventory</span>
+                    <span class="ym-progress-step" data-step="3">Details & Compatibility</span>
+                    <span class="ym-progress-step" data-step="4">Advanced Settings</span>
+                    <span class="ym-progress-step" data-step="5">Status & Images</span>
+                </div>
+            </div>
+            
+            <!-- Tab Navigation -->
+            <div class="ym-tab-navigation ym-mb-6">
+                <div class="ym-tab-list" role="tablist">
+                    <button class="ym-tab ym-active" data-tab="basic-info" role="tab" aria-selected="true" aria-controls="basic-info-panel">
+                        <i class="fas fa-info-circle"></i> Basic Information
+                    </button>
+                    <button class="ym-tab" data-tab="pricing-inventory" role="tab" aria-selected="false" aria-controls="pricing-inventory-panel">
+                        <i class="fas fa-dollar-sign"></i> Pricing & Inventory
+                    </button>
+                    <button class="ym-tab" data-tab="details-compatibility" role="tab" aria-selected="false" aria-controls="details-compatibility-panel">
+                        <i class="fas fa-car"></i> Details & Compatibility
+                    </button>
+                    <button class="ym-tab" data-tab="advanced-settings" role="tab" aria-selected="false" aria-controls="advanced-settings-panel">
+                        <i class="fas fa-cog"></i> Advanced Settings
+                    </button>
+                    <button class="ym-tab" data-tab="status-images" role="tab" aria-selected="false" aria-controls="status-images-panel">
+                        <i class="fas fa-image"></i> Status & Images
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tab Content -->
+            <div class="ym-tab-content">
+                <!-- Basic Information Tab Panel -->
+                <div class="ym-tab-panel ym-active" id="basic-info-panel" role="tabpanel" aria-labelledby="basic-info-tab">
+                    <div class="ym-row">
+                        <div class="ym-col-lg-6">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-tag"></i> Part Identification</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.parts_number.id_for_label }}" class="ym-form-label">
+                                            Part Number <span class="ym-text-danger">*</span>
+                                        </label>
+                                        {{ form.parts_number }}
+                                        {% if form.parts_number.errors %}
+                                            <div class="ym-form-error">{{ form.parts_number.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Unique part identifier</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.description.id_for_label }}" class="ym-form-label">
+                                            Description <span class="ym-text-danger">*</span>
+                                        </label>
+                                        {{ form.description }}
+                                        {% if form.description.errors %}
+                                            <div class="ym-form-error">{{ form.description.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Detailed part description</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.material_description_ar.id_for_label }}" class="ym-form-label">
+                                            Arabic Description
+                                        </label>
+                                        {{ form.material_description_ar }}
+                                        {% if form.material_description_ar.errors %}
+                                            <div class="ym-form-error">{{ form.material_description_ar.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Arabic description of the part</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="ym-card-body">
-                            <div class="ym-form-group">
-                                <label for="{{ form.parts_number.id_for_label }}" class="ym-form-label">
-                                    Part Number <span class="ym-text-danger">*</span>
-                                </label>
-                                {{ form.parts_number }}
-                                {% if form.parts_number.errors %}
-                                    <div class="ym-form-error">{{ form.parts_number.errors.0 }}</div>
-                                {% endif %}
-                                <div class="ym-form-text">Unique part identifier</div>
+                        
+                        <div class="ym-col-lg-6">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-industry"></i> Manufacturer Details</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.manufacturer_part_number.id_for_label }}" class="ym-form-label">
+                                            Manufacturer Part Number
+                                        </label>
+                                        {{ form.manufacturer_part_number }}
+                                        {% if form.manufacturer_part_number.errors %}
+                                            <div class="ym-form-error">{{ form.manufacturer_part_number.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Manufacturer's part number (up to 40 digits)</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.manufacturer_oem_number.id_for_label }}" class="ym-form-label">
+                                            OEM Number
+                                        </label>
+                                        {{ form.manufacturer_oem_number }}
+                                        {% if form.manufacturer_oem_number.errors %}
+                                            <div class="ym-form-error">{{ form.manufacturer_oem_number.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Original Equipment Manufacturer number</div>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div class="ym-form-group">
-                                <label for="{{ form.description.id_for_label }}" class="ym-form-label">
-                                    Description <span class="ym-text-danger">*</span>
-                                </label>
-                                {{ form.description }}
-                                {% if form.description.errors %}
-                                    <div class="ym-form-error">{{ form.description.errors.0 }}</div>
-                                {% endif %}
-                                <div class="ym-form-text">Detailed part description</div>
+                        </div>
+                    </div>
+                    
+                    <div class="ym-row ym-mt-4">
+                        <div class="ym-col-lg-6">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-list"></i> Classification</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.category.id_for_label }}" class="ym-form-label">
+                                            Category <span class="ym-text-danger">*</span>
+                                        </label>
+                                        {{ form.category }}
+                                        {% if form.category.errors %}
+                                            <div class="ym-form-error">{{ form.category.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Part category</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.brand.id_for_label }}" class="ym-form-label">
+                                            Brand <span class="ym-text-danger">*</span>
+                                        </label>
+                                        {{ form.brand }}
+                                        {% if form.brand.errors %}
+                                            <div class="ym-form-error">{{ form.brand.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Part brand or manufacturer</div>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div class="ym-form-group">
-                                <label for="{{ form.category.id_for_label }}" class="ym-form-label">
-                                    Category <span class="ym-text-danger">*</span>
-                                </label>
-                                {{ form.category }}
-                                {% if form.category.errors %}
-                                    <div class="ym-form-error">{{ form.category.errors.0 }}</div>
-                                {% endif %}
-                                <div class="ym-form-text">Part category</div>
-                            </div>
-                            
-                            <div class="ym-form-group">
-                                <label for="{{ form.brand.id_for_label }}" class="ym-form-label">
-                                    Brand <span class="ym-text-danger">*</span>
-                                </label>
-                                {{ form.brand }}
-                                {% if form.brand.errors %}
-                                    <div class="ym-form-error">{{ form.brand.errors.0 }}</div>
-                                {% endif %}
-                                <div class="ym-form-text">Part brand or manufacturer</div>
+                        </div>
+                        
+                        <div class="ym-col-lg-6">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-ruler"></i> Physical Properties</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-row">
+                                        <div class="ym-col-lg-6">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.gross_weight.id_for_label }}" class="ym-form-label">
+                                                    Gross Weight (kg)
+                                                </label>
+                                                {{ form.gross_weight }}
+                                                {% if form.gross_weight.errors %}
+                                                    <div class="ym-form-error">{{ form.gross_weight.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Gross weight in kilograms</div>
+                                            </div>
+                                        </div>
+                                        <div class="ym-col-lg-6">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.net_weight.id_for_label }}" class="ym-form-label">
+                                                    Net Weight (kg)
+                                                </label>
+                                                {{ form.net_weight }}
+                                                {% if form.net_weight.errors %}
+                                                    <div class="ym-form-error">{{ form.net_weight.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Net weight in kilograms</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.size_dimensions.id_for_label }}" class="ym-form-label">
+                                            Size/Dimensions
+                                        </label>
+                                        {{ form.size_dimensions }}
+                                        {% if form.size_dimensions.errors %}
+                                            <div class="ym-form-error">{{ form.size_dimensions.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Physical dimensions of the part (L×W×H)</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Pricing and Inventory -->
-                <div class="ym-col-lg-6">
-                    <div class="ym-card ym-border-light">
-                        <div class="ym-card-header">
-                            <h6 class="ym-mb-0">Pricing and Inventory</h6>
+                <!-- Pricing & Inventory Tab Panel -->
+                <div class="ym-tab-panel" id="pricing-inventory-panel" role="tabpanel" aria-labelledby="pricing-inventory-tab">
+                    <div class="ym-row">
+                        <div class="ym-col-lg-6">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-dollar-sign"></i> Pricing</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.price.id_for_label }}" class="ym-form-label">
+                                            Selling Price <span class="ym-text-danger">*</span>
+                                        </label>
+                                        <div class="ym-input-group">
+                                            <span class="ym-input-group-text">$</span>
+                                            {{ form.price }}
+                                        </div>
+                                        {% if form.price.errors %}
+                                            <div class="ym-form-error">{{ form.price.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Unit price in USD</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.standard_price.id_for_label }}" class="ym-form-label">
+                                            Standard Price
+                                        </label>
+                                        <div class="ym-input-group">
+                                            <span class="ym-input-group-text">$</span>
+                                            {{ form.standard_price }}
+                                        </div>
+                                        {% if form.standard_price.errors %}
+                                            <div class="ym-form-error">{{ form.standard_price.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Standard price for valuation</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.moving_average_price.id_for_label }}" class="ym-form-label">
+                                            Moving Average Price
+                                        </label>
+                                        <div class="ym-input-group">
+                                            <span class="ym-input-group-text">$</span>
+                                            {{ form.moving_average_price }}
+                                        </div>
+                                        {% if form.moving_average_price.errors %}
+                                            <div class="ym-form-error">{{ form.moving_average_price.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Moving average or periodic unit price</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="ym-card-body">
-                            <div class="ym-form-group">
-                                <label for="{{ form.price.id_for_label }}" class="ym-form-label">
-                                    Price <span class="ym-text-danger">*</span>
-                                </label>
-                                {{ form.price }}
-                                {% if form.price.errors %}
-                                    <div class="ym-form-error">{{ form.price.errors.0 }}</div>
-                                {% endif %}
-                                <div class="ym-form-text">Unit price in USD</div>
+                        
+                        <div class="ym-col-lg-6">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-boxes"></i> Inventory Management</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.quantity.id_for_label }}" class="ym-form-label">
+                                            Current Quantity <span class="ym-text-danger">*</span>
+                                        </label>
+                                        {{ form.quantity }}
+                                        {% if form.quantity.errors %}
+                                            <div class="ym-form-error">{{ form.quantity.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Current stock quantity</div>
+                                    </div>
+                                    
+                                    <div class="ym-row">
+                                        <div class="ym-col-lg-6">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.safety_stock.id_for_label }}" class="ym-form-label">
+                                                    Safety Stock
+                                                </label>
+                                                {{ form.safety_stock }}
+                                                {% if form.safety_stock.errors %}
+                                                    <div class="ym-form-error">{{ form.safety_stock.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Minimum stock level</div>
+                                            </div>
+                                        </div>
+                                        <div class="ym-col-lg-6">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.minimum_safety_stock.id_for_label }}" class="ym-form-label">
+                                                    Min Safety Stock
+                                                </label>
+                                                {{ form.minimum_safety_stock }}
+                                                {% if form.minimum_safety_stock.errors %}
+                                                    <div class="ym-form-error">{{ form.minimum_safety_stock.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Absolute minimum level</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="ym-row">
+                                        <div class="ym-col-lg-6">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.reorder_point.id_for_label }}" class="ym-form-label">
+                                                    Reorder Point
+                                                </label>
+                                                {{ form.reorder_point }}
+                                                {% if form.reorder_point.errors %}
+                                                    <div class="ym-form-error">{{ form.reorder_point.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Stock level that triggers reorder</div>
+                                            </div>
+                                        </div>
+                                        <div class="ym-col-lg-6">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.minimum_order_quantity.id_for_label }}" class="ym-form-label">
+                                                    Min Order Qty
+                                                </label>
+                                                {{ form.minimum_order_quantity }}
+                                                {% if form.minimum_order_quantity.errors %}
+                                                    <div class="ym-form-error">{{ form.minimum_order_quantity.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Minimum quantity for orders</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div class="ym-form-group">
-                                <label for="{{ form.quantity.id_for_label }}" class="ym-form-label">
-                                    Quantity <span class="ym-text-danger">*</span>
-                                </label>
-                                {{ form.quantity }}
-                                {% if form.quantity.errors %}
-                                    <div class="ym-form-error">{{ form.quantity.errors.0 }}</div>
-                                {% endif %}
-                                <div class="ym-form-text">Current stock quantity</div>
+                        </div>
+                    </div>
+                    
+                    <div class="ym-row ym-mt-4">
+                        <div class="ym-col-lg-12">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-warehouse"></i> Storage Information</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-row">
+                                        <div class="ym-col-lg-3">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.plant.id_for_label }}" class="ym-form-label">
+                                                    Plant
+                                                </label>
+                                                {{ form.plant }}
+                                                {% if form.plant.errors %}
+                                                    <div class="ym-form-error">{{ form.plant.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Plant code</div>
+                                            </div>
+                                        </div>
+                                        <div class="ym-col-lg-3">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.storage_location.id_for_label }}" class="ym-form-label">
+                                                    Storage Location
+                                                </label>
+                                                {{ form.storage_location }}
+                                                {% if form.storage_location.errors %}
+                                                    <div class="ym-form-error">{{ form.storage_location.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Storage location code</div>
+                                            </div>
+                                        </div>
+                                        <div class="ym-col-lg-3">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.warehouse_number.id_for_label }}" class="ym-form-label">
+                                                    Warehouse Number
+                                                </label>
+                                                {{ form.warehouse_number }}
+                                                {% if form.warehouse_number.errors %}
+                                                    <div class="ym-form-error">{{ form.warehouse_number.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Warehouse identification</div>
+                                            </div>
+                                        </div>
+                                        <div class="ym-col-lg-3">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.storage_bin.id_for_label }}" class="ym-form-label">
+                                                    Storage Bin
+                                                </label>
+                                                {{ form.storage_bin }}
+                                                {% if form.storage_bin.errors %}
+                                                    <div class="ym-form-error">{{ form.storage_bin.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Storage bin location</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div class="ym-form-group">
-                                <label for="{{ form.safety_stock.id_for_label }}" class="ym-form-label">
-                                    Safety Stock
-                                </label>
-                                {{ form.safety_stock }}
-                                {% if form.safety_stock.errors %}
-                                    <div class="ym-form-error">{{ form.safety_stock.errors.0 }}</div>
-                                {% endif %}
-                                <div class="ym-form-text">Minimum stock level before reorder</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Continue with other tab panels... -->
+                <!-- I'll add the remaining tab panels in the next part -->
+                
+                <!-- Details & Compatibility Tab Panel -->
+                <div class="ym-tab-panel" id="details-compatibility-panel" role="tabpanel" aria-labelledby="details-compatibility-tab">
+                    <div class="ym-row">
+                        <div class="ym-col-lg-6">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-list-alt"></i> Classification Details</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.material_group.id_for_label }}" class="ym-form-label">
+                                            Material Group
+                                        </label>
+                                        {{ form.material_group }}
+                                        {% if form.material_group.errors %}
+                                            <div class="ym-form-error">{{ form.material_group.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Material classification group</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.abc_indicator.id_for_label }}" class="ym-form-label">
+                                            ABC Indicator
+                                        </label>
+                                        {{ form.abc_indicator }}
+                                        {% if form.abc_indicator.errors %}
+                                            <div class="ym-form-error">{{ form.abc_indicator.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">ABC classification (A=High value, C=Low value)</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.unit_of_measure.id_for_label }}" class="ym-form-label">
+                                            Unit of Measure
+                                        </label>
+                                        {{ form.unit_of_measure }}
+                                        {% if form.unit_of_measure.errors %}
+                                            <div class="ym-form-error">{{ form.unit_of_measure.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Unit of measurement (EA, KG, etc.)</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.price_control_indicator.id_for_label }}" class="ym-form-label">
+                                            Price Control
+                                        </label>
+                                        {{ form.price_control_indicator }}
+                                        {% if form.price_control_indicator.errors %}
+                                            <div class="ym-form-error">{{ form.price_control_indicator.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Price control indicator (S=Standard, V=Moving Average)</div>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div class="ym-form-group">
-                                <label for="{{ form.reorder_point.id_for_label }}" class="ym-form-label">
-                                    Reorder Point
-                                </label>
-                                {{ form.reorder_point }}
-                                {% if form.reorder_point.errors %}
-                                    <div class="ym-form-error">{{ form.reorder_point.errors.0 }}</div>
-                                {% endif %}
-                                <div class="ym-form-text">Stock level that triggers reorder</div>
+                        </div>
+                        
+                        <div class="ym-col-lg-6">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-car"></i> Vehicle Compatibility</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.vehicle_variants.id_for_label }}" class="ym-form-label">
+                                            Compatible Vehicles
+                                        </label>
+                                        {{ form.vehicle_variants }}
+                                        {% if form.vehicle_variants.errors %}
+                                            <div class="ym-form-error">{{ form.vehicle_variants.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Select compatible vehicle variants</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.warranty_period.id_for_label }}" class="ym-form-label">
+                                            Warranty Period
+                                        </label>
+                                        {{ form.warranty_period }}
+                                        {% if form.warranty_period.errors %}
+                                            <div class="ym-form-error">{{ form.warranty_period.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Warranty period in months</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="ym-row ym-mt-4">
+                        <div class="ym-col-lg-12">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-dollar-sign"></i> Advanced Pricing</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-row">
+                                        <div class="ym-col-lg-4">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.price_unit_peinh.id_for_label }}" class="ym-form-label">
+                                                    Price Unit
+                                                </label>
+                                                {{ form.price_unit_peinh }}
+                                                {% if form.price_unit_peinh.errors %}
+                                                    <div class="ym-form-error">{{ form.price_unit_peinh.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Price unit (PEINH)</div>
+                                            </div>
+                                        </div>
+                                        <div class="ym-col-lg-4">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.valuation_class.id_for_label }}" class="ym-form-label">
+                                                    Valuation Class
+                                                </label>
+                                                {{ form.valuation_class }}
+                                                {% if form.valuation_class.errors %}
+                                                    <div class="ym-form-error">{{ form.valuation_class.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Valuation class code</div>
+                                            </div>
+                                        </div>
+                                        <div class="ym-col-lg-4">
+                                            <div class="ym-form-group">
+                                                <label for="{{ form.weight_of_unit.id_for_label }}" class="ym-form-label">
+                                                    Weight of Unit
+                                                </label>
+                                                {{ form.weight_of_unit }}
+                                                {% if form.weight_of_unit.errors %}
+                                                    <div class="ym-form-error">{{ form.weight_of_unit.errors.0 }}</div>
+                                                {% endif %}
+                                                <div class="ym-form-text">Weight of unit in kg</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Advanced Settings Tab Panel -->
+                <div class="ym-tab-panel" id="advanced-settings-panel" role="tabpanel" aria-labelledby="advanced-settings-tab">
+                    <div class="ym-row">
+                        <div class="ym-col-lg-4">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-cog"></i> Material Settings</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.material_type.id_for_label }}" class="ym-form-label">
+                                            Material Type
+                                        </label>
+                                        {{ form.material_type }}
+                                        {% if form.material_type.errors %}
+                                            <div class="ym-form-error">{{ form.material_type.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Type of material (FERT, HAWA, etc.)</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.division.id_for_label }}" class="ym-form-label">
+                                            Division
+                                        </label>
+                                        {{ form.division }}
+                                        {% if form.division.errors %}
+                                            <div class="ym-form-error">{{ form.division.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Division code</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.old_material_number.id_for_label }}" class="ym-form-label">
+                                            Old Material Number
+                                        </label>
+                                        {{ form.old_material_number }}
+                                        {% if form.old_material_number.errors %}
+                                            <div class="ym-form-error">{{ form.old_material_number.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Previous material number</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.external_material_group.id_for_label }}" class="ym-form-label">
+                                            External Material Group
+                                        </label>
+                                        {{ form.external_material_group }}
+                                        {% if form.external_material_group.errors %}
+                                            <div class="ym-form-error">{{ form.external_material_group.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">External material group classification</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ym-col-lg-4">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-clock"></i> Planning Settings</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.planned_delivery_time_days.id_for_label }}" class="ym-form-label">
+                                            Planned Delivery Time
+                                        </label>
+                                        {{ form.planned_delivery_time_days }}
+                                        {% if form.planned_delivery_time_days.errors %}
+                                            <div class="ym-form-error">{{ form.planned_delivery_time_days.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Planned delivery time in days</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.goods_receipt_processing_time_days.id_for_label }}" class="ym-form-label">
+                                            Goods Receipt Processing Time
+                                        </label>
+                                        {{ form.goods_receipt_processing_time_days }}
+                                        {% if form.goods_receipt_processing_time_days.errors %}
+                                            <div class="ym-form-error">{{ form.goods_receipt_processing_time_days.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Goods receipt processing time in days</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.total_replenishment_lead_time.id_for_label }}" class="ym-form-label">
+                                            Total Replenishment Lead Time
+                                        </label>
+                                        {{ form.total_replenishment_lead_time }}
+                                        {% if form.total_replenishment_lead_time.errors %}
+                                            <div class="ym-form-error">{{ form.total_replenishment_lead_time.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Total replenishment lead time in workdays</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ym-col-lg-4">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-chart-line"></i> MRP Settings</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.mrp_type.id_for_label }}" class="ym-form-label">
+                                            MRP Type
+                                        </label>
+                                        {{ form.mrp_type }}
+                                        {% if form.mrp_type.errors %}
+                                            <div class="ym-form-error">{{ form.mrp_type.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">MRP type</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.mrp_controller.id_for_label }}" class="ym-form-label">
+                                            MRP Controller
+                                        </label>
+                                        {{ form.mrp_controller }}
+                                        {% if form.mrp_controller.errors %}
+                                            <div class="ym-form-error">{{ form.mrp_controller.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">MRP controller (materials planner)</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.mrp_group.id_for_label }}" class="ym-form-label">
+                                            MRP Group
+                                        </label>
+                                        {{ form.mrp_group }}
+                                        {% if form.mrp_group.errors %}
+                                            <div class="ym-form-error">{{ form.mrp_group.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">MRP group</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.lot_size.id_for_label }}" class="ym-form-label">
+                                            Lot Size
+                                        </label>
+                                        {{ form.lot_size }}
+                                        {% if form.lot_size.errors %}
+                                            <div class="ym-form-error">{{ form.lot_size.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Lot size for materials planning</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.procurement_type.id_for_label }}" class="ym-form-label">
+                                            Procurement Type
+                                        </label>
+                                        {{ form.procurement_type }}
+                                        {% if form.procurement_type.errors %}
+                                            <div class="ym-form-error">{{ form.procurement_type.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Procurement type (F=In-house, E=External, B=Both)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="ym-row ym-mt-4">
+                        <div class="ym-col-lg-6">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-chart-area"></i> Forecasting</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.forecast_model.id_for_label }}" class="ym-form-label">
+                                            Forecast Model
+                                        </label>
+                                        {{ form.forecast_model }}
+                                        {% if form.forecast_model.errors %}
+                                            <div class="ym-form-error">{{ form.forecast_model.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Forecast model</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.period_indicator.id_for_label }}" class="ym-form-label">
+                                            Period Indicator
+                                        </label>
+                                        {{ form.period_indicator }}
+                                        {% if form.period_indicator.errors %}
+                                            <div class="ym-form-error">{{ form.period_indicator.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Period indicator for forecasting (D=Day, W=Week, M=Month, Y=Year)</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.expiration_xchpf.id_for_label }}" class="ym-form-label">
+                                            Expiration Indicator
+                                        </label>
+                                        {{ form.expiration_xchpf }}
+                                        {% if form.expiration_xchpf.errors %}
+                                            <div class="ym-form-error">{{ form.expiration_xchpf.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Expiration indicator (XCHPF)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ym-col-lg-6">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-building"></i> Organizational</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.sales_organization.id_for_label }}" class="ym-form-label">
+                                            Sales Organization
+                                        </label>
+                                        {{ form.sales_organization }}
+                                        {% if form.sales_organization.errors %}
+                                            <div class="ym-form-error">{{ form.sales_organization.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Sales organization code</div>
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.distribution_channel.id_for_label }}" class="ym-form-label">
+                                            Distribution Channel
+                                        </label>
+                                        {{ form.distribution_channel }}
+                                        {% if form.distribution_channel.errors %}
+                                            <div class="ym-form-error">{{ form.distribution_channel.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Distribution channel code</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Status & Images Tab Panel -->
+                <div class="ym-tab-panel" id="status-images-panel" role="tabpanel" aria-labelledby="status-images-tab">
+                    <div class="ym-row">
+                        <div class="ym-col-lg-6">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-toggle-on"></i> Status Settings</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-check">
+                                        {{ form.is_active }}
+                                        <label for="{{ form.is_active.id_for_label }}" class="ym-form-check-label">
+                                            Active
+                                        </label>
+                                    </div>
+                                    <div class="ym-form-text ym-mb-4">Make part available for sale</div>
+                                    
+                                    <div class="ym-form-check">
+                                        {{ form.is_featured }}
+                                        <label for="{{ form.is_featured.id_for_label }}" class="ym-form-check-label">
+                                            Featured
+                                        </label>
+                                    </div>
+                                    <div class="ym-form-text">Highlight this part in listings</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ym-col-lg-6">
+                            <div class="ym-card ym-border-light">
+                                <div class="ym-card-header">
+                                    <h6 class="ym-mb-0"><i class="fas fa-image"></i> Part Images</h6>
+                                </div>
+                                <div class="ym-card-body">
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.image.id_for_label }}" class="ym-form-label">
+                                            Part Image
+                                        </label>
+                                        {{ form.image }}
+                                        {% if form.image.errors %}
+                                            <div class="ym-form-error">{{ form.image.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Upload part image (optional)</div>
+                                        {% if part and part.image %}
+                                            <div class="ym-mt-3">
+                                                <img src="{{ part.image.url }}" alt="Current part image" class="ym-img-thumbnail" style="max-width: 150px;">
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="ym-form-group">
+                                        <label for="{{ form.image_url.id_for_label }}" class="ym-form-label">
+                                            Image URL
+                                        </label>
+                                        {{ form.image_url }}
+                                        {% if form.image_url.errors %}
+                                            <div class="ym-form-error">{{ form.image_url.errors.0 }}</div>
+                                        {% endif %}
+                                        <div class="ym-form-text">Alternative image URL (if not uploading)</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Additional Fields -->
-            <div class="ym-row">
-                <div class="ym-col-lg-6">
-                    <div class="ym-card ym-border-light">
-                        <div class="ym-card-header">
-                            <h6 class="ym-mb-0">Additional Details</h6>
-                        </div>
-                        <div class="ym-card-body">
-                            <div class="ym-form-group">
-                                <label for="{{ form.material_group.id_for_label }}" class="ym-form-label">
-                                    Material Group
-                                </label>
-                                {{ form.material_group }}
-                                {% if form.material_group.errors %}
-                                    <div class="ym-form-error">{{ form.material_group.errors.0 }}</div>
-                                {% endif %}
-                                <div class="ym-form-text">Material classification group</div>
-                            </div>
-                            
-                            <div class="ym-form-group">
-                                <label for="{{ form.abc_indicator.id_for_label }}" class="ym-form-label">
-                                    ABC Indicator
-                                </label>
-                                {{ form.abc_indicator }}
-                                {% if form.abc_indicator.errors %}
-                                    <div class="ym-form-error">{{ form.abc_indicator.errors.0 }}</div>
-                                {% endif %}
-                                <div class="ym-form-text">ABC classification (A=High value, C=Low value)</div>
-                            </div>
-                            
-                            <div class="ym-form-group">
-                                <label for="{{ form.unit_of_measure.id_for_label }}" class="ym-form-label">
-                                    Unit of Measure
-                                </label>
-                                {{ form.unit_of_measure }}
-                                {% if form.unit_of_measure.errors %}
-                                    <div class="ym-form-error">{{ form.unit_of_measure.errors.0 }}</div>
-                                {% endif %}
-                                <div class="ym-form-text">Unit of measurement (EA, KG, etc.)</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="ym-col-lg-6">
-                    <div class="ym-card ym-border-light">
-                        <div class="ym-card-header">
-                            <h6 class="ym-mb-0">Status and Settings</h6>
-                        </div>
-                        <div class="ym-card-body">
-                            <div class="ym-form-group">
-                                <div class="ym-form-check">
-                                    {{ form.is_active }}
-                                    <label for="{{ form.is_active.id_for_label }}" class="ym-form-check-label">
-                                        Active
-                                    </label>
-                                </div>
-                                <div class="ym-form-text">Make part available for sale</div>
-                            </div>
-                            
-                            <div class="ym-form-group">
-                                <div class="ym-form-check">
-                                    {{ form.is_featured }}
-                                    <label for="{{ form.is_featured.id_for_label }}" class="ym-form-check-label">
-                                        Featured
-                                    </label>
-                                </div>
-                                <div class="ym-form-text">Highlight this part in listings</div>
-                            </div>
-                            
-                            <div class="ym-form-group">
-                                <label for="{{ form.image.id_for_label }}" class="ym-form-label">
-                                    Part Image
-                                </label>
-                                {{ form.image }}
-                                {% if form.image.errors %}
-                                    <div class="ym-form-error">{{ form.image.errors.0 }}</div>
-                                {% endif %}
-                                <div class="ym-form-text">Upload part image (optional)</div>
-                                {% if part and part.image %}
-                                    <div class="ym-mt-2">
-                                        <img src="{{ part.image.url }}" alt="Current part image" class="ym-img-thumbnail" style="max-width: 150px;">
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
             
             <!-- Form Actions -->
             <div class="ym-form-actions">
-                <button type="submit" class="ym-btn ym-btn-primary" id="submitBtn">
+                <button type="button" class="ym-btn ym-btn-secondary" id="prevBtn" style="display: none;">
+                    <i class="fas fa-arrow-left"></i> Previous
+                </button>
+                <button type="button" class="ym-btn ym-btn-primary" id="nextBtn">
+                    Next <i class="fas fa-arrow-right"></i>
+                </button>
+                <button type="submit" class="ym-btn ym-btn-primary" id="submitBtn" style="display: none;">
                     <i class="fas fa-save"></i> {{ action }} Part
                 </button>
                 <a href="{% url 'business_partners:vendor_parts_list' %}" class="ym-btn ym-btn-secondary">
@@ -256,42 +1263,233 @@
 
 {% block extra_js %}
 <script>
-// Form validation and submission handling
+// Enhanced Tab functionality with debugging
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Form script initializing...');
+    
     const form = document.getElementById('partForm');
+    const tabButtons = document.querySelectorAll('.ym-tab');
+    const tabPanels = document.querySelectorAll('.ym-tab-panel');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
     const submitBtn = document.getElementById('submitBtn');
+    const progressBar = document.getElementById('formProgressBar');
+    const progressSteps = document.querySelectorAll('.ym-progress-step');
     
-    // Real-time validation
-    const requiredFields = form.querySelectorAll('[required]');
-    requiredFields.forEach(field => {
-        field.addEventListener('blur', function() {
-            validateField(this);
+    let currentTab = 0;
+    const totalTabs = tabButtons.length;
+    
+    console.log(`Found ${totalTabs} tabs, ${tabPanels.length} panels`);
+    
+    // Initialize tab functionality
+    function initTabs() {
+        console.log('Initializing tab buttons...');
+        tabButtons.forEach((button, index) => {
+            button.addEventListener('click', (e) => {
+                console.log(`Tab ${index} clicked`);
+                e.preventDefault();
+                switchTab(index);
+            });
         });
         
-        field.addEventListener('input', function() {
-            clearFieldError(this);
+        // Add click handlers to progress steps
+        progressSteps.forEach((step, index) => {
+            step.addEventListener('click', (e) => {
+                console.log(`Progress step ${index} clicked`);
+                e.preventDefault();
+                switchTab(index);
+            });
         });
-    });
+    }
     
-    // Form submission
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
+    // Switch between tabs
+    function switchTab(tabIndex) {
+        console.log(`Switching to tab ${tabIndex}, current tab is ${currentTab}`);
         
-        if (validateForm()) {
-            // Show loading state
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-            submitBtn.disabled = true;
-            
-            // Submit form
-            this.submit();
+        if (tabIndex < 0 || tabIndex >= totalTabs) {
+            console.log('Invalid tab index');
+            return;
         }
-    });
+        
+        // Validate current tab before switching forward
+        if (tabIndex > currentTab && !validateCurrentTab()) {
+            console.log('Validation failed, not switching');
+            return;
+        }
+        
+        // Update tab buttons
+        tabButtons.forEach((button, index) => {
+            const isActive = index === tabIndex;
+            button.classList.toggle('ym-active', isActive);
+            button.setAttribute('aria-selected', isActive);
+            console.log(`Tab button ${index} active: ${isActive}`);
+        });
+        
+        // Update tab panels
+        tabPanels.forEach((panel, index) => {
+            const isActive = index === tabIndex;
+            panel.classList.toggle('ym-active', isActive);
+            console.log(`Tab panel ${index} active: ${isActive}`);
+        });
+        
+        // Update progress
+        updateProgress(tabIndex);
+        
+        // Update navigation buttons
+        updateNavigationButtons(tabIndex);
+        
+        currentTab = tabIndex;
+        console.log(`Switched to tab ${currentTab}`);
+    }
     
-    // Field validation functions
+    // Update progress bar and steps
+    function updateProgress(tabIndex) {
+        const progress = ((tabIndex + 1) / totalTabs) * 100;
+        progressBar.style.width = progress + '%';
+        console.log(`Progress updated to ${progress}%`);
+        
+        progressSteps.forEach((step, index) => {
+            step.classList.toggle('ym-active', index <= tabIndex);
+        });
+    }
+    
+    // Update navigation buttons
+    function updateNavigationButtons(tabIndex) {
+        const showPrev = tabIndex > 0;
+        const showNext = tabIndex < totalTabs - 1;
+        const showSubmit = tabIndex === totalTabs - 1;
+        
+        prevBtn.style.display = showPrev ? 'inline-flex' : 'none';
+        nextBtn.style.display = showNext ? 'inline-flex' : 'none';
+        submitBtn.style.display = showSubmit ? 'inline-flex' : 'none';
+        
+        console.log(`Navigation: prev=${showPrev}, next=${showNext}, submit=${showSubmit}`);
+    }
+    
+    // Validate current tab
+    function validateCurrentTab() {
+        console.log(`Validating tab ${currentTab}`);
+        const currentPanel = tabPanels[currentTab];
+        const requiredFields = currentPanel.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!validateField(field)) {
+                isValid = false;
+                console.log(`Field validation failed: ${field.name}`);
+            }
+        });
+        
+        console.log(`Tab validation result: ${isValid}`);
+        return isValid;
+    }
+    
+    // Navigation button event listeners
+    if (prevBtn) {
+        prevBtn.addEventListener('click', (e) => {
+            console.log('Previous button clicked');
+            e.preventDefault();
+            switchTab(currentTab - 1);
+        });
+    }
+    
+    if (nextBtn) {
+        nextBtn.addEventListener('click', (e) => {
+            console.log('Next button clicked');
+            e.preventDefault();
+            switchTab(currentTab + 1);
+        });
+    }
+    
+    // Form validation and submission
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            console.log('Form submit triggered');
+            
+            // Only prevent default and use AJAX if JavaScript is working properly
+            if (validateForm()) {
+                console.log('Form validation passed, submitting...');
+                // Show loading state
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                    submitBtn.disabled = true;
+                }
+                
+                // Prevent default and submit via AJAX
+                e.preventDefault();
+                submitForm();
+            } else {
+                console.log('Form validation failed, preventing submission');
+                e.preventDefault(); // Prevent submission if validation fails
+            }
+        });
+    }
+    
+    // Submit form via AJAX
+    function submitForm() {
+        const formData = new FormData(form);
+        
+        // Debug: log form data
+        console.log('Submitting form data:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`${key}: ${value}`);
+        }
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => {
+            console.log('Response received:', response.status, response.statusText);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json().catch(err => {
+                throw new Error('Invalid JSON response from server');
+            });
+        })
+        .then(data => {
+            console.log('Form submission response:', data);
+            if (data.success) {
+                // Show success message
+                showMessage(data.message || 'Part saved successfully!', 'success');
+                // Redirect after short delay
+                setTimeout(() => {
+                    window.location.href = '{% url "business_partners:vendor_parts_list" %}';
+                }, 1500);
+            } else {
+                // Show error message
+                const errorMessage = data.error || data.message || 'An error occurred';
+                showMessage(errorMessage, 'error');
+                // Re-enable submit button
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<i class="fas fa-save"></i> {{ action }} Part';
+                    submitBtn.disabled = false;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Form submission error:', error);
+            showMessage(`Error: ${error.message}`, 'error');
+            // Re-enable submit button
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> {{ action }} Part';
+                submitBtn.disabled = false;
+            }
+        });
+    }
+    
+    // Enhanced field validation
     function validateField(field) {
         const value = field.value.trim();
         let isValid = true;
         let errorMessage = '';
+        
+        console.log(`Validating field ${field.name}: "${value}"`);
         
         // Required field validation
         if (field.hasAttribute('required') && !value) {
@@ -343,40 +1541,60 @@ document.addEventListener('DOMContentLoaded', function() {
         return isValid;
     }
     
+    // Validate entire form
     function validateForm() {
+        console.log('Validating entire form...');
         let isValid = true;
-        const requiredFields = form.querySelectorAll('[required]');
         
-        requiredFields.forEach(field => {
-            if (!validateField(field)) {
-                isValid = false;
-            }
-        });
+        // Validate all tabs
+        for (let i = 0; i < totalTabs; i++) {
+            const panel = tabPanels[i];
+            const requiredFields = panel.querySelectorAll('[required]');
+            
+            requiredFields.forEach(field => {
+                if (!validateField(field)) {
+                    isValid = false;
+                    console.log(`Form validation failed on tab ${i}, field ${field.name}`);
+                }
+            });
+        }
         
         // Cross-field validation
-        const price = parseFloat(form.querySelector('[name="price"]').value) || 0;
-        const quantity = parseInt(form.querySelector('[name="quantity"]').value) || 0;
+        const priceField = form.querySelector('[name="price"]');
+        const quantityField = form.querySelector('[name="quantity"]');
         
-        if (price > 0 && quantity === 0) {
-            if (window.VendorSystem && window.VendorSystem.notifications) {
-                window.VendorSystem.notifications.show('Warning: Part has price but zero quantity. Are you sure?', 'warning');
+        if (priceField && quantityField) {
+            const price = parseFloat(priceField.value) || 0;
+            const quantity = parseInt(quantityField.value) || 0;
+            
+            if (price > 0 && quantity === 0) {
+                showMessage('Warning: Part has price but zero quantity. Are you sure?', 'warning');
             }
         }
         
+        console.log(`Form validation result: ${isValid}`);
         return isValid;
     }
     
+    // Show field error
     function showFieldError(field, message) {
         clearFieldError(field);
         
         const errorDiv = document.createElement('div');
         errorDiv.className = 'ym-form-error';
-        errorDiv.textContent = message;
+        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
         
         field.parentNode.appendChild(errorDiv);
         field.classList.add('ym-form-control-error');
+        
+        // Add shake animation
+        field.style.animation = 'shake 0.5s ease-in-out';
+        setTimeout(() => {
+            field.style.animation = '';
+        }, 500);
     }
     
+    // Clear field error
     function clearFieldError(field) {
         const existingError = field.parentNode.querySelector('.ym-form-error');
         if (existingError) {
@@ -385,33 +1603,62 @@ document.addEventListener('DOMContentLoaded', function() {
         field.classList.remove('ym-form-control-error');
     }
     
-    // Auto-save functionality
-    let autoSaveTimeout;
-    const autoSaveFields = form.querySelectorAll('input[type="text"], input[type="number"], textarea');
+    // Show message function
+    function showMessage(message, type) {
+        console.log(`Showing message: ${message} (${type})`);
+        if (window.VendorSystem && window.VendorSystem.notifications) {
+            window.VendorSystem.notifications.show(message, type);
+        } else {
+            // Fallback to alert if notification system is not available
+            alert(`${type.toUpperCase()}: ${message}`);
+        }
+    }
     
-    autoSaveFields.forEach(field => {
+    // Real-time validation
+    const allFields = form.querySelectorAll('input, select, textarea');
+    allFields.forEach(field => {
+        field.addEventListener('blur', function() {
+            validateField(this);
+        });
+        
         field.addEventListener('input', function() {
-            clearTimeout(autoSaveTimeout);
-            autoSaveTimeout = setTimeout(() => {
-                if (window.VendorSystem && window.VendorSystem.analytics) {
-                    window.VendorSystem.analytics.track('form_auto_save', {
-                        form_id: 'partForm',
-                        field_name: field.name,
-                        action: '{{ action|lower }}'
-                    });
-                }
-            }, 5000); // Auto-save after 5 seconds of inactivity
+            if (this.classList.contains('ym-form-control-error')) {
+                validateField(this);
+            }
         });
     });
     
-    // Track form interaction
-    if (window.VendorSystem && window.VendorSystem.analytics) {
-        window.VendorSystem.analytics.track('form_viewed', {
-            form_id: 'partForm',
-            action: '{{ action|lower }}',
-            page: 'part_form'
+    // Initialize tabs
+    initTabs();
+    
+    // Add CSS classes to all form fields
+    function styleFormFields() {
+        const formFields = form.querySelectorAll('input, select, textarea');
+        formFields.forEach(field => {
+            if (!field.classList.contains('ym-form-control-error')) {
+                field.classList.add('ym-form-control');
+            }
         });
     }
+    
+    // Style form fields on load
+    styleFormFields();
+    
+    // Add shake animation CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Initialize navigation buttons
+    updateNavigationButtons(0);
+    
+    console.log('Form script initialization complete');
 });
 </script>
 {% endblock %}

@@ -1,0 +1,708 @@
+/************************************************************
+ * Vendor Modern Animations & Transitions
+ * Smooth, performant animations for enhanced UX
+ ************************************************************/
+
+/* =========================================================
+   1. CSS CUSTOM PROPERTIES FOR ANIMATIONS
+   ========================================================= */
+:root {
+    /* Animation Durations */
+    --ym-animation-fast: 150ms;
+    --ym-animation-normal: 300ms;
+    --ym-animation-slow: 500ms;
+    --ym-animation-slower: 700ms;
+    
+    /* Animation Easing Functions */
+    --ym-ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ym-ease-in: cubic-bezier(0.55, 0.085, 0.68, 0.53);
+    --ym-ease-in-out: cubic-bezier(0.455, 0.03, 0.515, 0.955);
+    --ym-ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --ym-ease-elastic: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    
+    /* Animation Delays */
+    --ym-delay-none: 0ms;
+    --ym-delay-short: 100ms;
+    --ym-delay-medium: 200ms;
+    --ym-delay-long: 300ms;
+}
+
+/* =========================================================
+   2. HEADER & NAVIGATION ANIMATIONS
+   ========================================================= */
+
+/* Header Scroll Animation */
+@keyframes headerSlideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.ym-header-modern {
+    animation: headerSlideDown var(--ym-animation-slow) var(--ym-ease-out) forwards;
+}
+
+/* Navigation Link Hover Animations */
+@keyframes navLinkHover {
+    0% {
+        transform: translateY(0) scale(1);
+    }
+    50% {
+        transform: translateY(-2px) scale(1.02);
+    }
+    100% {
+        transform: translateY(0) scale(1);
+    }
+}
+
+.ym-nav-link-enhanced:hover {
+    animation: navLinkHover var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+/* Navigation Active State Animation */
+@keyframes navActivePulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(var(--ym-primary-500), 0.4);
+    }
+    70% {
+        transform: scale(1.01);
+        box-shadow: 0 0 0 10px rgba(var(--ym-primary-500), 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(var(--ym-primary-500), 0);
+    }
+}
+
+.ym-nav-link-enhanced.ym-active {
+    animation: navActivePulse 2s infinite;
+}
+
+/* =========================================================
+   3. LOGO ANIMATIONS
+   ========================================================= */
+
+/* Logo Entrance Animation */
+@keyframes logoFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.ym-brand-logo-svg {
+    animation: logoFadeIn var(--ym-animation-slow) var(--ym-ease-out) forwards;
+    animation-delay: var(--ym-delay-short);
+}
+
+/* Logo Hover Animation */
+@keyframes logoGlow {
+    0% {
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    }
+    100% {
+        filter: drop-shadow(0 4px 12px rgba(102, 126, 234, 0.3));
+    }
+}
+
+.ym-brand-link:hover .ym-brand-logo-svg {
+    animation: logoGlow var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+/* =========================================================
+   4. USER MENU ANIMATIONS
+   ========================================================= */
+
+/* User Dropdown Entrance */
+@keyframes dropdownSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.ym-user-dropdown-menu[aria-hidden="false"] {
+    animation: dropdownSlideDown var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+/* User Avatar Pulse Animation */
+@keyframes avatarPulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.ym-user-dropdown-trigger-enhanced:hover .ym-user-avatar-modern {
+    animation: avatarPulse var(--ym-animation-normal) var(--ym-ease-in-out) forwards;
+}
+
+/* =========================================================
+   5. MOBILE MENU ANIMATIONS
+   ========================================================= */
+
+/* Mobile Menu Slide Animation */
+@keyframes mobileMenuSlideIn {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes mobileMenuSlideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+}
+
+.ym-mobile-nav-enhanced[aria-hidden="false"] {
+    animation: mobileMenuSlideIn var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+.ym-mobile-nav-enhanced[aria-hidden="true"] {
+    animation: mobileMenuSlideOut var(--ym-animation-normal) var(--ym-ease-in) forwards;
+}
+
+/* Mobile Menu Overlay Animation */
+@keyframes overlayFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes overlayFadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+#mobile-nav-overlay:not(.ym-hidden) {
+    animation: overlayFadeIn var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+#mobile-nav-overlay.ym-hidden {
+    animation: overlayFadeOut var(--ym-animation-normal) var(--ym-ease-in) forwards;
+}
+
+/* Mobile Menu Icon Animation */
+@keyframes menuIconRotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(180deg);
+    }
+}
+
+.ym-mobile-menu-toggle-enhanced.active {
+    animation: menuIconRotate var(--ym-animation-fast) var(--ym-ease-out) forwards;
+}
+
+/* =========================================================
+   6. CONTENT & CARD ANIMATIONS
+   ========================================================= */
+
+/* Page Content Fade In */
+@keyframes contentFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ym-main-content {
+    animation: contentFadeIn var(--ym-animation-slow) var(--ym-ease-out) forwards;
+}
+
+/* Card Hover Lift Animation */
+@keyframes cardLift {
+    0% {
+        transform: translateY(0);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    100% {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+    }
+}
+
+.ym-card:hover {
+    animation: cardLift var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+/* =========================================================
+   7. BUTTON & INTERACTIVE ELEMENT ANIMATIONS
+   ========================================================= */
+
+/* Button Click Animation */
+@keyframes buttonClick {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(0.95);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.ym-button:active {
+    animation: buttonClick var(--ym-animation-fast) var(--ym-ease-out) forwards;
+}
+
+/* Button Hover Glow Animation */
+@keyframes buttonGlow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(var(--ym-primary-500), 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(var(--ym-primary-500), 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(var(--ym-primary-500), 0);
+    }
+}
+
+.ym-button-primary:hover {
+    animation: buttonGlow 2s infinite;
+}
+
+/* =========================================================
+   8. LOADING & STATE ANIMATIONS
+   ========================================================= */
+
+/* Loading Spinner Animation */
+@keyframes spinnerRotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.ym-spinner {
+    animation: spinnerRotate 1s linear infinite;
+}
+
+/* Skeleton Loading Animation */
+@keyframes skeletonShimmer {
+    0% {
+        background-position: -200px 0;
+    }
+    100% {
+        background-position: calc(200px + 100%) 0;
+    }
+}
+
+.ym-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200px 100%;
+    animation: skeletonShimmer 1.5s infinite;
+}
+
+/* =========================================================
+   9. MESSAGE & NOTIFICATION ANIMATIONS
+   ========================================================= */
+
+/* Message Slide In Animation */
+@keyframes messageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes messageSlideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+.ym-message {
+    animation: messageSlideIn var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+.ym-message.removing {
+    animation: messageSlideOut var(--ym-animation-normal) var(--ym-ease-in) forwards;
+}
+
+/* =========================================================
+   10. PERFORMANCE OPTIMIZATIONS
+   ========================================================= */
+
+/* GPU Acceleration for Smooth Animations */
+.ym-nav-link-enhanced,
+.ym-brand-logo-svg,
+.ym-user-dropdown-trigger-enhanced,
+.ym-mobile-menu-toggle-enhanced,
+.ym-card {
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+/* Reduced Motion Media Query */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .ym-nav-link-enhanced,
+    .ym-brand-logo-svg,
+    .ym-user-dropdown-trigger-enhanced,
+    .ym-mobile-menu-toggle-enhanced,
+    .ym-card {
+        will-change: auto;
+    }
+}
+
+/* =========================================================
+   11. CUSTOM ANIMATION UTILITIES
+   ========================================================= */
+
+/* Fade In Up Animation */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ym-fade-in-up {
+    animation: fadeInUp var(--ym-animation-slow) var(--ym-ease-out) forwards;
+}
+
+/* Scale In Animation */
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.ym-scale-in {
+    animation: scaleIn var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+/* Slide In Left Animation */
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.ym-slide-in-left {
+    animation: slideInLeft var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+/* =========================================================
+   12. ANIMATION DELAY UTILITIES
+   ========================================================= */
+
+.ym-delay-100 { animation-delay: 100ms !important; }
+.ym-delay-200 { animation-delay: 200ms !important; }
+.ym-delay-300 { animation-delay: 300ms !important; }
+.ym-delay-400 { animation-delay: 400ms !important; }
+.ym-delay-500 { animation-delay: 500ms !important; }
+
+/* =========================================================
+   13. ANIMATION DURATION UTILITIES
+   ========================================================= */
+
+.ym-duration-fast { animation-duration: var(--ym-animation-fast) !important; }
+.ym-duration-normal { animation-duration: var(--ym-animation-normal) !important; }
+.ym-duration-slow { animation-duration: var(--ym-animation-slow) !important; }
+.ym-duration-slower { animation-duration: var(--ym-animation-slower) !important; }
+
+/* =========================================================
+   14. ADVANCED VENDOR-SPECIFIC ANIMATIONS
+   ========================================================= */
+
+/* Swipe Indicator Animation */
+@keyframes swipeIndicatorPulse {
+    0% {
+        opacity: 0.6;
+        transform: translateX(-10px);
+    }
+    50% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0.6;
+        transform: translateX(-10px);
+    }
+}
+
+.ym-swipe-indicator {
+    animation: swipeIndicatorPulse 2s infinite;
+}
+
+/* Mobile Menu Badge Animation */
+@keyframes badgePulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.ym-mobile-menu-badge-enhanced {
+    animation: badgePulse 1.5s infinite;
+}
+
+/* Header Sticky Animation */
+@keyframes headerSticky {
+    0% {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.ym-header-modern.scrolled {
+    animation: headerSticky var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+/* Navigation Item Stagger Animation */
+@keyframes navItemStagger {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ym-nav-list-enhanced .ym-nav-item-enhanced {
+    animation: navItemStagger var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+.ym-nav-list-enhanced .ym-nav-item-enhanced:nth-child(1) { animation-delay: 100ms; }
+.ym-nav-list-enhanced .ym-nav-item-enhanced:nth-child(2) { animation-delay: 200ms; }
+.ym-nav-list-enhanced .ym-nav-item-enhanced:nth-child(3) { animation-delay: 300ms; }
+.ym-nav-list-enhanced .ym-nav-item-enhanced:nth-child(4) { animation-delay: 400ms; }
+.ym-nav-list-enhanced .ym-nav-item-enhanced:nth-child(5) { animation-delay: 500ms; }
+
+/* Mobile Navigation Item Stagger */
+.ym-mobile-nav-list-enhanced .ym-mobile-nav-item-enhanced {
+    animation: navItemStagger var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+.ym-mobile-nav-list-enhanced .ym-mobile-nav-item-enhanced:nth-child(1) { animation-delay: 150ms; }
+.ym-mobile-nav-list-enhanced .ym-mobile-nav-item-enhanced:nth-child(2) { animation-delay: 250ms; }
+.ym-mobile-nav-list-enhanced .ym-mobile-nav-item-enhanced:nth-child(3) { animation-delay: 350ms; }
+.ym-mobile-nav-list-enhanced .ym-mobile-nav-item-enhanced:nth-child(4) { animation-delay: 450ms; }
+.ym-mobile-nav-list-enhanced .ym-mobile-nav-item-enhanced:nth-child(5) { animation-delay: 550ms; }
+
+/* Enhanced Logo Gradient Animation */
+@keyframes logoGradientShift {
+    0% {
+        stop-color: #667eea;
+    }
+    50% {
+        stop-color: #764ba2;
+    }
+    100% {
+        stop-color: #667eea;
+    }
+}
+
+.ym-brand-logo-svg:hover #logoGradient stop:nth-child(1) {
+    animation: logoGradientShift 3s infinite;
+}
+
+/* User Dropdown Item Hover */
+@keyframes dropdownItemHover {
+    0% {
+        background-color: transparent;
+        transform: translateX(0);
+    }
+    100% {
+        background-color: rgba(var(--ym-primary-500), 0.1);
+        transform: translateX(4px);
+    }
+}
+
+.ym-user-dropdown-item:hover {
+    animation: dropdownItemHover var(--ym-animation-fast) var(--ym-ease-out) forwards;
+}
+
+/* Footer Link Hover Animation */
+@keyframes footerLinkSlide {
+    0% {
+        transform: translateX(0);
+        color: var(--ym-gray-600);
+    }
+    100% {
+        transform: translateX(4px);
+        color: var(--ym-primary-600);
+    }
+}
+
+.ym-footer-link:hover {
+    animation: footerLinkSlide var(--ym-animation-fast) var(--ym-ease-out) forwards;
+}
+
+/* Loading Overlay Animation */
+@keyframes loadingOverlayFade {
+    0% {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+    100% {
+        opacity: 1;
+        backdrop-filter: blur(8px);
+    }
+}
+
+.ym-loading-overlay:not(.ym-hidden) {
+    animation: loadingOverlayFade var(--ym-animation-normal) var(--ym-ease-out) forwards;
+}
+
+/* Breadcrumb Animation */
+@keyframes breadcrumbSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ym-breadcrumb {
+    animation: breadcrumbSlide var(--ym-animation-slow) var(--ym-ease-out) forwards;
+    animation-delay: var(--ym-delay-medium);
+}
+
+/* =========================================================
+   15. INTERSECTION OBSERVER ANIMATIONS
+   ========================================================= */
+
+/* Fade in on scroll */
+@keyframes fadeInOnScroll {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ym-fade-in-scroll {
+    opacity: 0;
+    transition: opacity var(--ym-animation-slow) var(--ym-ease-out), 
+                transform var(--ym-animation-slow) var(--ym-ease-out);
+}
+
+.ym-fade-in-scroll.ym-visible {
+    opacity: 1;
+    transform: translateY(0);
+    animation: fadeInOnScroll var(--ym-animation-slow) var(--ym-ease-out) forwards;
+}
+
+/* Scale in on scroll */
+@keyframes scaleInOnScroll {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.ym-scale-in-scroll {
+    opacity: 0;
+    transform: scale(0.9);
+    transition: opacity var(--ym-animation-slow) var(--ym-ease-out), 
+                transform var(--ym-animation-slow) var(--ym-ease-out);
+}
+
+.ym-scale-in-scroll.ym-visible {
+    opacity: 1;
+    transform: scale(1);
+    animation: scaleInOnScroll var(--ym-animation-slow) var(--ym-ease-out) forwards;
+}

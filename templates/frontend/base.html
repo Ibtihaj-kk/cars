@@ -75,15 +75,9 @@
           <div class="navbar-dropdown-menu">
             {% if user.is_authenticated %}
               <!-- Authenticated user menu -->
-              <a href="{% url 'parts:my_orders' %}" class="navbar-dropdown-link">My Orders</a>
-              {% if user.role == 'SELLER' or user.role == 'ADMIN' or user.is_staff or user.is_superuser %}
-                <span class="navbar-dropdown-divider">|</span>
-                <a href="{% url 'parts:my_inventory' %}" class="navbar-dropdown-link">My Inventory</a>
-              {% endif %}
+              <a href="{% url 'business_partners:vendor_dashboard' %}" class="navbar-dropdown-link">Dashboard</a>
               <span class="navbar-dropdown-divider">|</span>
-              <a href="#" class="navbar-dropdown-link">Profile</a>
-              <span class="navbar-dropdown-divider">|</span>
-              <a href="#" class="navbar-dropdown-link">Logout</a>
+              <a href="{% url 'business_partners:vendor_logout' %}" class="navbar-dropdown-link">Logout</a>
             {% else %}
               <!-- Guest user menu -->
               <a href="{% url 'business_partners:vendor_login' %}" class="navbar-dropdown-link">Login</a>
