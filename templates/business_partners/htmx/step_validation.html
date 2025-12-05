@@ -1,0 +1,35 @@
+{% if is_valid %}
+<div id="step-{{ step_number }}-validation"></div>
+<script>
+    if (typeof showStep === 'function') {
+        showStep({{ step_number }} + 1);
+    } else {
+        console.error('showStep function not found');
+    }
+</script>
+{% else %}
+<div id="step-{{ step_number }}-validation">
+    <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4" role="alert">
+        <p class="font-bold text-red-700">Please correct the following errors:</p>
+        <ul class="mt-1 text-sm text-red-600 list-disc list-inside">
+            {% for field, error in errors.items %}
+                <li>{{ error }}</li>
+                <script>
+                    // Update individual field error message if the container exists
+                    var errorContainer = document.getElementById('{{ field }}-validation');
+                    if (errorContainer) {
+                        errorContainer.outerHTML = '<div id="{{ field }}-validation" class="text-red-500 text-sm mt-1 fade-in">{{ error }}</div>';
+                    }
+                    
+                    // Highlight input
+                    var inputField = document.getElementsByName('{{ field }}')[0];
+                    if (inputField) {
+                        inputField.classList.add('border-red-500', 'bg-red-50');
+                        inputField.classList.remove('border-gray-200');
+                    }
+                </script>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}

@@ -1,0 +1,190 @@
+{% load static %}
+<div class="w-full max-w-md mx-auto">
+    <form id="vendor-login-form" 
+          hx-post="{% url 'vendors_htmx:login_submit' %}" 
+          hx-trigger="submit"
+          hx-target="#login-response"
+          hx-indicator="#login-spinner"
+          class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        <div id="login-response" class="mt-4"></div>
+        {% csrf_token %}
+        
+
+
+        <!-- Email Field -->
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                Email Address
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                   id="email" 
+                   type="email" 
+                   name="email" 
+                   placeholder="vendor@example.com"
+                   hx-post="{% url 'vendors_htmx:login_validate' %}"
+                   hx-trigger="keyup changed delay:500ms"
+                   hx-target="#email-error"
+                   hx-indicator="#email-spinner"
+                   required>
+            <div id="email-spinner" class="htmx-indicator">
+                <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+            <div id="email-error" class="text-red-500 text-xs italic mt-1"></div>
+        </div>
+
+        <!-- Password Field -->
+        <div class="mb-6">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                Password
+            </label>
+            <div class="relative">
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline pr-10" 
+                       id="password" 
+                       type="password" 
+                       name="password" 
+                       placeholder="******************"
+                       hx-post="{% url 'vendors_htmx:login_validate' %}"
+                       hx-trigger="keyup changed delay:500ms"
+                       hx-target="#password-error"
+                       hx-indicator="#password-spinner"
+                       required>
+                <div id="password-error" class="absolute right-8 top-3"></div>
+                <div id="password-spinner" class="htmx-indicator absolute right-8 top-3">
+                    <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <button type="button" 
+                        id="toggle-password" 
+                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+                    <svg class="h-4 w-4 text-gray-500" fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Remember Me -->
+        <div class="mb-6">
+            <label class="flex items-center">
+                <input type="checkbox" 
+                       name="remember_me" 
+                       id="remember_me"
+                       class="mr-2 leading-tight">
+                <span class="text-sm text-gray-700">Remember me for 30 days</span>
+            </label>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex items-center justify-between">
+            <button id="login-submit" 
+                    type="submit" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                <span id="login-button-text">Sign In</span>
+                <div id="login-spinner" class="htmx-indicator inline-block ml-2">
+                    <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+            </button>
+            <a class="inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800" href="/password-reset/">
+                Forgot Password?
+            </a>
+        </div>
+
+        
+
+        <!-- Status Check (Hidden) -->
+        <div id="login-status" class="mt-4 hidden">
+            <div class="bg-blue-50 border border-blue-200 rounded-md p-4 hidden">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-blue-800">Checking login status...</h3>
+                        <div class="mt-2 text-sm text-blue-700">
+                            <p id="status-message">Please wait while we verify your credentials.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Password toggle functionality
+document.getElementById('toggle-password').addEventListener('click', function() {
+    const passwordInput = document.getElementById('password');
+    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordInput.setAttribute('type', type);
+});
+
+// Form validation - enable submit button when form is complete
+function validateForm() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const submitButton = document.getElementById('login-submit');
+    
+    // Enable submit button when both email and password are filled
+    if (email && password && email.includes('@')) {
+        submitButton.disabled = false;
+    } else {
+        submitButton.disabled = true;
+    }
+}
+
+// Add event listeners for form validation
+document.getElementById('email').addEventListener('input', validateForm);
+document.getElementById('password').addEventListener('input', validateForm);
+
+// Initial validation
+validateForm();
+
+// Status checking function
+function checkLoginStatus() {
+    const statusDiv = document.getElementById('login-status');
+    const statusMessage = document.getElementById('status-message');
+    
+    statusDiv.classList.remove('hidden');
+    statusMessage.textContent = 'Verifying your credentials...';
+    
+    // Poll for login status
+    const checkStatus = setInterval(function() {
+        fetch('{% url "vendors_htmx:login_status" %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'complete') {
+                    statusMessage.textContent = 'Login successful! Redirecting...';
+                    clearInterval(checkStatus);
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url;
+                    }, 1000);
+                } else if (data.status === 'error') {
+                    statusMessage.textContent = 'Login failed. Please try again.';
+                    clearInterval(checkStatus);
+                } else {
+                    statusMessage.textContent = data.message || 'Processing...';
+                }
+            })
+            .catch(error => {
+                console.error('Status check failed:', error);
+                clearInterval(checkStatus);
+            });
+    }, 1000);
+}
+
+// Hook into form submission to start status checking
+document.getElementById('vendor-login-form').addEventListener('htmx:beforeRequest', function() {
+    checkLoginStatus();
+});
+</script>

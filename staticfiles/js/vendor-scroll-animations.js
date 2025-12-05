@@ -1,6 +1,6 @@
 /**
  * Intersection Observer Animations for Vendor Portal
- * Cars Portal - Scroll-triggered animations
+ * CorporateDock - Scroll-triggered animations
  */
 
 (function() {

@@ -1,5 +1,5 @@
 """
-ASGI config for yallamotor_project project.
+ASGI config for CorporateDock project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 

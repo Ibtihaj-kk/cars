@@ -251,7 +251,7 @@ let currentStep = 1
 const topSellingProducts = [
   {
     id: 1,
-    title: "CarsPortal Interior Protectant Spray",
+    title: "CorporateDock Interior Protectant Spray",
     price: "$ 999",
     originalPrice: "$ 1,297",
     image: "/images/brands/OIP.jpeg",
@@ -267,7 +267,7 @@ const topSellingProducts = [
   },
   {
     id: 3,
-    title: "CarsPortal Waterless Car Wash",
+    title: "CorporateDock Waterless Car Wash",
     price: "$ 699",
     originalPrice: "$ 897",
     image: "/images/brands/81VB7au6D2L._AC_.jpg",
@@ -275,7 +275,7 @@ const topSellingProducts = [
   },
   {
     id: 4,
-    title: "CarsPortal Spotless Car Wash Twin Pack",
+    title: "CorporateDock Spotless Car Wash Twin Pack",
     price: "$ 1,199",
     originalPrice: "$ 1,399",
     image: "/images/brands/Slide_pakwheels-spotless-car-wash-shampoo-pack-of-2-69417151.jpg",

@@ -16,7 +16,7 @@ from listings.models import (
 
 
 class Command(BaseCommand):
-    help = 'Create test data for Cars Portal application'
+    help = 'Create test data for CorporateDock application'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -53,7 +53,7 @@ class Command(BaseCommand):
         
         self.stdout.write(self.style.SUCCESS('Test data creation completed!'))
         self.stdout.write('\nTest Accounts:')
-        self.stdout.write('Admin: admin@carsportal.com / admin123')
+        self.stdout.write('Admin: admin@corporatedock.com / admin123')
         self.stdout.write('Seller: seller@example.com / seller123')
         self.stdout.write('Client: client@example.com / client123')
 
@@ -61,7 +61,7 @@ class Command(BaseCommand):
         """Create test users."""
         users_data = [
             {
-                'email': 'admin@carsportal.com',
+                'email': 'admin@corporatedock.com',
                 'password': 'admin123',
                 'first_name': 'Admin',
                 'last_name': 'User',

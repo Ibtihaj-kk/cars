@@ -60,14 +60,53 @@ function initializeMobileDropdowns() {
   })
 }
 
-// Initialize navbar and footer functionality
-function initializeNavbarAndFooter() {
-  console.log("[v0] Initializing navbar and footer functionality")
-  
-  // Initialize dropdowns and mobile menu since navbar is already in DOM
-  initializeDropdowns()
-  initializeMobileMenu()
-  console.log("[v0] Navbar and footer functionality initialized successfully")
+// Load navbar and footer
+function loadNavbarAndFooter() {
+  console.log("[v0] Starting to load navbar and footer")
+
+  // Load navbar
+  fetch("/navbar.html")
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`)
+      }
+      return res.text()
+    })
+    .then((data) => {
+      const navbarElement = document.getElementById("navbar")
+      if (navbarElement) {
+        navbarElement.innerHTML = data
+        console.log("[v0] Navbar loaded successfully")
+        initializeDropdowns()
+        initializeMobileMenu() // Initialize mobile menu after navbar loads
+      } else {
+        console.error("[v0] Navbar element not found")
+      }
+    })
+    .catch((error) => {
+      console.error("[v0] Error loading navbar:", error)
+    })
+
+  // Load footer
+  fetch("/footer.html")
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`)
+      }
+      return res.text()
+    })
+    .then((data) => {
+      const footerElement = document.getElementById("footer")
+      if (footerElement) {
+        footerElement.innerHTML = data
+        console.log("[v0] Footer loaded successfully")
+      } else {
+        console.error("[v0] Footer element not found")
+      }
+    })
+    .catch((error) => {
+      console.error("[v0] Error loading footer:", error)
+    })
 }
 
 // Updated dropdown functions with improved handling
@@ -255,14 +294,16 @@ function handleWindowResize() {
 // Check if DOM is already loaded, if not wait for it
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
-    initializeNavbarAndFooter()
+    loadNavbarAndFooter()
     ensureDropdownFunctionality()
+    initializeMobileMenu() // Initialize mobile menu on DOM load
     window.addEventListener("resize", handleWindowResize) // Add resize listener
   })
 } else {
   // DOM is already loaded, execute immediately
-  initializeNavbarAndFooter()
+  loadNavbarAndFooter()
   ensureDropdownFunctionality()
+  initializeMobileMenu() // Initialize mobile menu immediately
   window.addEventListener("resize", handleWindowResize) // Add resize listener
 }
 

@@ -123,12 +123,12 @@ class Command(BaseCommand):
         # Create a default user if none exists
         if not User.objects.exists():
             user = User.objects.create_user(
-                email='admin@carsportal.com',
+                email='admin@corporatedock.com',
                 password='admin123',
                 is_staff=True,
                 is_superuser=True
             )
-            self.stdout.write(self.style.SUCCESS("Created admin user: admin@carsportal.com/admin123"))
+            self.stdout.write(self.style.SUCCESS("Created admin user: admin@corporatedock.com/admin123"))
 
     def create_dummy_listings(self, count):
         """Create dummy car listings with realistic data and live image URLs."""

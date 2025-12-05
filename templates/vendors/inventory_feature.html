@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corporate Dock - Inventory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        #sidebar { transition: all 0.3s ease-in-out; }
+        .nav-text { transition: opacity 0.2s ease; }
+        
+        /* Custom Card Hover Effect */
+        .action-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .action-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-900 antialiased">
+    
+    <div id="view-dashboard" class="flex h-screen bg-gray-100 overflow-hidden">
+        
+        <aside id="sidebar" class="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 shadow-sm z-50 h-full transition-all duration-300">
+    
+            <div class="h-16 flex items-center justify-between px-4 border-b border-gray-100 flex-shrink-0 transition-all duration-300">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <img src="./assets/images/logo.png" alt="Logo" class="h-12 w-auto object-contain flex-shrink-0">
+                    <span id="brand-text" class="text-xl font-bold text-gray-800 whitespace-nowrap tracking-tight">
+                        Corporate Dock
+                    </span>
+                </div>
+                <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg text-red-500 hover:bg-red-50 focus:outline-none">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <nav class="flex-1 px-2 py-6 space-y-1 overflow-y-auto overflow-x-hidden">
+                <p class="section-label px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 whitespace-nowrap transition-opacity duration-200">Main</p>
+                
+                <a href="./dashboard.html" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
+                    <i class="fas fa-tachometer-alt w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
+                    <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Dashboard</span>
+                </a>
+                
+                <a href="./inventory.html" class="sidebar-link flex items-center px-4 py-3 bg-black text-white shadow-md rounded-lg transition group">
+                    <i class="fas fa-box w-6 text-center text-lg transition-colors"></i>
+                    <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Inventory</span>
+                </a>
+                
+                <a href="./orders.html" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
+                    <i class="fas fa-shopping-cart w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
+                    <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Orders</span>
+                    <span class="nav-text ml-auto bg-red-500 text-white py-0.5 px-2 rounded-full text-xs font-bold">3</span>
+                </a>
+                
+                <a href="./customers.html" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
+                    <i class="fas fa-users w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
+                    <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Customers</span>
+                </a>
+
+                <p class="section-label px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-6 whitespace-nowrap transition-opacity duration-200">Finance</p>
+                
+                <a href="./earnings.html" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
+                    <i class="fas fa-wallet w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
+                    <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Earnings</span>
+                </a>
+                
+                <a href="./invoices.html" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
+                    <i class="fas fa-file-invoice-dollar w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
+                    <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Invoices</span>
+                </a>
+
+                <p class="section-label px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-6 whitespace-nowrap transition-opacity duration-200">Account</p>
+                
+                <a href="./settings.html" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
+                    <i class="fas fa-cog w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
+                    <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Settings</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 flex flex-col overflow-hidden relative w-full">
+            
+            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-2 shadow-sm z-10">
+                <div class="flex items-center">
+                    <button onclick="toggleMobileMenu()" class="md:hidden text-gray-500 hover:text-black mr-4 focus:outline-none p-2">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <button onclick="toggleSidebar()" class="hidden md:block p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-black focus:outline-none ml-auto">
+                        <i class="fas fa-bars"></i>
+                    </button>&nbsp;&nbsp;
+                    <h2 class="text-lg font-semibold text-gray-800">Inventory Overview</h2>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <button class="p-2 text-gray-400 hover:text-black relative">
+                        <i class="fas fa-bell text-lg"></i>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                    </button>
+                    <div class="h-8 w-px bg-gray-200 mx-2"></div>
+                    <div class="relative">
+                        <button onclick="toggleUserDropdown()" class="flex items-center focus:outline-none">
+                            <div class="text-right mr-3 hidden sm:block">
+                                <p class="text-sm font-bold text-gray-900">AutoPro Parts Ltd</p>
+                            </div>
+                            <div class="h-10 w-10 rounded-full bg-gray-800 text-white flex items-center justify-center font-bold border-2 border-white shadow-sm hover:ring-2 hover:ring-black transition">
+                                AP
+                            </div>
+                            <i class="fas fa-chevron-down ml-2 text-xs text-gray-400"></i>
+                        </button>
+                        <div id="user-dropdown" class="hidden absolute right-0 mt-3 w-48 bg-white rounded-lg shadow-xl py-2 z-50 ring-1 ring-black ring-opacity-5 transform origin-top-right transition-all">
+                            <a href="vendor_profile.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black"><i class="fas fa-user-circle mr-2 text-gray-400"></i> My Account</a>
+                            <a href="settings.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black"><i class="fas fa-cog mr-2 text-gray-400"></i> Settings</a>
+                            <div class="border-t border-gray-100 my-1"></div>
+                            <a href="login.html" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50"><i class="fas fa-sign-out-alt mr-2"></i> Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-4 sm:p-8 bg-gray-100" onclick="closeDropdownsIfOpen()">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
+                        <h3 class="text-3xl font-extrabold text-gray-900">200K</h3>
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Order Amount</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
+                        <h3 class="text-3xl font-extrabold text-gray-900">350</h3>
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Order Units</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
+                        <h3 class="text-3xl font-extrabold text-gray-900">1.2 M</h3>
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Monthly Sales</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
+                        <h3 class="text-3xl font-extrabold text-gray-900">1.5 M</h3>
+                        <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Inventory Value</p>
+                    </div>
+                </div>
+
+                <div class="max-w-4xl mx-auto">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <a href="./inventory_management.html" class="action-card bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40 group cursor-pointer">
+                            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-black group-hover:text-white transition-colors">
+                                <i class="fas fa-boxes text-xl text-gray-600 group-hover:text-white"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800 group-hover:text-black">Inventory Management</h3>
+                            <p class="text-xs text-gray-500 mt-1">Add, edit, and track stock</p>
+                        </a>
+
+                        <a href="#" class="action-card bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40 group cursor-pointer">
+                            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-black group-hover:text-white transition-colors">
+                                <i class="fas fa-truck-loading text-xl text-gray-600 group-hover:text-white"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800 group-hover:text-black">FAB Dashboard</h3>
+                            <p class="text-xs text-gray-500 mt-1">Fulfillment & Logistics</p>
+                        </a>
+
+                        <a href="#" class="action-card bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40 group cursor-pointer">
+                            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-black group-hover:text-white transition-colors">
+                                <i class="fas fa-book-open text-xl text-gray-600 group-hover:text-white"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800 group-hover:text-black">Catalog Management</h3>
+                            <p class="text-xs text-gray-500 mt-1">Manage product listings</p>
+                        </a>
+
+                        <a href="#" class="action-card bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40 group cursor-pointer">
+                            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-black group-hover:text-white transition-colors">
+                                <i class="fas fa-tags text-xl text-gray-600 group-hover:text-white"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800 group-hover:text-black">Offers & Discount Mgmt</h3>
+                            <p class="text-xs text-gray-500 mt-1">Create promotions</p>
+                        </a>
+
+                        <a href="#" class="action-card bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40 group cursor-pointer md:col-span-2 lg:col-span-1 lg:col-start-1 lg:col-end-3 mx-auto w-full lg:w-1/2">
+                            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-black group-hover:text-white transition-colors">
+                                <i class="fas fa-bullhorn text-xl text-gray-600 group-hover:text-white"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800 group-hover:text-black">Marketing</h3>
+                            <p class="text-xs text-gray-500 mt-1">Campaigns & Ads</p>
+                        </a>
+
+                    </div>
+                </div>
+                
+                <div class="mt-12 text-center text-xs text-gray-400 pb-8">&copy; 2023 Corporate Dock. All rights reserved.</div>
+            </div>
+        </main>
+        
+        <div id="sidebar-overlay" onclick="toggleMobileMenu()" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"></div>
+    </div>
+
+    <script>
+        // Sidebar Logic
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('hidden')) {
+                sidebar.classList.remove('hidden');
+                sidebar.classList.add('flex', 'fixed', 'inset-y-0', 'left-0');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('hidden');
+                sidebar.classList.remove('flex', 'fixed', 'inset-y-0', 'left-0');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const brandText = document.getElementById('brand-text');
+            const navTexts = document.querySelectorAll('.nav-text');
+            const sectionLabels = document.querySelectorAll('.section-label');
+
+            if (sidebar.classList.contains('w-64')) {
+                sidebar.classList.remove('w-64');
+                sidebar.classList.add('w-20');
+                brandText.classList.add('hidden');
+                navTexts.forEach(text => text.classList.add('hidden'));
+                sectionLabels.forEach(label => label.classList.add('hidden'));
+            } else {
+                sidebar.classList.remove('w-20');
+                sidebar.classList.add('w-64');
+                brandText.classList.remove('hidden');
+                navTexts.forEach(text => text.classList.remove('hidden'));
+                sectionLabels.forEach(label => label.classList.remove('hidden'));
+            }
+        }
+
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('user-dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        function closeDropdownsIfOpen() {
+            document.getElementById('user-dropdown').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

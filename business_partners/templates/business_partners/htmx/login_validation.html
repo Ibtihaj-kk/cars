@@ -1,0 +1,13 @@
+{% if errors %}
+    {% for field, error in errors.items %}
+        {% if field == "email" %}
+            <span class="text-red-500 text-xs">{{ error }}</span>
+        {% elif field == "password" %}
+            <span class="text-red-500 text-xs">{{ error }}</span>
+        {% else %}
+            <span class="text-red-500 text-xs">{{ error }}</span>
+        {% endif %}
+    {% endfor %}
+{% else %}
+    <span class="text-green-500 text-xs">✓ Valid</span>
+{% endif %}

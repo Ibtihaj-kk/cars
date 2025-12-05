@@ -1,6 +1,6 @@
 /**
  * Vendor Portal Utilities
- * Common utility functions for the Cars Portal Vendor Portal
+ * Common utility functions for the CorporateDock Vendor Portal
  */
 
 (function() {

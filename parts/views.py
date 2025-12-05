@@ -26,7 +26,7 @@ from .models import (
     IntegrationSource, Cart, CartItem, DiscountCode, OrderDiscount, SaudiCity, 
     CityArea, ShippingRate, OrderShipping, OrderStatusHistory
 )
-from vehicles.models import VehicleMake, VehicleModelTaxonomy, VehicleVariant
+# from vehicles.models import VehicleMake, VehicleModelTaxonomy, VehicleVariant  # Disabled - vehicles not in INSTALLED_APPS
 from .cache import (
     get_cached_categories, get_cached_brands, get_cached_popular_parts, 
     get_cached_featured_parts, invalidate_part_cache
@@ -93,7 +93,7 @@ def dealer_admin_required(view_func):
 class PartListView(ListView):
     """Public view to list all active parts with search and filtering, including vendor parts."""
     model = Part
-    template_name = 'parts/part_list.html'
+    template_name = 'home/parts.html'
     context_object_name = 'parts'
     paginate_by = 12
     
@@ -144,6 +144,11 @@ class PartListView(ListView):
         if parts_number_query:
             queryset = queryset.filter(parts_number__icontains=parts_number_query)
         
+        # Part number filter (from template form)
+        part_number_query = self.request.GET.get('part_number', '').strip()
+        if part_number_query:
+            queryset = queryset.filter(parts_number__icontains=part_number_query)
+        
         # Category filter (single from dropdown)
         category_id = self.request.GET.get('category')
         if category_id:
@@ -171,6 +176,14 @@ class PartListView(ListView):
             queryset = queryset.filter(price__gte=min_price)
         if max_price:
             queryset = queryset.filter(price__lte=max_price)
+        
+        # Price range filter from template (price_min/price_max)
+        price_min = self.request.GET.get('price_min')
+        price_max = self.request.GET.get('price_max')
+        if price_min:
+            queryset = queryset.filter(price__gte=price_min)
+        if price_max:
+            queryset = queryset.filter(price__lte=price_max)
         
         # Enhanced stock filter
         stock_filter = self.request.GET.get('stock_availability')
@@ -274,17 +287,44 @@ class PartListView(ListView):
         # Vehicle Make filter
         vehicle_makes = self.request.GET.getlist('vehicle_make')
         if vehicle_makes:
-            queryset = queryset.filter(vehicle_variants__model__make_id__in=vehicle_makes).distinct()
+            # Filter out empty strings and convert to integers
+            valid_makes = [int(make) for make in vehicle_makes if make and make.isdigit()]
+            if valid_makes:
+                queryset = queryset.filter(vehicle_variants__model__make_id__in=valid_makes).distinct()
         
         # Vehicle Model filter
         vehicle_models = self.request.GET.getlist('vehicle_model')
         if vehicle_models:
-            queryset = queryset.filter(vehicle_variants__model_id__in=vehicle_models).distinct()
+            # Filter out empty strings and convert to integers
+            valid_models = [int(model) for model in vehicle_models if model and model.isdigit()]
+            if valid_models:
+                queryset = queryset.filter(vehicle_variants__model_id__in=valid_models).distinct()
         
         # Vehicle Variant filter
         vehicle_variants = self.request.GET.getlist('vehicle_variant')
         if vehicle_variants:
-            queryset = queryset.filter(vehicle_variants__id__in=vehicle_variants).distinct()
+            # Filter out empty strings and convert to integers
+            valid_variants = [int(variant) for variant in vehicle_variants if variant and variant.isdigit()]
+            if valid_variants:
+                queryset = queryset.filter(vehicle_variants__id__in=valid_variants).distinct()
+        
+        # Year filter
+        years = self.request.GET.getlist('year')
+        if years:
+            # Filter out empty strings and convert to integers
+            valid_years = [int(year) for year in years if year and year.isdigit()]
+            if valid_years:
+                queryset = queryset.filter(vehicle_variants__year__in=valid_years).distinct()
+        
+        # Trim filter
+        trims = self.request.GET.getlist('trim')
+        if trims:
+            queryset = queryset.filter(vehicle_variants__name__in=trims).distinct()
+        
+        # Engine filter
+        engines = self.request.GET.getlist('engine')
+        if engines:
+            queryset = queryset.filter(vehicle_variants__engine_code__in=engines).distinct()
         
         # Sorting
         sort_by = self.request.GET.get('sort', '-created_at')
@@ -363,38 +403,77 @@ class PartListView(ListView):
         ).order_by('abc_indicator')
         context['abc_indicators'] = abc_indicator_counts
         
-        # Vehicle Makes with counts (only if vehicle variants exist)
-        if VehicleVariant.objects.exists():
-            vehicle_make_counts = VehicleMake.objects.filter(
-                is_active=True
-            ).annotate(
-                count=Count('taxonomy_models__variants__parts', distinct=True)
-            ).filter(count__gt=0).order_by('name')
-        else:
-            vehicle_make_counts = VehicleMake.objects.filter(is_active=True).annotate(count=Value(0, output_field=IntegerField()))
-        context['vehicle_makes'] = vehicle_make_counts
+        # Vehicle Makes with counts (only if vehicle variants exist) - Disabled, vehicles app not in INSTALLED_APPS
+        # if VehicleVariant.objects.exists():
+        #     vehicle_make_counts = VehicleMake.objects.filter(
+        #         is_active=True
+        #     ).annotate(
+        #         count=Count('taxonomy_models__variants__parts', distinct=True)
+        #     ).filter(count__gt=0).order_by('name')
+        # else:
+        #     vehicle_make_counts = VehicleMake.objects.filter(is_active=True).annotate(count=Value(0, output_field=IntegerField()))
+        # context['vehicle_makes'] = vehicle_make_counts
+        context['vehicle_makes'] = []  # Disabled - vehicles app not in INSTALLED_APPS
         
-        # Vehicle Models with counts (only if vehicle variants exist)
-        if VehicleVariant.objects.exists():
-            vehicle_model_counts = VehicleModelTaxonomy.objects.filter(
-                make__is_active=True
-            ).annotate(
-                count=Count('variants__parts', distinct=True)
-            ).filter(count__gt=0).order_by('make__name', 'name')
-        else:
-            vehicle_model_counts = VehicleModelTaxonomy.objects.filter(make__is_active=True).annotate(count=Value(0, output_field=IntegerField()))
-        context['vehicle_models'] = vehicle_model_counts
+        # Vehicle Models with counts (only if vehicle variants exist) - Disabled, vehicles app not in INSTALLED_APPS
+        # if VehicleVariant.objects.exists():
+        #     vehicle_model_counts = VehicleModelTaxonomy.objects.filter(
+        #         make__is_active=True
+        #     ).annotate(
+        #         count=Count('variants__parts', distinct=True)
+        #     ).filter(count__gt=0).order_by('make__name', 'name')
+        # else:
+        #     vehicle_model_counts = VehicleModelTaxonomy.objects.filter(make__is_active=True).annotate(count=Value(0, output_field=IntegerField()))
+        # context['vehicle_models'] = vehicle_model_counts
+        context['vehicle_models'] = []  # Disabled - vehicles app not in INSTALLED_APPS
         
-        # Vehicle Variants with counts (only if vehicle variants exist)
-        if VehicleVariant.objects.exists():
-            vehicle_variant_counts = VehicleVariant.objects.filter(
-                model__make__is_active=True
-            ).annotate(
-                count=Count('parts', distinct=True)
-            ).filter(count__gt=0).order_by('model__make__name', 'model__name', 'name')
-        else:
-            vehicle_variant_counts = VehicleVariant.objects.none()
-        context['vehicle_variants'] = vehicle_variant_counts
+        # Vehicle Variants with counts (only if vehicle variants exist) - Disabled, vehicles app not in INSTALLED_APPS
+        # if VehicleVariant.objects.exists():
+        #     vehicle_variant_counts = VehicleVariant.objects.filter(
+        #         model__make__is_active=True
+        #     ).annotate(
+        #         count=Count('parts', distinct=True)
+        #     ).filter(count__gt=0).order_by('model__make__name', 'model__name', 'name')
+        # else:
+        #     vehicle_variant_counts = VehicleVariant.objects.none()
+        # context['vehicle_variants'] = vehicle_variant_counts
+        context['vehicle_variants'] = []  # Disabled - vehicles app not in INSTALLED_APPS
+        
+        # Available years from vehicle variants - Disabled, vehicles app not in INSTALLED_APPS
+        # if VehicleVariant.objects.exists():
+        #     available_years = VehicleVariant.objects.filter(
+        #         model__make__is_active=True,
+        #         parts__isnull=False
+        #     ).values_list('year', flat=True).distinct().order_by('-year')
+        # else:
+        #     available_years = []
+        # context['available_years'] = available_years
+        context['available_years'] = []  # Disabled - vehicles app not in INSTALLED_APPS
+        
+        # Available trims from vehicle variants - Disabled, vehicles app not in INSTALLED_APPS
+        # if VehicleVariant.objects.exists():
+        #     available_trims = VehicleVariant.objects.filter(
+        #         model__make__is_active=True,
+        #         parts__isnull=False
+        #     ).values_list('name', flat=True).distinct().order_by('name')
+        # else:
+        #     available_trims = []
+        # context['available_trims'] = available_trims
+        context['available_trims'] = []  # Disabled - vehicles app not in INSTALLED_APPS
+        
+        # Available engines from vehicle variants - Disabled, vehicles app not in INSTALLED_APPS
+        # if VehicleVariant.objects.exists():
+        #     available_engines = VehicleVariant.objects.filter(
+        #         model__make__is_active=True,
+        #         parts__isnull=False
+        #     ).exclude(
+        #         engine_code__isnull=True
+        #     ).exclude(
+        #         engine_code__exact=''
+        #     ).values_list('engine_code', flat=True).distinct().order_by('engine_code')
+        # else:
+        #     available_engines = []
+        context['available_engines'] = []  # Disabled - vehicles app not in INSTALLED_APPS
         
         # Procurement Types
         context['procurement_types'] = active_parts.exclude(
@@ -417,7 +496,31 @@ class PartListView(ListView):
             'valuation_class', flat=True
         ).distinct().order_by('valuation_class')
         
+        # Add current filter values for template
+        context['search_query'] = self.request.GET.get('search', '')
+        context['current_category'] = self.request.GET.get('category', '')
+        context['current_brand'] = self.request.GET.get('brand', '')
+        context['current_vehicle_model'] = self.request.GET.get('vehicle_model', '')
+        context['current_part_number'] = self.request.GET.get('part_number', '')
+        context['current_price_min'] = self.request.GET.get('price_min', '')
+        context['current_price_max'] = self.request.GET.get('price_max', '')
+        context['min_price'] = self.request.GET.get('min_price', '')
+        context['max_price'] = self.request.GET.get('max_price', '')
+        context['current_year'] = self.request.GET.get('year', '')
+        context['current_trim'] = self.request.GET.get('trim', '')
+        context['current_engine'] = self.request.GET.get('engine', '')
+        context['current_sort'] = self.request.GET.get('sort', '')
+        context['stock_filter'] = self.request.GET.get('stock_availability', '')
+        context['vendor_filter'] = self.request.GET.get('vendor_type', '')
+        context['sort_by'] = self.request.GET.get('sort', '-created_at')
+        
         return context
+    
+    def render_to_response(self, context, **response_kwargs):
+        """Override to handle HTMX requests with partial template."""
+        if self.request.headers.get('HX-Request'):
+            return render(self.request, 'home/parts_results_partial.html', context)
+        return super().render_to_response(context, **response_kwargs)
 
 
 @require_http_methods(["POST"])
@@ -831,16 +934,16 @@ def vehicle_models_partial(request):
     """
     make_id = request.GET.get('vehicle_make')
     
-    if make_id:
-        try:
-            from vehicles.models import VehicleModelTaxonomy
-            models = VehicleModelTaxonomy.objects.filter(
-                make_id=make_id, is_active=True
-            ).order_by('name')
-        except ImportError:
-            models = []
-    else:
-        models = []
+    models = []
+    # Disabled - vehicles app not in INSTALLED_APPS
+    # if make_id:
+    #     try:
+    #         from vehicles.models import VehicleModelTaxonomy
+    #         models = VehicleModelTaxonomy.objects.filter(
+    #             make_id=make_id, is_active=True
+    #         ).order_by('name')
+    #     except ImportError:
+    #         models = []
     
     return render(request, 'parts/partials/vehicle_models_options.html', {
         'models': models
@@ -2576,7 +2679,7 @@ def send_order_confirmation_email(order):
         send_mail(
             subject=subject,
             message=message,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@carsportal.com'),
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@corporatedock.com'),
             recipient_list=[order.customer_email],
             html_message=html_message,
             fail_silently=False,

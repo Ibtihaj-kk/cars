@@ -1,5 +1,5 @@
 """
-Enhanced admin authentication middleware for Cars Portal admin panel.
+Enhanced admin authentication middleware for CorporateDock admin panel.
 Provides session timeout, IP validation, and comprehensive security features.
 """
 import logging

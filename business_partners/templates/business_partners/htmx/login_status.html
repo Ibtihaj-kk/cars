@@ -1,0 +1,22 @@
+{% if status == "complete" %}
+    {
+        "status": "complete",
+        "message": "Login successful! Redirecting...",
+        "redirect_url": "{{ redirect_url|default:'/vendor/dashboard/' }}"
+    }
+{% elif status == "error" %}
+    {
+        "status": "error",
+        "message": "{{ message|default:'Login failed. Please try again.' }}"
+    }
+{% elif status == "pending" %}
+    {
+        "status": "pending",
+        "message": "{{ message|default:'Processing your login...' }}"
+    }
+{% else %}
+    {
+        "status": "processing",
+        "message": "{{ message|default:'Verifying credentials...' }}"
+    }
+{% endif %}

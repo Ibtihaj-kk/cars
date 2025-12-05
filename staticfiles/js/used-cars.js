@@ -233,7 +233,7 @@ const videosData = [
     title: "We Took On 15 Insane Challenges Each in Audi RS M...",
     thumbnail: "audi-episode",
     overlayText: "The Ultimate Audi Episode",
-    channel: "Cars Portal",
+    channel: "CorporateDock",
     duration: "45:33 min",
     date: "24 July 2025",
     videoUrl: "#",
@@ -243,7 +243,7 @@ const videosData = [
     title: "New 2025 C63 S Hybrid - Love It or Hate It?",
     thumbnail: "c63-hybrid",
     overlayText: "GoodBye V8 ? Hello E-Hybrid?",
-    channel: "Cars Portal",
+    channel: "CorporateDock",
     duration: "15:59 min",
     date: "22 July 2025",
     videoUrl: "#",
@@ -253,7 +253,7 @@ const videosData = [
     title: "The Fastest SUV in the world? Audi RSQ8 2025",
     thumbnail: "rsq8-suv",
     overlayText: "Fastest SUV in the world ? The Audi RSQ8",
-    channel: "Cars Portal",
+    channel: "CorporateDock",
     duration: "07:52 min",
     date: "20 July 2025",
     videoUrl: "#",
@@ -720,8 +720,8 @@ function playVideo(videoUrl) {
 
 function subscribeYoutube() {
   // In a real application, this would redirect to the YouTube channel
-  alert("Redirecting to Cars Portal YouTube channel...");
-  // window.open('https://youtube.com/carsportal', '_blank');
+  alert("Redirecting to CorporateDock YouTube channel...");
+  // window.open('https://youtube.com/corporatedock', '_blank');
 }
 
 function viewAllVideos() {

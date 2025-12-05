@@ -1,0 +1,94 @@
+<!-- HTMX Cart Detail Fragment -->
+<div class="cart-container">
+    <h2>Shopping Cart</h2>
+
+    {% if cart_items %}
+    <div class="cart-items">
+        {% for item in cart_items %}
+        <div class="cart-item" id="cart-item-{{ item.id }}">
+            <div class="item-info">
+                <h4>{{ item.part.name }}</h4>
+                <p class="item-part-number">{{ item.part.part_number }}</p>
+                <p class="item-price">${{ item.part.price }}</p>
+            </div>
+
+            <div class="item-quantity">
+                <button
+                    hx-post="/htmx/parts/cart/update/{{ item.id }}/"
+                    hx-vals='{"quantity": {{ item.quantity|add:"-1" }}}'
+                    hx-target="#cart-item-{{ item.id }}"
+                    hx-swap="outerHTML"
+                    class="qty-btn">-</button>
+
+                <input type="number"
+                       value="{{ item.quantity }}"
+                       min="0"
+                       hx-post="/htmx/parts/cart/update/{{ item.id }}/"
+                       hx-trigger="change"
+                       hx-target="#cart-item-{{ item.id }}"
+                       hx-swap="outerHTML"
+                       name="quantity"
+                       class="qty-input">
+
+                <button
+                    hx-post="/htmx/parts/cart/update/{{ item.id }}/"
+                    hx-vals='{"quantity": {{ item.quantity|add:"1" }}}'
+                    hx-target="#cart-item-{{ item.id }}"
+                    hx-swap="outerHTML"
+                    class="qty-btn">+</button>
+            </div>
+
+            <div class="item-total">
+                ${{ item.part.price|multiply:item.quantity }}
+            </div>
+
+            <button
+                hx-delete="/htmx/parts/cart/remove/{{ item.id }}/"
+                hx-target="#cart-item-{{ item.id }}"
+                hx-swap="outerHTML swap:1s"
+                hx-confirm="Remove this item from cart?"
+                class="btn-remove">
+                Remove
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="cart-summary">
+        <div class="summary-row">
+            <span>Subtotal:</span>
+            <span>${{ subtotal }}</span>
+        </div>
+        <div class="summary-row">
+            <span>Tax (5%):</span>
+            <span>${{ tax }}</span>
+        </div>
+        <div class="summary-row">
+            <span>Shipping:</span>
+            <span>{% if shipping > 0 %}${{ shipping }}{% else %}FREE{% endif %}</span>
+        </div>
+        <div class="summary-row total">
+            <span>Total:</span>
+            <span>${{ total }}</span>
+        </div>
+
+        <button
+            hx-get="/htmx/parts/checkout/"
+            hx-target="#main-content"
+            hx-push-url="true"
+            class="btn btn-primary btn-lg">
+            Proceed to Checkout
+        </button>
+    </div>
+    {% else %}
+    <div class="empty-cart">
+        <p>Your cart is empty</p>
+        <button
+            hx-get="/htmx/parts/parts/"
+            hx-target="#main-content"
+            class="btn btn-primary">
+            Continue Shopping
+        </button>
+    </div>
+    {% endif %}
+</div>

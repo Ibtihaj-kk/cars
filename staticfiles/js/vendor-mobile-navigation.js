@@ -1,6 +1,6 @@
 /**
  * Enhanced Mobile Navigation with Swipe Gestures and Accessibility
- * Cars Portal Vendor Portal - Mobile Navigation System
+ * CorporateDock Vendor Portal - Mobile Navigation System
  */
 
 (function() {

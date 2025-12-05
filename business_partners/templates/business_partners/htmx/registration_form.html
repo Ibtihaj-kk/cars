@@ -1,0 +1,640 @@
+{% extends "vendors/base.html" %}
+{% load static %}
+
+{% block title %}Vendor Registration | Corporate Dock{% endblock %}
+
+{% block content %}
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    
+    /* Modern Input Styling */
+    .modern-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background-color: #f9fafb; /* gray-50 */
+        border: 1px solid #e5e7eb; /* gray-200 */
+        border-radius: 0.5rem;
+        outline: none;
+        transition: all 0.2s ease-in-out;
+        color: #1f2937;
+    }
+    .modern-input:focus {
+        background-color: #ffffff;
+        border-color: #000000;
+        box-shadow: 0 0 0 4px rgba(0,0,0,0.05);
+    }
+    .input-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    /* File Upload Custom Style */
+    .file-upload-wrapper {
+        position: relative;
+        cursor: pointer;
+    }
+    .file-upload-wrapper:hover .modern-input {
+        background-color: #f3f4f6;
+        border-color: #d1d5db;
+    }
+
+    /* Animations */
+    .fade-in { animation: fadeIn 0.5s ease-in-out; }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .error-message {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .success-message {
+        color: #10b981;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+</style>
+
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="max-w-4xl mx-auto px-4">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">Vendor Registration</h1>
+            <p class="text-lg text-gray-600">Register your company to start selling on Corporate Dock</p>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div class="mb-8">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium text-gray-700">Step <span id="current-step">1</span> of 5</span>
+                <span class="text-sm text-gray-500" id="step-description">Account Creation</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-black h-2 rounded-full transition-all duration-300" id="progress-bar" style="width: 20%"></div>
+            </div>
+        </div>
+
+        <!-- Registration Form -->
+        <form id="vendor-registration-form" 
+              enctype="multipart/form-data" 
+              hx-post="{% url 'vendors_htmx:registration_submit' %}"
+              hx-trigger="submit"
+              hx-target="#registration-response"
+              hx-swap="innerHTML"
+              class="bg-white rounded-lg shadow-lg p-8">
+            
+            {% csrf_token %}
+            
+            <!-- Step 1: Account Creation -->
+            <div id="step-1" class="step-content fade-in">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Create Business Account</h2>
+                
+                <div class="space-y-6">
+                    <div class="relative">
+                        <label class="input-label">Business Email</label>
+                        <input type="email" 
+                               name="business_email" 
+                               placeholder="company@example.com" 
+                               class="modern-input"
+                               hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                               hx-trigger="blur"
+                               hx-target="#business-email-validation"
+                               hx-swap="outerHTML"
+                               required>
+                        <div id="business-email-validation"></div>
+                    </div>
+                    
+                    <div class="flex justify-between pt-6">
+                        <button type="button" 
+                                onclick="nextStep(2)" 
+                                class="bg-black text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors">
+                            Next Step →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Business Details -->
+            <div id="step-2" class="step-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Business Details</h2>
+                <p class="text-gray-600 mb-6">Legal information regarding your company</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="input-label">Business Name</label>
+                        <input type="text" 
+                               name="business_name" 
+                               class="modern-input" 
+                               placeholder="Registered Company Name"
+                               hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                               hx-trigger="blur"
+                               hx-target="#business-name-validation"
+                               hx-swap="outerHTML"
+                               required>
+                        <div id="business-name-validation"></div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="input-label">Preferred Currency</label>
+                        <select name="preferred_currency" 
+                                class="modern-input cursor-pointer bg-white"
+                                hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                                hx-trigger="change"
+                                hx-target="#preferred-currency-validation"
+                                hx-swap="outerHTML">
+                            <option value="" disabled selected>Select Currency</option>
+                            <option value="USD">USD - US Dollar</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="GBP">GBP - British Pound</option>
+                            <option value="PKR">PKR - Pakistani Rupee</option>
+                            <option value="AED">AED - UAE Dirham</option>
+                            <option value="SAR">SAR - Saudi Riyal</option>
+                        </select>
+                        <div id="preferred-currency-validation"></div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="input-label">Address</label>
+                        <input type="text" 
+                               name="address" 
+                               class="modern-input" 
+                               placeholder="Street Address, P.O. Box, Company Name, c/o"
+                               hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                               hx-trigger="blur"
+                               hx-target="#address-validation"
+                               hx-swap="outerHTML">
+                        <div id="address-validation"></div>
+                    </div>
+
+                    <div>
+                        <label class="input-label">City</label>
+                        <input type="text" 
+                               name="city" 
+                               class="modern-input" 
+                               placeholder="City"
+                               hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                               hx-trigger="blur"
+                               hx-target="#city-validation"
+                               hx-swap="outerHTML">
+                        <div id="city-validation"></div>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Postal Code</label>
+                        <input type="text" 
+                               name="postal_code" 
+                               class="modern-input" 
+                               placeholder="Zip/Postal Code"
+                               hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                               hx-trigger="blur"
+                               hx-target="#postal-code-validation"
+                               hx-swap="outerHTML">
+                        <div id="postal-code-validation"></div>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Country</label>
+                        <select name="country" 
+                                class="modern-input cursor-pointer bg-white"
+                                hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                                hx-trigger="change"
+                                hx-target="#country-validation"
+                                hx-swap="outerHTML">
+                            <option value="" disabled selected>Select Country</option>
+                            <option value="USA">USA</option>
+                            <option value="UK">UK</option>
+                            <option value="UAE">UAE</option>
+                            <option value="Pakistan">Pakistan</option>
+                        </select>
+                        <div id="country-validation"></div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="input-label">Business Phone</label>
+                        <input type="text" 
+                               name="business_phone" 
+                               class="modern-input" 
+                               placeholder="+1 (555) 000-0000"
+                               hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                               hx-trigger="blur"
+                               hx-target="#business-phone-validation"
+                               hx-swap="outerHTML"
+                               required>
+                        <div id="business-phone-validation"></div>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Commercial Register No.</label>
+                        <input type="text" 
+                               name="commercial_register_no" 
+                               class="modern-input" 
+                               placeholder="e.g. 123456789"
+                               hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                               hx-trigger="blur"
+                               hx-target="#commercial-register-validation"
+                               hx-swap="outerHTML">
+                        <div id="commercial-register-validation"></div>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Tax ID No.</label>
+                        <input type="text" 
+                               name="tax_id_no" 
+                               class="modern-input" 
+                               placeholder="e.g. TRN-0000"
+                               hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                               hx-trigger="blur"
+                               hx-target="#tax-id-validation"
+                               hx-swap="outerHTML"
+                               required>
+                        <div id="tax-id-validation"></div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="input-label">Upload Commercial Register (CR)</label>
+                        <div class="file-upload-wrapper">
+                            <input type="file" 
+                                   name="commercial_register_file" 
+                                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                   accept=".pdf,.jpg,.jpeg,.png">
+                            <div class="modern-input flex items-center justify-between text-gray-400 bg-white">
+                                <span>Choose file...</span>
+                                <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded text-xs font-bold uppercase tracking-wide">Browse</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="input-label">Upload Tax Certificate</label>
+                        <div class="file-upload-wrapper">
+                            <input type="file" 
+                                   name="tax_certificate_file" 
+                                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                   accept=".pdf,.jpg,.jpeg,.png">
+                            <div class="modern-input flex items-center justify-between text-gray-400 bg-white">
+                                <span>Choose file...</span>
+                                <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded text-xs font-bold uppercase tracking-wide">Browse</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between pt-6">
+                    <button type="button" 
+                            onclick="prevStep(1)" 
+                            class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                        ← Previous
+                    </button>
+                    <button type="button" 
+                            onclick="nextStep(3)" 
+                            class="bg-black text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors">
+                        Next Step →
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 3: User Setup -->
+            <div id="step-3" class="step-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Admin User Setup</h2>
+                <p class="text-gray-600 mb-6">Create credentials for the account administrator</p>
+
+                <div class="space-y-6">
+                    <div>
+                        <label class="input-label">Username</label>
+                        <input type="text" 
+                               name="username" 
+                               class="modern-input" 
+                               placeholder="Create a username"
+                               hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                               hx-trigger="blur"
+                               hx-target="#username-validation"
+                               hx-swap="outerHTML"
+                               required>
+                        <div id="username-validation"></div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="input-label">Password</label>
+                            <input type="password" 
+                                   name="password" 
+                                   class="modern-input" 
+                                   placeholder="********"
+                                   hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                                   hx-trigger="blur"
+                                   hx-target="#password-validation"
+                                   hx-swap="outerHTML"
+                                   required>
+                            <div id="password-validation"></div>
+                        </div>
+                        <div>
+                            <label class="input-label">Confirm Password</label>
+                            <input type="password" 
+                                   name="confirm_password" 
+                                   class="modern-input" 
+                                   placeholder="********"
+                                   hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                                   hx-trigger="blur"
+                                   hx-target="#confirm-password-validation"
+                                   hx-swap="outerHTML"
+                                   required>
+                            <div id="confirm-password-validation"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="input-label">First Name</label>
+                            <input type="text" 
+                                   name="first_name" 
+                                   class="modern-input" 
+                                   placeholder="John"
+                                   hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                                   hx-trigger="blur"
+                                   hx-target="#first-name-validation"
+                                   hx-swap="outerHTML"
+                                   required>
+                            <div id="first-name-validation"></div>
+                        </div>
+                        <div>
+                            <label class="input-label">Last Name</label>
+                            <input type="text" 
+                                   name="last_name" 
+                                   class="modern-input" 
+                                   placeholder="Doe"
+                                   hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                                   hx-trigger="blur"
+                                   hx-target="#last-name-validation"
+                                   hx-swap="outerHTML"
+                                   required>
+                            <div id="last-name-validation"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Admin Email</label>
+                        <input type="email" 
+                               name="admin_email" 
+                               class="modern-input" 
+                               placeholder="admin@company.com"
+                               hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                               hx-trigger="blur"
+                               hx-target="#admin-email-validation"
+                               hx-swap="outerHTML"
+                               required>
+                        <div id="admin-email-validation"></div>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Phone Number</label>
+                        <input type="text" 
+                               name="admin_phone" 
+                               class="modern-input" 
+                               placeholder="+1 (555) 000-0000"
+                               hx-post="{% url 'vendors_htmx:registration_validate' %}"
+                               hx-trigger="blur"
+                               hx-target="#admin-phone-validation"
+                               hx-swap="outerHTML"
+                               required>
+                        <div id="admin-phone-validation"></div>
+                    </div>
+                </div>
+
+                <div class="flex justify-between pt-6">
+                    <button type="button" 
+                            onclick="prevStep(2)" 
+                            class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                        ← Previous
+                    </button>
+                    <button type="button" 
+                            onclick="nextStep(4)" 
+                            class="bg-black text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors">
+                        Next Step →
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 4: Subscription -->
+            <div id="step-4" class="step-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Choose Your Plan</h2>
+                <p class="text-gray-600 mb-8">Select a subscription plan that fits your business needs</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="subscription_plan" value="basic" class="hidden" hx-post="{% url 'vendors_htmx:registration_validate' %}" hx-trigger="change" hx-target="#subscription-validation" hx-swap="outerHTML">
+                        <div class="border-2 border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors h-full">
+                            <h3 class="text-xl font-bold mb-2">Basic</h3>
+                            <p class="text-3xl font-bold mb-4">$29<span class="text-sm text-gray-500">/month</span></p>
+                            <ul class="text-sm text-gray-600 space-y-2">
+                                <li>✓ Up to 100 products</li>
+                                <li>✓ Basic analytics</li>
+                                <li>✓ Email support</li>
+                            </ul>
+                        </div>
+                    </label>
+
+                    <label class="cursor-pointer">
+                        <input type="radio" name="subscription_plan" value="professional" class="hidden" hx-post="{% url 'vendors_htmx:registration_validate' %}" hx-trigger="change" hx-target="#subscription-validation" hx-swap="outerHTML">
+                        <div class="border-2 border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors h-full">
+                            <h3 class="text-xl font-bold mb-2">Professional</h3>
+                            <p class="text-3xl font-bold mb-4">$79<span class="text-sm text-gray-500">/month</span></p>
+                            <ul class="text-sm text-gray-600 space-y-2">
+                                <li>✓ Up to 1,000 products</li>
+                                <li>✓ Advanced analytics</li>
+                                <li>✓ Priority support</li>
+                                <li>✓ Marketing tools</li>
+                            </ul>
+                        </div>
+                    </label>
+
+                    <label class="cursor-pointer">
+                        <input type="radio" name="subscription_plan" value="enterprise" class="hidden" hx-post="{% url 'vendors_htmx:registration_validate' %}" hx-trigger="change" hx-target="#subscription-validation" hx-swap="outerHTML">
+                        <div class="border-2 border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors h-full">
+                            <h3 class="text-xl font-bold mb-2">Enterprise</h3>
+                            <p class="text-3xl font-bold mb-4">$199<span class="text-sm text-gray-500">/month</span></p>
+                            <ul class="text-sm text-gray-600 space-y-2">
+                                <li>✓ Unlimited products</li>
+                                <li>✓ Custom analytics</li>
+                                <li>✓ 24/7 support</li>
+                                <li>✓ Custom integrations</li>
+                            </ul>
+                        </div>
+                    </label>
+                </div>
+                <div id="subscription-validation"></div>
+
+                <div class="flex justify-between pt-6">
+                    <button type="button" 
+                            onclick="prevStep(3)" 
+                            class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                        ← Previous
+                    </button>
+                    <button type="button" 
+                            onclick="nextStep(5)" 
+                            class="bg-black text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors">
+                        Next Step →
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 5: Finish -->
+            <div id="step-5" class="step-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Complete Registration</h2>
+                <p class="text-gray-600 mb-8">Review your information and submit your application</p>
+
+                <div class="bg-gray-50 rounded-lg p-6 mb-8">
+                    <h3 class="text-lg font-bold mb-4">Registration Summary</h3>
+                    <div id="registration-summary">
+                        <!-- Summary will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="flex justify-between pt-6">
+                    <button type="button" 
+                            onclick="prevStep(4)" 
+                            class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                        ← Previous
+                    </button>
+                    <button type="submit" 
+                            class="bg-green-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors">
+                        Submit Registration
+                    </button>
+                </div>
+            </div>
+
+            <!-- Registration Response -->
+            <div id="registration-response" class="mt-6"></div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let currentStep = 1;
+    const totalSteps = 5;
+
+    function showStep(step) {
+        // Hide all steps
+        document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
+        
+        // Show current step
+        document.getElementById(`step-${step}`).classList.remove('hidden');
+        document.getElementById(`step-${step}`).classList.add('fade-in');
+        
+        // Update progress
+        document.getElementById('current-step').textContent = step;
+        document.getElementById('progress-bar').style.width = `${(step / totalSteps) * 100}%`;
+        
+        // Update step description
+        const descriptions = {
+            1: 'Account Creation',
+            2: 'Business Details',
+            3: 'User Setup',
+            4: 'Subscription',
+            5: 'Complete Registration'
+        };
+        document.getElementById('step-description').textContent = descriptions[step];
+        
+        currentStep = step;
+        
+        // Update summary on step 5
+        if (step === 5) {
+            updateSummary();
+        }
+    }
+
+    function nextStep(step) {
+        if (validateCurrentStep()) {
+            showStep(step);
+        }
+    }
+
+    function prevStep(step) {
+        showStep(step);
+    }
+
+    function validateCurrentStep() {
+        const currentStepEl = document.getElementById(`step-${currentStep}`);
+        const requiredFields = currentStepEl.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('border-red-500');
+                isValid = false;
+            } else {
+                field.classList.remove('border-red-500');
+            }
+        });
+        
+        return isValid;
+    }
+
+    function updateSummary() {
+        const form = document.getElementById('vendor-registration-form');
+        const formData = new FormData(form);
+        
+        const summary = document.getElementById('registration-summary');
+        summary.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <strong>Business Email:</strong> ${formData.get('business_email') || 'Not provided'}
+                </div>
+                <div>
+                    <strong>Business Name:</strong> ${formData.get('business_name') || 'Not provided'}
+                </div>
+                <div>
+                    <strong>Preferred Currency:</strong> ${formData.get('preferred_currency') || 'Not selected'}
+                </div>
+                <div>
+                    <strong>Country:</strong> ${formData.get('country') || 'Not selected'}
+                </div>
+                <div>
+                    <strong>Username:</strong> ${formData.get('username') || 'Not provided'}
+                </div>
+                <div>
+                    <strong>Admin Name:</strong> ${formData.get('first_name') || ''} ${formData.get('last_name') || ''}
+                </div>
+                <div>
+                    <strong>Subscription Plan:</strong> ${formData.get('subscription_plan') ? formData.get('subscription_plan').charAt(0).toUpperCase() + formData.get('subscription_plan').slice(1) : 'Not selected'}
+                </div>
+            </div>
+        `;
+    }
+
+    // File upload handling
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name || 'Choose file...';
+            const display = e.target.parentElement.querySelector('span');
+            if (display) {
+                display.textContent = fileName;
+            }
+        });
+    });
+
+    // Form submission handling
+    document.getElementById('vendor-registration-form').addEventListener('htmx:beforeRequest', function(e) {
+        // Show loading state
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+        }
+    });
+
+    document.getElementById('vendor-registration-form').addEventListener('htmx:responseError', function(e) {
+        // Reset button state on error
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Registration';
+        }
+    });
+</script>
+{% endblock %}

@@ -1,5 +1,5 @@
 """
-Admin authentication views for Cars Portal admin panel.
+Admin authentication views for CorporateDock admin panel.
 Provides secure login/logout with comprehensive logging and 2FA support.
 """
 import logging
@@ -264,7 +264,7 @@ def setup_2fa_view(request):
     totp = pyotp.TOTP(user.otp_secret)
     provisioning_uri = totp.provisioning_uri(
         name=user.email,
-        issuer_name="Cars Portal Admin"
+        issuer_name="CorporateDock Admin"
     )
     
     # Create QR code image

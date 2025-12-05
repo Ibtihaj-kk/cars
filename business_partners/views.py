@@ -11,9 +11,11 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views.generic import View, TemplateView
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.urls import reverse
 from django.conf import settings
+from django import forms
+from django.utils import timezone
 import json
 
 from .models import VendorApplication
@@ -689,3 +691,181 @@ def admin_review_application(request, application_id):
     }
     
     return render(request, 'business_partners/admin_review_application.html', context)
+
+
+class VendorSinglePageRegistrationView(VendorRegistrationMixin, View):
+    """Single-page multi-tab vendor registration view"""
+    template_name = 'vendors/vendor_registration.html'
+    
+    def get(self, request):
+        """Display the single-page registration form"""
+        application = self.get_or_create_application(request.user)
+        
+        context = {
+            'application': application,
+            'user_authenticated': request.user.is_authenticated
+        }
+        
+        return render(request, self.template_name, context)
+    
+    def post(self, request):
+        """Handle complete single-page form submission"""
+        application = self.get_or_create_application(request.user)
+        
+        # Create a combined form with all fields
+        class SinglePageVendorApplicationForm(forms.ModelForm):
+            """Combined form for single-page vendor registration"""
+            
+            class Meta:
+                model = VendorApplication
+                fields = [
+                    # Step 1: Business Details
+                    'company_name', 'business_type', 'commercial_registration_number',
+                    'legal_identifier', 'cr_document', 'business_license',
+                    'establishment_date', 'business_description',
+                    # Step 2: Contact Information  
+                    'contact_person_name', 'contact_person_title',
+                    'business_phone', 'business_email', 'website',
+                    'street_address', 'city', 'state_province',
+                    'postal_code', 'country',
+                    # Step 3: Bank Details
+                    'bank_name', 'bank_branch', 'account_holder_name',
+                    'account_number', 'iban', 'swift_code', 'bank_statement'
+                ]
+                widgets = {
+                    'establishment_date': forms.DateInput(attrs={'type': 'date'}),
+                    'business_description': forms.Textarea(attrs={'rows': 4}),
+                    'street_address': forms.Textarea(attrs={'rows': 3}),
+                    'cr_document': forms.FileInput(attrs={'accept': '.pdf,.jpg,.jpeg,.png'}),
+                    'business_license': forms.FileInput(attrs={'accept': '.pdf,.jpg,.jpeg,.png'}),
+                    'bank_statement': forms.FileInput(attrs={'accept': '.pdf,.jpg,.jpeg,.png'}),
+                }
+            
+            def clean_business_email(self):
+                email = self.cleaned_data.get('business_email')
+                if email:
+                    # Validate email format
+                    from django.core.validators import validate_email
+                    try:
+                        validate_email(email)
+                    except ValidationError:
+                        raise ValidationError("Please enter a valid email address.")
+                    
+                    # Check if email already exists in approved applications
+                    if VendorApplication.objects.filter(
+                        business_email=email,
+                        status='approved'
+                    ).exclude(pk=self.instance.pk).exists():
+                        raise ValidationError("This email is already registered with an approved vendor account.")
+                
+                return email
+            
+            def clean_commercial_registration_number(self):
+                cr_number = self.cleaned_data.get('commercial_registration_number')
+                if cr_number:
+                    # Validate CR number format (basic validation)
+                    if len(cr_number) < 5:
+                        raise ValidationError("Commercial registration number must be at least 5 characters long.")
+                    
+                    # Check if CR number already exists in approved applications
+                    if VendorApplication.objects.filter(
+                        commercial_registration_number=cr_number,
+                        status='approved'
+                    ).exclude(pk=self.instance.pk).exists():
+                        raise ValidationError("This commercial registration number is already registered with an approved vendor account.")
+                
+                return cr_number
+            
+            def clean_iban(self):
+                iban = self.cleaned_data.get('iban')
+                if iban:
+                    # Basic IBAN validation (remove spaces and check length)
+                    iban_clean = iban.replace(' ', '').upper()
+                    if len(iban_clean) < 15 or len(iban_clean) > 34:
+                        raise ValidationError("IBAN must be between 15 and 34 characters long.")
+                    
+                    # Check if IBAN already exists in approved applications
+                    if VendorApplication.objects.filter(
+                        iban=iban,
+                        status='approved'
+                    ).exclude(pk=self.instance.pk).exists():
+                        raise ValidationError("This IBAN is already registered with an approved vendor account.")
+                
+                return iban
+            
+            def clean(self):
+                cleaned_data = super().clean()
+                
+                # Validate required fields based on submission type
+                required_fields = [
+                    'company_name', 'business_type', 'commercial_registration_number',
+                    'contact_person_name', 'business_phone', 'business_email',
+                    'street_address', 'city', 'postal_code', 'country',
+                    'bank_name', 'account_holder_name', 'account_number', 'iban'
+                ]
+                
+                missing_fields = []
+                for field in required_fields:
+                    if not cleaned_data.get(field):
+                        missing_fields.append(field)
+                
+                if missing_fields:
+                    raise ValidationError(f"Please fill in all required fields: {', '.join(missing_fields)}")
+                
+                return cleaned_data
+        
+        # Handle form submission
+        form = SinglePageVendorApplicationForm(
+            request.POST, request.FILES,
+            instance=application,
+        )
+        
+        if form.is_valid():
+            try:
+                application = form.save(commit=False)
+                
+                # Set the status to submitted if all required fields are filled
+                if application.can_submit():
+                    application.status = 'submitted'
+                    application.submitted_at = timezone.now()
+                    
+                    # Generate application ID if not exists
+                    if not application.application_id:
+                        application.application_id = f"VENDOR-{timezone.now().strftime('%Y%m%d')}-{application.id:06d}"
+                
+                application.save()
+                
+                messages.success(request, 'Your vendor application has been submitted successfully!')
+                
+                if application.status == 'submitted':
+                    return redirect('business_partners:vendor_registration_success')
+                else:
+                    return redirect('business_partners:registration')
+                    
+            except Exception as e:
+                messages.error(request, f'Error submitting application: {str(e)}')
+                return redirect('business_partners:registration')
+        else:
+            # Form is invalid, show errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field.replace("_", " ").title()}: {error}')
+            
+            # Re-render the form with errors
+            context = {
+                'application': application,
+                'user_authenticated': request.user.is_authenticated,
+                'form_errors': form.errors
+            }
+            
+            return render(request, self.template_name, context)
+
+
+class VendorRegistrationSuccessView(TemplateView):
+    """Success page for vendor registration submission"""
+    template_name = 'vendors/vendor_registration_success.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Registration Submitted Successfully'
+        return context

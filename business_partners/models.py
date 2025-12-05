@@ -342,6 +342,16 @@ class VendorProfile(models.Model):
         on_delete=models.CASCADE, 
         related_name='vendor_profile'
     )
+    
+    # User relationship for direct vendor-user mapping
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='vendor_profiles',
+        help_text="User account associated with this vendor profile"
+    )
     payment_terms = models.CharField(
         max_length=20, 
         choices=PAYMENT_TERMS, 
@@ -364,6 +374,11 @@ class VendorProfile(models.Model):
     is_approved = models.BooleanField(
         default=False,
         help_text="Whether the vendor profile is approved for platform access"
+    )
+    registration_date = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date when the vendor was registered on the platform"
     )
     two_factor_enabled = models.BooleanField(
         default=False,
@@ -1825,3 +1840,5 @@ class PasswordHistory(models.Model):
     
     def __str__(self):
         return f"Password history for {self.user.email} - {self.created_at}"
+
+

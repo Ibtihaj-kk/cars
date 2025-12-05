@@ -102,7 +102,7 @@ def vendor_required(view_func):
             return business_partner.roles.filter(role_type='vendor').exists()
         return False
     
-    return user_passes_test(check_vendor_permissions, login_url='business_partners:vendor_registration_step1')(view_func)
+    return user_passes_test(check_vendor_permissions, login_url='business_partners:registration')(view_func)
 
 
 def vendor_part_owner_required(view_func):

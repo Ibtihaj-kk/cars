@@ -19,7 +19,7 @@ class Command(BaseCommand):
         
         # Create or get superuser
         user, created = User.objects.get_or_create(
-            email='admin@carsportal.com',
+            email='admin@corporatedock.com',
             defaults={
                 'is_staff': True,
                 'is_superuser': True,

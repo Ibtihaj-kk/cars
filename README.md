@@ -1,4 +1,4 @@
-# Cars Portal - Vehicle Marketplace Platform
+# CorporateDock - Vehicle Marketplace Platform
 
 A comprehensive Django-based backend and frontend for a vehicle marketplace platform, featuring advanced search, user management, listings, inquiries, reviews, and subscription management.
 
@@ -30,7 +30,7 @@ A comprehensive Django-based backend and frontend for a vehicle marketplace plat
 ## 🏗️ Project Structure
 
 ```
-carsportal/
+corporatedock/
 ├── admin_panel/          # Custom admin interface and analytics
 ├── content/              # CMS functionality and dynamic content
 ├── core/                 # Shared utilities, permissions, and mixins
@@ -44,7 +44,7 @@ carsportal/
 ├── vehicles/             # Vehicle data models and specifications
 ├── static/               # Frontend assets (CSS, JS, images)
 ├── templates/            # HTML templates
-├── carsportal_project/   # Django project settings
+├── yallamotor_project/   # Django project settings (CorporateDock)
 └── requirements.txt      # Python dependencies
 ```
 
@@ -62,7 +62,7 @@ carsportal/
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd carsportal
+   cd corporatedock
    ```
 
 2. **Create and activate virtual environment**
@@ -91,7 +91,7 @@ carsportal/
    ALLOWED_HOSTS=localhost,127.0.0.1
    
    # Database Configuration
-   DATABASE_URL=postgresql://username:password@localhost:5432/carsportal_db
+   DATABASE_URL=postgresql://username:password@localhost:5432/corporatedock_db
    
    # Redis Configuration
    REDIS_URL=redis://localhost:6379/0
@@ -125,7 +125,7 @@ carsportal/
 5. **Database Setup**
    ```bash
    # Create database (PostgreSQL example)
-   createdb carsportal_db
+   createdb corporatedock_db
    
    # Run migrations
    python manage.py migrate
@@ -155,10 +155,10 @@ For production or full feature testing, start Celery workers:
 
 ```bash
 # Start Celery worker
-celery -A carsportal_project worker -l info
+celery -A yallamotor_project worker -l info
 
 # Start Celery beat (for scheduled tasks)
-celery -A carsportal_project beat -l info
+celery -A yallamotor_project beat -l info
 ```
 
 ## 📚 API Documentation
@@ -261,7 +261,7 @@ COPY . .
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
-CMD ["gunicorn", "carsportal_project.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "yallamotor_project.wsgi:application", "--bind", "0.0.0.0:8000"]
 ```
 
 ### Nginx Configuration
@@ -372,4 +372,4 @@ For support and questions:
 
 ---
 
-**Cars Portal** - Connecting buyers and sellers in the automotive marketplace.
+**CorporateDock** - Connecting buyers and sellers in the automotive marketplace.

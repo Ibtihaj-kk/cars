@@ -1,0 +1,31 @@
+{% if not is_valid %}
+    <div class="mt-2 space-y-1">
+        {% for field, error in errors.items %}
+            <div class="text-red-600 text-sm">{{ error }}</div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="hidden">success</div>
+    <script>
+        // Trigger step navigation after successful validation
+        setTimeout(function() {
+            // Navigate to next step
+            const currentStep = {{ step_number }};
+            const nextStep = currentStep + 1;
+            
+            // Hide current step
+            document.getElementById('step-' + currentStep).classList.add('hidden');
+            // Show next step
+            document.getElementById('step-' + nextStep).classList.remove('hidden');
+            
+            // Update tab styling
+            document.getElementById('tab-' + currentStep).classList.remove('text-gray-900', 'font-bold');
+            document.getElementById('tab-' + currentStep).classList.add('text-gray-400', 'font-medium');
+            document.getElementById('tab-' + nextStep).classList.remove('text-gray-400', 'font-medium');
+            document.getElementById('tab-' + nextStep).classList.add('text-gray-900', 'font-bold');
+            
+            // Update mobile step counter
+            document.getElementById('mobile-step-count').innerText = nextStep;
+        }, 100);
+    </script>
+{% endif %}

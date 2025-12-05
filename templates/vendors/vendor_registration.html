@@ -1,0 +1,630 @@
+{%load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Vendor Registration | Corporate Dock</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111; }
+        
+        /* --- Modern Inputs --- */
+        .modern-input {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #111;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+        }
+        .modern-input:focus {
+            border-color: #000000;
+            box-shadow: 0 0 0 1px #000000;
+        }
+        .modern-input::placeholder { color: #9ca3af; }
+        .input-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        /* --- File Upload Zone --- */
+        .file-upload-wrapper {
+            position: relative;
+            width: 100%;
+            height: 50px;
+            border: 1px dashed #d1d5db;
+            border-radius: 10px;
+            background: #f9fafb;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .file-upload-wrapper:hover {
+            border-color: #000;
+            background: #f3f4f6;
+        }
+        .file-upload-wrapper input[type=file] {
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            opacity: 0; cursor: pointer; z-index: 10;
+        }
+        .file-upload-placeholder {
+            font-size: 13px; color: #6b7280; pointer-events: none; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* --- Service Pills --- */
+        .service-pill {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            color: #374151;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .service-pill:hover {
+            border-color: #9ca3af;
+            transform: translateY(-1px);
+        }
+        
+        /* Checked state handled via JS class toggling or adjacent sibling selector */
+        input[type="checkbox"]:checked + .service-pill {
+            background: #000000;
+            border-color: #000000;
+            color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        /* --- Subscription Cards --- */
+        .plan-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 28px;
+            background: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .plan-card:hover {
+            border-color: #9ca3af;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+        /* Checked state */
+        input[type="radio"]:checked + .plan-card {
+            border-color: #000000;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 2px #000000;
+            transform: translateY(-4px);
+        }
+        
+        .check-icon { color: #10b981; margin-right: 10px; font-size: 14px; }
+        
+        /* --- Scrollbar for Terms --- */
+        .terms-scroll::-webkit-scrollbar { width: 6px; }
+        .terms-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .terms-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        .terms-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        /* --- Animations --- */
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Sidebar Active State */
+        .nav-item.active { color: #000; font-weight: 700; position: relative; }
+        .nav-item.active::before {
+            content: ''; position: absolute; left: -24px; top: 50%; transform: translateY(-50%);
+            width: 4px; height: 100%; background: black; border-radius: 0 4px 4px 0;
+        }
+        .nav-item { position: relative; }
+    </style>
+</head>
+<body class="bg-white min-h-screen flex flex-col md:flex-row text-gray-800 font-sans">
+
+    <aside class="w-full md:w-1/3 md:max-w-xs border-r border-gray-100 bg-gray-50/50 p-8 md:h-screen md:sticky md:top-0 flex flex-col justify-between z-20">
+        
+        <div class="mb-10">
+            <div class="flex items-center gap-3 mb-2">
+                <img src="{%static 'images/logo.png'%}" alt="Corporate Dock" class="h-10 w-auto object-contain">
+                <span class="text-lg font-bold tracking-tight">Corporate Dock</span>
+            </div>
+            <div class="md:hidden text-xs font-bold text-gray-400 uppercase tracking-wide">
+                Step <span id="mobile-step-count">1</span> of 5
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-row md:flex-col justify-between md:justify-center gap-6 overflow-x-auto md:overflow-visible pb-4 md:pb-0 scrollbar-hide">
+            <div id="tab-1" class="nav-item active text-sm md:text-lg text-gray-400 cursor-pointer whitespace-nowrap transition-colors" onclick="goToStep(1)">
+                Account Creation
+            </div>
+            <div id="tab-2" class="nav-item text-sm md:text-lg text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(2)">
+                Business Details
+            </div>
+            <div id="tab-3" class="nav-item text-sm md:text-lg text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(3)">
+                User Setup
+            </div>
+            <div id="tab-4" class="nav-item text-sm md:text-lg text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(4)">
+                Subscription
+            </div>
+            <div id="tab-5" class="nav-item text-sm md:text-lg text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(5)">
+                Final Review
+            </div>
+        </div>
+
+        <div class="hidden md:block text-xs text-gray-400 mt-auto">
+            &copy; 2024 Corporate Dock Inc.
+        </div>
+
+    </aside>
+
+    <form id="vendor-registration-form" 
+          enctype="multipart/form-data"
+          hx-post="/business-partners/htmx/registration/submit/"
+          hx-target="#registration-response"
+          hx-swap="innerHTML"
+          hx-validate="true"
+          class="flex-1 flex flex-col h-screen overflow-hidden">
+        {% csrf_token %}
+
+        <main class="flex-1 w-full p-6 md:p-12 lg:p-16 overflow-y-auto bg-white scroll-smooth">
+            <div class="max-w-3xl mx-auto w-full">
+            
+                <section id="step-1" class="step-content fade-in">
+                    <div class="text-center mb-10">
+                        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">Start Your Journey</h1>
+                        <p class="text-gray-500 text-lg">Create your vendor account to access the marketplace.</p>
+                    </div>
+                    
+                    <div class="max-w-md mx-auto space-y-6">
+                        <div class="w-full relative">
+                            <label class="input-label">Business Email</label>
+                            <input type="email" 
+                                   name="business_email" 
+                                   placeholder="company@example.com" 
+                                   class="modern-input py-3 text-center font-medium"
+                                   hx-post="/business-partners/htmx/registration/validate/"
+                                   hx-trigger="blur"
+                                   hx-target="#business-email-validation"
+                                   hx-swap="outerHTML"
+                                   required>
+                            <div id="business-email-validation" class="mt-1"></div>
+                        </div>
+                        
+                        <button type="button" 
+                                class="w-full bg-black text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-gray-900 hover:shadow-xl transition-all transform hover:-translate-y-0.5"
+                                hx-post="/business-partners/htmx/registration/validate-step/1/"
+                                hx-trigger="click"
+                                hx-target="#step-1-validation"
+                                hx-swap="outerHTML">
+                            Get Started <span class="ml-2">→</span>
+                        </button>
+                        <div id="step-1-validation"></div>
+                        
+                        <div class="relative flex py-5 items-center">
+                            <div class="flex-grow border-t border-gray-200"></div>
+                            <span class="flex-shrink-0 mx-4 text-gray-400 text-xs font-semibold uppercase">Or continue with</span>
+                            <div class="flex-grow border-t border-gray-200"></div>
+                        </div>
+
+                        <button class="flex items-center justify-center w-full bg-white border border-gray-200 text-gray-700 font-semibold py-3 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all">
+                            <svg class="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                            </svg>
+                            Google
+                        </button>
+                    </div>
+                </section>
+
+                <section id="step-2" class="step-content hidden fade-in">
+                    <div class="mb-8 border-b border-gray-100 pb-4">
+                        <h1 class="text-2xl font-bold text-gray-900">Business Information</h1>
+                        <p class="text-gray-500 text-sm mt-1">Tell us about your company.</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-8">
+                        <div class="md:col-span-2">
+                            <label class="input-label">Business Name</label>
+                            <input type="text" name="business_name" placeholder="Registered Company Name" class="modern-input" hx-post="/business-partners/htmx/registration/validate/" hx-trigger="blur" hx-target="#business-name-validation" hx-swap="outerHTML" required>
+                            <div id="business-name-validation"></div>
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="input-label">Preferred Currency</label>
+                            <div class="relative">
+                                <select name="currency" class="modern-input appearance-none cursor-pointer bg-white" required>
+                                    <option value="" disabled selected>Select Currency</option>
+                                    <option value="USD">USD - US Dollar</option>
+                                    <option value="EUR">EUR - Euro</option>
+                                    <option value="GBP">GBP - British Pound</option>
+                                    <option value="PKR">PKR - Pakistani Rupee</option>
+                                    <option value="AED">AED - UAE Dirham</option>
+                                    <option value="SAR">SAR - Saudi Riyal</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="input-label">Street Address</label>
+                            <input type="text" name="address" placeholder="123 Business Ave, Suite 100" class="modern-input" hx-post="/business-partners/htmx/registration/validate/" hx-trigger="blur" hx-target="#address-validation" hx-swap="outerHTML" required>
+                            <div id="address-validation"></div>
+                        </div>
+
+                        <div>
+                            <label class="input-label">City</label>
+                            <input type="text" name="city" placeholder="City" class="modern-input" required>
+                        </div>
+                        
+                        <div>
+                            <label class="input-label">Postal / Zip Code</label>
+                            <input type="text" name="postal_code" placeholder="00000" class="modern-input" required>
+                        </div>
+
+                        <div>
+                            <label class="input-label">Country</label>
+                            <div class="relative">
+                                <select name="country" class="modern-input appearance-none cursor-pointer" required>
+                                    <option value="" disabled selected>Select Country</option>
+                                    <option value="UAE">United Arab Emirates</option>
+                                    <option value="KSA">Saudi Arabia</option>
+                                    <option value="USA">United States</option>
+                                    <option value="UK">United Kingdom</option>
+                                    <option value="PK">Pakistan</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="input-label">Business Phone</label>
+                            <input type="tel" name="business_phone" placeholder="+1 (555) 000-0000" class="modern-input" required>
+                        </div>
+                        
+                        <div>
+                            <label class="input-label">Commercial Register No.</label>
+                            <input type="text" name="commercial_register_no" placeholder="CR Number" class="modern-input" required>
+                        </div>
+                        
+                        <div>
+                            <label class="input-label">Tax ID No.</label>
+                            <input type="text" name="tax_id_no" placeholder="Tax / VAT ID" class="modern-input" required>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="input-label">Commercial Register (PDF/IMG)</label>
+                            <div class="file-upload-wrapper">
+                                <div class="file-upload-placeholder">
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                    <span>Click to upload file</span>
+                                </div>
+                                <input type="file" name="commercial_register_file" accept=".pdf,.jpg,.png" required>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="input-label">Tax Certificate (PDF/IMG)</label>
+                            <div class="file-upload-wrapper">
+                                <div class="file-upload-placeholder">
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    <span>Click to upload file</span>
+                                </div>
+                                <input type="file" name="tax_certificate_file" accept=".pdf,.jpg,.png" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between pt-4">
+                        <button type="button" onclick="showStep(1)" class="px-6 py-2.5 text-gray-500 hover:text-black font-semibold transition-colors text-sm">
+                            ← Back
+                        </button>
+                        <button type="button" 
+                                class="px-8 py-3 bg-black text-white font-bold rounded-xl shadow-md hover:bg-gray-900 transition-all"
+                                hx-post="/business-partners/htmx/registration/validate-step/2/"
+                                hx-trigger="click"
+                                hx-target="#step-2-validation"
+                                hx-swap="outerHTML">
+                            Next Step
+                        </button>
+                    </div>
+                    <div id="step-2-validation"></div>
+                </section>
+
+                <section id="step-3" class="step-content hidden fade-in">
+                    <div class="mb-8 border-b border-gray-100 pb-4">
+                        <h1 class="text-2xl font-bold text-gray-900">Admin Setup</h1>
+                        <p class="text-gray-500 text-sm mt-1">Create the master account for administration.</p>
+                    </div>
+                    
+                    <div class="space-y-5 max-w-md mx-auto mb-8">
+                        <div>
+                            <label class="input-label">Username</label>
+                            <input type="text" name="username" placeholder="admin_user" class="modern-input" required>
+                        </div>
+                        
+                        <div>
+                            <label class="input-label">Password</label>
+                            <input type="password" name="password" placeholder="••••••••" class="modern-input" required>
+                        </div>
+                        
+                        <div>
+                            <label class="input-label">Confirm Password</label>
+                            <input type="password" name="confirm_password" placeholder="••••••••" class="modern-input" required>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between pt-4">
+                        <button type="button" onclick="showStep(2)" class="px-6 py-2.5 text-gray-500 hover:text-black font-semibold transition-colors text-sm">
+                            ← Back
+                        </button>
+                        <button type="button" 
+                                class="px-8 py-3 bg-black text-white font-bold rounded-xl shadow-md hover:bg-gray-900 transition-all"
+                                hx-post="/business-partners/htmx/registration/validate-step/3/"
+                                hx-trigger="click"
+                                hx-target="#step-3-validation"
+                                hx-swap="outerHTML">
+                            Next Step
+                        </button>
+                    </div>
+                    <div id="step-3-validation"></div>
+                </section>
+
+                <section id="step-4" class="step-content hidden fade-in">
+                    <div class="mb-8 text-center">
+                        <h1 class="text-2xl font-bold text-gray-900">Select Plan</h1>
+                        <p class="text-gray-500 text-sm mt-1">Choose the tier that fits your scale.</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="subscription_plan" value="basic" class="hidden" checked>
+                            <div class="plan-card border-black bg-gray-50/50">
+                                <div class="mb-4">
+                                    <span class="text-xs font-bold tracking-wider text-gray-400 uppercase">Starter</span>
+                                    <h3 class="text-lg font-bold text-gray-900">Basic</h3>
+                                </div>
+                                <div class="mb-6">
+                                    <span class="text-3xl font-extrabold text-gray-900">Free</span>
+                                    <span class="text-sm text-gray-500">/forever</span>
+                                </div>
+                                <ul class="space-y-3 text-sm text-gray-600 flex-1">
+                                    <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2 text-xs"></i> Standard Listing</li>
+                                    <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2 text-xs"></i> Basic Support</li>
+                                    <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2 text-xs"></i> Community Access</li>
+                                </ul>
+                                <div class="mt-6 w-full py-2 text-center text-sm font-bold text-black border border-black rounded-lg group-hover:bg-black group-hover:text-white transition-colors">Selected</div>
+                            </div>
+                        </label>
+                        
+                        <label class="cursor-pointer opacity-60 hover:opacity-100 transition-opacity">
+                            <input type="radio" name="subscription_plan" value="professional" class="hidden" disabled>
+                            <div class="plan-card relative overflow-hidden">
+                                <div class="absolute top-3 right-3 text-[10px] font-bold bg-gray-200 text-gray-600 px-2 py-1 rounded">SOON</div>
+                                <div class="mb-4">
+                                    <span class="text-xs font-bold tracking-wider text-gray-400 uppercase">Business</span>
+                                    <h3 class="text-lg font-bold text-gray-900">Pro</h3>
+                                </div>
+                                <div class="mb-6">
+                                    <span class="text-3xl font-extrabold text-gray-900">$79</span>
+                                    <span class="text-sm text-gray-500">/mo</span>
+                                </div>
+                                <ul class="space-y-3 text-sm text-gray-600">
+                                    <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2 text-xs"></i> Priority Listing</li>
+                                    <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2 text-xs"></i> 24/7 Support</li>
+                                </ul>
+                            </div>
+                        </label>
+                        
+                        <label class="cursor-pointer opacity-60 hover:opacity-100 transition-opacity">
+                            <input type="radio" name="subscription_plan" value="enterprise" class="hidden" disabled>
+                            <div class="plan-card">
+                                <div class="mb-4">
+                                    <span class="text-xs font-bold tracking-wider text-gray-400 uppercase">Large Scale</span>
+                                    <h3 class="text-lg font-bold text-gray-900">Enterprise</h3>
+                                </div>
+                                <div class="mb-6">
+                                    <span class="text-3xl font-extrabold text-gray-900">$199</span>
+                                    <span class="text-sm text-gray-500">/mo</span>
+                                </div>
+                                <ul class="space-y-3 text-sm text-gray-600">
+                                    <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2 text-xs"></i> Dedicated Manager</li>
+                                    <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2 text-xs"></i> API Access</li>
+                                </ul>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="flex justify-between pt-4">
+                        <button type="button" onclick="showStep(3)" class="px-6 py-2.5 text-gray-500 hover:text-black font-semibold transition-colors text-sm">
+                            ← Back
+                        </button>
+                        <button type="button" 
+                                class="px-8 py-3 bg-black text-white font-bold rounded-xl shadow-md hover:bg-gray-900 transition-all"
+                                hx-post="/business-partners/htmx/registration/validate-step/4/"
+                                hx-trigger="click"
+                                hx-target="#step-4-validation"
+                                hx-swap="outerHTML">
+                            Next Step
+                        </button>
+                    </div>
+                    <div id="step-4-validation"></div>
+                </section>
+
+                <section id="step-5" class="step-content hidden fade-in">
+                    <div class="mb-8 text-center">
+                        <h1 class="text-2xl font-bold text-gray-900">Finalize Registration</h1>
+                        <p class="text-gray-500 text-sm mt-1">Select your services and review terms.</p>
+                    </div>
+                    
+                    <div class="bg-white border border-gray-200 rounded-2xl p-8 mb-6 shadow-sm">
+                        <h3 class="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wide">Services Provided</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="selected_services" value="Cars" class="hidden">
+                                <div class="service-pill px-4 py-3 rounded-xl text-sm text-center flex items-center justify-center gap-2">
+                                    <span>🚗 Cars</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="selected_services" value="Parts" class="hidden">
+                                <div class="service-pill px-4 py-3 rounded-xl text-sm text-center flex items-center justify-center gap-2">
+                                    <span>⚙️ Parts</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="selected_services" value="Services" class="hidden">
+                                <div class="service-pill px-4 py-3 rounded-xl text-sm text-center flex items-center justify-center gap-2">
+                                    <span>🔧 Service</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="selected_services" value="Rent & Leasing" class="hidden">
+                                <div class="service-pill px-4 py-3 rounded-xl text-sm text-center flex items-center justify-center gap-2">
+                                    <span>🔑 Renting</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100">
+                        <h3 class="font-bold text-gray-900 mb-3 text-sm uppercase tracking-wide">Terms & Conditions</h3>
+                        <div class="bg-white rounded-xl p-4 h-32 overflow-y-auto text-xs text-gray-500 mb-4 border border-gray-200 terms-scroll leading-relaxed">
+                            <p class="mb-2"><strong>1. Acceptance of Terms:</strong> By registering as a vendor on Corporate Dock, you agree to these terms...</p>
+                            <p class="mb-2"><strong>2. Vendor Obligations:</strong> You agree to provide accurate business information and maintain valid licenses...</p>
+                            <p class="mb-2"><strong>3. Fees & Payments:</strong> Applicable subscription fees and transaction commissions will be deducted...</p>
+                            <p><strong>4. Termination:</strong> Corporate Dock reserves the right to suspend accounts violating policies...</p>
+                        </div>
+                        <label class="flex items-start space-x-3 cursor-pointer p-2 hover:bg-gray-100 rounded-lg transition">
+                            <div class="flex items-center h-5">
+                                <input type="checkbox" id="terms-checkbox" name="terms_accepted" class="w-4 h-4 text-black border-gray-300 rounded focus:ring-black cursor-pointer" required>
+                            </div>
+                            <span class="text-sm text-gray-600">I confirm that I have read and agree to the <a href="#" class="text-black font-bold hover:underline">Terms & Conditions</a> and <a href="#" class="text-black font-bold hover:underline">Privacy Policy</a>.</span>
+                        </label>
+                    </div>
+                    
+                    <div class="flex justify-between items-center w-full pt-4">
+                        <button type="button" onclick="showStep(4)" class="px-6 py-2.5 text-gray-500 hover:text-black font-semibold transition-colors text-sm">
+                            ← Back
+                        </button>
+                        <button id="finish-btn" type="submit"
+                                class="w-full max-w-xs bg-gradient-to-r from-green-600 to-green-500 text-white text-lg font-bold py-4 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 opacity-50 cursor-not-allowed" disabled>
+                            Complete Registration
+                        </button>
+                    </div>
+                    
+                    <div id="registration-response" class="w-full mt-6 text-center">
+                         <div class="htmx-indicator inline-block">
+                            <svg class="animate-spin h-5 w-5 text-gray-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </form>
+
+    <script>
+        function showStep(stepNumber) {
+            // Fade out current
+            document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
+            
+            // Show new
+            const target = document.getElementById(`step-${stepNumber}`);
+            if(target) {
+                target.classList.remove('hidden');
+                target.classList.add('fade-in');
+            }
+            
+            // Update Sidebar visual state
+            document.querySelectorAll('.nav-item').forEach((el, index) => {
+                if (index + 1 === stepNumber) {
+                    el.classList.remove('text-gray-400');
+                    el.classList.add('active', 'text-black', 'font-bold');
+                } else {
+                    el.classList.remove('active', 'text-black', 'font-bold');
+                    el.classList.add('text-gray-400');
+                }
+            });
+            
+            // Mobile text update
+            const mobileCount = document.getElementById('mobile-step-count');
+            if(mobileCount) mobileCount.textContent = stepNumber;
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function goToStep(step) {
+            // In a real scenario, you might want validation before allowing jumping
+            showStep(step);
+        }
+
+        // Logic for Terms Checkbox
+        const termsCheckbox = document.getElementById('terms-checkbox');
+        const finishBtn = document.getElementById('finish-btn');
+
+        if(termsCheckbox && finishBtn) {
+            termsCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    finishBtn.disabled = false;
+                    finishBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    finishBtn.disabled = true;
+                    finishBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            });
+        }
+
+        // Visual feedback for checkboxes/radios
+        document.addEventListener('change', function(e) {
+            if (e.target.name === 'selected_services') {
+                const pill = e.target.nextElementSibling;
+                if (e.target.checked) {
+                    pill.classList.add('bg-black', 'text-white', 'border-black');
+                    pill.classList.remove('bg-white', 'text-gray-700');
+                } else {
+                    pill.classList.remove('bg-black', 'text-white', 'border-black');
+                    pill.classList.add('bg-white', 'text-gray-700');
+                }
+            }
+            if (e.target.name === 'subscription_plan') {
+                document.querySelectorAll('input[name="subscription_plan"]').forEach(input => {
+                     const card = input.nextElementSibling;
+                     if (input.checked) {
+                         card.classList.add('border-black', 'bg-gray-50');
+                         card.querySelector('div:last-child').classList.remove('hidden'); // Show "Selected" badge logic if added
+                     } else {
+                         card.classList.remove('border-black', 'bg-gray-50');
+                     }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

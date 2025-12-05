@@ -1,0 +1,64 @@
+<!-- HTMX Parts List Fragment -->
+<div class="parts-grid">
+    {% for part in parts %}
+    <div class="part-card" id="part-{{ part.id }}">
+        {% if part.image %}
+        <img src="{{ part.image.url }}" alt="{{ part.name }}" class="part-image">
+        {% endif %}
+
+        <div class="part-info">
+            <h3 class="part-name">{{ part.name }}</h3>
+            <p class="part-number">Part #: {{ part.part_number }}</p>
+
+            {% if part.make %}
+            <p class="part-compatibility">
+                {{ part.make.name }}
+                {% if part.model %} {{ part.model.name }}{% endif %}
+            </p>
+            {% endif %}
+
+            <p class="part-price">${{ part.price }}</p>
+
+            {% if part.stock_quantity > 0 %}
+                <p class="part-stock in-stock">In Stock: {{ part.stock_quantity }}</p>
+            {% else %}
+                <p class="part-stock out-of-stock">Out of Stock</p>
+            {% endif %}
+        </div>
+
+        <div class="part-actions">
+            <button
+                hx-get="/htmx/parts/parts/{{ part.id }}/"
+                hx-target="#part-modal"
+                hx-swap="innerHTML"
+                class="btn btn-secondary">
+                View Details
+            </button>
+
+            {% if part.stock_quantity > 0 %}
+            <button
+                hx-post="/htmx/parts/cart/add/{{ part.id }}/"
+                hx-vals='{"quantity": 1}'
+                hx-target="#cart-badge"
+                hx-swap="outerHTML"
+                class="btn btn-primary">
+                Add to Cart
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="no-results">
+        <p>No parts found matching your search.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% if has_more %}
+<div class="load-more"
+     hx-get="/htmx/parts/parts/?page={{ next_page }}"
+     hx-trigger="revealed"
+     hx-swap="afterend">
+    <span class="loading">Loading more...</span>
+</div>
+{% endif %}

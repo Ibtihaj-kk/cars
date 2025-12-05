@@ -1,5 +1,5 @@
 """
-Django settings for YallaMotor project.
+Django settings for CorporateDock project.
 """
 
 import os
@@ -44,6 +44,9 @@ LOCAL_APPS = [
     'inquiries',
     'content',
     'notifications',
+    'vehicles',
+    'reviews',
+    'subscriptions',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

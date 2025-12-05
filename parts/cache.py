@@ -203,7 +203,7 @@ def get_cached_part_detail(part_id):
                 },
                 'dealer': {
                     'id': part.dealer.id if part.dealer else None,
-                    'name': f"{part.dealer.first_name} {part.dealer.last_name}" if part.dealer else "Cars Portal"
+                    'name': f"{part.dealer.first_name} {part.dealer.last_name}" if part.dealer else "CorporateDock"
                 },
                 'avg_rating': float(part.avg_rating) if part.avg_rating else 0,
                 'review_count': part.review_count,

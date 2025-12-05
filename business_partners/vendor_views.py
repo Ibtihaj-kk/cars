@@ -137,6 +137,37 @@ def vendor_dashboard(request):
         created_at__lt=timezone.now() - timedelta(days=7)
     ).count()
     
+    # Calculate order and sales statistics
+    # Get all orders that contain items from this vendor's parts
+    from parts.models import Order, OrderItem
+    
+    # Get order items for this vendor's parts
+    vendor_order_items = OrderItem.objects.filter(
+        part__vendor=business_partner,
+        order__status__in=['confirmed', 'processing', 'shipped', 'delivered']
+    )
+    
+    # Total orders count
+    total_orders = vendor_order_items.values('order').distinct().count()
+    
+    # Monthly sales calculation (last 30 days)
+    last_30_days = timezone.now() - timedelta(days=30)
+    monthly_sales_data = vendor_order_items.filter(
+        order__created_at__gte=last_30_days
+    ).aggregate(
+        total_sales=Sum(F('price') * F('quantity'))
+    )
+    
+    monthly_sales = monthly_sales_data['total_sales'] or 0
+    
+    # Format monthly sales for display (e.g., 1.2M)
+    if monthly_sales >= 1000000:
+        monthly_sales_display = f"{monthly_sales / 1000000:.1f}M"
+    elif monthly_sales >= 1000:
+        monthly_sales_display = f"{monthly_sales / 1000:.0f}K"
+    else:
+        monthly_sales_display = f"{monthly_sales:.0f}"
+    
     context = {
         'vendor_profile': vendor_profile,
         'business_partner': business_partner,
@@ -156,13 +187,15 @@ def vendor_dashboard(request):
             'healthy_stock_count': healthy_stock_count,
             'critical_notifications': critical_notifications,
             'overdue_notifications': overdue_notifications,
+            'total_orders': total_orders,
+            'monthly_sales': monthly_sales_display,
         },
         'recent_notifications': recent_notifications,
         'recent_parts': recent_parts,
         'top_categories': top_categories,
     }
     
-    return render(request, 'business_partners/vendor_dashboard_standardized.html', context)
+    return render(request, 'vendors/dashboard.html', context)
 
 
 @vendor_required

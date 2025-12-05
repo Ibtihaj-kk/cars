@@ -1,605 +1,772 @@
-{% extends 'frontend/base.html' %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ part.name }} | corporatedock</title>
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <link href="//cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 
-{% block title %}{{ part.name }} - CarPortal{% endblock %}
+    <script type="module" src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/products.css' %}">
-{% endblock %}
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/navbar.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/parts.css' %}">
 
-{% block content %}
-<div class="pw-product-main-section">
-    <!-- Left Column - Product Details -->
-    <div class="pw-product-details-column">
-        <div class="pw-product-header-section">
-            <h1 class="pw-product-main-title">{{ part.name }}</h1>
-            <div class="pw-product-action-icons">
-                <i class="far fa-bookmark bookmark-icon"></i>
-                <i class="far fa-heart favorite-icon"></i>
+    <style>
+        /* --- THEME VARIABLES --- */
+        :root {
+            --primary-color: #000000;
+            --text-main: #111111;
+            --text-light: #666666;
+            --bg-grey: #f8f9fa;
+            --border-color: #e5e5e5;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: white;
+            color: var(--text-main);
+        }
+
+        .container-custom {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            margin-top: 100px !important; 
+        }
+
+        /* --- BREADCRUMB --- */
+        .breadcrumb {
+            background: transparent;
+            padding: 0;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #888;
+        }
+        .breadcrumb a { color: #888; text-decoration: none; }
+        .breadcrumb a:hover, .breadcrumb .active { color: black; font-weight: 700; }
+        .breadcrumb-item + .breadcrumb-item::before { content: "/"; color: #ddd; }
+
+        /* --- PRODUCT WRAPPER (3 COLUMNS) --- */
+        .product-detail-wrapper {
+            display: grid;
+            /* Gallery | Details | Buy Box */
+            grid-template-columns: 1fr 1.2fr 0.8fr; 
+            gap: 30px;
+            margin-bottom: 50px;
+            align-items: start;
+        }
+
+        /* --- COL 1: GALLERY --- */
+        .gallery-container {
+            display: flex;
+            gap: 15px;
+        }
+
+        .thumbs-col {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 70px;
+        }
+
+        .thumb {
+            width: 70px;
+            height: 70px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            cursor: pointer;
+            object-fit: contain;
+            padding: 5px;
+            transition: all 0.2s;
+        }
+        .thumb.active, .thumb:hover {
+            border-color: black;
+            box-shadow: 0 0 0 1px black;
+        }
+
+        .main-image-col {
+            flex: 1;
+            background-color: #fff;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 1/1;
+        }
+        .main-image-col img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s;
+        }
+        .main-image-col:hover img { transform: scale(1.1); cursor: zoom-in; }
+
+        /* --- COL 2: CENTER DETAILS --- */
+        .product-center-info { padding-right: 20px; }
+
+        .product-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #000;
+            line-height: 1.3;
+            margin-bottom: 15px;
+        }
+
+        .product-summary {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        /* Key Specs List */
+        .key-specs {
+            font-size: 14px;
+            line-height: 2;
+        }
+        .spec-line {
+            display: flex;
+            gap: 5px;
+        }
+        .k-label { font-weight: 800; color: black; }
+        .k-val { color: #333; }
+
+        /* --- COL 3: BUY BOX --- */
+        .buy-box {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+
+        .price-row { margin-bottom: 15px; }
+        .discount { color: #d32f2f; font-size: 18px; margin-right: 5px; }
+        .final-price { font-size: 26px; font-weight: 900; color: black; }
+        .list-price { font-size: 12px; color: #888; display: block; }
+        .returns-info { font-size: 13px; margin-top: 5px; color: #555; }
+
+        .qty-selector {
+            display: flex;
+            align-items: center;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: fit-content;
+            margin-bottom: 15px;
+        }
+        .q-btn { width: 30px; height: 30px; border: none; background: #f9f9f9; font-weight: bold; cursor: pointer; }
+        .q-input { width: 40px; text-align: center; border: none; font-weight: bold; }
+
+        /* Actions */
+        .btn-buy {
+            width: 100%;
+            background: black;
+            color: white;
+            padding: 12px;
+            border-radius: 4px;
+            font-weight: 700;
+            border: none;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-size: 14px;
+        }
+        .btn-buy:hover { background: #333; }
+
+        .btn-cart {
+            width: 100%;
+            background: white;
+            color: black;
+            padding: 12px;
+            border-radius: 4px;
+            font-weight: 700;
+            border: 1px solid black;
+            text-transform: uppercase;
+            font-size: 14px;
+        }
+        .btn-cart:hover { background: #f0f0f0; }
+
+        /* Seller Info */
+        .seller-details {
+            margin-top: 20px;
+            font-size: 13px;
+            color: #333;
+            line-height: 1.6;
+        }
+        .rating-stars { color: #000; font-size: 12px; margin-bottom: 5px; display: block;}
+
+        /* --- TABS SECTION --- */
+        .tabs-container { margin-bottom: 60px; border: 1px solid #eee; border-radius: 4px; }
+        .tabs-header { display: flex; background: #f9f9f9; border-bottom: 1px solid #eee; }
+        .tab-btn {
+            flex: 1; padding: 15px; border: none; background: none; border-right: 1px solid #eee;
+            font-weight: 600; color: #666; cursor: pointer;
+        }
+        .tab-btn.active { background: white; color: black; font-weight: 800; border-bottom: 2px solid black; }
+        .tab-content-area { padding: 30px; background: white; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        /* Similar Products */
+        .companion-section { margin-bottom: 60px; }
+        .sec-title { font-size: 24px; font-weight: 800; margin-bottom: 20px; }
+        .comp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .comp-card { border: 1px solid #eee; padding: 15px; border-radius: 8px; transition: 0.2s; }
+        .comp-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .comp-img { width: 100%; height: 150px; object-fit: contain; margin-bottom: 10px; }
+        .comp-title { font-size: 14px; font-weight: 700; height: 40px; overflow: hidden; margin-bottom: 5px; }
+        .comp-price { font-size: 18px; font-weight: 900; }
+
+        @media (max-width: 992px) {
+            .product-detail-wrapper { grid-template-columns: 1fr; }
+            .comp-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* Signup Modal Styles (Required) */
+        .signup-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 10000; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; }
+        .signup-modal-overlay.active { display: flex; opacity: 1; }
+        .signup-modal-content { background: white; padding: 40px; border-radius: 24px; width: 100%; max-width: 450px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; transform: scale(0.95); transition: transform 0.3s ease; border: 1px solid #f3f4f6; }
+        .signup-modal-overlay.active .signup-modal-content { transform: scale(1); }
+        .signup-close-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; color: #6b7280; cursor: pointer; padding: 8px; border-radius: 50%; transition: background 0.2s; }
+        .signup-close-btn:hover { background: #f3f4f6; }
+        .signup-title { text-align: center; font-size: 1.875rem; font-weight: 800; color: #111827; margin-bottom: 0.75rem; }
+        .signup-subtitle { text-align: center; color: #6b7280; margin-bottom: 2rem; }
+        .signup-options { display: flex; flex-direction: column; gap: 1rem; }
+        .signup-option { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 1.25rem 1.5rem; border-radius: 1rem; text-decoration: none; transition: all 0.3s ease; border: 2px solid; }
+        .signup-option.individual { border-color: black; background: white; color: black; }
+        .signup-option.individual:hover { background: black; color: white; }
+        .signup-option.individual .icon-box { background: #f3f4f6; color: black; }
+        .signup-option.individual:hover .icon-box { background: #374151; color: white; }
+        .signup-option.business { border-color: black; background: black; color: white; }
+        .signup-option.business:hover { background: white; color: black; border-color: black; }
+        .signup-option.business .icon-box { background: #1f2937; color: white; }
+        .signup-option.business:hover .icon-box { background: #f3f4f6; color: black; }
+        .signup-option .left-content { display: flex; align-items: center; gap: 1rem; }
+        .icon-box { padding: 0.5rem; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; }
+        .option-text { font-weight: 700; font-size: 1.125rem; }
+        .signup-option .arrow-icon { width: 20px; height: 20px; transition: transform 0.3s; }
+        .signup-option:hover .arrow-icon { transform: translateX(4px); }
+    </style>
+  </head>
+  <body>
+    <button class="mobile-menu-toggle" id="mobileMenuToggle"><span></span><span></span><span></span></button>
+    <div class="navbar-top-header">
+      <div class="navbar-logo">
+        <a href="{% url 'home' %}">
+          <img src="{% static 'images/logo.png' %}" alt="CorporateDock Logo"/>
+        </a>
+      </div>
+      <div class="navbar-right-info">
+        <span class="navbar-phone-info">
+          <i class="fa-solid fa-phone"></i>
+          <span class="navbar-phone-number">+92-333-3610109</span>
+        </span>
+        <span class="navbar-divider">|</span>
+        <a href="{% url 'parts:cart_view' %}" class="navbar-cart"><ion-icon name="cart"></ion-icon></a>
+
+        <div class="navbar-user-profile-dropdown">
+          <div class="navbar-profile-trigger">
+            <div class="navbar-profile-icon">
+              <i class="fa-solid fa-user"></i>
             </div>
+            <i class="fa-solid fa-chevron-down navbar-dropdown-arrow"></i>
+          </div>
+          <div class="navbar-dropdown-menu">
+              <a href="#" class="navbar-dropdown-link">Login</a>
+              <span class="navbar-dropdown-divider">|</span>
+              <a href="#" class="navbar-dropdown-link" onclick="openSignupModal(); return false;">Signup</a>
+          </div>
         </div>
-
-        <div class="pw-product-gallery-section">
-            <div class="pw-gallery-main-image-container">
-                <button class="pw-gallery-nav-btn pw-gallery-prev-btn" onclick="previousImage()">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <img id="mainImage" src="{% if part.image %}{{ part.image.url }}{% else %}{% static 'images/default-part.jpg' %}{% endif %}" alt="{{ part.name }}" class="pw-gallery-main-image">
-                <button class="pw-gallery-nav-btn pw-gallery-next-btn" onclick="nextImage()">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-            
-            <div class="pw-gallery-thumbnail-container">
-                {% if part.image %}
-                <img src="{{ part.image.url }}" alt="Thumbnail 1" class="pw-gallery-thumbnail active" onclick="selectImage(0)">
-                {% endif %}
-                {% for image in part.additional_images.all %}
-                <img src="{{ image.image.url }}" alt="Thumbnail {{ forloop.counter|add:1 }}" class="pw-gallery-thumbnail" onclick="selectImage({{ forloop.counter }})">
-                {% endfor %}
-                {% if not part.image and not part.additional_images.all %}
-                <img src="{% static 'images/default-part.jpg' %}" alt="Default Thumbnail" class="pw-gallery-thumbnail active" onclick="selectImage(0)">
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="pw-product-info-section">
-            <div class="pw-product-info-grid">
-                <div class="pw-info-grid-item">
-                    <span class="pw-info-grid-label">Category</span>
-                    <span class="pw-info-grid-value pw-info-category-link">{{ part.category.name|default:"Auto Parts" }}</span>
-                </div>
-                <div class="pw-info-grid-item">
-                    <span class="pw-info-grid-label">Brand</span>
-                    <span class="pw-info-grid-value pw-info-category-link">{{ part.brand.name|default:"Generic" }}</span>
-                </div>
-                <div class="pw-info-grid-item">
-                    <span class="pw-info-grid-label">Last Updated:</span>
-                    <span class="pw-info-grid-value">{{ part.updated_at|date:"M d, Y" }}</span>
-                </div>
-                <div class="pw-info-grid-item">
-                    <span class="pw-info-grid-label">Part SKU #</span>
-                    <span class="pw-info-grid-value">{{ part.sku|default:part.id }}</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="pw-product-description-section">
-            <h3>Product Description:</h3>
-            {% if part.description %}
-                {{ part.description|linebreaks }}
-            {% else %}
-                <p>High-quality automotive part designed for optimal performance and durability. This part meets industry standards and is compatible with various vehicle models.</p>
-            {% endif %}
-        </div>
-
-        <!-- ==================== NEW MATERIAL SPECIFICATIONS SECTION ==================== -->
-        <div class="pw-product-specifications-section">
-            <h3>Material Specifications:</h3>
-            <div class="pw-specifications-grid">
-                <!-- Basic Information -->
-                {% if part.parts_number %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Parts Number:</span>
-                    <span class="pw-spec-value">{{ part.parts_number }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.material_type %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Material Type:</span>
-                    <span class="pw-spec-value">{{ part.material_type }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.plant %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Plant:</span>
-                    <span class="pw-spec-value">{{ part.plant }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.storage_location %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Storage Location:</span>
-                    <span class="pw-spec-value">{{ part.storage_location }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.warehouse_number %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Warehouse Number:</span>
-                    <span class="pw-spec-value">{{ part.warehouse_number }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.material_description %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Material Description:</span>
-                    <span class="pw-spec-value">{{ part.material_description }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.material_description_ar %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Material Description (Arabic):</span>
-                    <span class="pw-spec-value">{{ part.material_description_ar }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.base_unit_of_measure %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Base Unit of Measure:</span>
-                    <span class="pw-spec-value">{{ part.base_unit_of_measure }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.material_group %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Material Group:</span>
-                    <span class="pw-spec-value">{{ part.material_group }}</span>
-                </div>
-                {% endif %}
-                
-                <!-- Physical Properties -->
-                {% if part.gross_weight %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Gross Weight:</span>
-                    <span class="pw-spec-value">{{ part.gross_weight }} kg</span>
-                </div>
-                {% endif %}
-                
-                {% if part.net_weight %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Net Weight:</span>
-                    <span class="pw-spec-value">{{ part.net_weight }} kg</span>
-                </div>
-                {% endif %}
-                
-                {% if part.weight_of_unit %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Weight of Unit:</span>
-                    <span class="pw-spec-value">{{ part.weight_of_unit }} kg</span>
-                </div>
-                {% endif %}
-                
-                {% if part.size_dimensions %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Size/Dimensions:</span>
-                    <span class="pw-spec-value">{{ part.size_dimensions }}</span>
-                </div>
-                {% endif %}
-                
-                <!-- Organization -->
-                {% if part.division %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Division:</span>
-                    <span class="pw-spec-value">{{ part.division }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.abc_indicator %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">ABC Indicator:</span>
-                    <span class="pw-spec-value">{{ part.abc_indicator }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.industry_sector %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Industry Sector:</span>
-                    <span class="pw-spec-value">{{ part.industry_sector }}</span>
-                </div>
-                {% endif %}
-                
-                <!-- Inventory Management -->
-                {% if part.minimum_order_quantity %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Minimum Order Quantity:</span>
-                    <span class="pw-spec-value">{{ part.minimum_order_quantity }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.safety_stock %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Safety Stock:</span>
-                    <span class="pw-spec-value">{{ part.safety_stock }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.minimum_safety_stock %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Minimum Safety Stock:</span>
-                    <span class="pw-spec-value">{{ part.minimum_safety_stock }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.planned_delivery_time_days %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Planned Delivery Time:</span>
-                    <span class="pw-spec-value">{{ part.planned_delivery_time_days }} days</span>
-                </div>
-                {% endif %}
-                
-                {% if part.goods_receipt_processing_time_days %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Goods Receipt Processing Time:</span>
-                    <span class="pw-spec-value">{{ part.goods_receipt_processing_time_days }} days</span>
-                </div>
-                {% endif %}
-                
-                <!-- Pricing -->
-                {% if part.valuation_class %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Valuation Class:</span>
-                    <span class="pw-spec-value">{{ part.valuation_class }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.price_unit_peinh %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Price Unit (PEINH):</span>
-                    <span class="pw-spec-value">{{ part.price_unit_peinh }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.moving_average_price %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Moving Average Price:</span>
-                    <span class="pw-spec-value">${{ part.moving_average_price }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.standard_price %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Standard Price:</span>
-                    <span class="pw-spec-value">${{ part.standard_price }}</span>
-                </div>
-                {% endif %}
-                
-                <!-- Manufacturing -->
-                {% if part.manufacturer_part_number %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Manufacturer Part Number:</span>
-                    <span class="pw-spec-value">{{ part.manufacturer_part_number }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.manufacturer_oem_number %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Manufacturer OEM Number:</span>
-                    <span class="pw-spec-value">{{ part.manufacturer_oem_number }}</span>
-                </div>
-                {% endif %}
-                
-                <!-- Additional Fields -->
-                {% if part.old_material_number %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Old Material Number:</span>
-                    <span class="pw-spec-value">{{ part.old_material_number }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.external_material_group %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">External Material Group:</span>
-                    <span class="pw-spec-value">{{ part.external_material_group }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.procurement_type %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Procurement Type:</span>
-                    <span class="pw-spec-value">{{ part.procurement_type }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.mrp_type %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">MRP Type:</span>
-                    <span class="pw-spec-value">{{ part.mrp_type }}</span>
-                </div>
-                {% endif %}
-                
-                {% if part.total_replenishment_lead_time %}
-                <div class="pw-spec-item">
-                    <span class="pw-spec-label">Total Replenishment Lead Time:</span>
-                    <span class="pw-spec-value">{{ part.total_replenishment_lead_time }} workdays</span>
-                </div>
-                {% endif %}
-            </div>
-        </div>
+      </div>
     </div>
 
-    <!-- Right Column - Pricing and Seller Info -->
-    <div class="pw-product-sidebar">
-        <!-- Price Box -->
-        <div class="pw-sidebar-price-box">
-            <div class="pw-price-section-container">
-                <div class="pw-price-current-amount">${{ part.price }}</div>
-            </div>
-            
-            <div class="pw-quantity-control-section">
-                <button class="pw-quantity-control-btn" onclick="decreaseQuantity()">-</button>
-                <input type="number" id="pw-quantity-input" data-part-id="{{ part.id }}" value="1" min="1" max="{{ part.quantity }}" readonly>
-                <button class="pw-quantity-control-btn" onclick="increaseQuantity()">+</button>
-            </div>
-            
-            <button class="pw-buy-now-button" data-part-id="{{ part.id }}">
-                <i class="fas fa-shopping-cart"></i> Buy Now
-            </button>
-            
-            <button class="pw-add-to-cart-button" 
-                    data-part-id="{{ part.id }}">
-                Add To Cart
-            </button>
-            
-            {% if part.quantity <= 0 %}
-            <div class="pw-stock-status out-of-stock">Out of Stock</div>
-            {% elif part.quantity <= 5 %}
-            <div class="pw-stock-status low-stock">Only {{ part.quantity }} left in stock</div>
-            {% else %}
-            <div class="pw-stock-status in-stock">In Stock ({{ part.quantity }} available)</div>
-            {% endif %}
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay">
+      <div class="mobile-menu-content">
+        <div class="mobile-menu-header">
+          <div class="mobile-logo">
+            <a href="{% url 'home' %}">
+                <img src="{% static 'images/logo.png' %}" alt="CorporateDock Logo"/>
+            </a>
+          </div>
+          <button class="mobile-menu-close" id="mobileMenuClose"></button>
         </div>
+        <div class="mobile-menu-items"></div>
+      </div>
+    </div>
 
-        <!-- Vendor Details Box -->
-        <div class="pw-sidebar-seller-box">
-            <h3>Vendor Details</h3>
-            <div class="pw-seller-info-container">
-                <div class="pw-seller-avatar-circle">
-                    {% if part.vendor.vendor_profile.logo %}
-                        <img src="{{ part.vendor.vendor_profile.logo.url }}" alt="{{ part.vendor.name }}">
-                    {% else %}
-                        <i class="fas fa-store"></i>
+    <main>
+        <div class="container-custom">
+            
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'parts:part_list' %}">Parts</a></li>
+                    {% if part.category %}
+                    <li class="breadcrumb-item"><a href="#">{{ part.category.name }}</a></li>
                     {% endif %}
+                    <li class="breadcrumb-item active" aria-current="page">{{ part.name }}</li>
+                </ol>
+            </nav>
+
+            <div class="product-detail-wrapper">
+                
+                <div class="gallery-container">
+                    <div class="thumbs-col">
+                        {% if part.image_url %}
+                        <img src="{{ part.image_url }}" class="thumb active" onclick="changeImage(this.src)">
+                        {% elif part.images.all %}
+                            {% for image in part.images.all %}
+                            <img src="{{ image.image.url }}" class="thumb {% if forloop.first %}active{% endif %}" onclick="changeImage(this.src)">
+                            {% endfor %}
+                        {% else %}
+                        <img src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=500&q=60" class="thumb active" onclick="changeImage(this.src)">
+                        {% endif %}
+                    </div>
+                    <div class="main-image-col">
+                        {% if part.image_url %}
+                        <img src="{{ part.image_url }}" id="mainImage" alt="{{ part.name }}">
+                        {% elif part.images.first %}
+                        <img src="{{ part.images.first.image.url }}" id="mainImage" alt="{{ part.name }}">
+                        {% else %}
+                        <img src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=800&q=80" id="mainImage" alt="{{ part.name }}">
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="pw-seller-details-section">
-                    <div class="pw-seller-name-text">
-                        <a href="{% url 'business_partners:vendor_store' part.vendor.slug %}" class="vendor-store-link">
-                            {{ part.vendor.name }}
+
+                <div class="product-center-info">
+                    <h1 class="product-title">{{ part.name }}</h1>
+                    
+                    <p class="product-summary">
+                        {{ part.description|default:part.material_description }}
+                    </p>
+
+                    <div class="key-specs">
+                        <div class="spec-line"><span class="k-label">Part #:</span> <span class="k-val">{{ part.parts_number|default:"-" }}</span></div>
+                        <div class="spec-line"><span class="k-label">OEM#:</span> <span class="k-val">{{ part.manufacturer_oem_number|default:"-" }}</span></div>
+                        {% if part.brand %}
+                        <div class="spec-line"><span class="k-label">Make:</span> <span class="k-val">{{ part.brand.name }}</span></div>
+                        {% endif %}
+                        {% if part.category %}
+                        <div class="spec-line"><span class="k-label">Category:</span> <span class="k-val">{{ part.category.name }}</span></div>
+                        {% if part.category.parent %}
+                        <div class="spec-line"><span class="k-label">Sub Cat:</span> <span class="k-val">{{ part.category.parent.name }}</span></div>
+                        {% endif %}
+                        {% endif %}
+                        <div class="spec-line"><span class="k-label">Stock:</span> 
+                            {% if part.inventory.stock > 0 %}
+                            <span class="k-val" style="color:green; font-weight:bold;">In Stock ({{ part.inventory.stock }} units)</span>
+                            {% else %}
+                            <span class="k-val" style="color:red; font-weight:bold;">Out of Stock</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="buy-box">
+                    <div class="price-row">
+                        <!-- <span class="discount">-20%</span> -->
+                        <span class="final-price">{{ part.price }} ر.س.</span>
+                        {% if part.standard_price and part.standard_price > part.price %}
+                        <span class="list-price">List Price: <span style="text-decoration:line-through">{{ part.standard_price }} ر.س.</span> <i class="fas fa-info-circle"></i></span>
+                        {% endif %}
+                        <div class="returns-info">FREE Returns <i class="fas fa-chevron-down"></i></div>
+                    </div>
+
+                    <form method="post" action="{% url 'parts:part_detail' part.pk %}">
+                        {% csrf_token %}
+                        <div class="qty-selector">
+                            <button type="button" class="q-btn" onclick="updateQty(-1)">-</button>
+                            <input type="text" class="q-input" id="qtyInput" name="quantity" value="1" readonly>
+                            <button type="button" class="q-btn" onclick="updateQty(1)">+</button>
+                        </div>
+
+                        <button type="submit" class="btn-buy"><i class="fas fa-shopping-cart me-2"></i> Buy Now</button>
+                        <button type="submit" class="btn-cart">Add To Cart</button>
+                    </form>
+
+                    <div class="seller-details">
+                        <!-- <div class="rating-stars">
+                            4.8 <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+                        </div> -->
+                        {% if part.vendor %}
+                        <div><strong>Seller:</strong> {{ part.vendor.name }}</div>
+                        {% endif %}
+                        <div><strong>Delivered By:</strong> Aramex</div>
+                        <hr style="border-top:1px solid #eee; margin:10px 0;">
+                        <!-- <div><strong>Shipping Date:</strong> 1 Jan 2026</div>
+                        <div><strong>Delivery Date:</strong> 5 Jan 2026</div> -->
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="tabs-container">
+                <div class="tabs-header">
+                    <button class="tab-btn active" onclick="openTab(event, 'details')">Product Details</button>
+                    <button class="tab-btn" onclick="openTab(event, 'warranty')">Warranty</button>
+                    <button class="tab-btn" onclick="openTab(event, 'specs')">Specs</button>
+                </div>
+
+                <div id="details" class="tab-content-area tab-pane active">
+                    <h3 style="font-weight:700; margin-bottom:15px;">Product Description</h3>
+                    <p style="color:#555; line-height:1.6;">
+                        {{ part.description|default:part.material_description }}
+                    </p>
+                    <div style="margin-top:20px; color:#d32f2f; font-weight:bold; font-size:14px; background:#fff5f5; padding:10px; border-radius:4px;">
+                        <i class="fas fa-exclamation-triangle"></i> WARNING: Cancer and Reproductive Harm - www.P65Warnings.ca.gov
+                    </div>
+                </div>
+
+                <div id="warranty" class="tab-content-area tab-pane">
+                    <h3 style="font-weight:700; margin-bottom:15px;">Warranty Information</h3>
+                    <p style="color:#555;">24 Month / Unlimited Mile Limited Warranty. Policy varies by part and manufacturer.</p>
+                </div>
+
+                <div id="specs" class="tab-content-area tab-pane">
+                    <h3 style="font-weight:700; margin-bottom:20px;">Technical Specifications</h3>
+                    <table class="specs-table" style="width:100%; border-collapse:collapse;">
+                        <tr style="border-bottom:1px solid #eee;"><td style="padding:10px; font-weight:bold; width:30%; background:#f9f9f9;">Parts Number</td><td style="padding:10px;">{{ part.parts_number|default:"-" }}</td></tr>
+                        <tr style="border-bottom:1px solid #eee;"><td style="padding:10px; font-weight:bold; background:#f9f9f9;">Material Type</td><td style="padding:10px;">{{ part.material_type|default:"-" }}</td></tr>
+                        <tr style="border-bottom:1px solid #eee;"><td style="padding:10px; font-weight:bold; background:#f9f9f9;">Description (Short)</td><td style="padding:10px;">{{ part.material_description|default:"-" }}</td></tr>
+                        <tr style="border-bottom:1px solid #eee;"><td style="padding:10px; font-weight:bold; background:#f9f9f9;">Desc (Arabic)</td><td style="padding:10px; font-family:'Cairo'; text-align:right;">{{ part.material_description_ar|default:"-" }}</td></tr>
+                        <tr style="border-bottom:1px solid #eee;"><td style="padding:10px; font-weight:bold; background:#f9f9f9;">Gross Weight</td><td style="padding:10px;">{{ part.gross_weight|default:"-" }} {{ part.base_unit_of_measure }}</td></tr>
+                        <tr style="border-bottom:1px solid #eee;"><td style="padding:10px; font-weight:bold; background:#f9f9f9;">Net Weight</td><td style="padding:10px;">{{ part.net_weight|default:"-" }} {{ part.base_unit_of_measure }}</td></tr>
+                        <tr style="border-bottom:1px solid #eee;"><td style="padding:10px; font-weight:bold; background:#f9f9f9;">Dimensions</td><td style="padding:10px;">{{ part.size_dimensions|default:"-" }}</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="companion-section">
+                <h2 class="sec-title">Popular Companion Parts</h2>
+                <p style="color:#666; margin-bottom:30px;">Often viewed by other customers with your currently selected product.</p>
+                
+                <div class="comp-grid">
+                    {% for related_part in related_parts %}
+                    <div class="comp-card">
+                        <a href="{% url 'parts:part_detail' related_part.pk %}" style="text-decoration:none; color:inherit;">
+                            {% if related_part.images.first %}
+                            <img src="{{ related_part.images.first.image.url }}" class="comp-img" alt="{{ related_part.name }}">
+                            {% else %}
+                            <img src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=500&q=60" class="comp-img" alt="{{ related_part.name }}">
+                            {% endif %}
+                            <div class="comp-title">{{ related_part.name }}</div>
+                            <div style="font-size:12px; color:#666;">Part #{{ related_part.parts_number|default:"-" }}</div>
+                            <div class="comp-price">{{ related_part.price }} ر.س.</div>
                         </a>
                     </div>
-                    <div class="pw-seller-since-text">Member Since {{ part.vendor.created_at|date:"M d, Y" }}</div>
-                    <div class="pw-seller-rating-container">
-                        {% if part.vendor.vendor_profile.average_rating %}
-                            <span class="pw-seller-rating-score">{{ part.vendor.vendor_profile.average_rating|floatformat:1 }}/5</span>
-                            <div class="pw-seller-rating-stars">
-                                {% for i in "12345" %}
-                                    {% if forloop.counter <= part.vendor.vendor_profile.average_rating %}
-                                        <i class="fas fa-star"></i>
-                                    {% else %}
-                                        <i class="far fa-star"></i>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <span class="pw-seller-rating-score">New Vendor</span>
-                        {% endif %}
+                    {% empty %}
+                    <div class="col-12">
+                        <p style="color:#666;">No companion parts available at the moment.</p>
                     </div>
-                    
-                    <!-- Vendor Badge -->
-                    <div class="vendor-badge-container">
-                        {% if part.vendor.vendor_profile.is_verified %}
-                            <span class="vendor-badge verified">
-                                <i class="fas fa-check-circle"></i> Verified Vendor
-                            </span>
-                        {% endif %}
-                        {% if part.vendor.vendor_profile.business_type %}
-                            <span class="vendor-badge business-type">
-                                {{ part.vendor.vendor_profile.get_business_type_display }}
-                            </span>
-                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="signupModal" class="signup-modal-overlay">
+        <div class="signup-modal-content">
+            <button class="signup-close-btn" onclick="closeSignupModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <div class="text-center">
+                <h2 class="signup-title">Join Corporate Dock</h2>
+                <p class="signup-subtitle">Select your account type to continue</p>
+            </div>
+            <div class="signup-options">
+                <a href="#" class="signup-option individual">
+                    <div class="left-content">
+                        <span class="icon-box">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        </span>
+                        <span class="option-text">Individual</span>
                     </div>
-                </div>
-            </div>
-            
-            <div class="pw-seller-contact-buttons">
-                {% if part.vendor.vendor_profile.business_phone %}
-<button class="pw-seller-contact-btn pw-seller-phone-btn" onclick="contactVendor('phone', '{{ part.vendor.vendor_profile.business_phone }}')">
-                        <i class="fas fa-phone"></i>
-                    </button>
-                {% endif %}
-                {% if part.vendor.vendor_profile.email %}
-                    <button class="pw-seller-contact-btn pw-seller-email-btn" onclick="contactVendor('email', '{{ part.vendor.vendor_profile.email }}')">
-                        <i class="fas fa-envelope"></i>
-                    </button>
-                {% endif %}
-                {% if part.vendor.vendor_profile.website %}
-                    <button class="pw-seller-contact-btn pw-seller-website-btn" onclick="window.open('{{ part.vendor.vendor_profile.website }}', '_blank')">
-                        <i class="fas fa-globe"></i>
-                    </button>
-                {% endif %}
-            </div>
-            
-            <div class="pw-seller-facebook-connect">
-                <p>See if your friends know this seller</p>
-                <p>Connect with facebook</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="arrow-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                </a>
+                <a href="{% url 'business_partners:vendor_registration_start' %}" class="signup-option business">
+                    <div class="left-content">
+                        <span class="icon-box">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                        </span>
+                        <span class="option-text">Business</span>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="arrow-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                </a>
             </div>
         </div>
-
-        <!-- Benefits Box -->
-        <div class="pw-sidebar-benefits-box">
-            <div class="pw-benefits-header-section">
-                <div class="pw-benefits-pakwheels-logo">
-                    <img src="{% static 'images/logos/carsportal-logo.png' %}" alt="Cars Portal">
-                </div>
-                <h3>Buy From Cars Portal and Get</h3>
-            </div>
-            
-            <ul class="pw-benefits-list-container">
-                <li>1. 100% Genuine Products</li>
-                <li>2. Hassle Free Buying</li>
-                <li>3. Money Back Guarantee</li>
-            </ul>
-        </div>
-
-        <!-- Report Button -->
-        <button class="pw-report-ad-button" data-part-id="{{ part.id }}">
-            <i class="fas fa-flag"></i> Report This Ad
-        </button>
     </div>
-</div>
 
-<!-- More Products Section -->
-<div class="pw-more-products-main-section">
-    <div class="pw-more-products-section-header">
-        <h2>More {{ part.category.name|default:"Auto Parts" }} Products</h2>
-        <a href="{% url 'parts:part_list' %}" class="pw-more-products-visit-store-link">Visit Cars Portal Store</a>
-    </div>
-    
-    <div class="pw-products-carousel-main-container">
-        <button class="pw-carousel-navigation-btn pw-carousel-prev-products" onclick="scrollProductsLeft()">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        
-        <div class="pw-products-carousel-scroll" id="productsCarousel">
-            {% for related_part in related_parts %}
-            <div class="pw-product-card-item">
-                <div class="pw-product-card-image-container">
-                    {% if related_part.discount_percentage %}
-                    <div class="pw-product-card-discount-badge">{{ related_part.discount_percentage }}% OFF</div>
-                    {% endif %}
-                    {% if related_part.is_featured %}
-                    <div class="pw-product-card-featured-badge">FEATURED</div>
-                    {% endif %}
-                    <a href="{% url 'parts:part_detail' related_part.id %}">
-                        <img src="{% if related_part.image %}{{ related_part.image.url }}{% else %}{% static 'images/default-part.jpg' %}{% endif %}" alt="{{ related_part.name }}">
-                    </a>
-                </div>
-                <div class="pw-product-card-info-section">
-                    <h3 class="pw-product-card-name">
-                        <a href="{% url 'parts:part_detail' related_part.id %}">{{ related_part.name|truncatechars:25 }}</a>
-                    </h3>
-                    <div class="pw-product-card-price">${{ related_part.price }}</div>
-                    {% if related_part.original_price and related_part.original_price > related_part.price %}
-                    <div class="pw-product-card-original-price">${{ related_part.original_price }}</div>
-                    {% endif %}
-                </div>
-            </div>
-            {% empty %}
-            <!-- Default products if no related parts -->
-            <div class="pw-product-card-item">
-                <div class="pw-product-card-image-container">
-                    <div class="pw-product-card-discount-badge">30% OFF</div>
-                    <img src="{% static 'images/default-part.jpg' %}" alt="Auto Part">
-                </div>
-                <div class="pw-product-card-info-section">
-                    <h3 class="pw-product-card-name">Premium Auto Part...</h3>
-                    <div class="pw-product-card-price">$174.99</div>
-                    <div class="pw-product-card-original-price">$250.01</div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        
-        <button class="pw-carousel-navigation-btn pw-carousel-next-products" onclick="scrollProductsRight()">
-            <i class="fas fa-chevron-right"></i>
-        </button>
-    </div>
-</div>
-
-<!-- Similar Accessories and Auto Parts Section -->
-<div class="pw-similar-accessories-main-section">
-    <h2>Similar Accessories and Auto Parts</h2>
-    
-    {% if categories_with_counts %}
-    <div class="pw-accessories-grid-container">
-        {% for category in categories_with_counts %}
-            {% if forloop.counter0|divisibleby:5 %}
-                <div class="pw-accessories-grid-column">
-            {% endif %}
-            
-            <a href="{% url 'parts:parts_by_category' category=category.slug %}" class="pw-accessory-link-item">
-                {{ category.name }} 
-                <span class="pw-accessory-count">({{ category.part_count }}{% if category.part_count >= 100 %}+{% endif %})</span>
+    <footer class="footer">
+      <div class="social-section">
+        <div class="social-container">
+          <div class="social-icons">
+            <a href="#" class="social-icon facebook">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
+                />
+              </svg>
+              FACEBOOK
             </a>
-            
-            {% if forloop.counter|divisibleby:5 or forloop.last %}
-                </div>
-            {% endif %}
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="pw-accessories-grid-container">
-        <div class="pw-accessories-grid-column">
-            <p>No categories available at the moment.</p>
+
+            <a href="#" class="social-icon twitter">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"
+                />
+              </svg>
+              TWITTER
+            </a>
+
+            <a href="#" class="social-icon dribbble">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm10.12-10.358c-.35-.11-3.17-.953-6.384-.438 1.34 3.684 1.887 6.684 1.992 7.308 2.3-1.555 3.936-4.02 4.395-6.87zm-6.115 7.808c-.153-.9-.75-4.032-2.19-7.77l-.066.02c-5.79 2.015-7.86 6.025-8.04 6.4 1.73 1.358 3.92 2.166 6.29 2.166 1.42 0 2.77-.29 4-.816zm-11.62-2.58c.232-.4 3.045-5.055 8.332-6.765.135-.045.27-.084.405-.12-.26-.585-.54-1.167-.832-1.74C7.17 11.775 2.206 11.71 1.756 11.7l-.004.312c0 2.633.998 5.037 2.634 6.855zm-2.42-8.955c.46.008 4.683.026 9.477-1.248-1.698-3.018-3.53-5.558-3.8-5.928-2.868 1.35-5.01 3.99-5.676 7.17zM9.6 2.052c.282.38 2.145 2.914 3.822 6 3.645-1.365 5.19-3.44 5.373-3.702-1.81-1.61-4.19-2.586-6.795-2.586-.825 0-1.63.1-2.4.285zm10.335 3.483c-.218.29-1.935 2.493-5.724 4.04.24.49.47.985.68 1.486.08.18.15.36.22.53 3.41-.43 6.8.26 7.14.33-.02-2.42-.88-4.64-2.31-6.38z"
+                />
+              </svg>
+              DRIBBBLE
+            </a>
+
+            <a href="#" class="social-icon pinterest">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.174-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.097.118.112.221.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24.009 12.017 24c6.624 0 11.99-5.367 11.99-12.013C24.007 5.367 18.641.001 12.017.001z"
+                />
+              </svg>
+              PINTEREST
+            </a>
+
+            <a href="#" class="social-icon linkedin">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"
+                />
+              </svg>
+              LINKEDIN
+            </a>
+
+            <a href="#" class="social-icon whatsapp">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.484 3.488"
+                />
+              </svg>
+              WHATSAPP
+            </a>
+          </div>
         </div>
-    </div>
-    {% endif %}
-</div>
+      </div>
 
-<script>
-// Image gallery functionality
-let currentImageIndex = 0;
-const images = [
-    {% if part.image %}'{{ part.image.url }}'{% if part.additional_images.all %},{% endif %}{% endif %}
-    {% for image in part.additional_images.all %}
-    '{{ image.image.url }}'{% if not forloop.last %},{% endif %}
-    {% endfor %}
-];
+      <div class="footer-content">
+        <div class="footer-grid">
+          <div class="footer-column company-info">
+            <p>
+              We deliver all the tools you need to create a powerful auto parts e-commerce store built for showcasing, selling, and managing automotive components.
+            </p>
 
-function selectImage(index) {
-    currentImageIndex = index;
-    document.getElementById('mainImage').src = images[index];
+            <ul class="contact-info">
+              <li>
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                  ></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                220E Front St, Burlington NC 27215
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+                  ></path>
+                </svg>
+                +92-333-3610109
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                  ></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                support@corporatedock.com
+              </li>
+            </ul>
+          </div>
+
+          <div class="footer-column useful-links">
+            <h3>USEFUL LINKS</h3>
+            <ul>
+              <li><a href="#">Change Oil and Filter</a></li>
+              <li><a href="#">Brake Pads Replacement</a></li>
+              <li><a href="#">Timing Belt Replacement</a></li>
+              <li><a href="#">Pre-purchase Car Inspection</a></li>
+              <li><a href="#">Starter Replacement</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-column recent-posts">
+            <h3>RECENT POSTS</h3>
+            <div class="post-item">
+              <img
+                src="//images.pexels.com/photos/3802508/pexels-photo-3802508.jpeg?auto=compress&cs=tinysrgb&w=100&h=80&fit=crop"
+                alt="Car post"
+                class="post-image"
+              />
+              <div class="post-content">
+                <h4>Upgrade Your Ride with Premium Auto Parts</h4>
+                <div class="post-date">
+                  <svg viewBox="0 0 24 24">
+                    <rect
+                      x="3"
+                      y="4"
+                      width="18"
+                      height="18"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  May 16, 2025
+                </div>
+              </div>
+            </div>
+
+            <div class="post-item">
+              <img
+                src="//images.pexels.com/photos/3802509/pexels-photo-3802509.jpeg?auto=compress&cs=tinysrgb&w=100&h=80&fit=crop"
+                alt="Car post"
+                class="post-image"
+              />
+              <div class="post-content">
+                <h4>Does Your Life Lack Meaning</h4>
+                <div class="post-date">
+                  <svg viewBox="0 0 24 24">
+                    <rect
+                      x="3"
+                      y="4"
+                      width="18"
+                      height="18"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  May 16, 2025
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-column newsletter">
+            <h3>SUBSCRIBE OUR NEWSLETTER</h3>
+            <p>
+              Keep up on our always evolving products, features and technology.
+              Enter your e-mail and subscribe to our newsletter.
+            </p>
+
+            <form class="newsletter-form">
+              <input
+                type="email"
+                placeholder="Enter Your Email"
+                class="newsletter-input"
+                required
+              />
+              <button type="submit" class="newsletter-btn">SUBSCRIBE</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-bottom-content">
+          <div class="copyright">© Powered by Corporate Dock LLC-2025 All rights Reserved</div>
+          <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Contact</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script src="{% static 'js/navbar.js' %}"></script>
+    <script src="{% static 'js/parts.js' %}"></script>
     
-    // Update thumbnail active state
-    document.querySelectorAll('.pw-gallery-thumbnail').forEach((thumb, i) => {
-        thumb.classList.toggle('active', i === index);
+    <script>
+    function changeImage(src) {
+        document.getElementById('mainImage').src = src;
+        document.querySelectorAll('.thumb').forEach(img => img.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+
+    function updateQty(change) {
+        const input = document.getElementById('qtyInput');
+        let currentVal = parseInt(input.value);
+        if (currentVal + change >= 1) {
+            input.value = currentVal + change;
+        }
+    }
+
+    // Tabs Logic
+    function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-pane");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+            tabcontent[i].classList.remove("active");
+        }
+        tablinks = document.getElementsByClassName("tab-btn");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.classList.add("active");
+    }
+
+    // Modal Logic
+    function openSignupModal() {
+        document.getElementById('signupModal').classList.add('active');
+        document.body.style.overflow = 'hidden'; 
+    }
+
+    function closeSignupModal() {
+        document.getElementById('signupModal').classList.remove('active');
+        document.body.style.overflow = 'auto'; 
+    }
+
+    document.getElementById('signupModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeSignupModal();
+        }
     });
-}
-
-function previousImage() {
-    currentImageIndex = currentImageIndex > 0 ? currentImageIndex - 1 : images.length - 1;
-    selectImage(currentImageIndex);
-}
-
-function nextImage() {
-    currentImageIndex = currentImageIndex < images.length - 1 ? currentImageIndex + 1 : 0;
-    selectImage(currentImageIndex);
-}
-
-// Quantity control
-function increaseQuantity() {
-    const input = document.getElementById('pw-quantity-input');
-    const max = parseInt(input.getAttribute('max'));
-    const current = parseInt(input.value);
-    if (current < max) {
-        input.value = current + 1;
-    }
-}
-
-function decreaseQuantity() {
-    const input = document.getElementById('pw-quantity-input');
-    const current = parseInt(input.value);
-    if (current > 1) {
-        input.value = current - 1;
-    }
-}
-
-// Product carousel
-function scrollProductsLeft() {
-    const carousel = document.getElementById('productsCarousel');
-    carousel.scrollBy({ left: -300, behavior: 'smooth' });
-}
-
-function scrollProductsRight() {
-    const carousel = document.getElementById('productsCarousel');
-    carousel.scrollBy({ left: 300, behavior: 'smooth' });
-}
-
-// Action functions are now handled by parts.js
-
-function contactSeller(method) {
-    console.log('Contact seller via:', method);
-}
-
-function reportAd(partId) {
-    console.log('Report ad:', partId);
-}
-</script>
-{% endblock %}
-
-{% block extra_js %}
-<script src="{% static 'js/parts.js' %}"></script>
-{% endblock %}
+    
+    document.addEventListener("DOMContentLoaded", function() {
+        const navbarLinks = document.querySelectorAll('.navbar-dropdown-link');
+        navbarLinks.forEach(link => {
+            if (link.textContent.trim() === 'Signup') {
+                link.setAttribute('href', '#');
+                link.setAttribute('onclick', 'openSignupModal(); return false;');
+            }
+        });
+    });
+    </script>
+  </body>
+</html>

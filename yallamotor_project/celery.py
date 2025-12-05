@@ -1,5 +1,5 @@
 """
-Celery configuration for Cars Portal project.
+Celery configuration for CorporateDock project.
 """
 
 import os

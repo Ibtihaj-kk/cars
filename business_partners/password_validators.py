@@ -109,7 +109,7 @@ class StrongPasswordValidator:
             response = requests.get(
                 f'https://api.pwnedpasswords.com/range/{prefix}',
                 timeout=5,
-                headers={'User-Agent': 'Cars-Portal-Security-Check'}
+                headers={'User-Agent': 'Corporate-Dock-Security-Check'}
             )
             
             if response.status_code == 200:

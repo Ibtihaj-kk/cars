@@ -19,7 +19,7 @@ import io
 from parts.models import Part, Inventory, InventoryTransaction
 from business_partners.models import VendorProfile, BusinessPartner
 from business_partners.permissions import get_vendor_profile, vendor_required
-from parts.forms import InventoryForm
+from parts.forms import InventoryForm, PartForm
 
 
 @login_required
@@ -62,6 +62,25 @@ def vendor_inventory_list(request):
                 safety_stock__isnull=False,
                 quantity__lt=F('safety_stock')
             )
+        elif stock_status == 'dead_stock':
+            # Filter for dead stock - items not sold for over a month
+            one_month_ago = timezone.now() - timedelta(days=30)
+            dead_stock_part_ids = []
+            
+            for part in parts_queryset:
+                recent_sales = InventoryTransaction.objects.filter(
+                    inventory__part=part,
+                    transaction_type='sale',
+                    timestamp__gte=one_month_ago
+                ).exists()
+                
+                if not recent_sales and part.quantity > 0:
+                    dead_stock_part_ids.append(part.id)
+            
+            if dead_stock_part_ids:
+                parts_queryset = parts_queryset.filter(id__in=dead_stock_part_ids)
+            else:
+                parts_queryset = parts_queryset.none()
     
     # Category filter
     category_filter = request.GET.get('category', '')
@@ -115,6 +134,25 @@ def vendor_inventory_list(request):
         ))
     )
     
+    # Calculate dead stock - items not sold for over a month
+    one_month_ago = timezone.now() - timedelta(days=30)
+    dead_stock_parts = []
+    
+    for part in parts_queryset:
+        # Check if part has any sale transactions in the last month
+        recent_sales = InventoryTransaction.objects.filter(
+            inventory__part=part,
+            transaction_type='sale',
+            timestamp__gte=one_month_ago
+        ).exists()
+        
+        # If no recent sales and quantity > 0, consider it dead stock
+        if not recent_sales and part.quantity > 0:
+            dead_stock_parts.append(part.id)
+    
+    # Add dead stock count to stats
+    stock_stats['dead_stock'] = len(dead_stock_parts)
+    
     # Get categories and brands for filters
     categories = parts_queryset.values('category__id', 'category__name').distinct().order_by('category__name')
     brands = parts_queryset.values('brand__id', 'brand__name').distinct().order_by('brand__name')
@@ -137,7 +175,11 @@ def vendor_inventory_list(request):
         'sort_by': sort_by,
     }
     
-    return render(request, 'business_partners/vendor_inventory_list_standardized.html', context)
+    # Check if this is an HTMX request
+    if request.headers.get('HX-Request'):
+        return render(request, 'vendors/inventory_table.html', context)
+    
+    return render(request, 'vendors/inventory.html', context)
 
 
 @login_required
@@ -638,7 +680,6 @@ def vendor_inventory_alerts_json(request):
     ).count()
     
     total_alerts = out_of_stock + low_stock + below_safety_stock
-    
     return JsonResponse({
         'total_alerts': total_alerts,
         'out_of_stock': out_of_stock,
@@ -646,3 +687,104 @@ def vendor_inventory_alerts_json(request):
         'below_safety_stock': below_safety_stock,
         'has_alerts': total_alerts > 0
     })
+
+
+@login_required
+@vendor_required
+def add_part(request):
+    """
+    View for vendors to add new parts with draft/publish functionality.
+    """
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'You do not have vendor access.')
+        return redirect('home')
+    
+    business_partner = vendor_profile.business_partner
+    
+    if request.method == 'POST':
+        form = PartForm(request.POST, request.FILES)
+        if form.is_valid():
+            part = form.save(commit=False)
+            part.vendor = business_partner
+            part.save()
+            
+            # Create inventory record for the new part
+            Inventory.objects.create(
+                part=part,
+                stock=part.quantity,
+                reorder_level=10,
+                last_restock_date=timezone.now() if part.quantity > 0 else None
+            )
+            
+            if part.status == 'draft':
+                messages.success(request, f'Part "{part.material_description}" saved as draft successfully.')
+                return redirect('business_partners:vendor_inventory_list')
+            else:
+                messages.success(request, f'Part "{part.material_description}" published successfully.')
+                return redirect('business_partners:vendor_inventory_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = PartForm()
+    
+    return render(request, 'vendors/add_part.html', {
+        'form': form,
+        'vendor_profile': vendor_profile
+    })
+
+
+@login_required
+@vendor_required
+def add_part_htmx(request):
+    """
+    HTMX-compatible API endpoint for adding new parts.
+    Returns JSON response instead of redirecting.
+    """
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        return JsonResponse({
+            'success': False,
+            'error': 'You do not have vendor access.'
+        }, status=403)
+    
+    business_partner = vendor_profile.business_partner
+    
+    if request.method == 'POST':
+        form = PartForm(request.POST, request.FILES)
+        if form.is_valid():
+            part = form.save(commit=False)
+            part.vendor = business_partner
+            part.save()
+            
+            # Create inventory record for the new part
+            Inventory.objects.create(
+                part=part,
+                stock=part.quantity,
+                reorder_level=10,
+                last_restock_date=timezone.now() if part.quantity > 0 else None
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Part "{part.material_description}" saved successfully.',
+                'part_id': part.id,
+                'status': part.status,
+                'redirect_url': reverse('business_partners:vendor_inventory_list')
+            })
+        else:
+            # Return form errors in JSON format
+            errors = {}
+            for field, field_errors in form.errors.items():
+                errors[field] = [str(error) for error in field_errors]
+            
+            return JsonResponse({
+                'success': False,
+                'errors': errors,
+                'error_message': 'Please correct the errors below.'
+            }, status=400)
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Invalid request method.'
+    }, status=405)

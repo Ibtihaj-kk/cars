@@ -1,0 +1,121 @@
+{% load static %} <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corporate Dock - Sign In</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+        }
+        
+        .password-toggle {
+            cursor: pointer;
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+        }
+        
+        .password-toggle:hover {
+            color: #374151;
+        }
+        nav {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            background: white;
+            position: relative;
+            z-index: 50;
+            padding:15px;
+        }
+    </style>
+</head>
+<body class="bg-white min-h-screen">
+    <div class="flex flex-col md:flex-row h-screen">
+        <div class="w-full md:w-1/2 flex items-center justify-center p-8 md:p-16 relative">
+            <div class="absolute top-6 left-6">
+                <div class="text-white px-4 py-2"><a href="{% url 'home' %}">
+                    <img src="{% static 'images/logo.png' %}" alt="Corporate Dock" class="h-20"></a>
+                </div>
+            </div>
+            
+            <div class="w-full max-w-md mt-32">
+                <h2 class="text-4xl font-semibold text-gray-800 mb-8 mt-8">Sign In</h2>
+                
+                <!-- Vendor HTMX Login Form -->
+                {% include 'business_partners/htmx/vendor_login_form.html' %}
+                
+                <!-- Traditional Login Form (Hidden) -->
+                <div id="traditional-login" class="hidden">
+                    <!-- Traditional login form hidden completely -->
+                </div>
+
+
+                
+                <div class="text-center mt-4">
+                    <a href="#" class="text-black-600 hover:text-gray-800 text-sm font-medium transition-colors">
+                        Trouble Signing In?
+                    </a>
+                </div>
+                
+                <div class="flex items-center my-6">
+                    <div class="flex-grow border-t border-gray-300"></div>
+                    <span class="flex-shrink mx-4 text-gray-500 text-sm">Or</span>
+                    <div class="flex-grow border-t border-gray-300"></div>
+                </div>
+                
+                <div class="text-center">
+                    <a href="{% url 'business_partners:registration' %}" class="text-black-600 hover:text-gray-800 font-medium transition-colors">
+                        Create Account
+                    </a>
+                </div>
+                
+            </div>
+        </div>
+        
+        <div class="w-full md:w-1/2 bg-white flex items-center justify-center">
+            <div class="max-w-xlg w-full flex justify-center">
+                <img 
+                    src="https://purepng.com/public/uploads/large/51506279449pjpwvzyktfinnxu47jlnkhs1im0iucnp24uzehqzuspy9bzygj9fsm4awlglniknr8zviza8wjphqjzkjacvt17jcg0auyjvkexw.png" alt="Luxury Car" >
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Password show/hide functionality for traditional form (if elements exist)
+        document.addEventListener('DOMContentLoaded', function() {
+            const togglePassword = document.getElementById('togglePassword');
+            const password = document.getElementById('password');
+            
+            if (togglePassword && password) {
+                const eyeIcon = togglePassword.querySelector('i');
+                
+                togglePassword.addEventListener('click', function() {
+                    // Toggle the type attribute
+                    const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                    password.setAttribute('type', type);
+                    
+                    // Toggle the eye icon
+                    if (type === 'password') {
+                        eyeIcon.classList.remove('fa-eye-slash');
+                        eyeIcon.classList.add('fa-eye');
+                    } else {
+                        eyeIcon.classList.remove('fa-eye');
+                        eyeIcon.classList.add('fa-eye-slash');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

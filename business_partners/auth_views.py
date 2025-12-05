@@ -35,13 +35,25 @@ class VendorLoginView(View):
     template_name = 'business_partners/vendor_login.html'
     
     def get(self, request):
+        # If user is already authenticated, redirect them away from login page
         if request.user.is_authenticated:
             vendor_profile = get_vendor_profile(request.user)
             if vendor_profile and vendor_profile.is_approved:
+                # Approved vendor - redirect to dashboard
                 return redirect('business_partners:vendor_dashboard')
             elif vendor_profile:
+                # Vendor with profile but not approved - redirect to status page
                 return redirect('business_partners:vendor_registration_status')
+            else:
+                # Authenticated user but no vendor profile - redirect to dashboard or home
+                # This prevents regular users from accessing vendor login
+                if request.user.is_staff or request.user.is_superuser:
+                    return redirect('/admin/')
+                else:
+                    # Regular authenticated user - redirect to main site or profile
+                    return redirect('/')
         
+        # Not authenticated - show login form
         form = VendorLoginForm()
         return render(request, self.template_name, {'form': form})
     
@@ -86,6 +98,20 @@ class Vendor2FAVerifyView(View):
     template_name = 'business_partners/vendor_2fa_verify.html'
     
     def get(self, request):
+        # If user is already fully authenticated, redirect away from 2FA page
+        if request.user.is_authenticated:
+            vendor_profile = get_vendor_profile(request.user)
+            if vendor_profile and vendor_profile.is_approved:
+                return redirect('business_partners:vendor_dashboard')
+            elif vendor_profile:
+                return redirect('business_partners:vendor_registration_status')
+            else:
+                # Regular authenticated user
+                if request.user.is_staff or request.user.is_superuser:
+                    return redirect('/admin/')
+                else:
+                    return redirect('/')
+        
         # Check if user is in pre-2FA state
         if 'pre_2fa_user_id' not in request.session:
             return redirect('business_partners:vendor_login')
@@ -152,6 +178,9 @@ class Vendor2FASetupView(View):
     
     @method_decorator(login_required)
     def get(self, request):
+        # Already authenticated users should not access login-related pages
+        # This decorator ensures only authenticated users can access this view
+        # The login_required decorator will handle redirecting non-authenticated users
         vendor_profile = get_vendor_profile(request.user)
         
         if vendor_profile is None:
@@ -169,7 +198,7 @@ class Vendor2FASetupView(View):
         # Generate QR code
         totp_uri = pyotp.totp.TOTP(secret).provisioning_uri(
             name=request.user.email,
-            issuer_name='Cars Portal Vendor Portal'
+            issuer_name='CorporateDock Vendor Portal'
         )
         
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
@@ -229,6 +258,20 @@ class VendorPasswordResetRequestView(View):
     template_name = 'business_partners/vendor_password_reset_request.html'
     
     def get(self, request):
+        # If user is already authenticated, redirect them away from password reset
+        if request.user.is_authenticated:
+            vendor_profile = get_vendor_profile(request.user)
+            if vendor_profile and vendor_profile.is_approved:
+                return redirect('business_partners:vendor_dashboard')
+            elif vendor_profile:
+                return redirect('business_partners:vendor_registration_status')
+            else:
+                # Regular authenticated user
+                if request.user.is_staff or request.user.is_superuser:
+                    return redirect('/admin/')
+                else:
+                    return redirect('/')
+        
         form = VendorPasswordResetForm()
         return render(request, self.template_name, {'form': form})
     
@@ -259,11 +302,11 @@ class VendorPasswordResetRequestView(View):
                     )
                     
                     # Send reset email
-                    subject = 'Password Reset - Cars Portal Vendor Portal'
+                    subject = 'Password Reset - CorporateDock Vendor Portal'
                     html_message = render_to_string('business_partners/emails/vendor_password_reset.html', {
                         'user': user,
                         'reset_url': reset_url,
-                        'site_name': 'Cars Portal Vendor Portal'
+                        'site_name': 'CorporateDock Vendor Portal'
                     })
                     plain_message = strip_tags(html_message)
                     
@@ -350,7 +393,7 @@ def vendor_logout_view(request):
     """Vendor logout view"""
     logout(request)
     messages.success(request, 'You have been logged out successfully.')
-    return redirect('business_partners:vendor_login')
+    return redirect('login') 
 
 
 @login_required

@@ -16,7 +16,7 @@ body {
 .homepage-filters {
   background: #f8f9fa;
   padding: 0px 0 30px 0;
-  margin-top: 160px;
+  margin-top: 130px;
 }
 
 /* Filter Tabs */
@@ -82,11 +82,6 @@ body {
 
 .carousel {
   overflow: hidden;
-  display: none !important;
-}
-
-.carousel.active {
-  display: block !important;
 }
 
 .carousel-track {
@@ -367,127 +362,6 @@ body {
   background: #3d5f9a;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(77, 120, 188, 0.3);
-}
-
-/* Live Search Suggestions */
-.live-search-suggestions {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #e8eaed;
-  border-top: none;
-  border-radius: 0 0 8px 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.search-form {
-  position: relative;
-}
-
-.live-search-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f1f3f4;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.live-search-item:last-child {
-  border-bottom: none;
-}
-
-.live-search-item:hover,
-.live-search-item.active {
-  background-color: #f8f9fa;
-}
-
-.suggestion-main {
-  flex: 1;
-  text-align: left;
-}
-
-.suggestion-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 4px;
-  line-height: 1.3;
-}
-
-.suggestion-title mark {
-  background-color: #fff3cd;
-  color: #856404;
-  padding: 0 2px;
-  border-radius: 2px;
-}
-
-.suggestion-details {
-  font-size: 12px;
-  color: #666;
-  line-height: 1.2;
-}
-
-.suggestion-meta {
-  text-align: right;
-  margin-left: 12px;
-}
-
-.suggestion-price {
-  font-size: 14px;
-  font-weight: 700;
-  color: #4d78bc;
-  margin-bottom: 2px;
-}
-
-.suggestion-location {
-  font-size: 11px;
-  color: #888;
-}
-
-.live-search-loading,
-.live-search-error,
-.live-search-no-results {
-  padding: 16px;
-  text-align: center;
-  color: #666;
-  font-size: 14px;
-}
-
-.live-search-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.live-search-loading .loading-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #e8eaed;
-  border-top: 2px solid #4d78bc;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.live-search-error {
-  color: #dc3545;
-}
-
-.live-search-no-results {
-  color: #6c757d;
-  font-style: italic;
 }
 
 /* Filter Sections */

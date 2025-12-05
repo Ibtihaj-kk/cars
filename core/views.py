@@ -1,21 +1,109 @@
 """
 Core application views
 """
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login
+from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Avg
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.http import require_http_methods
 
 from .models import SystemMetric, DashboardWidget, ComplianceCheck
-from analytics.models import SalesMetric, VendorAnalytics
 from .audit_logging import audit_logger
+from users.models import UserRole
+from business_partners.permissions import get_vendor_profile
+from parts.cache import get_cached_categories, get_cached_brands, get_cached_popular_parts, get_cached_featured_parts
+from parts.models import Part, Category, Brand
+from vehicles.models import VehicleMake, VehicleModelTaxonomy, VehicleVariant
+from django.db.models import Q, Count, Sum, Avg, F, Prefetch
+from business_partners.models import BusinessPartner
 
 
 def home(request):
     """Home page view"""
-    return render(request, 'core/home.html')
+    context = {
+        'user': request.user if request.user.is_authenticated else None
+    }
+    return render(request, 'home/index.html', context)
+
+
+@csrf_protect
+@require_http_methods(["GET", "POST"])
+def custom_login_view(request):
+    """
+    Custom login view with role-based redirect logic.
+    Vendors/sellers are redirected to vendor dashboard, others to home with popup.
+    """
+    print(f"Login view called - Method: {request.method}")
+    
+    # If user is already authenticated, redirect them away from login page
+    if request.user.is_authenticated:
+        vendor_profile = get_vendor_profile(request.user)
+        if vendor_profile and vendor_profile.is_approved:
+            return redirect('business_partners:vendor_dashboard')
+        elif vendor_profile:
+            return redirect('business_partners:vendor_registration_status')
+        else:
+            # Regular authenticated user
+            if request.user.is_staff or request.user.is_superuser:
+                return redirect('/admin/')
+            else:
+                return redirect('home')
+    
+    if request.method == 'POST':
+        email = request.POST.get('username', '').strip().lower()
+        password = request.POST.get('password', '')
+        
+        print(f"Login attempt - Email: {email}, Password: {'*' * len(password) if password else 'empty'}")
+        
+        if not email or not password:
+            messages.error(request, 'Email and password are required.')
+            return render(request, 'home/login.html')
+        
+        # Authenticate user
+        user = authenticate(request, username=email, password=password)
+        print(f"Authentication result: {user is not None}")
+        
+        if user is not None:
+            login(request, user)
+            print(f"User logged in successfully: {user.email}")
+            
+            # Check if user is vendor or seller
+            is_vendor = False
+            
+            # Check user role
+            if hasattr(user, 'role') and user.role in [UserRole.SELLER, UserRole.ADMIN]:
+                is_vendor = True
+                print(f"User role indicates vendor: {user.role}")
+            
+            # Check if user has vendor profile
+            vendor_profile = get_vendor_profile(user)
+            if vendor_profile and vendor_profile.is_approved:
+                is_vendor = True
+                print(f"User has approved vendor profile")
+            
+            # Debug logging
+            print(f"User {user.email} logged in. Role: {getattr(user, 'role', 'unknown')}, Vendor profile: {vendor_profile is not None}, Is vendor: {is_vendor}")
+            
+            # Redirect based on role
+            if is_vendor:
+                messages.success(request, f'Welcome back, {user.get_full_name() or user.email}!')
+                return redirect('business_partners:vendor_dashboard')
+            else:
+                # Show popup message for non-vendors
+                messages.info(request, 'Welcome! You are logged in as a regular user.')
+                return redirect('home')
+        else:
+            messages.error(request, 'Invalid email or password.')
+            print(f"Failed login attempt for email: {email}")
+    
+    # GET request - show login form
+    print("Showing login form")
+    return render(request, 'home/login.html')
 
 
 @login_required
@@ -23,7 +111,7 @@ def dashboard(request):
     """Main dashboard view"""
     context = {
         'user': request.user,
-        'dashboard_title': 'YallaMotor Dashboard'
+        'dashboard_title': 'CorporateDock Dashboard'
     }
     return render(request, 'core/dashboard.html', context)
 
@@ -61,3 +149,5 @@ def compliance_dashboard(request):
     }
     
     return render(request, 'core/compliance_dashboard.html', context)
+
+

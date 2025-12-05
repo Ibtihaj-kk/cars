@@ -607,14 +607,25 @@ class Part(models.Model):
     )
     
     # Vehicle Compatibility
-    vehicle_variants = models.ManyToManyField(
-        'vehicles.VehicleVariant',
-        blank=True,
-        related_name='parts',
-        help_text="Compatible vehicle variants for this part"
-    )
+    # vehicle_variants = models.ManyToManyField(  # Disabled - vehicles app not in INSTALLED_APPS
+    #     'vehicles.VehicleVariant',
+    #     blank=True,
+    #     related_name='parts',
+    #     help_text="Compatible vehicle variants for this part"
+    # )
     
     # Status and Metadata
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+        ('archived', 'Archived'),
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='draft',
+        help_text="Current status of the part listing"
+    )
     is_active = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)
     view_count = models.PositiveIntegerField(default=0)
@@ -638,6 +649,7 @@ class Part(models.Model):
             models.Index(fields=['vendor'], name='parts_part_vendor_idx'),
             
             # Status and filtering indexes
+            models.Index(fields=['status'], name='parts_part_status_idx'),
             models.Index(fields=['is_active'], name='parts_part_is_active_idx'),
             models.Index(fields=['is_featured'], name='parts_part_is_featured_idx'),
             models.Index(fields=['price'], name='parts_part_price_idx'),
@@ -646,14 +658,22 @@ class Part(models.Model):
             models.Index(fields=['created_at'], name='parts_part_created_at_idx'),
             
             # Composite indexes for common query patterns
+            models.Index(fields=['status', '-created_at'], name='parts_part_status_created_idx'),
             models.Index(fields=['is_active', '-created_at'], name='parts_part_active_created_idx'),
             models.Index(fields=['category', 'brand'], name='parts_part_cat_brand_idx'),
+            models.Index(fields=['category', 'status'], name='parts_part_cat_status_idx'),
             models.Index(fields=['category', 'is_active'], name='parts_part_cat_active_idx'),
+            models.Index(fields=['brand', 'status'], name='parts_part_brand_status_idx'),
             models.Index(fields=['brand', 'is_active'], name='parts_part_brand_active_idx'),
+            models.Index(fields=['dealer', 'status'], name='parts_part_dealer_status_idx'),
             models.Index(fields=['dealer', 'is_active'], name='parts_part_dealer_active_idx'),
+            models.Index(fields=['vendor', 'status'], name='parts_part_vendor_status_idx'),
             models.Index(fields=['vendor', 'is_active'], name='parts_part_vendor_active_idx'),
+            models.Index(fields=['status', 'price'], name='parts_part_status_price_idx'),
             models.Index(fields=['is_active', 'price'], name='parts_part_active_price_idx'),
+            models.Index(fields=['status', 'quantity'], name='parts_part_status_qty_idx'),
             models.Index(fields=['is_active', 'quantity'], name='parts_part_active_qty_idx'),
+            models.Index(fields=['is_featured', 'status'], name='parts_part_featured_status_idx'),
             models.Index(fields=['is_featured', 'is_active'], name='parts_part_featured_active_idx'),
             models.Index(fields=['category', 'price'], name='parts_part_cat_price_idx'),
             models.Index(fields=['brand', 'price'], name='parts_part_brand_price_idx'),

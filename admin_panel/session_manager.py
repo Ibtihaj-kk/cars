@@ -1,5 +1,5 @@
 """
-Admin session management for Cars Portal admin panel.
+Admin session management for CorporateDock admin panel.
 Handles session security, concurrent sessions, and automatic logout.
 """
 import logging

@@ -11,6 +11,7 @@ from . import vendor_order_views
 from . import vendor_inventory_views
 from . import order_processing_views
 from . import api_views
+from . import htmx_views
 from .stock_monitoring_api import stock_monitoring_api
 
 app_name = 'business_partners'
@@ -51,6 +52,10 @@ urlpatterns = [
          views.VendorRegistrationStartView.as_view(), 
          name='vendor_registration_start'),
     
+    path('vendor/register/single/', 
+         views.VendorSinglePageRegistrationView.as_view(), 
+         name='registration'),
+    
     path('vendor/register/step1/', 
          views.VendorRegistrationStep1View.as_view(), 
          name='vendor_registration_step1'),
@@ -82,6 +87,23 @@ urlpatterns = [
     path('vendor/register/submitted/', 
          views.VendorRegistrationSubmittedView.as_view(), 
          name='vendor_registration_submitted'),
+    
+    path('vendor/register/success/', 
+         views.VendorRegistrationSuccessView.as_view(), 
+         name='vendor_registration_success'),
+    
+    # HTMX Registration Endpoints
+    path('htmx/registration/validate/', 
+         htmx_views.vendor_registration_validate_htmx, 
+         name='vendor_registration_validate_htmx'),
+    
+    path('htmx/registration/validate-step/<int:step_number>/', 
+         htmx_views.vendor_registration_validate_step_htmx, 
+         name='vendor_registration_validate_step_htmx'),
+    
+    path('htmx/registration/submit/', 
+         htmx_views.vendor_registration_submit_htmx, 
+         name='vendor_registration_submit_htmx'),
     
     # AJAX Endpoints
     path('ajax/validate-iban/', 
@@ -116,8 +138,12 @@ urlpatterns = [
          name='vendor_parts_list'),
     
     path('vendor/parts/create/', 
-         vendor_views.vendor_part_create, 
+         vendor_inventory_views.add_part, 
          name='vendor_part_create'),
+    
+    path('vendor/parts/create/htmx/', 
+         vendor_inventory_views.add_part_htmx, 
+         name='vendor_part_create_htmx'),
     
     path('vendor/parts/<int:part_id>/', 
          vendor_views.vendor_part_detail, 

@@ -73,11 +73,11 @@ class UserRegistrationView(generics.CreateAPIView):
         html_message = f'''
         <html>
             <body>
-                <h2>Welcome to Cars Portal!</h2>
+                <h2>Welcome to CorporateDock!</h2>
                 <p>Thank you for registering. Please click the link below to verify your email address:</p>
                 <p><a href="{verification_url}">Verify Email</a></p>
                 <p>This link will expire in 24 hours.</p>
-                <p>If you did not register for a Cars Portal account, please ignore this email.</p>
+                <p>If you did not register for a CorporateDock account, please ignore this email.</p>
             </body>
         </html>
         '''
@@ -579,7 +579,7 @@ class ProfileUpdateView(generics.UpdateAPIView):
         html_message = f'''
         <html>
             <body>
-                <h2>Email Address Change - Cars Portal</h2>
+                <h2>Email Address Change - CorporateDock</h2>
                 <p>You have updated your email address. Please click the link below to verify your new email:</p>
                 <p><a href="{verification_url}">Verify New Email</a></p>
                 <p>This link will expire in 24 hours.</p>

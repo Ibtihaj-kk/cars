@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('parts', '0010_part_account_assignment_group_and_more'),
-        ('vehicles', '0002_vehiclemake_vehiclemodeltaxonomy_partcategory_and_more'),
+        # ('vehicles', '0002_vehiclemake_vehiclemodeltaxonomy_partcategory_and_more'),  # Disabled - vehicles app not in INSTALLED_APPS
     ]
 
     operations = [

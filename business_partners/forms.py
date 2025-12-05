@@ -130,7 +130,7 @@ class VendorPartForm(forms.ModelForm):
             'valuation_class', 'price_control_indicator',
             
             # ==================== COMPATIBILITY SECTION ====================
-            'vehicle_variants',
+            # 'vehicle_variants',  # Disabled - vehicles app not in INSTALLED_APPS
             
             # ==================== ADVANCED SECTION ====================
             'material_type', 'material_group', 'external_material_group', 'division',
@@ -154,11 +154,12 @@ class VendorPartForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         # Filter vehicle variants to show only active ones
-        if 'vehicle_variants' in self.fields:
-            from vehicles.models import VehicleVariant
-            self.fields['vehicle_variants'].queryset = VehicleVariant.objects.filter(
-                is_active=True
-            ).select_related('model__make').order_by('model__make__name', 'model__name', 'name')
+        # Disabled - vehicles app not in INSTALLED_APPS
+        # if 'vehicle_variants' in self.fields:
+        #     from vehicles.models import VehicleVariant
+        #     self.fields['vehicle_variants'].queryset = VehicleVariant.objects.filter(
+        #         is_active=True
+        #     ).select_related('model__make').order_by('model__make__name', 'model__name', 'name')
             
         # Set initial values for new parts
         if not self.instance.pk:
@@ -872,7 +873,7 @@ class VendorPartForm(forms.ModelForm):
             'valuation_class', 'price_control_indicator',
             
             # COMPATIBILITY SECTION
-            'vehicle_variants',
+            # 'vehicle_variants',  # Disabled - vehicles app not in INSTALLED_APPS
             
             # ADVANCED SECTION
             'material_type', 'material_group', 'division', 'external_material_group',
@@ -1067,10 +1068,10 @@ class VendorPartForm(forms.ModelForm):
             }),
             
             # ==================== COMPATIBILITY SECTION ====================
-            'vehicle_variants': VehicleVariantMultiSelectWidget(attrs={
-                'data-section': 'compatibility',
-                'data-placeholder': 'Search and select compatible vehicle variants...',
-            }),
+            # 'vehicle_variants': VehicleVariantMultiSelectWidget(attrs={  # Disabled - vehicles app not in INSTALLED_APPS
+            #     'data-section': 'compatibility',
+            #     'data-placeholder': 'Search and select compatible vehicle variants...',
+            # }),
             
             # ==================== ADVANCED SECTION ====================
             'material_type': forms.TextInput(attrs={

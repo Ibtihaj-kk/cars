@@ -16,7 +16,7 @@ class PartAdminForm(forms.ModelForm):
     
     class Meta:
         model = Part
-        fields = '__all__'  # Include all model fields
+        exclude = ['vehicle_variants']  # Exclude fields referencing disabled apps
         widgets = {
             'slug': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -79,11 +79,209 @@ class PartForm(forms.ModelForm):
     class Meta:
         model = Part
         fields = [
+            # Core Product Data
+            'parts_number', 'material_description', 'material_description_ar',
+            'manufacturer_part_number', 'manufacturer_oem_number', 'old_material_number',
+            'material_type', 'material_group', 'external_material_group', 'division',
+            'industry_sector',
+            
+            # Pricing & Sales Data
+            'standard_price', 'moving_average_price', 'price_unit_peinh',
+            'valuation_class', 'valuation_category', 'price_control_indicator',
+            'sales_organization', 'distribution_channel', 'profit_center',
+            'tax_classification_material', 'account_assignment_group', 'item_category_group',
+            
+            # Inventory & Logistics
+            'plant', 'storage_location', 'warehouse_number', 'storage_bin',
+            'base_unit_of_measure', 'gross_weight', 'net_weight', 'size_dimensions',
+            'minimum_order_quantity', 'transportation_group', 'loading_group', 'abc_indicator',
+            
+            # Planning (MRP)
+            'mrp_type', 'mrp_controller', 'procurement_type', 'reorder_point',
+            'safety_stock', 'minimum_safety_stock', 'planned_delivery_time_days',
+            'goods_receipt_processing_time_days', 'total_replenishment_lead_time',
+            'purchasing_group', 'lot_size', 'availability_check',
+            
+            # Legacy fields for backward compatibility
             'name', 'description', 'sku', 'slug', 'category', 'brand', 
             'price', 'quantity', 'image', 'image_url', 'weight', 
-            'dimensions', 'warranty_period', 'is_active', 'is_featured'
+            'dimensions', 'warranty_period', 'is_active', 'is_featured',
+            
+            # Status field for draft functionality
+            'status'
         ]
         widgets = {
+            # Core Product Data widgets
+            'parts_number': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'INT-001-X'
+            }),
+            'material_description': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'e.g. Front Brake Pads Ceramic'
+            }),
+            'material_description_ar': forms.TextInput(attrs={
+                'class': 'form-input text-right',
+                'placeholder': 'وصف المادة'
+            }),
+            'manufacturer_part_number': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'OEM-123456789...'
+            }),
+            'manufacturer_oem_number': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Original Equipment Number'
+            }),
+            'old_material_number': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'material_type': forms.Select(attrs={
+                'class': 'form-input bg-white'
+            }),
+            'material_group': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'external_material_group': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'division': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'industry_sector': forms.Select(attrs={
+                'class': 'form-input bg-white'
+            }),
+            
+            # Pricing & Sales Data widgets
+            'standard_price': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'step': '0.01',
+                'placeholder': '0.00'
+            }),
+            'moving_average_price': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'step': '0.01',
+                'placeholder': '0.00'
+            }),
+            'price_unit_peinh': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'value': '1'
+            }),
+            'valuation_class': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'valuation_category': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'price_control_indicator': forms.Select(attrs={
+                'class': 'form-input bg-white'
+            }),
+            'sales_organization': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'distribution_channel': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'profit_center': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'tax_classification_material': forms.Select(attrs={
+                'class': 'form-input bg-white'
+            }),
+            'account_assignment_group': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'item_category_group': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            
+            # Inventory & Logistics widgets
+            'plant': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Code'
+            }),
+            'storage_location': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Code'
+            }),
+            'warehouse_number': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'storage_bin': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'base_unit_of_measure': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'EA / PC'
+            }),
+            'gross_weight': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'kg'
+            }),
+            'net_weight': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'kg'
+            }),
+            'size_dimensions': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'L x W x H'
+            }),
+            'minimum_order_quantity': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'value': '1'
+            }),
+            'transportation_group': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'loading_group': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'abc_indicator': forms.Select(attrs={
+                'class': 'form-input bg-white'
+            }),
+            
+            # Planning (MRP) widgets
+            'mrp_type': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'PD / ND'
+            }),
+            'mrp_controller': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'procurement_type': forms.Select(attrs={
+                'class': 'form-input bg-white'
+            }),
+            'reorder_point': forms.NumberInput(attrs={
+                'class': 'form-input'
+            }),
+            'safety_stock': forms.NumberInput(attrs={
+                'class': 'form-input'
+            }),
+            'minimum_safety_stock': forms.NumberInput(attrs={
+                'class': 'form-input'
+            }),
+            'planned_delivery_time_days': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Days'
+            }),
+            'goods_receipt_processing_time_days': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Days'
+            }),
+            'total_replenishment_lead_time': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Days'
+            }),
+            'purchasing_group': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            'lot_size': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'EX / FX'
+            }),
+            'availability_check': forms.TextInput(attrs={
+                'class': 'form-input'
+            }),
+            
             'description': forms.Textarea(attrs={
                 'rows': 4, 
                 'class': 'form-control',
@@ -280,56 +478,38 @@ class PartSearchForm(forms.Form):
         })
     )
     
-    # Vehicle compatibility filters
-    vehicle_make = forms.ModelChoiceField(
-        queryset=None,  # Will be set dynamically
-        required=False,
-        empty_label="All Makes",
-        widget=forms.Select(attrs={
-            'class': 'form-select',
-            'id': 'vehicle-make-filter',
-            'hx-get': '',
-            'hx-trigger': 'change',
-            'hx-target': '#vehicle-model-filter',
-            'hx-indicator': '#loading-indicator'
-        })
-    )
-    
-    vehicle_model = forms.ModelChoiceField(
-        queryset=None,  # Will be set dynamically based on make
-        required=False,
-        empty_label="All Models",
-        widget=forms.Select(attrs={
-            'class': 'form-select',
-            'id': 'vehicle-model-filter',
-            'hx-get': '',
-            'hx-trigger': 'change',
-            'hx-target': '#parts-results',
-            'hx-indicator': '#loading-indicator'
-        })
-    )
+    # Vehicle compatibility filters - Disabled, vehicles app not in INSTALLED_APPS
+    # vehicle_make = forms.ModelChoiceField(
+    #     queryset=None,  # Will be set dynamically
+    #     required=False,
+    #     empty_label="All Makes",
+    #     widget=forms.Select(attrs={
+    #         'class': 'form-select',
+    #         'id': 'vehicle-make-filter',
+    #         'hx-get': '',
+    #         'hx-trigger': 'change',
+    #         'hx-target': '#vehicle-model-filter',
+    #         'hx-indicator': '#loading-indicator'
+    #     })
+    # )
+    # 
+    # vehicle_model = forms.ModelChoiceField(
+    #     queryset=None,  # Will be set dynamically based on make
+    #     required=False,
+    #     empty_label="All Models",
+    #     widget=forms.Select(attrs={
+    #         'class': 'form-select',
+    #         'id': 'vehicle-model-filter',
+    #         'hx-get': '',
+    #         'hx-trigger': 'change',
+    #         'hx-target': '#parts-results',
+    #         'hx-indicator': '#loading-indicator'
+    #     })
+    # )
     
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        
-        # Import here to avoid circular imports
-        from vehicles.models import VehicleMake, VehicleModelTaxonomy
-        
-        # Set vehicle make queryset
-        self.fields['vehicle_make'].queryset = VehicleMake.objects.filter(is_active=True)
-        
-        # Set vehicle model queryset based on selected make
-        if self.data.get('vehicle_make'):
-            try:
-                make_id = int(self.data.get('vehicle_make'))
-                self.fields['vehicle_model'].queryset = VehicleModelTaxonomy.objects.filter(
-                    make_id=make_id, is_active=True
-                )
-            except (ValueError, TypeError):
-                self.fields['vehicle_model'].queryset = VehicleModelTaxonomy.objects.none()
-        else:
-            self.fields['vehicle_model'].queryset = VehicleModelTaxonomy.objects.none()
 
 
 class VendorPartSearchForm(PartSearchForm):

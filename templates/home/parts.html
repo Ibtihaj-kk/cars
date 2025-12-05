@@ -1,0 +1,1194 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Auto Parts | CorporateDock</title>
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <link href="//cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet"/>
+
+    <script type="module" src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/navbar.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/parts.css' %}" />
+    
+    <!-- HTMX for live search and filtering -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <style>
+        /* --- THEME VARIABLES (Black, White, Grey) --- */
+        :root {
+            --primary-color: #000000;
+            --text-main: #333333;
+            --text-light: #666666;
+            --bg-grey: #f4f4f4;
+            --border-color: #dddddd;
+            --placeholder-bg: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: white;
+            color: var(--text-main);
+        }
+
+        .parts-container {
+            max-width: 1400px;
+            margin: 60px auto;
+            padding: 20px;
+        }
+
+        /* --- BUTTONS (Monochrome Theme) --- */
+        .btn-primary {
+            background-color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+            color: white !important;
+        }
+        .btn-primary:hover {
+            background-color: #333333 !important;
+        }
+
+        .btn-outline-secondary {
+            color: var(--text-main) !important;
+            border-color: var(--border-color) !important;
+            background: white !important;
+        }
+        .btn-outline-secondary:hover, .btn-outline-secondary.active {
+            background-color: #e0e0e0 !important;
+            color: black !important;
+            border-color: #999 !important;
+        }
+
+        /* --- SIDEBAR --- */
+        .filters-sidebar {
+            background: white;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            position: sticky;
+            top: 20px;
+            height: calc(100vh - 40px); 
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 900;
+        }
+
+        .sidebar-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: white;
+            flex-shrink: 0;
+        }
+
+        #filterForm {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar-scroll-area {
+            padding: 0 20px;
+            overflow-y: auto;
+            flex: 1; 
+            scrollbar-width: thin;
+        }
+
+        .sidebar-footer {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid var(--border-color);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .filter-section {
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .filter-header {
+            padding: 15px 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            user-select: none;
+        }
+        .filter-header:hover { color: black; }
+
+        .filter-header i.chevron {
+            transition: transform 0.3s ease;
+            font-size: 12px;
+            color: #999;
+        }
+        .filter-header.active i.chevron { transform: rotate(180deg); }
+
+        .filter-body {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s ease;
+        }
+        .filter-body.open {
+            max-height: 500px;
+            opacity: 1;
+            padding-bottom: 20px;
+        }
+
+        .price-inputs { display: flex; gap: 10px; }
+        .price-inputs input { flex: 1; font-size: 13px; border-radius: 2px; }
+
+        /* --- SEARCH BAR --- */
+        .search-sort-bar {
+            background: white;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .input-group-text { background: white; border-right: none; color: #999; }
+        .form-control { border-left: none; box-shadow: none !important; border-color: var(--border-color); }
+        .form-control:focus { border-color: black; }
+
+        /* --- VIEW CONTROLS --- */
+        .view-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        /* --- GRID VIEW (Modern Square Cards) --- */
+        .parts-grid {
+                display: grid;
+                /* Creates a 3-column layout on desktop (approx 33% width each) */
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 24px; /* Increased gap for a cleaner look */
+        }
+
+        .part-card {
+            background: #ffffff;
+            border: 1px solid #f0f0f0; /* Very subtle border */
+            border-radius: 8px; /* Slightly more rounded */
+            overflow: hidden;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column; /* Stack vertically (Square look) */
+            height: 420px; /* Fixed height for consistent square shape */
+            position: relative;
+        }
+
+        .part-card:hover { 
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.08); /* Modern diffuse shadow */
+            border-color: transparent;
+        }
+
+        /* Image Area */
+        .part-image-container {
+            width: 100%;
+            height: 55%; /* Takes top half */
+            background-color: #f8f9fa; /* Light grey background */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .part-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Ensures image fills square without distortion */
+            transition: transform 0.5s ease;
+        }
+
+        .part-card:hover .part-image-container img {
+            transform: scale(1.05); /* Subtle zoom on hover */
+        }
+
+        .no-photo-text {
+            color: #ccc;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Content Area */
+        .part-content {
+            width: 100%;
+            height: 45%; /* Bottom half */
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: white;
+        }
+
+        .part-header {
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+
+        .part-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #222; /* Darker black */
+            margin-bottom: 6px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-decoration: none;
+        }
+
+        .part-subtitle {
+            font-size: 13px;
+            color: #777; /* Grey text */
+            font-weight: 500;
+        }
+
+        .part-price {
+            font-size: 20px;
+            font-weight: 800; /* Extra bold */
+            color: #000; /* Pure black */
+            letter-spacing: -0.5px;
+        }
+
+        .part-meta {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+            font-family: monospace; /* Technical look for Part # */
+        }
+
+        .part-actions {
+            display: none;
+        }
+
+        /* Badges (Modern Pill Shape) */
+        .status-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #000;
+            font-size: 11px;
+            border-radius: 20px; /* Pill shape */
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 2;
+        }
+
+        /* --- LIST VIEW (Table Style - Like Image 1) --- */
+        
+        /* Table Header (Hidden in Grid) */
+        .list-header {
+            display: none;
+            padding: 10px 15px;
+            background: white;
+            border-bottom: 2px solid #eee;
+            font-weight: bold;
+            color: #555;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        .list-header > div {
+            flex: 1;
+            padding: 0 10px;
+        }
+
+        .parts-grid.list-view {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            background: white;
+            border-radius: 4px;
+        }
+
+        /* Show Header in List View */
+        .parts-grid.list-view + .pagination-custom { margin-top: 20px; } /* spacing fix */
+
+        .parts-grid.list-view .part-card {
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr;
+            height: auto;
+            border: none;
+            border-bottom: 1px solid #eee;
+            border-radius: 0;
+            align-items: center;
+            padding: 10px 5px;
+            background: white;
+        }
+        .parts-grid.list-view .part-card:hover {
+            background-color: #f9f9f9;
+        }
+
+        /* Hide Image in List View */
+        .parts-grid.list-view .part-image-container {
+            display: none;
+        }
+
+        .parts-grid.list-view .part-content {
+            width: 100%;
+            display: contents; /* Flattens the div to let children sit in grid */
+            padding: 0;
+        }
+
+        /* Reset styles for List View Cells */
+        .parts-grid.list-view .part-header,
+        .parts-grid.list-view .part-title,
+        .parts-grid.list-view .part-subtitle,
+        .parts-grid.list-view .part-price,
+        .parts-grid.list-view .status-badge {
+            display: block;
+            border: none;
+            margin: 0;
+            padding: 0 10px;
+            font-size: 13px;
+            font-weight: 400;
+            color: #444;
+        }
+
+        .parts-grid.list-view .part-title {
+            color: #3498db; /* Link color in list view */
+            font-weight: 500;
+        }
+        
+        .parts-grid.list-view .part-meta { display: none; } /* Hide extra meta in list */
+
+        /* Show/hide grid/list content based on view */
+        .grid-view-content { display: block; }
+        .list-view-content { display: none; }
+        .parts-grid.list-view .grid-view-content { display: none; }
+        .parts-grid.list-view .list-view-content { 
+            display: flex; 
+            width: 100%;
+            align-items: center;
+        }
+
+        /* List view cell styling */
+        .list-cell {
+            padding: 0 10px;
+            font-size: 13px;
+            color: #444;
+            flex: 1;
+        }
+        .list-cell.model-name { font-weight: 500; color: #3498db; }
+        .list-cell.make { color: #666; }
+        .list-cell.part-number { font-family: monospace; font-size: 12px; }
+        .list-cell.price { font-weight: 500; color: #2c3e50; }
+        .list-cell.stock { text-align: center; }
+
+        @media (max-width: 768px) {
+            .filters-sidebar { position: static; height: auto; max-height: none; }
+            .parts-grid.list-view .part-card { display: flex; flex-direction: column; height: auto; padding: 15px; align-items: flex-start; }
+            .parts-grid.list-view .part-content { display: block; width: 100%; }
+            .list-header { display: none !important; }
+        }
+
+        /* ========================================= */
+        /* SIGNUP MODAL STYLES (ADDED)               */
+        /* ========================================= */
+        .signup-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            display: none; /* Hidden by default */
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .signup-modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .signup-modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            position: relative;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+            border: 1px solid #f3f4f6;
+        }
+
+        .signup-modal-overlay.active .signup-modal-content {
+            transform: scale(1);
+        }
+
+        .signup-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        .signup-close-btn:hover { background: #f3f4f6; }
+
+        .signup-title {
+            text-align: center;
+            font-size: 1.875rem;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.025em;
+        }
+
+        .signup-subtitle {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+
+        .signup-options { display: flex; flex-direction: column; gap: 1rem; }
+
+        .signup-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 1.25rem 1.5rem;
+            border-radius: 1rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 2px solid;
+        }
+
+        /* Individual Button */
+        .signup-option.individual {
+            border-color: black;
+            background: white;
+            color: black;
+        }
+        .signup-option.individual:hover {
+            background: black;
+            color: white;
+        }
+        .signup-option.individual .icon-box {
+            background: #f3f4f6;
+            color: black;
+        }
+        .signup-option.individual:hover .icon-box {
+            background: #374151;
+            color: white;
+        }
+
+        /* Business Button */
+        .signup-option.business {
+            border-color: black;
+            background: black;
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .signup-option.business:hover {
+            background: white;
+            color: black;
+            border-color: black;
+        }
+        .signup-option.business .icon-box {
+            background: #1f2937;
+            color: white;
+        }
+        .signup-option.business:hover .icon-box {
+            background: #f3f4f6;
+            color: black;
+        }
+
+        .signup-option .left-content { display: flex; align-items: center; gap: 1rem; }
+        .icon-box {
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        .option-text { font-weight: 700; font-size: 1.125rem; }
+        
+        .signup-option .arrow-icon {
+            width: 20px;
+            height: 20px;
+            transition: transform 0.3s;
+        }
+        .signup-option:hover .arrow-icon { transform: translateX(4px); }
+        
+        .pagination .page-link {
+            color: #000000;
+            border: 1px solid #dee2e6;
+            margin: 0 2px;
+        }
+        
+        .pagination .page-link:hover {
+            background-color: #000000;
+            color: white;
+            border-color: #757575;
+        }
+        
+        .pagination .page-item.active .page-link {
+            background-color: #000000;
+            border-color: #757575;
+            color: rgb(255, 255, 255);
+        }
+        
+        .pagination-info {
+            margin-top: 1rem;
+            font-size: 0.875rem;
+        }
+    </style>
+  </head>
+  <body>
+    <button class="mobile-menu-toggle" id="mobileMenuToggle"><span></span><span></span><span></span></button>
+    <div class="navbar-top-header">
+      <div class="navbar-logo">
+        <a href="{% url 'home' %}">
+          <img src="{% static 'images/logo.png' %}" alt="CorporateDock Logo"/>
+        </a>
+      </div>
+      <div class="navbar-right-info">
+        <span class="navbar-phone-info">
+          <i class="fa-solid fa-phone"></i>
+          <span class="navbar-phone-number">+92-333-3610109</span>
+        </span>
+        <span class="navbar-divider">|</span>
+        <a href="#" class="navbar-cart"><ion-icon name="cart"></ion-icon></a>
+
+        <div class="navbar-user-profile-dropdown">
+          <div class="navbar-profile-trigger">
+            <div class="navbar-profile-icon">
+              <i class="fa-solid fa-user"></i>
+            </div>
+            <i class="fa-solid fa-chevron-down navbar-dropdown-arrow"></i>
+          </div>
+          <div class="navbar-dropdown-menu">
+              {% if user.is_authenticated %}
+                {# <a href="{% url 'admin_panel:dashboard' %}" class="navbar-dropdown-link">Dashboard</a> #}
+                {# Disabled - admin_panel app not in INSTALLED_APPS #}
+                <span class="navbar-dropdown-divider">|</span>
+                <a href="{% url 'logout' %}" class="navbar-dropdown-link">Logout</a>
+              {% else %}
+                <a href="{% url 'login' %}" class="navbar-dropdown-link">Login</a>
+                <span class="navbar-dropdown-divider">|</span>
+                <a href="#" class="navbar-dropdown-link" onclick="openSignupModal(); return false;">Signup</a>
+              {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay">
+      <div class="mobile-menu-content">
+        <div class="mobile-menu-header">
+          <div class="mobile-logo">
+            <a href="{% url 'home' %}">
+                <img src="{% static 'images/logo.png' %}" alt="CorporateDock Logo"/>
+            </a>
+          </div>
+          <button class="mobile-menu-close" id="mobileMenuClose"></button>
+        </div>
+        <div class="mobile-menu-items">
+            </div>
+      </div>
+    </div>
+
+    <main>
+        <div class="parts-container">
+            
+            <div class="search-sort-bar">
+                <form method="GET" class="row g-3" id="searchForm">
+                    <div class="col-12">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" name="search" value="{{ search_query }}" placeholder="Search parts..." hx-get="{% url 'parts:part_list' %}" hx-trigger="keyup changed delay:500ms" hx-target="#productsContainer" hx-push-url="true">
+                            <button type="submit" class="btn btn-primary px-4">Search</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-3">
+                    <div class="filters-sidebar">
+                        <div class="sidebar-header d-flex justify-content-between align-items-center">
+                            <h5 class="filter-title mb-0" style="font-size:16px;">Filter Sets</h5>
+                            <button type="button" class="btn btn-sm text-muted" 
+                                    onclick="document.getElementById('filterForm').reset();" 
+                                    hx-get="{% url 'parts:part_list' %}" 
+                  hx-target="#parts-results" 
+                  hx-push-url="true"
+                  hx-indicator="#loading-indicator">
+              Reset
+                            </button>
+                        </div>
+                        
+                        <form method="GET" id="filterForm" 
+                              hx-get="{% url 'parts:part_list' %}" 
+                              hx-target="#parts-results" 
+                              hx-push-url="true"
+                              hx-indicator="#loading-indicator">
+                            <div class="sidebar-scroll-area">
+
+                                <div class="filter-section">
+                                    <div class="filter-header" onclick="toggleFilter(this)">
+                                        <span>Part #</span>
+                                        <i class="fas fa-chevron-down chevron"></i>
+                                    </div>
+                                    <div class="filter-body">
+                                        <input type="text" class="form-control form-control-sm" name="part_number" value="{{ current_part_number }}" placeholder="Search Part #" 
+                                               hx-get="{% url 'parts:part_list' %}" 
+                                               hx-target="#parts-results" 
+                                               hx-push-url="true"
+                                               hx-indicator="#loading-indicator"
+                                               hx-trigger="keyup changed delay:500ms">
+                                    </div>
+                                </div>
+                                
+                                <div class="filter-section">
+                                    <div class="filter-header" onclick="toggleFilter(this)">
+                                        <span>Category</span>
+                                        <i class="fas fa-chevron-down chevron"></i>
+                                    </div>
+                                    <div class="filter-body open">
+                                        <select class="form-select form-select-sm" name="category" 
+                                                hx-get="{% url 'parts:part_list' %}" 
+                                                hx-target="#parts-results" 
+                                                hx-push-url="true"
+                                                hx-indicator="#loading-indicator"
+                                                hx-trigger="change">
+                                            <option value="">Select Category</option>
+                                            {% for category in categories %}
+                                            <option value="{{ category.id }}" {% if current_category|add:0 == category.id %}selected{% endif %}>{{ category.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="filter-section">
+                                    <div class="filter-header" onclick="toggleFilter(this)">
+                                        <span>Make</span>
+                                        <i class="fas fa-chevron-down chevron"></i>
+                                    </div>
+                                    <div class="filter-body open">
+                                        <select class="form-select form-select-sm" name="brand" 
+                                                hx-get="{% url 'parts:part_list' %}" 
+                                                hx-target="#parts-results" 
+                                                hx-push-url="true"
+                                                hx-indicator="#loading-indicator"
+                                                hx-trigger="change">
+                                            <option value="">Select Make</option>
+                                            {% for brand in brands %}
+                                            <option value="{{ brand.id }}" {% if current_brand|add:0 == brand.id %}selected{% endif %}>{{ brand.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="filter-section">
+                                    <div class="filter-header" onclick="toggleFilter(this)">
+                                        <span>Model</span>
+                                        <i class="fas fa-chevron-down chevron"></i>
+                                    </div>
+                                    <div class="filter-body">
+                                        <select class="form-select form-select-sm" name="vehicle_model" 
+                                                hx-get="{% url 'parts:part_list' %}" 
+                                                hx-target="#parts-results" 
+                                                hx-push-url="true"
+                                                hx-indicator="#loading-indicator"
+                                                hx-trigger="change">
+                                            <option value="">Select Model</option>
+                                            {% for model in vehicle_models %}
+                                            <option value="{{ model.id }}" {% if current_vehicle_model|add:0 == model.id %}selected{% endif %}>{{ model.make.name }} {{ model.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="filter-section">
+                                    <div class="filter-header" onclick="toggleFilter(this)">
+                                        <span>Year</span>
+                                        <i class="fas fa-chevron-down chevron"></i>
+                                    </div>
+                                    <div class="filter-body">
+                                        <select class="form-select form-select-sm" name="year" 
+                                                hx-get="{% url 'parts:part_list' %}" 
+                                                hx-target="#parts-results" 
+                                                hx-push-url="true"
+                                                hx-indicator="#loading-indicator"
+                                                hx-trigger="change">
+                                            <option value="">Year</option>
+                                            {% for year in available_years %}
+                                            <option value="{{ year }}" {% if current_year|add:0 == year %}selected{% endif %}>{{ year }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="filter-section">
+                                    <div class="filter-header" onclick="toggleFilter(this)">
+                                        <span>Trim</span>
+                                        <i class="fas fa-chevron-down chevron"></i>
+                                    </div>
+                                    <div class="filter-body">
+                                        <select class="form-select form-select-sm" name="trim" 
+                                                hx-get="{% url 'parts:part_list' %}" 
+                                                hx-target="#parts-results" 
+                                                hx-push-url="true"
+                                                hx-indicator="#loading-indicator"
+                                                hx-trigger="change">
+                                            <option value="">Trim</option>
+                                            {% for trim in available_trims %}
+                                            <option value="{{ trim }}" {% if current_trim == trim %}selected{% endif %}>{{ trim }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="filter-section">
+                                    <div class="filter-header" onclick="toggleFilter(this)">
+                                        <span>Engine</span>
+                                        <i class="fas fa-chevron-down chevron"></i>
+                                    </div>
+                                    <div class="filter-body">
+                                        <select class="form-select form-select-sm" name="engine" 
+                                                hx-get="{% url 'parts:part_list' %}" 
+                                                hx-target="#parts-results" 
+                                                hx-push-url="true"
+                                                hx-indicator="#loading-indicator"
+                                                hx-trigger="change">
+                                            <option value="">Engine</option>
+                                            {% for engine in available_engines %}
+                                            <option value="{{ engine }}" {% if current_engine == engine %}selected{% endif %}>{{ engine }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="filter-section">
+                                    <div class="filter-header" onclick="toggleFilter(this)">
+                                        <span>Price</span>
+                                        <i class="fas fa-chevron-down chevron"></i>
+                                    </div>
+                                    <div class="filter-body open">
+                                        <div class="price-inputs">
+                                            <input type="number" class="form-control form-control-sm" name="price_min" value="{{ current_price_min }}" placeholder="Min" 
+                                                   hx-get="{% url 'parts:part_list' %}" 
+                                                   hx-target="#parts-results" 
+                                                   hx-push-url="true"
+                                                   hx-indicator="#loading-indicator"
+                                                   hx-trigger="change">
+                                            <input type="number" class="form-control form-control-sm" name="price_max" value="{{ current_price_max }}" placeholder="Max" 
+                                                   hx-get="{% url 'parts:part_list' %}" 
+                                                   hx-target="#parts-results" 
+                                                   hx-push-url="true"
+                                                   hx-indicator="#loading-indicator"
+                                                   hx-trigger="change">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="sidebar-footer">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    Search Parts
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-lg-9">
+                    
+                    <div class="view-controls">
+                        <div>
+                            <span style="font-weight: 700; font-size: 14px;">Entries found: {{ parts.count }}</span>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-3">
+                            
+                            <div class="d-flex align-items-center">
+                                <span class="me-2 text-muted" style="font-size: 13px; font-weight: 600; white-space: nowrap;">Sort By:</span>
+                                <select class="form-select form-select-sm" name="sort" style="width: 160px; font-size: 13px; border-color: #dddddd;"
+                                        hx-get="{% url 'parts:part_list' %}" 
+                                        hx-target="#parts-results" 
+                                        hx-push-url="true"
+                                        hx-indicator="#loading-indicator"
+                                        hx-trigger="change">
+                                    <option value="" {% if current_sort == '' %}selected{% endif %}>Relevance</option>
+                                    <option value="-created_at" {% if current_sort == '-created_at' %}selected{% endif %}>Newest First</option>
+                                    <option value="price" {% if current_sort == 'price' %}selected{% endif %}>Price: Low to High</option>
+                                    <option value="-price" {% if current_sort == '-price' %}selected{% endif %}>Price: High to Low</option>
+                                    <option value="name" {% if current_sort == 'name' %}selected{% endif %}>Name: A to Z</option>
+                                    <option value="-name" {% if current_sort == '-name' %}selected{% endif %}>Name: Z to A</option>
+                                </select>
+                            </div>
+
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-secondary active" id="gridViewBtn" onclick="setView('grid')">
+                                    <i class="fas fa-th-large"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="listViewBtn" onclick="setView('list')">
+                                    <i class="fas fa-list"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="list-header" id="listHeader">
+                        <div>Model / Name</div>
+                        <div>Make</div>
+                        <div>Part Number</div>
+                        <div>Price</div>
+                        <div>Stock</div>
+                    </div>
+
+                    <!-- Loading indicator -->
+                    <div id="loading-indicator" class="htmx-indicator" style="display: none; text-align: center; padding: 20px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading parts...</p>
+                    </div>
+
+                    <!-- Parts results container for HTMX -->
+                    <div id="parts-results">
+                        <div class="parts-grid" id="productsContainer">
+                        
+                        {% for part in parts %}
+                        <div class="part-card">
+                            <a href="{% url 'parts:part_detail' part.pk %}" style="text-decoration: none;">
+                                <div class="part-image-container">
+                                    {% if part.image_url %}
+                                    <img src="{{ part.image_url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
+                                    {% elif part.images.first %}
+                                    <img src="{{ part.images.first.image.url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
+                                    {% else %}
+                                    <img src="https://images.unsplash.com/photo-1613214150384-14921ff659b2?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
+                                    {% endif %}
+                                </div>
+                                <div class="part-content">
+                                    <!-- Grid View Content -->
+                                    <div class="grid-view-content">
+                                        <div class="part-header">
+                                            <div class="part-title">{{ part.name }}</div>
+                                            <div class="part-subtitle">{{ part.brand.name }}</div>
+                                        </div>
+                                        <div class="part-category">
+                                            <span class="badge bg-secondary">{{ part.category.name }}</span>
+                                        </div>
+                                        <div class="part-price">{{ part.price }} ر.س.</div>
+                                        <div class="part-meta">
+                                            {% if part.vin %}VIN: {{ part.vin }}<br>{% endif %}
+                                            Part #: {{ part.parts_number }}<br>
+                                        </div>
+                                    </div>
+                                    <!-- List View Content -->
+                                    <div class="list-view-content">
+                                        <div class="list-cell model-name">{{ part.name }}</div>
+                                        <div class="list-cell make">{{ part.brand.name }}</div>
+                                        <div class="list-cell part-number">{{ part.parts_number }}</div>
+                                        <div class="list-cell price">{{ part.price }} ر.س.</div>
+                                        <div class="list-cell stock">
+                                            {% if part.inventory and part.inventory.stock > 0 %}
+                                                <span class="badge bg-success">In Stock ({{ part.inventory.stock }})</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Out of Stock</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {% empty %}
+                        <div class="col-12 text-center py-5">
+                            <p>No parts found matching your criteria.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    </div> <!-- End parts-results container -->
+                    
+                    <!-- Pagination -->
+                    {% if is_paginated %}
+                    <div class="pagination-container">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" 
+                                       aria-label="First"
+                                       hx-get="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                                       hx-target="#parts-results"
+                                       hx-push-url="true"
+                                       hx-indicator="#loading-indicator">
+                                        <span aria-hidden="true">&laquo;&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" 
+                                       aria-label="Previous"
+                                       hx-get="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                                       hx-target="#parts-results"
+                                       hx-push-url="true"
+                                       hx-indicator="#loading-indicator">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                                       hx-get="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                                       hx-target="#parts-results"
+                                       hx-push-url="true"
+                                       hx-indicator="#loading-indicator">{{ num }}</a>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" 
+                                       aria-label="Next"
+                                       hx-get="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                                       hx-target="#parts-results"
+                                       hx-push-url="true"
+                                       hx-indicator="#loading-indicator">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" 
+                                       aria-label="Last"
+                                       hx-get="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                                       hx-target="#parts-results"
+                                       hx-push-url="true"
+                                       hx-indicator="#loading-indicator">
+                                        <span aria-hidden="true">&raquo;&raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        
+                        <div class="pagination-info text-center mt-2">
+                            <small class="text-muted">
+                                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} parts
+                            </small>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    </div> <!-- End of parts-results container -->
+                    
+                </div> 
+            </div>
+        </div>
+    </main>
+
+    <div id="signupModal" class="signup-modal-overlay">
+        <div class="signup-modal-content">
+            <button class="signup-close-btn" onclick="closeSignupModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <div class="text-center">
+                <h2 class="signup-title">Join Corporate Dock</h2>
+                <p class="signup-subtitle">Select your account type to continue</p>
+            </div>
+
+            <div class="signup-options">
+                <a href="#" class="signup-option individual">
+                    <div class="left-content">
+                        <span class="icon-box">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </span>
+                        <span class="option-text">Individual</span>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="arrow-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </a>
+                
+                <a href="{% url 'business_partners:registration' %}" class="signup-option business">
+                    <div class="left-content">
+                        <span class="icon-box">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                        </span>
+                        <span class="option-text">Business</span>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="arrow-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+      <div class="social-section">
+        <div class="social-container">
+          <div class="social-icons">
+            <a href="#" class="social-icon facebook"><svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> FACEBOOK</a>
+            </div>
+        </div>
+      </div>
+
+      <div class="footer-content">
+        <div class="footer-grid">
+          <div class="footer-column company-info">
+            <p>We deliver all the tools you need to create a powerful auto parts e-commerce store built for showcasing, selling, and managing automotive components.</p>
+            <ul class="contact-info">
+              <li>220E Front St, Burlington NC 27215</li>
+              <li>+92-333-3610109</li>
+              <li>support@corporatedock.com</li>
+            </ul>
+          </div>
+
+          <div class="footer-column useful-links">
+            <h3>USEFUL LINKS</h3>
+            <ul>
+                <li><a href="#">Engine Oil & Filters</a></li>
+                <li><a href="#">Brake Pads & Rotors</a></li>
+                </ul>
+          </div>
+          
+          <div class="footer-column newsletter">
+            <h3>SUBSCRIBE OUR NEWSLETTER</h3>
+            <p>Keep up on our always evolving products. Enter your e-mail.</p>
+            <form class="newsletter-form">
+              <input type="email" placeholder="Enter Your Email" class="newsletter-input" required />
+              <button type="submit" class="newsletter-btn">SUBSCRIBE</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-bottom-content">
+          <div class="copyright">© Powered by Corporate Dock LLC-2025 All rights Reserved</div>
+          <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Contact</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script src="{% static 'js/navbar.js' %}"></script>
+    <script src="{% static 'js/parts.js' %}"></script>
+    
+    <script>
+    function toggleFilter(header) {
+        header.classList.toggle('active');
+        const body = header.nextElementSibling;
+        
+        if (body.classList.contains('open')) {
+            body.style.maxHeight = null;
+            body.classList.remove('open');
+        } else {
+            body.classList.add('open');
+            body.style.maxHeight = body.scrollHeight + "px";
+        }
+    }
+
+    function setView(view) {
+        const container = document.getElementById('productsContainer');
+        const gridBtn = document.getElementById('gridViewBtn');
+        const listBtn = document.getElementById('listViewBtn');
+        const listHeader = document.getElementById('listHeader');
+
+        if (view === 'list') {
+            container.classList.add('list-view');
+            listHeader.style.display = 'flex'; 
+            gridBtn.classList.remove('active');
+            listBtn.classList.add('active');
+        } else {
+            container.classList.remove('list-view');
+            listHeader.style.display = 'none'; 
+            listBtn.classList.remove('active');
+            gridBtn.classList.add('active');
+        }
+    }
+    
+    // Handle sort change
+    function handleSortChange(select) {
+        const url = new URL(window.location.href);
+        if (select.value) {
+            url.searchParams.set('sort', select.value);
+        } else {
+            url.searchParams.delete('sort');
+        }
+        window.location.href = url.toString();
+    }
+    function openSignupModal() {
+        document.getElementById('signupModal').classList.add('active');
+        document.body.style.overflow = 'hidden'; 
+    }
+
+    function closeSignupModal() {
+        document.getElementById('signupModal').classList.remove('active');
+        document.body.style.overflow = 'auto'; 
+    }
+
+    document.getElementById('signupModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeSignupModal();
+        }
+    });
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const openSections = document.querySelectorAll('.filter-body.open');
+        openSections.forEach(section => {
+            section.style.maxHeight = section.scrollHeight + "px";
+            section.previousElementSibling.classList.add('active');
+        });
+    });
+    </script>
+  </body>
+</html>

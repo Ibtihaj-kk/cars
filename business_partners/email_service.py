@@ -22,7 +22,7 @@ class VendorApplicationEmailService:
     """
     
     def __init__(self):
-        self.from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@carsportal.com')
+        self.from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@corporatedock.com')
         self.site_domain = self._get_site_domain()
     
     def _get_site_domain(self):
@@ -31,7 +31,7 @@ class VendorApplicationEmailService:
             site = Site.objects.get_current()
             return f"https://{site.domain}"
         except:
-            return getattr(settings, 'FRONTEND_URL', 'https://carsportal.com')
+            return getattr(settings, 'FRONTEND_URL', 'https://corporatedock.com')
     
     def _get_base_context(self, application):
         """Get base context variables used in all email templates."""
@@ -100,7 +100,7 @@ class VendorApplicationEmailService:
             logger.warning(f"No email address for application {application.application_id}")
             return False
         
-        subject = f"Cars Portal - Vendor Application Submitted (ID: {application.application_id})"
+        subject = f"CorporateDock - Vendor Application Submitted (ID: {application.application_id})"
         context = self._get_base_context(application)
         
         return self._send_email(
@@ -123,7 +123,7 @@ class VendorApplicationEmailService:
             logger.warning(f"No email address for application {application.application_id}")
             return False
         
-        subject = f"🎉 Congratulations! Your Cars Portal Vendor Application is Approved"
+        subject = f"🎉 Congratulations! Your CorporateDock Vendor Application is Approved"
         context = self._get_base_context(application)
         
         # Add vendor profile to context if available
@@ -149,7 +149,7 @@ class VendorApplicationEmailService:
             logger.warning(f"No email address for application {application.application_id}")
             return False
         
-        subject = f"Cars Portal - Vendor Application Status Update (ID: {application.application_id})"
+        subject = f"CorporateDock - Vendor Application Status Update (ID: {application.application_id})"
         context = self._get_base_context(application)
         
         return self._send_email(
@@ -171,7 +171,7 @@ class VendorApplicationEmailService:
             logger.warning(f"No email address for application {application.application_id}")
             return False
         
-        subject = f"⚠️ Action Required - Cars Portal Vendor Application (ID: {application.application_id})"
+        subject = f"⚠️ Action Required - CorporateDock Vendor Application (ID: {application.application_id})"
         context = self._get_base_context(application)
         
         return self._send_email(
@@ -263,7 +263,7 @@ Application Details:
 Review Application: {context['admin_review_url']}
 Admin Dashboard: {context['admin_dashboard_url']}
 
-This is an automated notification from Cars Portal Vendor Management System.
+This is an automated notification from CorporateDock Vendor Management System.
             """
             
             send_mail(
