@@ -1010,110 +1010,96 @@ def buy_now(request):
             data = request.POST
         
         part_id = data.get('part_id')
-        qty = int(data.get('qty', 1))
+        qty = int(data.get('qty', data.get('quantity', 1)))
         
         logger.info(f"Buy now request received: part_id={part_id}, qty={qty}, user={request.user}")
         
         if not part_id:
             logger.warning("Buy now failed: Part ID is required")
-            return JsonResponse({'error': 'Part ID is required'}, status=400)
+            if request.headers.get('HX-Request') or request.content_type == 'application/json':
+                return JsonResponse({'error': 'Part ID is required'}, status=400)
+            messages.error(request, 'Part ID is required')
+            return redirect('parts:part_list')
         
         if qty < 1:
             logger.warning(f"Buy now failed: Invalid quantity {qty}")
-            return JsonResponse({'error': 'Quantity must be at least 1'}, status=400)
+            if request.headers.get('HX-Request') or request.content_type == 'application/json':
+                return JsonResponse({'error': 'Quantity must be at least 1'}, status=400)
+            messages.error(request, 'Quantity must be at least 1')
+            return redirect('parts:part_detail', pk=part_id)
         
-        with transaction.atomic():
-            # Get the part and check if it's active
-            part = get_object_or_404(Part, pk=part_id, is_active=True)
+        # Check stock availability before adding to cart
+        part = get_object_or_404(Part, pk=part_id, is_active=True)
+        if part.quantity < qty:
+             if request.headers.get('HX-Request') or request.content_type == 'application/json':
+                 return JsonResponse({'error': f'Only {part.quantity} items available.'}, status=400)
+             messages.error(request, f'Only {part.quantity} items available.')
+             return redirect('parts:part_detail', pk=part_id)
+
+        # Add to cart logic (Unified for Auth and Guest)
+        if request.user.is_authenticated:
+            # Database Cart
+            cart, _ = Cart.objects.get_or_create(user=request.user)
+            cart_item, created = CartItem.objects.get_or_create(cart=cart, part=part)
             
-            # Check stock availability
-            if part.quantity < qty:
-                logger.warning(f"Buy now failed: Insufficient stock for part {part_id}. Available: {part.quantity}, Requested: {qty}")
-                return JsonResponse({
-                    'error': f'Insufficient stock. Only {part.quantity} items available.'
-                }, status=400)
-            
-            # Calculate total price
-            item_total = part.price * qty
-            shipping_cost = Decimal('0.00')  # You can implement shipping calculation logic here
-            tax_amount = Decimal('0.00')    # You can implement tax calculation logic here
-            total_price = item_total + shipping_cost + tax_amount
-            
-            # Create order
-            order_data = {
-                'total_price': total_price,
-                'shipping_cost': shipping_cost,
-                'tax_amount': tax_amount,
-                'status': 'pending',
-                'payment_method': None,  # Will be set during checkout
-                'payment_status': 'pending',
-                'notes': f'Buy Now order for {part.name}'
-            }
-            
-            # Set customer or guest information
-            if request.user.is_authenticated:
-                order_data['customer'] = request.user
+            if not created:
+                new_quantity = cart_item.quantity + qty
+                if part.quantity < new_quantity:
+                     if request.headers.get('HX-Request') or request.content_type == 'application/json':
+                         return JsonResponse({'error': f'Cannot add more. Only {part.quantity} available.'}, status=400)
+                     messages.error(request, f'Cannot add more. Only {part.quantity} available.')
+                     return redirect('parts:part_detail', pk=part_id)
+                cart_item.quantity = new_quantity
             else:
-                # For guest orders, you might want to collect this info in the frontend
-                # For now, we'll create a minimal guest order
-                order_data['guest_name'] = 'Guest Customer'
-                order_data['guest_email'] = data.get('guest_email', '')
-                order_data['guest_phone'] = data.get('guest_phone', '')
-                order_data['guest_address'] = data.get('guest_address', '')
-            
-            # Create the order
-            order = Order.objects.create(**order_data)
-            logger.info(f"Created buy now order: order_id={order.id}, order_number={order.order_number}")
-            
-            # Create order item
-            OrderItem.objects.create(
-                order=order,
-                part=part,
-                quantity=qty,
-                price=part.price
-            )
-            
-            # Reserve stock (decrement quantity)
-            part.quantity -= qty
-            part.save(update_fields=['quantity'])
-            
-            # Optionally add to user's cart for consistency (but don't duplicate if already there)
-            if request.user.is_authenticated:
-                try:
-                    cart = Cart.objects.get(user=request.user)
-                    cart_item, created = CartItem.objects.get_or_create(
-                        cart=cart,
-                        part=part,
-                        defaults={'quantity': qty}
-                    )
-                    if not created:
-                        # If item already exists, update quantity
-                        cart_item.quantity += qty
-                        cart_item.save()
-                except Cart.DoesNotExist:
-                    # If user doesn't have a cart, create one
-                    cart = Cart.objects.create(user=request.user)
-                    CartItem.objects.create(cart=cart, part=part, quantity=qty)
-            
-            # Generate checkout URL
-            checkout_url = reverse('parts:checkout_step1') + f'?order_id={order.id}'
-            
-            logger.info(f"Buy now successful: order_id={order.id}, order_number={order.order_number}, checkout_url={checkout_url}")
-            
+                cart_item.quantity = qty
+            cart_item.save()
+        else:
+            # Session Cart
+            cart = request.session.get('cart', {})
+            part_id_str = str(part_id)
+            if part_id_str in cart:
+                new_quantity = cart[part_id_str]['quantity'] + qty
+                if part.quantity < new_quantity:
+                     if request.headers.get('HX-Request') or request.content_type == 'application/json':
+                         return JsonResponse({'error': f'Cannot add more. Only {part.quantity} available.'}, status=400)
+                     messages.error(request, f'Cannot add more. Only {part.quantity} available.')
+                     return redirect('parts:part_detail', pk=part_id)
+                cart[part_id_str]['quantity'] = new_quantity
+            else:
+                cart[part_id_str] = {
+                    'quantity': qty,
+                    'name': part.name,
+                    'price': float(part.price),
+                    'sku': part.sku,
+                    'image_url': part.image.url if part.image else (part.image_url or ''),
+                }
+            request.session['cart'] = cart
+            request.session.modified = True
+
+        # Redirect to Checkout
+        checkout_url = reverse('parts:checkout')
+        
+        if request.headers.get('HX-Request') or request.content_type == 'application/json':
             return JsonResponse({
                 'success': True,
-                'order_id': order.id,
-                'order_number': order.order_number,
                 'checkout_url': checkout_url,
-                'message': f'Order {order.order_number} created successfully!'
+                'message': f'Proceeding to checkout...'
             })
+        
+        return redirect(checkout_url)
             
     except ValueError as e:
         logger.error(f"Buy now failed: Invalid data error - {str(e)}")
-        return JsonResponse({'error': f'Invalid data: {str(e)}'}, status=400)
+        if request.headers.get('HX-Request') or request.content_type == 'application/json':
+            return JsonResponse({'error': f'Invalid data: {str(e)}'}, status=400)
+        messages.error(request, f'Invalid data: {str(e)}')
+        return redirect('parts:part_list')
     except Exception as e:
         logger.error(f"Buy now failed: Unexpected error - {str(e)}", exc_info=True)
-        return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+        if request.headers.get('HX-Request') or request.content_type == 'application/json':
+            return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+        messages.error(request, f'An error occurred: {str(e)}')
+        return redirect('parts:part_list')
 
     def get_template_names(self):
         # Return partial template for HTMX requests
@@ -1999,252 +1985,216 @@ def add_to_cart(request, part_id):
     """Add item to cart - supports both AJAX JSON and form POST requests."""
     if request.method == 'POST':
         try:
-            # Parse quantity from both JSON and form data
+            # Parse quantity
             if request.content_type == 'application/json':
                 try:
                     data = json.loads(request.body)
                     quantity = int(data.get('qty', data.get('quantity', 1)))
                 except (json.JSONDecodeError, ValueError):
-                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
-                    messages.error(request, 'Invalid request data.')
-                    return redirect('parts:part_detail', pk=part_id)
+                    return JsonResponse({'error': 'Invalid JSON data'}, status=400)
             else:
                 quantity = int(request.POST.get('qty', request.POST.get('quantity', 1)))
             
-            # Validate quantity
             if quantity < 1:
-                error_msg = 'Quantity must be at least 1.'
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'error': error_msg}, status=400)
-                messages.error(request, error_msg)
-                return redirect('parts:part_detail', pk=part_id)
+                return JsonResponse({'error': 'Quantity must be at least 1.'}, status=400)
             
-            # Use atomic transaction for cart operations
             with transaction.atomic():
-                # Get part with SELECT FOR UPDATE to prevent race conditions
                 part = get_object_or_404(Part.objects.select_for_update(), id=part_id, is_active=True)
-                
-                # Check stock availability
                 available_stock = part.inventory.stock if hasattr(part, 'inventory') else part.quantity
+                
                 if available_stock < quantity:
-                    error_msg = f'Only {available_stock} items available in stock.'
-                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                        return JsonResponse({'error': error_msg}, status=400)
-                    messages.error(request, error_msg)
-                    return redirect('parts:part_detail', pk=part_id)
+                    return JsonResponse({'error': f'Only {available_stock} items available.'}, status=400)
                 
-                # Get or create cart
-                cart = get_cart(request)
-                
-                # Add or update item in cart
-                if str(part_id) in cart:
-                    new_quantity = cart[str(part_id)]['quantity'] + quantity
-                    # Check total quantity against stock
-                    if available_stock < new_quantity:
-                        error_msg = f'Cannot add more items. Only {available_stock} available in stock.'
-                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                            return JsonResponse({'error': error_msg}, status=400)
-                        messages.error(request, error_msg)
-                        return redirect('parts:part_detail', pk=part_id)
-                    cart[str(part_id)]['quantity'] = new_quantity
-                    success_msg = f'Updated {part.name} quantity in cart.'
+                if request.user.is_authenticated:
+                    # Database Cart for Authenticated Users
+                    cart, _ = Cart.objects.get_or_create(user=request.user)
+                    cart_item, created = CartItem.objects.get_or_create(cart=cart, part=part)
+                    
+                    if not created:
+                        new_quantity = cart_item.quantity + quantity
+                        if available_stock < new_quantity:
+                            return JsonResponse({'error': f'Cannot add more. Only {available_stock} available.'}, status=400)
+                        cart_item.quantity = new_quantity
+                    else:
+                        cart_item.quantity = quantity
+                    cart_item.save()
+                    cart_count = cart.total_items
+                    cart_total = float(cart.total_price)
                 else:
-                    cart[str(part_id)] = {
-                        'quantity': quantity,
-                        'name': part.name,
-                        'price': float(part.price),
-                        'sku': part.sku,
-                        'image_url': part.image.url if part.image else (part.image_url or ''),
+                    # Session Cart for Anonymous Users
+                    cart = request.session.get('cart', {})
+                    if str(part_id) in cart:
+                        new_quantity = cart[str(part_id)]['quantity'] + quantity
+                        if available_stock < new_quantity:
+                            return JsonResponse({'error': f'Cannot add more. Only {available_stock} available.'}, status=400)
+                        cart[str(part_id)]['quantity'] = new_quantity
+                    else:
+                        cart[str(part_id)] = {
+                            'quantity': quantity,
+                            'name': part.name,
+                            'price': float(part.price),
+                            'sku': part.sku,
+                            'image_url': part.image.url if part.image else (part.image_url or ''),
+                        }
+                    request.session['cart'] = cart
+                    request.session.modified = True
+                    cart_count = sum(item['quantity'] for item in cart.values())
+                    cart_total = sum(float(item['price']) * item['quantity'] for item in cart.values())
+                
+                msg = f'Added {part.name} to cart.'
+
+                # Handle HTMX requests with OOB swaps
+                if request.headers.get('HX-Request'):
+                    context = {
+                        'cart_count': cart_count,
+                        'cart_total': cart_total,
+                        'message': msg,
+                        'success': True
                     }
-                    success_msg = f'Added {part.name} to cart.'
-                
-                # Save cart to session
-                request.session['cart'] = cart
-                request.session.modified = True
-                
-                # Return JSON response for AJAX requests
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return render(request, 'parts/htmx/add_to_cart_response.html', context)
+
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.content_type == 'application/json':
                     return JsonResponse({
                         'success': True,
-                        'message': success_msg,
-                        'cart_count': get_cart_count(request),
-                        'cart_total': float(get_cart_total(request))
+                        'message': msg,
+                        'cart_count': cart_count,
+                        'cart_total': cart_total
                     })
                 
-                messages.success(request, success_msg)
+                messages.success(request, msg)
                 return redirect('parts:cart_view')
                 
         except Part.DoesNotExist:
-            error_msg = 'Part not found.'
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'error': error_msg}, status=404)
-            messages.error(request, error_msg)
-        except ValueError:
-            error_msg = 'Invalid quantity.'
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'error': error_msg}, status=400)
-            messages.error(request, error_msg)
+            return JsonResponse({'error': 'Part not found.'}, status=404)
         except Exception as e:
-            error_msg = f'Error adding item to cart: {str(e)}'
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'error': error_msg}, status=500)
-            messages.error(request, error_msg)
+            return JsonResponse({'error': str(e)}, status=500)
     
-    # For non-POST requests or fallback
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
     return redirect('parts:part_detail', pk=part_id)
 
 
 def cart_view(request):
-    """Display cart contents - works for both authenticated and anonymous users"""
-    if request.user.is_authenticated:
-        # Use database cart for authenticated users
-        try:
-            cart_obj = Cart.objects.get(user=request.user)
-            cart_items = cart_obj.items.select_related('part', 'part__brand', 'part__category').all()
-            
-            # Convert to template-compatible format
-            cart_items_list = []
-            has_out_of_stock = False
-            has_insufficient_stock = False
-            cart_total = 0
-            
-            for item in cart_items:
-                part = item.part
-                available_stock = part.inventory.stock if hasattr(part, 'inventory') else part.quantity
-                in_stock = available_stock >= item.quantity
-                
-                # Track stock issues
-                if available_stock == 0:
-                    has_out_of_stock = True
-                elif not in_stock:
-                    has_insufficient_stock = True
-                
-                cart_items_list.append({
-                    'part': part,
-                    'quantity': item.quantity,
-                    'item_total': item.total_price,
-                    'in_stock': in_stock,
-                    'available_stock': available_stock,
-                    'id': item.id  # Add item ID for authenticated users
-                })
-                cart_total += item.total_price
-            
-            context = {
-                'cart_items': cart_items_list,
-                'cart_total': cart_total,
-                'cart_count': len(cart_items_list),
-                'has_out_of_stock': has_out_of_stock,
-                'has_insufficient_stock': has_insufficient_stock,
-                'can_checkout': not has_out_of_stock and not has_insufficient_stock,
-                'page_title': 'Shopping Cart'
-            }
-            
-            return render(request, 'parts/cart.html', context)
-            
-        except Cart.DoesNotExist:
-            # No cart exists for authenticated user
-            context = {
-                'cart_items': [],
-                'cart_total': 0,
-                'cart_count': 0,
-                'has_out_of_stock': False,
-                'has_insufficient_stock': False,
-                'can_checkout': True,
-                'page_title': 'Shopping Cart'
-            }
-            return render(request, 'parts/cart.html', context)
-    
-    else:
-        # Session-based cart for anonymous users
-        cart = get_cart(request)
-        cart_items = []
-        cart_total = 0
-        has_out_of_stock = False
-        has_insufficient_stock = False
+    """Display cart contents - Requires Login."""
+    # Logic for authenticated users only (due to @login_required)
+    try:
+        cart_obj = Cart.objects.get(user=request.user)
+        cart_items = cart_obj.items.select_related('part', 'part__brand').all()
         
-        for item_id, item_data in cart.items():
-            try:
-                part = Part.objects.get(id=item_id, is_active=True)
-                item_total = part.price * item_data['quantity']
-                available_stock = part.inventory.stock if hasattr(part, 'inventory') else part.quantity
-                in_stock = available_stock >= item_data['quantity']
-                
-                # Track stock issues
-                if available_stock == 0:
-                    has_out_of_stock = True
-                elif not in_stock:
-                    has_insufficient_stock = True
-                
-                cart_items.append({
-                    'part': part,
-                    'quantity': item_data['quantity'],
-                    'item_total': item_total,
-                    'in_stock': in_stock,
-                    'available_stock': available_stock,
-                    'part_id': item_id  # Use part_id for guest users
-                })
-                cart_total += item_total
-            except Part.DoesNotExist:
-                # Remove invalid items from cart
-                del cart[item_id]
-                request.session['cart'] = cart
-                request.session.modified = True
+        cart_items_list = []
+        has_issue = False
+        cart_total = 0
+        
+        for item in cart_items:
+            part = item.part
+            available_stock = part.inventory.stock if hasattr(part, 'inventory') else part.quantity
+            in_stock = available_stock >= item.quantity
+            
+            if not in_stock:
+                has_issue = True
+            
+            cart_items_list.append({
+                'part': part,
+                'quantity': item.quantity,
+                'item_total': item.total_price,
+                'in_stock': in_stock,
+                'available_stock': available_stock,
+                'id': item.id
+            })
+            cart_total += item.total_price
         
         context = {
-            'cart_items': cart_items,
+            'cart_items': cart_items_list,
             'cart_total': cart_total,
-            'cart_count': len(cart_items),
-            'has_out_of_stock': has_out_of_stock,
-            'has_insufficient_stock': has_insufficient_stock,
-            'can_checkout': not has_out_of_stock and not has_insufficient_stock,
-            'page_title': 'Shopping Cart'
+            'cart_tax': cart_total * Decimal('0.15'),
+            'cart_grand_total': cart_total * Decimal('1.15'),
+            'cart_count': len(cart_items_list),
+            'has_issue': has_issue,
+            'can_checkout': not has_issue,
         }
         
-        return render(request, 'parts/cart.html', context)
+    except Cart.DoesNotExist:
+        context = {
+            'cart_items': [],
+            'cart_total': 0,
+            'cart_tax': 0,
+            'cart_grand_total': 0,
+            'cart_count': 0,
+            'has_issue': False,
+            'can_checkout': True,
+        }
+
+    return render(request, 'home/cart.html', context)
 
 
-def update_cart(request, part_id):
-    """Update item quantity in cart."""
-    if request.method == 'POST':
-        try:
-            part = get_object_or_404(Part, id=part_id, is_active=True)
-            quantity = int(request.POST.get('quantity', 1))
+@require_POST
+def hx_update_cart_quantity(request, item_id):
+    """HTMX view to update cart item quantity."""
+    try:
+        change = int(request.POST.get('change', 0))
+        if change == 0:
+             return JsonResponse({'error': 'Invalid change'}, status=400)
+
+        if request.user.is_authenticated:
+            cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
+            new_quantity = cart_item.quantity + change
+            part = cart_item.part
+            available_stock = part.quantity
             
+            if new_quantity < 1:
+                new_quantity = 1
+            elif new_quantity > available_stock:
+                new_quantity = available_stock
+            
+            cart_item.quantity = new_quantity
+            cart_item.save()
+        else:
+            # Session Cart
             cart = get_cart(request)
+            part_id = str(item_id)
             
-            if str(part_id) in cart:
-                if quantity <= 0:
-                    # Remove item if quantity is 0 or negative
-                    del cart[str(part_id)]
-                    messages.success(request, f'Removed {part.name} from cart.')
-                else:
-                    # Check stock availability
-                    available_stock = part.inventory.stock if hasattr(part, 'inventory') else part.quantity
-                    if available_stock < quantity:
-                        messages.error(request, f'Only {available_stock} items available in stock.')
-                        return redirect('parts:cart_view')
-                    
-                    cart[str(part_id)]['quantity'] = quantity
-                    messages.success(request, f'Updated {part.name} quantity.')
+            if part_id in cart:
+                current_qty = cart[part_id]['quantity']
+                new_quantity = current_qty + change
                 
+                # Check stock
+                try:
+                    part = Part.objects.get(id=part_id)
+                    available_stock = part.quantity
+                except Part.DoesNotExist:
+                    available_stock = 999
+                
+                if new_quantity < 1:
+                    new_quantity = 1
+                elif new_quantity > available_stock:
+                    new_quantity = available_stock
+                
+                cart[part_id]['quantity'] = new_quantity
                 request.session['cart'] = cart
                 request.session.modified = True
-            
-            # Return JSON response for AJAX requests
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'cart_count': get_cart_count(request),
-                    'cart_total': float(get_cart_total(request))
-                })
-            
-        except (Part.DoesNotExist, ValueError) as e:
-            messages.error(request, 'Error updating cart.')
-    
-    return redirect('parts:cart_view')
+        
+        return cart_view(request)
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_POST
+def hx_remove_from_cart(request, item_id):
+    """HTMX view to remove item from cart."""
+    try:
+        if request.user.is_authenticated:
+            cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
+            cart_item.delete()
+        else:
+            cart = get_cart(request)
+            part_id = str(item_id)
+            if part_id in cart:
+                del cart[part_id]
+                request.session['cart'] = cart
+                request.session.modified = True
+                
+        return cart_view(request)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 def remove_from_session_cart_legacy(request, part_id):
@@ -2456,204 +2406,199 @@ def cart_count_api(request):
         })
 
 
-def checkout(request):
-    """Checkout view for both authenticated and guest users."""
-    cart = get_cart(request)
+def checkout_view(request):
+    """
+    Single-page checkout view.
+    Handles both display of checkout form (with cart summary) and order processing.
+    """
+    # 1. Get Cart Data
+    cart_items_list = []
+    items_total = Decimal('0.00')
     
-    if not cart:
-        messages.error(request, 'Your cart is empty.')
+    if request.user.is_authenticated:
+        try:
+            cart_obj = Cart.objects.get(user=request.user)
+            cart_items = cart_obj.items.select_related('part', 'part__brand').all()
+            cart_items_list = cart_items
+            items_total = cart_obj.total_price
+        except Cart.DoesNotExist:
+            pass
+    else:
+        cart = get_cart(request)
+        for part_id, item_data in cart.items():
+            try:
+                part = Part.objects.get(id=part_id, is_active=True)
+                item_total = part.price * item_data['quantity']
+                
+                # Create mock object
+                class MockItem:
+                    def __init__(self, part, quantity, item_total):
+                        self.part = part
+                        self.quantity = quantity
+                        self.item_total = item_total
+                
+                cart_items_list.append(MockItem(part, item_data['quantity'], item_total))
+                items_total += item_total
+            except Part.DoesNotExist:
+                continue
+    
+    if not cart_items_list:
+        messages.warning(request, 'Your cart is empty.')
         return redirect('parts:cart_view')
     
-    cart_total = get_cart_total(request)
+    # 2. Calculate Initial Totals (Tax, etc.)
+    # Standard 15% tax
+    tax_amount = items_total * Decimal('0.15')
+    shipping_cost = Decimal('0.00') # Free shipping for now
     
+    grand_total = items_total + tax_amount + shipping_cost
+    
+    # 3. Handle POST (Order Placement)
     if request.method == 'POST':
-        if request.user.is_authenticated:
-            # Process authenticated user checkout
-            return process_authenticated_checkout(request, cart, cart_total)
+        # Extract form data
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        address = request.POST.get('address', '').strip()
+        postal_code = request.POST.get('postal_code', '').strip()
+        if postal_code:
+            address = f"{address}, Postal Code: {postal_code}"
+            
+        city_id = request.POST.get('city', '')
+        city_area_id = request.POST.get('area', '')
+        payment_method = request.POST.get('payment_method', 'cod')
+        
+        checkout_data = {
+            'contact_name': f"{first_name} {last_name}".strip(),
+            'first_name': first_name,
+            'last_name': last_name,
+            'email': email,
+            'mobile_number': phone,
+            'address': address,
+            'city_id': city_id,
+            'city_area_id': city_area_id,
+            'payment_method': payment_method,
+        }
+        
+        # Validate
+        if not all([first_name, email, phone, address, city_id]):
+             messages.error(request, 'Please fill in all required fields.')
         else:
-            # Process guest checkout
-            return process_guest_checkout(request, cart, cart_total)
-    
-    # GET request - show checkout form
-    context = {
-        'cart': cart,
-        'cart_total': cart_total,
-        'is_authenticated': request.user.is_authenticated,
-    }
-    
-    if not request.user.is_authenticated:
-        from .forms import GuestCheckoutForm
-        context['guest_form'] = GuestCheckoutForm()
-    
-    return render(request, 'parts/checkout.html', context)
-
-
-def process_guest_checkout(request, cart, cart_total):
-    """Process checkout for guest users."""
-    from .forms import GuestCheckoutForm
-    from .models import Order, OrderItem, OrderStatusHistory
-    from django.core.mail import send_mail
-    from django.conf import settings
-    from django.db import transaction
-    
-    form = GuestCheckoutForm(request.POST)
-    
-    if form.is_valid():
-        try:
-            with transaction.atomic():
-                # Create order
-                order = Order.objects.create(
-                    guest_name=form.cleaned_data['name'],
-                    guest_email=form.cleaned_data['email'],
-                    guest_phone=form.cleaned_data['phone'],
-                    guest_address=form.cleaned_data['address'],
-                    total_price=cart_total,
-                    session_key=request.session.session_key,
-                    status='pending'
-                )
-                
-                # Create order items first
-                for part_id, item in cart.items():
-                    part = Part.objects.select_for_update().get(id=part_id)
-                    quantity = item['quantity']
+             try:
+                with transaction.atomic():
+                    # Create Order
+                    order_data = {
+                        'total_price': grand_total,
+                        'shipping_cost': shipping_cost,
+                        'tax_amount': tax_amount,
+                        'status': 'pending',
+                        'payment_method': payment_method,
+                        'payment_status': 'pending' if payment_method == 'cod' else 'pending'
+                    }
                     
-                    # Create order item
-                    OrderItem.objects.create(
+                    if request.user.is_authenticated:
+                        order_data['customer'] = request.user
+                    else:
+                        order_data['guest_name'] = checkout_data['contact_name']
+                        order_data['guest_email'] = checkout_data['email']
+                        order_data['guest_phone'] = checkout_data['mobile_number']
+                        order_data['guest_address'] = checkout_data['address']
+                    
+                    order = Order.objects.create(**order_data)
+                    
+                    # Create Order Items
+                    for item in cart_items_list:
+                        OrderItem.objects.create(
+                            order=order,
+                            part=item.part,
+                            quantity=item.quantity,
+                            price=item.part.price
+                        )
+                    
+                    # Deduct inventory using the robust model method
+                    # This handles both Inventory model and Part.quantity field sync
+                    order.deduct_inventory()
+                    
+                    # Create Shipping Info
+                    city = SaudiCity.objects.get(id=city_id)
+                    city_area = None
+                    if city_area_id:
+                         try:
+                            city_area = CityArea.objects.get(id=city_area_id)
+                         except CityArea.DoesNotExist:
+                            pass
+                         
+                    OrderShipping.objects.create(
                         order=order,
-                        part=part,
-                        quantity=quantity,
-                        price=part.price
+                        contact_name=checkout_data['contact_name'],
+                        mobile_number=checkout_data['mobile_number'],
+                        city=city,
+                        city_area=city_area,
+                        address=checkout_data['address'],
+                        shipping_cost=shipping_cost
                     )
-                
-                # Check stock availability for all items
-                stock_available, error_message = order.check_stock_availability()
-                if not stock_available:
-                    raise ValueError(error_message)
-                
-                # Deduct inventory for all items
-                order.deduct_inventory()
-                
-                # Update order status to confirmed with audit logging
-                order.update_status('confirmed', request=request, 
-                                  change_reason='Order confirmed after successful payment')
-                
-                # Create initial status history entry for order creation
-                OrderStatusHistory.objects.create(
-                    order=order,
-                    previous_status=None,
-                    new_status='pending',
-                    notes='Order created by guest user',
-                    ip_address=order.get_client_ip(request) if request else None,
-                    user_agent=request.META.get('HTTP_USER_AGENT', '') if request else ''
-                )
-                
-                # Clear cart
-                if 'cart' in request.session:
-                    del request.session['cart']
-                    request.session.modified = True
-                
-                # Store order confirmation in session
-                request.session['order_confirmation'] = {
-                    'order_number': order.order_number,
-                    'email': order.guest_email,
-                    'total': float(order.total_price)
-                }
-                
-                # Send confirmation email
-                send_order_confirmation_email(order)
-                
-                messages.success(request, f'Order {order.order_number} placed successfully! Confirmation email sent.')
-                return redirect('parts:order_confirmation')
-                
-        except ValueError as e:
-            messages.error(request, str(e))
-        except Exception as e:
-            messages.error(request, 'An error occurred while processing your order. Please try again.')
+                    
+                    # Clear Cart
+                    if request.user.is_authenticated:
+                        cart_obj.items.all().delete()
+                    else:
+                        if 'cart' in request.session:
+                            del request.session['cart']
+                            request.session.modified = True
+                            
+                    messages.success(request, f'Order #{order.order_number} placed successfully!')
+                    return redirect('parts:order_confirmation', order_number=order.order_number)
+                    
+             except Exception as e:
+                 import traceback
+                 traceback.print_exc()
+                 messages.error(request, f'Error processing order: {str(e)}')
     
-    # If form is invalid or error occurred, show form with errors
+    # 4. Prepare Context for GET (or failed POST)
+    # User Data Pre-fill
+    user_data = {}
+    if request.user.is_authenticated:
+        # Get basic user data
+        user_data = {
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name,
+            'email': request.user.email,
+            'phone': request.user.phone_number if hasattr(request.user, 'phone_number') else '',
+        }
+        
+        # Try to get profile data
+        if hasattr(request.user, 'profile'):
+            profile = request.user.profile
+            if profile.address:
+                user_data['address'] = profile.address
+            if profile.city:
+                # We need to match the city name to ID if possible, or just pass the name if the template uses text input for some cases
+                # But here the template uses a select box with ID. 
+                # Ideally we should store city ID in profile or handle matching logic.
+                # For now, let's pass it and let the template decide or if we can match it.
+                # Check if profile.city matches any SaudiCity name
+                city_obj = SaudiCity.objects.filter(name__iexact=profile.city).first()
+                if city_obj:
+                    user_data['city_id'] = city_obj.id
+            if profile.postal_code:
+                user_data['postal_code'] = profile.postal_code
+
+    # Cities for dropdown
+    cities = SaudiCity.objects.filter(is_active=True).order_by('name')
+    
     context = {
-        'cart': cart,
-        'cart_total': cart_total,
-        'guest_form': form,
-        'is_authenticated': False,
+        'cart_items': cart_items_list,
+        'items_total': items_total,
+        'tax_amount': tax_amount,
+        'shipping_cost': shipping_cost,
+        'grand_total': grand_total,
+        'user_data': user_data,
+        'cities': cities,
+        'title': 'Checkout'
     }
     return render(request, 'parts/checkout.html', context)
 
-
-def process_authenticated_checkout(request, cart, cart_total):
-    """Process checkout for authenticated users."""
-    from .models import Order, OrderItem, OrderStatusHistory
-    from django.db import transaction
-    
-    try:
-        with transaction.atomic():
-            # Create order for authenticated user
-            order = Order.objects.create(
-                user=request.user,
-                total_price=cart_total,
-                status='pending'
-            )
-            
-            # Create order items first
-            for part_id, item in cart.items():
-                part = Part.objects.select_for_update().get(id=part_id)
-                quantity = item['quantity']
-                
-                # Create order item
-                OrderItem.objects.create(
-                    order=order,
-                    part=part,
-                    quantity=quantity,
-                    price=part.price
-                )
-            
-            # Check stock availability for all items
-            stock_available, error_message = order.check_stock_availability()
-            if not stock_available:
-                raise ValueError(error_message)
-            
-            # Deduct inventory for all items
-            order.deduct_inventory()
-            
-            # Update order status to confirmed with audit logging
-            order.update_status('confirmed', request=request, 
-                              change_reason='Order confirmed after successful payment')
-            
-            # Create initial status history entry for order creation
-            OrderStatusHistory.objects.create(
-                order=order,
-                previous_status=None,
-                new_status='pending',
-                changed_by=request.user,
-                notes='Order created by authenticated user',
-                ip_address=order.get_client_ip(request) if request else None,
-                user_agent=request.META.get('HTTP_USER_AGENT', '') if request else ''
-            )
-            
-            # Clear cart
-            if 'cart' in request.session:
-                del request.session['cart']
-                request.session.modified = True
-            
-            # Store order confirmation in session
-            request.session['order_confirmation'] = {
-                'order_number': order.order_number,
-                'email': request.user.email,
-                'total': float(order.total_price)
-            }
-            
-            # Send confirmation email
-            send_order_confirmation_email(order)
-            
-            messages.success(request, f'Order {order.order_number} placed successfully! Confirmation email sent.')
-            return redirect('parts:order_confirmation')
-            
-    except ValueError as e:
-        messages.error(request, str(e))
-    except Exception as e:
-        messages.error(request, 'An error occurred while processing your order. Please try again.')
-    
-    return redirect('parts:checkout')
 
 
 def send_order_confirmation_email(order):
@@ -2690,26 +2635,6 @@ def send_order_confirmation_email(order):
         print(f"Failed to send confirmation email for order {order.order_number}: {str(e)}")
 
 
-def order_confirmation(request):
-    """Display order confirmation page."""
-    order_data = request.session.get('order_confirmation')
-    
-    if not order_data:
-        messages.error(request, 'No order confirmation found.')
-        return redirect('parts:part_list')
-    
-    context = {
-        'order_number': order_data['order_number'],
-        'email': order_data['email'],
-        'total': order_data['total'],
-    }
-    
-    # Clear the confirmation from session after displaying
-    if 'order_confirmation' in request.session:
-        del request.session['order_confirmation']
-        request.session.modified = True
-    
-    return render(request, 'parts/order_confirmation.html', context)
 
 
 # Cart Views
@@ -2853,12 +2778,19 @@ def update_cart_item(request, item_id):
 
 
 def cart_view(request):
-    """Display cart contents - works for both authenticated and anonymous users"""
+    """Display cart contents - requires authentication now as per user request"""
+    if not request.user.is_authenticated:
+        messages.info(request, "Please register or login to view your cart.")
+        return redirect('users:register_page')
+
+    cart_items_list = []
+    
     if request.user.is_authenticated:
         # Use database cart for authenticated users
         try:
             cart_obj = Cart.objects.get(user=request.user)
             cart_items = cart_obj.items.select_related('part', 'part__brand', 'part__category').all()
+            cart_items_list = cart_items
             
             # Convert to template-compatible format
             cart = {}
@@ -2885,6 +2817,7 @@ def cart_view(request):
         # Use session cart for anonymous users
         cart = get_cart(request)
         cart_total = 0
+        cart_items_list = []
         for part_id, item_data in cart.items():
             try:
                 part = Part.objects.get(id=part_id, is_active=True)
@@ -2901,6 +2834,20 @@ def cart_view(request):
                     'in_stock': part.is_in_stock,
                 })
                 cart_total += item_total
+                
+                # Create object for template iteration
+                # We need an object that has .part, .quantity, .item_total, .id attributes
+                class MockItem:
+                    def __init__(self, part, quantity, item_total):
+                        self.part = part
+                        self.quantity = quantity
+                        self.item_total = item_total
+                        self.id = part.id # For removal, we use part_id for session
+                        self.available_stock = part.quantity
+                        self.in_stock = part.is_in_stock
+                        
+                cart_items_list.append(MockItem(part, item_data['quantity'], item_total))
+                
             except Part.DoesNotExist:
                 continue
     
@@ -2908,14 +2855,217 @@ def cart_view(request):
         'cart': cart,
         'cart_total': cart_total,
         'cart_count': len(cart),
-        'title': 'Shopping Cart'
+        'title': 'Shopping Cart',
+        'cart_items': cart_items_list,
+        'cart_tax': cart_total * Decimal('0.15'),
+        'cart_grand_total': cart_total * Decimal('1.15'),
+        'can_checkout': len(cart) > 0,
     }
     
+    if request.headers.get('HX-Request'):
+        return render(request, 'parts/cart_partial.html', context)
+        
     return render(request, 'parts/cart.html', context)
 
 
 
 # Multi-step Checkout Views
+
+
+
+def checkout_view(request):
+    """
+    Single-page checkout view.
+    Handles both display of checkout form (with cart summary) and order processing.
+    """
+    # 1. Get Cart Data
+    cart_items_list = []
+    items_total = Decimal('0.00')
+    
+    if request.user.is_authenticated:
+        try:
+            cart_obj = Cart.objects.get(user=request.user)
+            cart_items = cart_obj.items.select_related('part', 'part__brand').all()
+            cart_items_list = cart_items
+            items_total = cart_obj.total_price
+        except Cart.DoesNotExist:
+            pass
+    else:
+        cart = get_cart(request)
+        for part_id, item_data in cart.items():
+            try:
+                part = Part.objects.get(id=part_id, is_active=True)
+                item_total = part.price * item_data['quantity']
+                
+                # Create mock object
+                class MockItem:
+                    def __init__(self, part, quantity, item_total):
+                        self.part = part
+                        self.quantity = quantity
+                        self.item_total = item_total
+                
+                cart_items_list.append(MockItem(part, item_data['quantity'], item_total))
+                items_total += item_total
+            except Part.DoesNotExist:
+                continue
+
+    if not cart_items_list:
+        messages.warning(request, 'Your cart is empty.')
+        return redirect('parts:cart_view')
+
+    # 2. Calculate Initial Totals (Tax, etc.)
+    # Standard 15% tax
+    tax_amount = items_total * Decimal('0.15')
+    shipping_cost = Decimal('0.00') # Free shipping for now
+    
+    grand_total = items_total + tax_amount + shipping_cost
+
+    # 3. Handle POST (Order Placement)
+    if request.method == 'POST':
+        # Extract form data
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        address = request.POST.get('address', '').strip()
+        postal_code = request.POST.get('postal_code', '').strip()
+        if postal_code:
+            address = f"{address}, Postal Code: {postal_code}"
+
+        city_id = request.POST.get('city', '')
+        city_area_id = request.POST.get('area', '')
+        payment_method = request.POST.get('payment_method', 'cod')
+        
+        checkout_data = {
+            'contact_name': f"{first_name} {last_name}".strip(),
+            'first_name': first_name,
+            'last_name': last_name,
+            'email': email,
+            'mobile_number': phone,
+            'address': address,
+            'city_id': city_id,
+            'city_area_id': city_area_id,
+            'payment_method': payment_method,
+        }
+        
+        # Validate
+        if not all([first_name, email, phone, address, city_id]):
+             messages.error(request, 'Please fill in all required fields.')
+        else:
+             try:
+                with transaction.atomic():
+                    # Create Order
+                    order_data = {
+                        'total_price': grand_total,
+                        'shipping_cost': shipping_cost,
+                        'tax_amount': tax_amount,
+                        'status': 'pending',
+                        'payment_method': payment_method,
+                        'payment_status': 'pending' if payment_method == 'cod' else 'pending'
+                    }
+                    
+                    if request.user.is_authenticated:
+                        order_data['customer'] = request.user
+                    else:
+                        order_data['guest_name'] = checkout_data['contact_name']
+                        order_data['guest_email'] = checkout_data['email']
+                        order_data['guest_phone'] = checkout_data['mobile_number']
+                        order_data['guest_address'] = checkout_data['address']
+
+                    order = Order.objects.create(**order_data)
+
+                    # Create Order Items
+                    for item in cart_items_list:
+                        # Lock part for update to prevent race conditions
+                        part = Part.objects.select_for_update().get(id=item.part.id)
+                        
+                        if item.quantity > part.quantity:
+                             raise Exception(f"Insufficient stock for {part.name}. Available: {part.quantity}")
+
+                        OrderItem.objects.create(
+                            order=order,
+                            part=part,
+                            quantity=item.quantity,
+                            price=part.price
+                        )
+                        # Update Stock
+                        part.quantity -= item.quantity
+                        part.save()
+                    
+                    # Create Shipping Info
+                    city = SaudiCity.objects.get(id=city_id)
+                    city_area = None
+                    if city_area_id:
+                         try:
+                            city_area = CityArea.objects.get(id=city_area_id)
+                         except CityArea.DoesNotExist:
+                            pass
+                         
+                    OrderShipping.objects.create(
+                        order=order,
+                        contact_name=checkout_data['contact_name'],
+                        mobile_number=checkout_data['mobile_number'],
+                        city=city,
+                        city_area=city_area,
+                        address=checkout_data['address'],
+                        shipping_cost=shipping_cost
+                    )
+                    
+                    # Clear Cart
+                    if request.user.is_authenticated:
+                        cart_obj.items.all().delete()
+                    else:
+                        if 'cart' in request.session:
+                            del request.session['cart']
+                            request.session.modified = True
+                            
+                    messages.success(request, f'Order #{order.order_number} placed successfully!')
+                    return redirect('parts:order_confirmation', order_number=order.order_number)
+
+             except Exception as e:
+                 import traceback
+                 traceback.print_exc()
+                 messages.error(request, f'Error processing order: {str(e)}')
+
+    # 4. Prepare Context for GET (or failed POST)
+    # User Data Pre-fill
+    user_data = {}
+    if request.user.is_authenticated:
+        # Get basic user data
+        user_data = {
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name,
+            'email': request.user.email,
+            'phone': request.user.phone_number if hasattr(request.user, 'phone_number') else '',
+        }
+        
+        # Try to get profile data
+        if hasattr(request.user, 'profile'):
+            profile = request.user.profile
+            if profile.address:
+                user_data['address'] = profile.address
+            if profile.city:
+                # Check if profile.city matches any SaudiCity name
+                city_obj = SaudiCity.objects.filter(name__iexact=profile.city).first()
+                if city_obj:
+                    user_data['city_id'] = city_obj.id
+            if profile.postal_code:
+                user_data['postal_code'] = profile.postal_code
+
+    # Cities for dropdown
+    cities = SaudiCity.objects.filter(is_active=True).order_by('name')
+
+    context = {
+        'cart_items': cart_items_list,
+        'items_total': items_total,
+        'tax_amount': tax_amount,
+        'shipping_cost': shipping_cost,
+        'grand_total': grand_total,
+        'user_data': user_data,
+        'cities': cities,
+        'title': 'Checkout'
+    }
+    return render(request, 'parts/checkout.html', context)
 
 
 def checkout_step1_order_summary(request):
@@ -3005,89 +3155,89 @@ def checkout_step1_order_summary(request):
             messages.warning(request, 'Your cart is empty.')
             return redirect('parts:cart_view')
         
-        # Calculate totals - items_total is already calculated above
-        shipping_cost = Decimal('0.00')  # Will be calculated in step 2
-        tax_amount = Decimal('0.00')  # Will be calculated based on location
-        discount_amount = Decimal('0.00')
-        
-        # Check for applied discount
-        discount_code = None
-        if 'applied_discount_code' in request.session:
-            try:
-                discount_code = DiscountCode.objects.get(
-                    code=request.session['applied_discount_code'],
-                    is_active=True
-                )
-                is_valid, message = discount_code.is_valid()
-                if is_valid:
-                    discount_amount = discount_code.calculate_discount(items_total)
-                else:
-                    del request.session['applied_discount_code']
-                    messages.error(request, f'Discount code error: {message}')
-            except DiscountCode.DoesNotExist:
+    # Calculate totals - items_total is already calculated above
+    shipping_cost = Decimal('0.00')  # Will be calculated in step 2
+    tax_amount = Decimal('0.00')  # Will be calculated based on location
+    discount_amount = Decimal('0.00')
+    
+    # Check for applied discount
+    discount_code = None
+    if 'applied_discount_code' in request.session:
+        try:
+            discount_code = DiscountCode.objects.get(
+                code=request.session['applied_discount_code'],
+                is_active=True
+            )
+            is_valid, message = discount_code.is_valid()
+            if is_valid:
+                discount_amount = discount_code.calculate_discount(items_total)
+            else:
                 del request.session['applied_discount_code']
-                messages.error(request, 'Invalid discount code.')
+                messages.error(request, f'Discount code error: {message}')
+        except DiscountCode.DoesNotExist:
+            del request.session['applied_discount_code']
+            messages.error(request, 'Invalid discount code.')
+    
+    grand_total = items_total + shipping_cost + tax_amount - discount_amount
+    
+    # Handle discount code application
+    if request.method == 'POST':
+        action = request.POST.get('action')
         
-        grand_total = items_total + shipping_cost + tax_amount - discount_amount
-        
-        # Handle discount code application
-        if request.method == 'POST':
-            action = request.POST.get('action')
+        if action == 'apply_discount':
+            discount_code_input = request.POST.get('discount_code', '').strip().upper()
             
-            if action == 'apply_discount':
-                discount_code_input = request.POST.get('discount_code', '').strip().upper()
-                
-                if discount_code_input:
-                    try:
-                        discount_code = DiscountCode.objects.get(
-                            code=discount_code_input,
-                            is_active=True
-                        )
-                        is_valid, message = discount_code.is_valid()
-                        
-                        if is_valid:
-                            if items_total >= discount_code.minimum_order_amount:
-                                request.session['applied_discount_code'] = discount_code.code
-                                messages.success(request, f'Discount code "{discount_code.code}" applied successfully!')
-                                return redirect('parts:checkout_step1')
-                            else:
-                                messages.error(request, f'Minimum order amount of {discount_code.minimum_order_amount} SAR required.')
+            if discount_code_input:
+                try:
+                    discount_code = DiscountCode.objects.get(
+                        code=discount_code_input,
+                        is_active=True
+                    )
+                    is_valid, message = discount_code.is_valid()
+                    
+                    if is_valid:
+                        if items_total >= discount_code.minimum_order_amount:
+                            request.session['applied_discount_code'] = discount_code.code
+                            messages.success(request, f'Discount code "{discount_code.code}" applied successfully!')
+                            return redirect('parts:checkout_step1')
                         else:
-                            messages.error(request, message)
-                    except DiscountCode.DoesNotExist:
-                        messages.error(request, 'Invalid discount code.')
-                else:
-                    messages.error(request, 'Please enter a discount code.')
-            
-            elif action == 'remove_discount':
-                if 'applied_discount_code' in request.session:
-                    del request.session['applied_discount_code']
-                    messages.success(request, 'Discount code removed.')
-                return redirect('parts:checkout_step1')
-            
-            elif action == 'proceed_to_shipping':
-                # Store order summary in session and proceed to step 2
-                request.session['checkout_data'] = {
-                    'items_total': str(items_total),
-                    'discount_amount': str(discount_amount),
-                    'discount_code': discount_code.code if discount_code else None,
-                }
-                return redirect('parts:checkout_step2')
+                            messages.error(request, f'Minimum order amount of {discount_code.minimum_order_amount} SAR required.')
+                    else:
+                        messages.error(request, message)
+                except DiscountCode.DoesNotExist:
+                    messages.error(request, 'Invalid discount code.')
+            else:
+                messages.error(request, 'Please enter a discount code.')
         
-        context = {
-            'cart': cart,
-            'cart_items': cart_items_data,  # Use the unified data structure
-            'items_total': items_total,
-            'shipping_cost': shipping_cost,
-            'tax_amount': tax_amount,
-            'discount_amount': discount_amount,
-            'discount_code': discount_code,
-            'grand_total': grand_total,
-            'step': 1,
-            'title': 'Checkout - Order Summary'
-        }
+        elif action == 'remove_discount':
+            if 'applied_discount_code' in request.session:
+                del request.session['applied_discount_code']
+                messages.success(request, 'Discount code removed.')
+            return redirect('parts:checkout_step1')
         
-        return render(request, 'parts/checkout/step1_order_summary.html', context)
+        elif action == 'proceed_to_shipping':
+            # Store order summary in session and proceed to step 2
+            request.session['checkout_data'] = {
+                'items_total': str(items_total),
+                'discount_amount': str(discount_amount),
+                'discount_code': discount_code.code if discount_code else None,
+            }
+            return redirect('parts:checkout_step2')
+    
+    context = {
+        'cart': cart,
+        'cart_items': cart_items_data,  # Use the unified data structure
+        'items_total': items_total,
+        'shipping_cost': shipping_cost,
+        'tax_amount': tax_amount,
+        'discount_amount': discount_amount,
+        'discount_code': discount_code,
+        'grand_total': grand_total,
+        'step': 1,
+        'title': 'Checkout - Order Summary'
+    }
+    
+    return render(request, 'parts/checkout/step1_order_summary.html', context)
 
 def checkout_step2_shipping_info(request):
     """Step 2: Shipping Information - Collect contact and shipping details.
@@ -3352,31 +3502,24 @@ def checkout_step3_payment_method(request):
                                         quantity=cart_item.quantity,
                                         price=cart_item.part.price
                                     )
-                                    
-                                    # Update part inventory
-                                    cart_item.part.quantity -= cart_item.quantity
-                                    cart_item.part.save()
                             else:
                                 # Session cart for guest users
                                 for part_id, item_data in cart.items():
                                     try:
                                         part = Part.objects.get(id=part_id, is_active=True)
-                                        quantity = item_data['quantity']
-                                        
-                                        # Create order item
                                         OrderItem.objects.create(
                                             order=order,
                                             part=part,
-                                            quantity=quantity,
+                                            quantity=item_data['quantity'],
                                             price=part.price
                                         )
-                                        
-                                        # Update part inventory
-                                        part.quantity -= quantity
-                                        part.save()
                                     except Part.DoesNotExist:
                                         logger.warning(f"Part {part_id} not found for guest cart item")
                                         continue
+                            
+                            # Deduct inventory using the robust model method
+                            # This handles both Inventory model and Part.quantity field sync
+                            order.deduct_inventory()
                         
                         # Create shipping information (for both buy now and regular orders)
                         city = SaudiCity.objects.get(id=checkout_data['city_id'])
@@ -3470,13 +3613,14 @@ def order_confirmation(request, order_number):
                 return redirect('parts:cart_view')
         
         context = {
+            'order': order,  # Pass the order object itself as well, not just attributes
             'order_number': order.order_number,
             'email': order.customer_email if order.customer_email else order.guest_email,
             'total': order.total_price,
             'title': f'Order Confirmation - {order.order_number}'
         }
         
-        return render(request, 'parts/order_confirmation.html', context)
+        return render(request, 'parts/thankyou.html', context)
         
     except Order.DoesNotExist:
         messages.error(request, 'Order not found.')

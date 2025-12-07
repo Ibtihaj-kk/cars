@@ -80,10 +80,9 @@ class Part(models.Model):
     # USER-VISIBLE: Parts Number
     parts_number = models.CharField(
         max_length=50, 
-        unique=True,
         blank=True,
         null=True,
-        help_text="Unique parts identification number"
+        help_text="Parts identification number"
     )
     
     # USER-VISIBLE: Material Description (Short Text)
@@ -688,6 +687,9 @@ class Part(models.Model):
             models.Index(fields=['plant'], name='parts_part_plant_idx'),
             models.Index(fields=['material_group'], name='parts_part_material_group_idx'),
         ]
+        constraints = [
+            models.UniqueConstraint(fields=['parts_number', 'vendor'], name='unique_part_per_vendor')
+        ]
     
     def __str__(self):
         return f"{self.parts_number} - {self.material_description}"
@@ -696,6 +698,11 @@ class Part(models.Model):
         # Generate slug from parts_number and material_description
         if not self.slug:
             base_slug = slugify(f"{self.parts_number}-{self.material_description}")
+            # Ensure valid slug even if fields are empty or non-ascii
+            if not base_slug:
+                import uuid
+                base_slug = str(uuid.uuid4())[:8]
+                
             self.slug = base_slug
             counter = 1
             while Part.objects.filter(slug=self.slug).exists():
@@ -1068,6 +1075,7 @@ class Order(models.Model):
     """Model for customer orders."""
     
     STATUS_CHOICES = [
+        ('created', 'Created'),
         ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
         ('processing', 'Processing'),
@@ -1236,36 +1244,56 @@ class Order(models.Model):
         
         with transaction.atomic():
             for order_item in self.items.all():
-                inventory = order_item.part.inventory
-                
-                if inventory.quantity < order_item.quantity:
-                    raise ValueError(
-                        f"Insufficient stock for {order_item.part.name}. "
-                        f"Available: {inventory.quantity}, Required: {order_item.quantity}"
+                # Check if inventory exists for the part
+                if hasattr(order_item.part, 'inventory'):
+                    inventory = order_item.part.inventory
+                    
+                    if inventory.stock < order_item.quantity:
+                        raise ValueError(
+                            f"Insufficient stock for {order_item.part.name}. "
+                            f"Available: {inventory.stock}, Required: {order_item.quantity}"
+                        )
+                    
+                    # Create inventory transaction record
+                    InventoryTransaction.objects.create(
+                        inventory=inventory,
+                        transaction_type='sale',
+                        quantity_change=-order_item.quantity,
+                        previous_quantity=inventory.stock,
+                        new_quantity=inventory.stock - order_item.quantity,
+                        order=self,
+                        order_item=order_item,
+                        notes=f"Stock deducted for order {self.order_number}"
                     )
-                
-                # Create inventory transaction record
-                InventoryTransaction.objects.create(
-                    inventory=inventory,
-                    transaction_type='sale',
-                    quantity_change=-order_item.quantity,
-                    previous_quantity=inventory.quantity,
-                    new_quantity=inventory.quantity - order_item.quantity,
-                    order=self,
-                    order_item=order_item,
-                    notes=f"Stock deducted for order {self.order_number}"
-                )
-                
-                # Update inventory quantity
-                inventory.quantity -= order_item.quantity
-                inventory.save()
+                    
+                    # Update inventory stock
+                    inventory.stock -= order_item.quantity
+                    inventory.save()
+                    
+                    # Sync part quantity
+                    order_item.part.quantity = inventory.stock
+                    order_item.part.save()
+                else:
+                    # Fallback: Update part quantity directly if no inventory record
+                    if order_item.part.quantity < order_item.quantity:
+                        raise ValueError(
+                            f"Insufficient stock for {order_item.part.name}. "
+                            f"Available: {order_item.part.quantity}, Required: {order_item.quantity}"
+                        )
+                    
+                    order_item.part.quantity -= order_item.quantity
+                    order_item.part.save()
     
     def check_stock_availability(self):
         """Check if all items in the order have sufficient stock."""
         for order_item in self.items.all():
-            inventory = order_item.part.inventory
-            if inventory.quantity < order_item.quantity:
-                return False, f"Insufficient stock for {order_item.part.name}"
+            if hasattr(order_item.part, 'inventory'):
+                inventory = order_item.part.inventory
+                if inventory.stock < order_item.quantity:
+                    return False, f"Insufficient stock for {order_item.part.name}"
+            else:
+                if order_item.part.quantity < order_item.quantity:
+                    return False, f"Insufficient stock for {order_item.part.name}"
         return True, "All items are in stock"
     
     def restore_inventory(self):
@@ -1274,23 +1302,32 @@ class Order(models.Model):
         
         with transaction.atomic():
             for order_item in self.items.all():
-                inventory = order_item.part.inventory
-                
-                # Create inventory transaction record
-                InventoryTransaction.objects.create(
-                    inventory=inventory,
-                    transaction_type='return',
-                    quantity_change=order_item.quantity,
-                    previous_quantity=inventory.quantity,
-                    new_quantity=inventory.quantity + order_item.quantity,
-                    order=self,
-                    order_item=order_item,
-                    notes=f"Stock restored for cancelled order {self.order_number}"
-                )
-                
-                # Update inventory quantity
-                inventory.quantity += order_item.quantity
-                inventory.save()
+                if hasattr(order_item.part, 'inventory'):
+                    inventory = order_item.part.inventory
+                    
+                    # Create inventory transaction record
+                    InventoryTransaction.objects.create(
+                        inventory=inventory,
+                        transaction_type='return',
+                        quantity_change=order_item.quantity,
+                        previous_quantity=inventory.stock,
+                        new_quantity=inventory.stock + order_item.quantity,
+                        order=self,
+                        order_item=order_item,
+                        notes=f"Stock restored for cancelled order {self.order_number}"
+                    )
+                    
+                    # Update inventory stock
+                    inventory.stock += order_item.quantity
+                    inventory.save()
+                    
+                    # Sync part quantity
+                    order_item.part.quantity = inventory.stock
+                    order_item.part.save()
+                else:
+                    # Fallback: Update part quantity directly
+                    order_item.part.quantity += order_item.quantity
+                    order_item.part.save()
 
 
 class OrderItem(models.Model):

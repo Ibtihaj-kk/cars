@@ -1,0 +1,180 @@
+{% extends 'vendors/base.html' %}
+{% load static %}
+
+{% block title %}Customer Management | Corporate Dock{% endblock %}
+{% block header_title %}Customer Management{% endblock %}
+{% block header_subtitle %}Manage your client relationships and view purchase history{% endblock %}
+
+{% block header_actions %}
+<div class="flex gap-3">
+    <button class="hidden sm:flex items-center px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 transition shadow-sm">
+         <i class="fas fa-file-export mr-2"></i> Export
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-start">
+        <div>
+            <p class="text-xs font-bold text-gray-400 uppercase">Total Customers</p>
+            <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ total_customers_count|default:"0" }}</h3>
+        </div>
+        <div class="p-2 bg-blue-50 rounded-lg text-blue-600"><i class="fas fa-users"></i></div>
+    </div>
+    
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-start">
+        <div>
+            <p class="text-xs font-bold text-gray-400 uppercase">Active Now</p>
+            <h3 class="text-2xl font-extrabold text-green-600 mt-1">{{ active_customers|default:"--" }}</h3>
+        </div>
+        <div class="p-2 bg-green-50 rounded-lg text-green-600"><i class="fas fa-user-check"></i></div>
+    </div>
+
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-start">
+        <div>
+            <p class="text-xs font-bold text-gray-400 uppercase">New (This Month)</p>
+            <h3 class="text-2xl font-extrabold text-purple-600 mt-1">{{ new_customers|default:"--" }}</h3>
+        </div>
+        <div class="p-2 bg-purple-50 rounded-lg text-purple-600"><i class="fas fa-user-plus"></i></div>
+    </div>
+
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-start">
+        <div>
+            <p class="text-xs font-bold text-gray-400 uppercase">Avg. Spend</p>
+            <h3 class="text-2xl font-extrabold text-yellow-600 mt-1">PKR {{ avg_spend|default:"--" }}</h3>
+        </div>
+        <div class="p-2 bg-yellow-50 rounded-lg text-yellow-600"><i class="fas fa-coins"></i></div>
+    </div>
+</div>
+
+<div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
+    <form method="get" class="relative w-full sm:w-96">
+        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fas fa-search"></i></span>
+        <input type="text" name="search" value="{{ search_query }}" class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black placeholder-gray-400" placeholder="Search customers by name or email...">
+    </form>
+    
+    <div class="flex gap-3 w-full sm:w-auto overflow-x-auto">
+        <select class="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 focus:border-black outline-none">
+            <option>Status: All</option>
+            <option>Active</option>
+            <option>Inactive</option>
+        </select>
+        <select class="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 focus:border-black outline-none">
+            <option>Sort By: Newest</option>
+            <option>Sort By: Spent</option>
+            <option>Sort By: Name</option>
+        </select>
+        <button class="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 flex items-center gap-2 whitespace-nowrap">
+            <i class="fas fa-filter"></i> Filter
+        </button>
+    </div>
+</div>
+
+<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Contact</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Orders (Yours)</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Total Spent (Yours)</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for customer in customers %}
+                <tr class="table-row-hover transition duration-150">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="h-10 w-10 flex-shrink-0">
+                                {% if customer.avatar %}
+                                    <img class="h-10 w-10 rounded-full object-cover" src="{{ customer.avatar.url }}" alt="">
+                                {% else %}
+                                    <div class="h-10 w-10 rounded-full bg-gray-800 text-white flex items-center justify-center font-bold text-xs">
+                                        {{ customer.first_name|first }}{{ customer.last_name|first }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-bold text-gray-900">{{ customer.get_full_name|default:customer.username }}</div>
+                                <div class="text-xs text-gray-500">Joined {{ customer.date_joined|date:"M Y" }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ customer.email }}</div>
+                        <div class="text-xs text-gray-500">{{ customer.phone|default:"--" }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-800">
+                            {{ customer.vendor_orders_count }} Orders
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                        PKR {{ customer.vendor_total_spent|floatformat:0 }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if customer.is_active %}
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">Active</span>
+                        {% else %}
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex justify-end gap-3">
+                            <a href="{% url 'business_partners:vendor_customer_detail' customer.id %}" class="text-gray-400 hover:text-black transition" title="View Details"><i class="fas fa-eye"></i></a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-10 text-center text-gray-500">No customers found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if is_paginated %}
+    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+                <p class="text-xs text-gray-700">Showing <span class="font-bold">{{ page_obj.start_index }}</span> to <span class="font-bold">{{ page_obj.end_index }}</span> of <span class="font-bold">{{ paginator.count }}</span> results</p>
+            </div>
+            <div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        <span class="sr-only">Previous</span>
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                    {% endif %}
+                    
+                    {% for i in paginator.page_range %}
+                        {% if page_obj.number == i %}
+                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-gray-50 text-sm font-medium text-gray-700">
+                            {{ i }}
+                        </span>
+                        {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                        <a href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            {{ i }}
+                        </a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        <span class="sr-only">Next</span>
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

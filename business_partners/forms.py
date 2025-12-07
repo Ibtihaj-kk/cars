@@ -75,287 +75,107 @@ class VendorApplicationStep1Form(BaseVendorApplicationForm):
         }
 
 
-class VendorPartForm(forms.ModelForm):
-    """
-    Comprehensive form for vendor part management with ALL fields from Excel Parts sheet.
-    Organized in sections: Basic Info, Inventory, Pricing, Compatibility, Advanced
-    """
-    
-    # Additional fields not in the Part model but needed for vendor management
-    cost_price = forms.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        required=False,
-        help_text="Cost price for profit margin calculation",
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'placeholder': 'Cost price',
-            'data-section': 'pricing',
-            'id': 'cost-price',
-            'hx-trigger': 'keyup changed delay:300ms',
-            'hx-post': '/vendor/calculate-profit-margin/',
-            'hx-target': '#profit-margin-display',
-            'hx-include': '#selling-price'
-        })
-    )
-    
-    inventory_threshold = forms.IntegerField(
-        required=False,
-        help_text="Alert when stock falls below this level",
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'min': '0',
-            'placeholder': 'Low stock alert threshold',
-            'data-section': 'inventory'
-        })
-    )
-
-    class Meta:
-        model = Part
-        fields = [
-            # ==================== BASIC INFO SECTION ====================
-            'parts_number', 'material_description', 'material_description_ar',
-            'manufacturer_part_number', 'manufacturer_oem_number', 'category', 'brand',
-            'base_unit_of_measure', 'gross_weight', 'net_weight', 'size_dimensions',
-            'image', 'image_url', 'warranty_period',
-            
-            # ==================== INVENTORY SECTION ====================
-            'quantity', 'safety_stock', 'minimum_safety_stock', 'reorder_point',
-            'minimum_order_quantity', 'storage_location', 'warehouse_number',
-            'storage_bin', 'plant', 'abc_indicator',
-            
-            # ==================== PRICING SECTION ====================
-            'price', 'standard_price', 'moving_average_price', 'price_unit_peinh',
-            'valuation_class', 'price_control_indicator',
-            
-            # ==================== COMPATIBILITY SECTION ====================
-            # 'vehicle_variants',  # Disabled - vehicles app not in INSTALLED_APPS
-            
-            # ==================== ADVANCED SECTION ====================
-            'material_type', 'material_group', 'external_material_group', 'division',
-            'old_material_number', 'expiration_xchpf', 'planned_delivery_time_days',
-            'goods_receipt_processing_time_days', 'weight_of_unit', 'sales_organization',
-            'distribution_channel', 'tax_classification_material', 'industry_sector',
-            'material_pricing_group', 'account_assignment_group', 'general_item_category_group',
-            'item_category_group', 'availability_check', 'transportation_group',
-            'loading_group', 'profit_center', 'purchasing_group', 'mrp_group',
-            'mrp_type', 'lot_size', 'mrp_controller', 'procurement_type',
-            'total_replenishment_lead_time', 'forecast_model', 'period_indicator',
-            'historical_periods', 'forecast_periods', 'initialization_indicator',
-            'valuation_category',
-            
-            # ==================== STATUS FIELDS ====================
-            'slug', 'is_active', 'is_featured',
-        ]
-    
-    def __init__(self, *args, **kwargs):
-        self.vendor = kwargs.pop('vendor', None)
-        super().__init__(*args, **kwargs)
-        
-        # Filter vehicle variants to show only active ones
-        # Disabled - vehicles app not in INSTALLED_APPS
-        # if 'vehicle_variants' in self.fields:
-        #     from vehicles.models import VehicleVariant
-        #     self.fields['vehicle_variants'].queryset = VehicleVariant.objects.filter(
-        #         is_active=True
-        #     ).select_related('model__make').order_by('model__make__name', 'model__name', 'name')
-            
-        # Set initial values for new parts
-        if not self.instance.pk:
-            self.fields['is_active'].initial = True
-    
-    def clean_parts_number(self):
-        """Validate parts number uniqueness for the vendor"""
-        parts_number = self.cleaned_data.get('parts_number')
-        if not parts_number:
-            return parts_number
-            
-        # Check for uniqueness within vendor's parts
-        queryset = Part.objects.filter(
-            parts_number=parts_number,
-            vendor=self.vendor
-        )
-        
-        # Exclude current instance if editing
-        if self.instance.pk:
-            queryset = queryset.exclude(pk=self.instance.pk)
-            
-        if queryset.exists():
-            raise forms.ValidationError(
-                f"A part with number '{parts_number}' already exists in your inventory."
-            )
-            
-        return parts_number
-    
-    def clean_price(self):
-        """Validate selling price"""
-        price = self.cleaned_data.get('price')
-        cost_price = self.cleaned_data.get('cost_price')
-        
-        if price is not None and price <= 0:
-            raise forms.ValidationError("Selling price must be greater than 0.")
-            
-        # Warn if selling price is lower than cost price
-        if price and cost_price and price < cost_price:
-            raise forms.ValidationError(
-                f"Selling price ({price}) is lower than cost price ({cost_price}). "
-                "This will result in a loss."
-            )
-            
-        return price
-    
-    def clean_cost_price(self):
-        """Validate cost price"""
-        cost_price = self.cleaned_data.get('cost_price')
-        
-        if cost_price is not None and cost_price < 0:
-            raise forms.ValidationError("Cost price cannot be negative.")
-            
-        return cost_price
-    
-    def clean_inventory_threshold(self):
-        """Validate inventory threshold"""
-        threshold = self.cleaned_data.get('inventory_threshold')
-        quantity = self.cleaned_data.get('quantity', 0)
-        
-        if threshold is not None and threshold < 0:
-            raise forms.ValidationError("Inventory threshold cannot be negative.")
-            
-        # Warn if current quantity is below threshold
-        if threshold and quantity < threshold:
-            # This is a warning, not an error - we'll handle it in the view
-            pass
-            
-        return threshold
-    
-    def clean_quantity(self):
-        """Validate quantity"""
-        quantity = self.cleaned_data.get('quantity')
-        
-        if quantity is not None and quantity < 0:
-            raise forms.ValidationError("Quantity cannot be negative.")
-            
-        return quantity
-    
-    def clean_safety_stock(self):
-        """Validate safety stock"""
-        safety_stock = self.cleaned_data.get('safety_stock')
-        minimum_safety_stock = self.cleaned_data.get('minimum_safety_stock')
-        
-        if safety_stock is not None and safety_stock < 0:
-            raise forms.ValidationError("Safety stock cannot be negative.")
-            
-        if (safety_stock and minimum_safety_stock and 
-            safety_stock < minimum_safety_stock):
-            raise forms.ValidationError(
-                "Safety stock cannot be less than minimum safety stock."
-            )
-            
-        return safety_stock
-    
-    def clean_reorder_point(self):
-        """Validate reorder point"""
-        reorder_point = self.cleaned_data.get('reorder_point')
-        safety_stock = self.cleaned_data.get('safety_stock')
-        
-        if reorder_point is not None and reorder_point < 0:
-            raise forms.ValidationError("Reorder point cannot be negative.")
-            
-        # Reorder point should typically be higher than safety stock
-        if (reorder_point and safety_stock and 
-            reorder_point < safety_stock):
-            raise forms.ValidationError(
-                "Reorder point should typically be higher than safety stock."
-            )
-            
-        return reorder_point
-    
-    def save(self, commit=True):
-        """Custom save method to handle vendor assignment and calculations"""
-        instance = super().save(commit=False)
-        
-        # Set vendor if provided
-        if self.vendor:
-            instance.vendor = self.vendor
-            
-        # Auto-generate slug if not provided
-        if not instance.slug and instance.parts_number:
-            from django.utils.text import slugify
-            base_slug = slugify(f"{instance.parts_number}-{instance.material_description}")
-            instance.slug = base_slug
-            
-        # Calculate profit margin if both prices are available
-        if hasattr(instance, 'cost_price') and instance.cost_price and instance.price:
-            instance.profit_margin = ((instance.price - instance.cost_price) / instance.cost_price) * 100
-            
-        if commit:
-            instance.save()
-            self.save_m2m()
-            
-        return instance
 
 
 class VendorPartSearchForm(forms.Form):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        # Make required fields
-        required_fields = [
-            'company_name', 'business_type', 
-            'commercial_registration_number', 'legal_identifier'
-        ]
-        for field_name in required_fields:
-            if field_name in self.fields:
-                self.fields[field_name].required = True
-        
-        # Add help text and placeholders
-        self.fields['company_name'].widget.attrs.update({
-            'placeholder': 'Enter your legal company name'
+    """
+    Form for searching and filtering vendor parts.
+    """
+    search = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Search by part number, description, or OEM number...'
         })
-        self.fields['commercial_registration_number'].widget.attrs.update({
-            'placeholder': 'Enter CR number (e.g., 1010123456)'
-        })
-        self.fields['legal_identifier'].widget.attrs.update({
-            'placeholder': 'Tax ID, VAT number, or other legal identifier'
-        })
+    )
     
-    def clean_commercial_registration_number(self):
-        """Validate commercial registration number format"""
-        cr_number = self.cleaned_data.get('commercial_registration_number')
-        if cr_number:
-            # Remove spaces and validate format (Saudi CR format: 10 digits)
-            cr_number = re.sub(r'\s+', '', cr_number)
-            if not re.match(r'^\d{10}$', cr_number):
-                raise ValidationError(
-                    'Commercial Registration number must be 10 digits.'
-                )
-        return cr_number
+    category = forms.ModelChoiceField(
+        queryset=Category.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        empty_label="All Categories"
+    )
     
-    def clean_company_name(self):
-        """Validate company name uniqueness"""
-        company_name = self.cleaned_data.get('company_name')
-        if company_name:
-            # Check if company name already exists in approved applications
-            existing = VendorApplication.objects.filter(
-                company_name__iexact=company_name,
-                status='approved'
-            ).exclude(pk=self.instance.pk if self.instance else None)
-            
-            if existing.exists():
-                raise ValidationError(
-                    'A vendor with this company name is already registered.'
-                )
-        return company_name
+    brand = forms.ModelChoiceField(
+        queryset=Brand.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        empty_label="All Brands"
+    )
     
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        instance.current_step = 1
-        if instance.is_step_completed(1):
-            instance.status = 'business_details_completed'
-        if commit:
-            instance.save()
-        return instance
+    is_active = forms.ChoiceField(
+        choices=[
+            ('', 'All Statuses'),
+            ('true', 'Active'),
+            ('false', 'Inactive'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    stock_status = forms.ChoiceField(
+        choices=[
+            ('', 'All Stock Levels'),
+            ('in_stock', 'In Stock'),
+            ('low_stock', 'Low Stock'),
+            ('out_of_stock', 'Out of Stock'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    is_featured = forms.ChoiceField(
+        choices=[
+            ('', 'All'),
+            ('true', 'Featured'),
+            ('false', 'Standard'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    min_price = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Min'})
+    )
+    
+    max_price = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Max'})
+    )
+    
+    material_type = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Material Type'})
+    )
+    
+    plant = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Plant'})
+    )
+    
+    material_group = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Material Group'})
+    )
+    
+    abc_indicator = forms.ChoiceField(
+        choices=[('', 'All')],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    sort_by = forms.ChoiceField(
+        choices=[
+            ('created_at', 'Newest First'),
+            ('parts_number', 'Part Number'),
+            ('price', 'Price: Low to High'),
+            ('-price', 'Price: High to Low'),
+            ('quantity', 'Quantity'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
 
 
 class VendorApplicationStep2Form(BaseVendorApplicationForm):
@@ -709,6 +529,228 @@ class VendorApplicationSubmissionForm(forms.Form):
         return cleaned_data
 
 
+class VendorPartBulkUpdateForm(forms.Form):
+    """
+    Form for bulk updating vendor parts.
+    """
+    # Price adjustments
+    price_adjustment_type = forms.ChoiceField(
+        choices=[
+            ('', '--- Select Adjustment ---'),
+            ('percentage_increase', 'Increase by Percentage (%)'),
+            ('percentage_decrease', 'Decrease by Percentage (%)'),
+            ('fixed_amount_increase', 'Increase by Fixed Amount'),
+            ('fixed_amount_decrease', 'Decrease by Fixed Amount'),
+            ('set_price', 'Set Specific Price'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    price_adjustment_value = forms.DecimalField(
+        required=False,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+
+    # Quantity adjustments
+    quantity_adjustment_type = forms.ChoiceField(
+        choices=[
+            ('', '--- Select Adjustment ---'),
+            ('add', 'Add to Stock'),
+            ('subtract', 'Subtract from Stock'),
+            ('set', 'Set Exact Quantity'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    quantity_adjustment_value = forms.DecimalField(
+        required=False,
+        decimal_places=3,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
+    )
+
+    # Status updates
+    set_active_status = forms.ChoiceField(
+        choices=[
+            ('', '--- No Change ---'),
+            ('true', 'Active'),
+            ('false', 'Inactive'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    set_featured_status = forms.ChoiceField(
+        choices=[
+            ('', '--- No Change ---'),
+            ('true', 'Featured'),
+            ('false', 'Not Featured'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    # Vendor-specific updates
+    update_material_type = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    update_plant = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    update_material_group = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Validate price adjustment
+        price_type = cleaned_data.get('price_adjustment_type')
+        price_value = cleaned_data.get('price_adjustment_value')
+        
+        if price_type and price_value is None:
+            self.add_error('price_adjustment_value', 'Value is required when an adjustment type is selected.')
+        if price_value is not None and not price_type:
+            self.add_error('price_adjustment_type', 'Type is required when a value is entered.')
+            
+        # Validate quantity adjustment
+        qty_type = cleaned_data.get('quantity_adjustment_type')
+        qty_value = cleaned_data.get('quantity_adjustment_value')
+        
+        if qty_type and qty_value is None:
+            self.add_error('quantity_adjustment_value', 'Value is required when an adjustment type is selected.')
+        if qty_value is not None and not qty_type:
+            self.add_error('quantity_adjustment_type', 'Type is required when a value is entered.')
+            
+        return cleaned_data
+
+
+class VendorPartForm(forms.ModelForm):
+    """
+    Form for vendors to add/edit parts with access to all Excel fields.
+    """
+    inventory_threshold = forms.IntegerField(
+        required=False,
+        initial=10,
+        min_value=0,
+        widget=InventoryThresholdWidget(),
+        label="Low Stock Alert Threshold",
+        help_text="Notify when stock falls below this level"
+    )
+
+    class Meta:
+        model = Part
+        exclude = [
+            'vendor', 'dealer', 'slug', 'view_count', 
+            'created_at', 'updated_at', 'is_featured', 
+            'average_rating', 'review_count', 'is_active'
+        ]
+        widgets = {
+            # Basic Info
+            'parts_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'material_description': forms.TextInput(attrs={'class': 'form-control'}),
+            'material_description_ar': forms.TextInput(attrs={'class': 'form-control', 'dir': 'rtl'}),
+            'manufacturer_part_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'manufacturer_oem_number': forms.TextInput(attrs={'class': 'form-control'}),
+            
+            # Classification
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'brand': forms.Select(attrs={'class': 'form-select'}),
+            'material_type': forms.TextInput(attrs={'class': 'form-control'}),
+            'material_group': forms.TextInput(attrs={'class': 'form-control'}),
+            'division': forms.TextInput(attrs={'class': 'form-control'}),
+            
+            # Weights & Dimensions
+            'base_unit_of_measure': forms.TextInput(attrs={'class': 'form-control'}),
+            'gross_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
+            'net_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
+            'weight_of_unit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
+            'size_dimensions': forms.TextInput(attrs={'class': 'form-control'}),
+            
+            # Pricing & Valuation
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'standard_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'moving_average_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'valuation_class': forms.TextInput(attrs={'class': 'form-control'}),
+            'price_control_indicator': forms.Select(attrs={'class': 'form-select'}),
+            'price_unit_peinh': forms.NumberInput(attrs={'class': 'form-control'}),
+            
+            # Logistics
+            'plant': forms.TextInput(attrs={'class': 'form-control'}),
+            'storage_location': forms.TextInput(attrs={'class': 'form-control'}),
+            'warehouse_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'storage_bin': forms.TextInput(attrs={'class': 'form-control'}),
+            'minimum_order_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
+            'safety_stock': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
+            'minimum_safety_stock': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
+            'reorder_point': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
+            'lot_size': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
+            
+            # Planning
+            'mrp_type': forms.TextInput(attrs={'class': 'form-control'}),
+            'mrp_controller': forms.TextInput(attrs={'class': 'form-control'}),
+            'mrp_group': forms.TextInput(attrs={'class': 'form-control'}),
+            'procurement_type': forms.Select(attrs={'class': 'form-select'}),
+            'planned_delivery_time_days': forms.NumberInput(attrs={'class': 'form-control'}),
+            'goods_receipt_processing_time_days': forms.NumberInput(attrs={'class': 'form-control'}),
+            'total_replenishment_lead_time': forms.NumberInput(attrs={'class': 'form-control'}),
+            
+            # Sales
+            'sales_organization': forms.TextInput(attrs={'class': 'form-control'}),
+            'distribution_channel': forms.TextInput(attrs={'class': 'form-control'}),
+            'material_pricing_group': forms.TextInput(attrs={'class': 'form-control'}),
+            'account_assignment_group': forms.TextInput(attrs={'class': 'form-control'}),
+            'item_category_group': forms.TextInput(attrs={'class': 'form-control'}),
+            'general_item_category_group': forms.TextInput(attrs={'class': 'form-control'}),
+            'tax_classification_material': forms.TextInput(attrs={'class': 'form-control'}),
+            'transportation_group': forms.TextInput(attrs={'class': 'form-control'}),
+            'loading_group': forms.TextInput(attrs={'class': 'form-control'}),
+            'profit_center': forms.TextInput(attrs={'class': 'form-control'}),
+            'purchasing_group': forms.TextInput(attrs={'class': 'form-control'}),
+            'availability_check': forms.TextInput(attrs={'class': 'form-control'}),
+            
+            # Status
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'abc_indicator': forms.Select(attrs={'class': 'form-select'}),
+            'valuation_category': forms.TextInput(attrs={'class': 'form-control'}),
+            
+            # Media
+            'image': forms.FileInput(attrs={'class': 'form-control'}),
+            'image_url': forms.URLInput(attrs={'class': 'form-control'}),
+            
+            # Other
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'old_material_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'expiration_xchpf': forms.TextInput(attrs={'class': 'form-control'}),
+            'external_material_group': forms.TextInput(attrs={'class': 'form-control'}),
+            'industry_sector': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.vendor = kwargs.pop('vendor', None)
+        super().__init__(*args, **kwargs)
+        
+        # Make important fields required
+        self.fields['parts_number'].required = True
+        self.fields['material_description'].required = True
+        self.fields['category'].required = True
+        self.fields['brand'].required = True
+        
+        # Add help texts where needed
+        self.fields['parts_number'].help_text = "Unique identifier for this part"
+        self.fields['material_description'].help_text = "Short descriptive name"
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.vendor:
+            instance.vendor = self.vendor
+        if commit:
+            instance.save()
+        return instance
+
+
 class VendorPartBulkImportForm(forms.Form):
     """
     Form for bulk importing vendor parts from CSV or Excel files.
@@ -779,901 +821,206 @@ class VendorPartExportForm(forms.Form):
         required=False,
         initial=False,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        help_text='Include inactive parts in export'
+        label=_('Include Inactive Parts'),
+        help_text=_('Include parts that are marked as inactive or out of stock')
     )
-    
-    include_images = forms.BooleanField(
-        required=False,
-        initial=False,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        help_text='Include image URLs in export'
-    )
-    
-    date_range_start = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date'
-        }),
-        help_text='Export parts created after this date'
-    )
-    
-    date_range_end = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date'
-        }),
-        help_text='Export parts created before this date'
-    )
-    
-    def clean(self):
-        """Validate date range"""
-        cleaned_data = super().clean()
-        start_date = cleaned_data.get('date_range_start')
-        end_date = cleaned_data.get('date_range_end')
-        
-        if start_date and end_date and start_date > end_date:
-            raise ValidationError(_('Start date must be before end date.'))
-        
-        return cleaned_data
 
-
-class VendorPartForm(forms.ModelForm):
-    """
-    Comprehensive form for vendors to manage their parts with ALL Excel fields.
-    Organized in sections: Basic Info, Inventory, Pricing, Compatibility, Advanced.
-    Includes vehicle compatibility multi-select and real-time profit margin calculation.
-    """
-    
-    # Additional fields for enhanced functionality
-    cost_price = forms.DecimalField(
-        max_digits=15,
-        decimal_places=2,
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'placeholder': 'Cost price for profit calculation',
-            'id': 'cost-price',
-            'hx-trigger': 'keyup changed delay:300ms',
-            'hx-post': '/vendor/calculate-profit-margin/',
-            'hx-target': '#profit-margin-display',
-            'hx-include': '#selling-price'
-        }),
-        help_text="Enter cost price to calculate profit margin automatically"
-    )
-    
-    inventory_threshold = forms.IntegerField(
-        required=False,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'min': '0',
-            'placeholder': 'Low stock alert threshold'
-        }),
-        help_text="Alert when stock falls below this level"
-    )
-    
-    class Meta:
-        model = Part
-        fields = [
-            # BASIC INFO SECTION
-            'parts_number', 'material_description', 'material_description_ar',
-            'manufacturer_part_number', 'manufacturer_oem_number', 'category', 'brand',
-            'base_unit_of_measure', 'gross_weight', 'net_weight', 'size_dimensions',
-            'image', 'image_url', 'warranty_period',
-            
-            # INVENTORY SECTION
-            'quantity', 'safety_stock', 'minimum_safety_stock', 'reorder_point',
-            'minimum_order_quantity', 'storage_location', 'warehouse_number', 'storage_bin',
-            'plant', 'abc_indicator',
-            
-            # PRICING SECTION
-            'price', 'standard_price', 'moving_average_price', 'price_unit_peinh',
-            'valuation_class', 'price_control_indicator',
-            
-            # COMPATIBILITY SECTION
-            # 'vehicle_variants',  # Disabled - vehicles app not in INSTALLED_APPS
-            
-            # ADVANCED SECTION
-            'material_type', 'material_group', 'division', 'external_material_group',
-            'old_material_number', 'expiration_xchpf', 'planned_delivery_time_days',
-            'goods_receipt_processing_time_days', 'mrp_type', 'mrp_group', 'mrp_controller',
-            'procurement_type', 'total_replenishment_lead_time', 'forecast_model',
-            'period_indicator', 'historical_periods', 'forecast_periods',
-            'initialization_indicator', 'valuation_category', 'weight_of_unit',
-            'sales_organization', 'distribution_channel', 'tax_classification_material',
-            'industry_sector', 'material_pricing_group', 'account_assignment_group',
-            'general_item_category_group', 'item_category_group', 'availability_check',
-            'transportation_group', 'loading_group', 'profit_center', 'purchasing_group',
-            'lot_size',
-            
-            # STATUS FIELDS
-            'slug', 'is_active', 'is_featured'
-        ]
-        
-        widgets = {
-            # ==================== BASIC INFO SECTION ====================
-            'parts_number': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Unique parts identification number',
-                'data-section': 'basic-info'
-            }),
-            'material_description': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Short description of the material/part',
-                'data-section': 'basic-info'
-            }),
-            'material_description_ar': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Arabic description (optional)',
-                'data-section': 'basic-info'
-            }),
-            'manufacturer_part_number': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Manufacturer part number (up to 40 digits)',
-                'data-section': 'basic-info'
-            }),
-            'manufacturer_oem_number': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'OEM number',
-                'data-section': 'basic-info'
-            }),
-            'category': forms.Select(attrs={
-                'class': 'form-control',
-                'data-section': 'basic-info'
-            }),
-            'brand': forms.Select(attrs={
-                'class': 'form-control',
-                'data-section': 'basic-info'
-            }),
-            'base_unit_of_measure': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'EA, KG, L, etc.',
-                'data-section': 'basic-info'
-            }),
-            'gross_weight': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.001',
-                'placeholder': 'Gross weight in kg',
-                'data-section': 'basic-info'
-            }),
-            'net_weight': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.001',
-                'placeholder': 'Net weight in kg',
-                'data-section': 'basic-info'
-            }),
-            'size_dimensions': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Physical dimensions',
-                'data-section': 'basic-info'
-            }),
-            'image': forms.FileInput(attrs={
-                'class': 'form-control',
-                'accept': 'image/*',
-                'data-section': 'basic-info'
-            }),
-            'image_url': forms.URLInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Alternative image URL',
-                'data-section': 'basic-info'
-            }),
-            'warranty_period': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-                'placeholder': 'Warranty period in months',
-                'data-section': 'basic-info'
-            }),
-            
-            # ==================== INVENTORY SECTION ====================
-            'quantity': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-                'placeholder': 'Available quantity',
-                'data-section': 'inventory',
-                'hx-trigger': 'keyup changed delay:300ms',
-                'hx-post': '/vendor/validate-inventory/',
-                'hx-target': '#inventory-alerts',
-                'hx-include': '[data-section="inventory"]'
-            }),
-            'safety_stock': InventoryThresholdWidget(attrs={
-                'step': '0.001',
-                'placeholder': 'Safety stock quantity',
-                'data-section': 'inventory',
-                'data-inventory-field': 'safety_stock'
-            }),
-            'minimum_safety_stock': InventoryThresholdWidget(attrs={
-                'step': '0.001',
-                'placeholder': 'Minimum safety stock',
-                'data-section': 'inventory',
-                'data-inventory-field': 'minimum_safety_stock'
-            }),
-            'reorder_point': InventoryThresholdWidget(attrs={
-                'step': '0.001',
-                'placeholder': 'Reorder point quantity',
-                'data-section': 'inventory',
-                'data-inventory-field': 'reorder_point'
-            }),
-            'inventory_threshold': InventoryThresholdWidget(attrs={
-                'step': '0.001',
-                'placeholder': 'Inventory threshold for alerts',
-                'data-section': 'inventory',
-                'data-inventory-field': 'inventory_threshold'
-            }),
-            'minimum_order_quantity': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.001',
-                'placeholder': 'Minimum order quantity',
-                'data-section': 'inventory'
-            }),
-            'storage_location': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Storage location code',
-                'data-section': 'inventory'
-            }),
-            'warehouse_number': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Warehouse number',
-                'data-section': 'inventory'
-            }),
-            'storage_bin': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Storage bin location',
-                'data-section': 'inventory'
-            }),
-            'plant': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Plant code',
-                'data-section': 'inventory'
-            }),
-            'abc_indicator': forms.Select(attrs={
-                'class': 'form-control',
-                'data-section': 'inventory'
-            }),
-            
-            # ==================== PRICING SECTION ====================
-            'price': ProfitMarginCalculatorWidget(attrs={
-                'min': '0.01',
-                'placeholder': 'Selling price',
-                'data-section': 'pricing',
-                'id': 'selling-price',
-            }),
-            'standard_price': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'placeholder': 'Standard price',
-                'data-section': 'pricing'
-            }),
-            'moving_average_price': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01',
-                'placeholder': 'Moving average price',
-                'data-section': 'pricing'
-            }),
-            'price_unit_peinh': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.001',
-                'placeholder': 'Price unit (PEINH)',
-                'data-section': 'pricing'
-            }),
-            'valuation_class': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Valuation class code',
-                'data-section': 'pricing'
-            }),
-            'price_control_indicator': forms.Select(attrs={
-                'class': 'form-control',
-                'data-section': 'pricing'
-            }),
-            
-            # ==================== COMPATIBILITY SECTION ====================
-            # 'vehicle_variants': VehicleVariantMultiSelectWidget(attrs={  # Disabled - vehicles app not in INSTALLED_APPS
-            #     'data-section': 'compatibility',
-            #     'data-placeholder': 'Search and select compatible vehicle variants...',
-            # }),
-            
-            # ==================== ADVANCED SECTION ====================
-            'material_type': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'FERT, HAWA, etc.',
-                'data-section': 'advanced'
-            }),
-            'material_group': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Material group classification',
-                'data-section': 'advanced'
-            }),
-            'external_material_group': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'External material group',
-                'data-section': 'advanced'
-            }),
-            'division': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Division code',
-                'data-section': 'advanced'
-            }),
-            'old_material_number': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Previous material number',
-                'data-section': 'advanced'
-            }),
-            'expiration_xchpf': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Expiration indicator',
-                'data-section': 'advanced'
-            }),
-            'planned_delivery_time_days': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-                'placeholder': 'Delivery time in days',
-                'data-section': 'advanced'
-            }),
-            'goods_receipt_processing_time_days': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-                'placeholder': 'Processing time in days',
-                'data-section': 'advanced'
-            }),
-            'weight_of_unit': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.001',
-                'placeholder': 'Weight of unit',
-                'data-section': 'advanced'
-            }),
-            'sales_organization': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Sales organization code',
-                'data-section': 'advanced'
-            }),
-            'distribution_channel': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Distribution channel',
-                'data-section': 'advanced'
-            }),
-            'tax_classification_material': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Tax classification',
-                'data-section': 'advanced'
-            }),
-            'industry_sector': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Industry sector',
-                'data-section': 'advanced'
-            }),
-            'material_pricing_group': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Material pricing group',
-                'data-section': 'advanced'
-            }),
-            'account_assignment_group': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Account assignment group',
-                'data-section': 'advanced'
-            }),
-            'general_item_category_group': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'General item category group',
-                'data-section': 'advanced'
-            }),
-            'item_category_group': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Item category group',
-                'data-section': 'advanced'
-            }),
-            'availability_check': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Availability check',
-                'data-section': 'advanced'
-            }),
-            'transportation_group': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Transportation group',
-                'data-section': 'advanced'
-            }),
-            'loading_group': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Loading group',
-                'data-section': 'advanced'
-            }),
-            'profit_center': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Profit center',
-                'data-section': 'advanced'
-            }),
-            'purchasing_group': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Purchasing group',
-                'data-section': 'advanced'
-            }),
-            'mrp_group': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'MRP group',
-                'data-section': 'advanced'
-            }),
-            'mrp_type': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'MRP type',
-                'data-section': 'advanced'
-            }),
-            'lot_size': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.001',
-                'placeholder': 'Lot size',
-                'data-section': 'advanced'
-            }),
-            'mrp_controller': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'MRP controller',
-                'data-section': 'advanced'
-            }),
-            'procurement_type': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Procurement type',
-                'data-section': 'advanced'
-            }),
-            'total_replenishment_lead_time': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-                'placeholder': 'Total replenishment lead time',
-                'data-section': 'advanced'
-            }),
-            'forecast_model': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Forecast model',
-                'data-section': 'advanced'
-            }),
-            'period_indicator': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Period indicator',
-                'data-section': 'advanced'
-            }),
-            'historical_periods': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-                'placeholder': 'Historical periods',
-                'data-section': 'advanced'
-            }),
-            'forecast_periods': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '0',
-                'placeholder': 'Forecast periods',
-                'data-section': 'advanced'
-            }),
-            'initialization_indicator': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Initialization indicator',
-                'data-section': 'advanced'
-            }),
-            'valuation_category': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Valuation category',
-                'data-section': 'advanced'
-            }),
-            
-            # ==================== STATUS FIELDS ====================
-            'slug': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'URL-friendly identifier (auto-generated if empty)',
-                'data-section': 'status'
-            }),
-            'is_active': forms.CheckboxInput(attrs={
-                'class': 'form-check-input',
-                'data-section': 'status'
-            }),
-            'is_featured': forms.CheckboxInput(attrs={
-                'class': 'form-check-input',
-                'data-section': 'status'
-            }),
-        }
-
-    def __init__(self, *args, **kwargs):
-        vendor = kwargs.pop('vendor', None)
-        super().__init__(*args, **kwargs)
-        
-        # Filter category and brand choices based on vendor if provided
-        if vendor:
-            # Filter categories and brands based on vendor's parts if needed
-            pass
-
-
-class VendorPartSearchForm(forms.Form):
-    """
-    Advanced search form for vendors to filter their parts.
-    Includes all Excel fields for comprehensive filtering.
-    """
-    
-    # Basic search
-    search = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Search parts, descriptions, numbers...'
-        })
-    )
-    
-    # Category and Brand filters
     category = forms.ModelChoiceField(
         queryset=Category.objects.all(),
         required=False,
-        empty_label="All Categories",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label=_('Filter by Category'),
+        help_text=_('Export only parts from specific category')
     )
-    
-    brand = forms.ModelChoiceField(
-        queryset=Brand.objects.filter(is_active=True),
-        required=False,
-        empty_label="All Brands",
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    # Status filters
-    is_active = forms.ChoiceField(
-        choices=[('', 'All'), ('true', 'Active'), ('false', 'Inactive')],
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    is_featured = forms.ChoiceField(
-        choices=[('', 'All'), ('true', 'Featured'), ('false', 'Not Featured')],
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    # Stock filters
-    stock_status = forms.ChoiceField(
-        choices=[
-            ('', 'All Stock Levels'),
-            ('in_stock', 'In Stock'),
-            ('low_stock', 'Low Stock'),
-            ('out_of_stock', 'Out of Stock')
-        ],
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    # Price range
-    min_price = forms.DecimalField(
-        required=False,
-        min_value=Decimal('0.01'),
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Min price',
-            'step': '0.01'
-        })
-    )
-    
-    max_price = forms.DecimalField(
-        required=False,
-        min_value=Decimal('0.01'),
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Max price',
-            'step': '0.01'
-        })
-    )
-    
-    # Vendor-specific filters (Excel fields)
-    material_type = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Material type (FERT, HAWA, etc.)'
-        })
-    )
-    
-    plant = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Plant code'
-        })
-    )
-    
-    material_group = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Material group'
-        })
-    )
-    
-    abc_indicator = forms.ChoiceField(
-        choices=[('', 'All'), ('A', 'A'), ('B', 'B'), ('C', 'C')],
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    # Sorting
-    sort_by = forms.ChoiceField(
-        choices=[
-            ('-created_at', 'Newest First'),
-            ('created_at', 'Oldest First'),
-            ('parts_number', 'Parts Number A-Z'),
-            ('-parts_number', 'Parts Number Z-A'),
-            ('material_description', 'Description A-Z'),
-            ('-material_description', 'Description Z-A'),
-            ('price', 'Price Low to High'),
-            ('-price', 'Price High to Low'),
-            ('quantity', 'Stock Low to High'),
-            ('-quantity', 'Stock High to Low'),
-        ],
-        required=False,
-        initial='-created_at',
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    def clean(self):
-        """Validate price range"""
-        cleaned_data = super().clean()
-        min_price = cleaned_data.get('min_price')
-        max_price = cleaned_data.get('max_price')
-        
-        if min_price and max_price and min_price > max_price:
-            raise ValidationError(_('Minimum price cannot be greater than maximum price.'))
-        
-        return cleaned_data
 
 
-class VendorPartBulkUpdateForm(forms.Form):
-    """
-    Form for bulk updating vendor parts.
-    Allows vendors to update multiple parts at once.
-    """
-    
-    # Fields that can be bulk updated
-    price_adjustment_type = forms.ChoiceField(
-        choices=[
-            ('', 'No Price Change'),
-            ('percentage_increase', 'Percentage Increase'),
-            ('percentage_decrease', 'Percentage Decrease'),
-            ('fixed_amount_increase', 'Fixed Amount Increase'),
-            ('fixed_amount_decrease', 'Fixed Amount Decrease'),
-            ('set_price', 'Set Fixed Price'),
-        ],
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    price_adjustment_value = forms.DecimalField(
-        required=False,
-        min_value=Decimal('0.01'),
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Adjustment value',
-            'step': '0.01'
-        })
-    )
-    
-    quantity_adjustment_type = forms.ChoiceField(
-        choices=[
-            ('', 'No Quantity Change'),
-            ('add', 'Add to Current Stock'),
-            ('subtract', 'Subtract from Current Stock'),
-            ('set', 'Set Fixed Quantity'),
-        ],
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    quantity_adjustment_value = forms.IntegerField(
-        required=False,
-        min_value=0,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Quantity value'
-        })
-    )
-    
-    # Status updates
-    set_active_status = forms.ChoiceField(
-        choices=[('', 'No Change'), ('true', 'Set Active'), ('false', 'Set Inactive')],
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    set_featured_status = forms.ChoiceField(
-        choices=[('', 'No Change'), ('true', 'Set Featured'), ('false', 'Remove Featured')],
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    # Vendor-specific bulk updates
-    update_material_type = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Set material type for selected parts'
-        })
-    )
-    
-    update_plant = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Set plant code for selected parts'
-        })
-    )
-    
-    update_material_group = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Set material group for selected parts'
-        })
-    )
-    
-    def clean(self):
-        """Validate bulk update form"""
-        cleaned_data = super().clean()
-        
-        # Validate price adjustment
-        price_type = cleaned_data.get('price_adjustment_type')
-        price_value = cleaned_data.get('price_adjustment_value')
-        
-        if price_type and not price_value:
-            raise ValidationError(_('Price adjustment value is required when price adjustment type is selected.'))
-        
-        # Validate quantity adjustment
-        quantity_type = cleaned_data.get('quantity_adjustment_type')
-        quantity_value = cleaned_data.get('quantity_adjustment_value')
-        
-        if quantity_type and quantity_value is None:
-            raise ValidationError(_('Quantity adjustment value is required when quantity adjustment type is selected.'))
-        
-        return cleaned_data
-
-
-# Authentication forms for vendor login and password reset
 class VendorLoginForm(forms.Form):
-    """Vendor login form with email and password fields"""
-    email = forms.EmailField(
-        widget=forms.EmailInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Email address'
-        })
-    )
-    password = forms.CharField(
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Password'
-        })
-    )
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        email = cleaned_data.get('email')
-        password = cleaned_data.get('password')
-        
-        if email and password:
-            # Check if user exists and has vendor profile
-            try:
-                user = User.objects.get(email=email)
-                vendor_profile = get_vendor_profile(user)
-                
-                # Check if vendor profile exists and is approved
-                if not vendor_profile:
-                    raise ValidationError(
-                        'Vendor profile not found. Please complete your vendor registration.'
-                    )
-                elif not vendor_profile.is_approved:
-                    raise ValidationError(
-                        'Your vendor application is still under review. Please wait for approval.'
-                    )
-                
-                # Authenticate user
-                user = authenticate(username=email, password=password)
-                if not user:
-                    raise ValidationError('Invalid email or password.')
-                    
-            except User.DoesNotExist:
-                raise ValidationError('Invalid email or password.')
-            except VendorProfile.DoesNotExist:
-                raise ValidationError('Vendor profile not found.')
-        
-        return cleaned_data
-
-
-class VendorPasswordResetForm(forms.Form):
-    """Vendor password reset form"""
-    email = forms.EmailField(
-        widget=forms.EmailInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Email address'
-        })
-    )
-    
-    def clean_email(self):
-        email = self.cleaned_data.get('email')
-        
-        # Check if user exists and has vendor profile
-        try:
-            user = User.objects.get(email=email)
-            vendor_profile = get_vendor_profile(user)
-            
-            if not vendor_profile:
-                raise ValidationError(
-                    'Vendor profile not found. Please complete your vendor registration.'
-                )
-            elif not vendor_profile.is_approved:
-                raise ValidationError(
-                    'Your vendor application is still under review. Please wait for approval.'
-                )
-                
-        except User.DoesNotExist:
-            raise ValidationError('No account found with this email address.')
-        except VendorProfile.DoesNotExist:
-            raise ValidationError('Vendor profile not found.')
-        
-        return email
+    email = forms.EmailField(widget=forms.EmailInput(attrs={
+        'class': 'appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm',
+        'placeholder': 'Email address'
+    }))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={
+        'class': 'appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm',
+        'placeholder': 'Password'
+    }))
 
 
 class Vendor2FAForm(forms.Form):
-    """Vendor 2FA verification form"""
     token = forms.CharField(
         max_length=6,
         min_length=6,
         widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Enter 6-digit code',
-            'autocomplete': 'off'
-        })
+            'class': 'shadow-sm focus:ring-black focus:border-black block w-full sm:text-sm border-gray-300 rounded-md text-center tracking-widest text-2xl font-mono',
+            'placeholder': '000000',
+            'autocomplete': 'one-time-code',
+            'pattern': '[0-9]*',
+            'inputmode': 'numeric'
+        }),
+        help_text='Enter the 6-digit code from your authenticator app'
     )
-    
-    def clean_token(self):
-        token = self.cleaned_data.get('token')
-        
-        # Validate that token contains only digits
-        if not token.isdigit():
-            raise ValidationError('Token must contain only digits.')
-        
-        return token
 
 
-# Admin forms for reviewing applications
-class VendorApplicationReviewForm(forms.ModelForm):
-    """Form for admin to review and approve/reject vendor applications"""
+class VendorPasswordResetForm(forms.Form):
+    email = forms.EmailField(widget=forms.EmailInput(attrs={
+        'class': 'appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-black sm:text-sm',
+        'placeholder': 'Email address'
+    }))
+
+
+class VendorSettingsForm(forms.Form):
+    business_name = forms.CharField(max_length=255, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    registration_number = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    description = forms.CharField(widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors', 'rows': 4}), required=False)
+    contact_email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    contact_phone = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    address = forms.CharField(widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors', 'rows': 3}))
+    city = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    zip_code = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    logo = forms.ImageField(required=False, widget=forms.FileInput(attrs={'class': 'absolute inset-0 w-full h-full opacity-0 cursor-pointer'}))
+
+    def __init__(self, *args, **kwargs):
+        self.business_partner = kwargs.pop('business_partner', None)
+        super().__init__(*args, **kwargs)
+        if self.business_partner:
+            self.fields['business_name'].initial = self.business_partner.name
+            self.fields['registration_number'].initial = self.business_partner.legal_identifier
+            self.fields['description'].initial = self.business_partner.description
+            
+            primary_contact_email = self.business_partner.contacts.filter(contact_type='email', is_primary=True).first()
+            if primary_contact_email:
+                self.fields['contact_email'].initial = primary_contact_email.value
+                
+            primary_contact_phone = self.business_partner.contacts.filter(contact_type='phone', is_primary=True).first()
+            if primary_contact_phone:
+                self.fields['contact_phone'].initial = primary_contact_phone.value
+                
+            primary_address = self.business_partner.addresses.filter(is_primary=True).first()
+            if primary_address:
+                self.fields['address'].initial = primary_address.street
+                self.fields['city'].initial = primary_address.city
+                self.fields['zip_code'].initial = primary_address.postal_code
+
+    def save(self):
+        if not self.business_partner:
+            return
+            
+        self.business_partner.name = self.cleaned_data['business_name']
+        self.business_partner.legal_identifier = self.cleaned_data['registration_number']
+        self.business_partner.description = self.cleaned_data['description']
+        if self.cleaned_data.get('logo'):
+            self.business_partner.logo = self.cleaned_data['logo']
+        self.business_partner.save()
+        
+        # Update contacts
+        from .models import ContactInfo, Address
+        
+        # Email
+        ContactInfo.objects.update_or_create(
+            business_partner=self.business_partner,
+            contact_type='email',
+            is_primary=True,
+            defaults={'value': self.cleaned_data['contact_email']}
+        )
+        
+        # Phone
+        ContactInfo.objects.update_or_create(
+            business_partner=self.business_partner,
+            contact_type='phone',
+            is_primary=True,
+            defaults={'value': self.cleaned_data['contact_phone']}
+        )
+        
+        # Address
+        Address.objects.update_or_create(
+            business_partner=self.business_partner,
+            is_primary=True,
+            defaults={
+                'street': self.cleaned_data['address'],
+                'city': self.cleaned_data['city'],
+                'postal_code': self.cleaned_data['zip_code'],
+                'country': 'Saudi Arabia', # Default
+                'address_type': 'office' # Default
+            }
+        )
+
+
+class VendorApplicationReviewForm(forms.Form):
+    """Form for reviewing vendor applications"""
     
     REVIEW_ACTIONS = [
         ('approve', 'Approve Application'),
         ('reject', 'Reject Application'),
-        ('request_changes', 'Request Changes'),
+        ('request_info', 'Request Additional Information'),
+        ('escalate', 'Escalate for Review'),
     ]
     
     action = forms.ChoiceField(
         choices=REVIEW_ACTIONS,
-        widget=forms.RadioSelect,
-        required=True
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label="Review Action"
     )
     
-    class Meta:
-        model = VendorApplication
-        fields = ['review_notes', 'rejection_reason']
-        widgets = {
-            'review_notes': forms.Textarea(
-                attrs={'rows': 4, 'class': 'form-control'}
-            ),
-            'rejection_reason': forms.Textarea(
-                attrs={'rows': 4, 'class': 'form-control'}
-            ),
-        }
+    review_notes = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 4,
+            'placeholder': 'Enter your review notes and observations...'
+        }),
+        required=False,
+        label="Review Notes"
+    )
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        self.fields['review_notes'].required = False
-        self.fields['rejection_reason'].required = False
+    rejection_reason = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'If rejecting, provide detailed reason...'
+        }),
+        required=False,
+        label="Rejection Reason (if applicable)"
+    )
+    
+    required_info = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Specify what additional information is needed...'
+        }),
+        required=False,
+        label="Required Information (if requesting info)"
+    )
+    
+    escalation_reason = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Explain why this case needs escalation...'
+        }),
+        required=False,
+        label="Escalation Reason (if escalating)"
+    )
+    
+    escalation_level = forms.ChoiceField(
+        choices=[(1, 'Level 1 - Senior Reviewer'), (2, 'Level 2 - Manager'), 
+                (3, 'Level 3 - Director'), (4, 'Level 4 - Executive')],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Escalation Level"
+    )
     
     def clean(self):
+        """Validate form based on selected action"""
         cleaned_data = super().clean()
         action = cleaned_data.get('action')
-        rejection_reason = cleaned_data.get('rejection_reason')
         
-        # Require rejection reason for reject and request_changes actions
-        if action in ['reject', 'request_changes'] and not rejection_reason:
-            raise ValidationError(
-                'Rejection reason is required when rejecting or requesting changes.'
-            )
+        if action == 'reject' and not cleaned_data.get('rejection_reason'):
+            raise ValidationError("Rejection reason is required when rejecting an application.")
+        
+        if action == 'request_info' and not cleaned_data.get('required_info'):
+            raise ValidationError("Required information details are needed.")
+        
+        if action == 'escalate' and not cleaned_data.get('escalation_reason'):
+            raise ValidationError("Escalation reason is required.")
         
         return cleaned_data
+

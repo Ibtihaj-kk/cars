@@ -173,7 +173,7 @@
         .parts-grid {
                 display: grid;
                 /* Creates a 3-column layout on desktop (approx 33% width each) */
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
                 gap: 24px; /* Increased gap for a cleaner look */
         }
 
@@ -297,48 +297,71 @@
             z-index: 2;
         }
 
-        /* --- LIST VIEW (Table Style - Like Image 1) --- */
+        /* --- LIST VIEW (Table Style) --- */
         
         /* Table Header (Hidden in Grid) */
         .list-header {
             display: none;
-            padding: 10px 15px;
-            background: white;
-            border-bottom: 2px solid #eee;
-            font-weight: bold;
-            color: #555;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            font-weight: 700;
+            color: #333;
             font-size: 13px;
-            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0;
+            grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr;
+            gap: 15px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            border: 1px solid #eee;
+            border-bottom: 2px solid #eee;
         }
-        .list-header > div {
-            flex: 1;
-            padding: 0 10px;
-        }
-
+        
+        /* Grid view container for list items */
         .parts-grid.list-view {
             display: flex;
             flex-direction: column;
             gap: 0;
             background: white;
-            border-radius: 4px;
+            border: 1px solid #eee;
+            border-top: none; /* Header has top border */
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            overflow: hidden;
         }
 
-        /* Show Header in List View */
-        .parts-grid.list-view + .pagination-custom { margin-top: 20px; } /* spacing fix */
+        .parts-grid.list-view + .pagination-custom { margin-top: 20px; }
 
+        /* Card Styling in List View */
         .parts-grid.list-view .part-card {
-            display: grid;
-            grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr;
+            display: block;
             height: auto;
             border: none;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #f0f0f0;
             border-radius: 0;
-            align-items: center;
-            padding: 10px 5px;
             background: white;
+            margin: 0;
+            transition: background-color 0.2s ease;
         }
+        
+        .parts-grid.list-view .part-card:last-child {
+            border-bottom: none;
+        }
+
         .parts-grid.list-view .part-card:hover {
-            background-color: #f9f9f9;
+            background-color: #f8f9fa;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Make anchor block to fill width */
+        .parts-grid.list-view .part-card > a {
+            display: block;
+            width: 100%;
+            text-decoration: none;
+            color: inherit;
         }
 
         /* Hide Image in List View */
@@ -347,24 +370,55 @@
         }
 
         .parts-grid.list-view .part-content {
-            width: 100%;
-            display: contents; /* Flattens the div to let children sit in grid */
+            display: block;
             padding: 0;
+            width: 100%;
+            height: auto;
         }
 
-        /* Reset styles for List View Cells */
-        .parts-grid.list-view .part-header,
-        .parts-grid.list-view .part-title,
-        .parts-grid.list-view .part-subtitle,
-        .parts-grid.list-view .part-price,
-        .parts-grid.list-view .status-badge {
-            display: block;
-            border: none;
-            margin: 0;
-            padding: 0 10px;
-            font-size: 13px;
-            font-weight: 400;
-            color: #444;
+        /* Hide Grid Content */
+        .parts-grid.list-view .grid-view-content { display: none; }
+
+        /* List View Grid Container */
+        .parts-grid.list-view .list-view-content { 
+            display: grid; 
+            grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr;
+            gap: 15px;
+            width: 100%;
+            align-items: center;
+            padding: 15px 20px;
+        }
+        
+        /* Cell Styling */
+        .parts-grid.list-view .list-cell {
+            font-size: 14px;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .parts-grid.list-view .list-cell.model-name {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .parts-grid.list-view .list-cell.make {
+            color: #666;
+        }
+        
+        .parts-grid.list-view .list-cell.part-number {
+            font-family: monospace;
+            color: #666;
+        }
+        
+        .parts-grid.list-view .list-cell.price {
+            font-weight: 700;
+            font-size: 15px;
+        }
+        
+        .parts-grid.list-view .list-cell.stock {
+            text-align: center;
         }
 
         .parts-grid.list-view .part-title {
@@ -571,6 +625,52 @@
     </style>
   </head>
   <body>
+
+    <!-- Django Messages Display -->
+    {% if messages %}
+    <div id="message-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;">
+        {% for message in messages %}
+            <div class="toast show align-items-center border-0 mb-2 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body border-start border-4 {% if message.tags == 'info' %}border-info{% elif message.tags == 'success' %}border-success{% elif message.tags == 'error' %}border-danger{% else %}border-secondary{% endif %} bg-white rounded-end w-100">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-2">
+                                {% if message.tags == 'info' %}
+                                    <i class="fas fa-info-circle text-info fs-5"></i>
+                                {% elif message.tags == 'success' %}
+                                    <i class="fas fa-check-circle text-success fs-5"></i>
+                                {% elif message.tags == 'error' %}
+                                    <i class="fas fa-exclamation-circle text-danger fs-5"></i>
+                                {% else %}
+                                    <i class="fas fa-bell text-secondary fs-5"></i>
+                                {% endif %}
+                            </div>
+                            <div class="text-dark">
+                                {{ message }}
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close" onclick="this.closest('.toast').remove()"></button>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const messages = document.querySelectorAll('.toast');
+                messages.forEach(function(message) {
+                    message.classList.remove('show');
+                    setTimeout(function() {
+                        message.remove();
+                    }, 300);
+                });
+            }, 5000);
+        });
+    </script>
+    {% endif %}
+
     <button class="mobile-menu-toggle" id="mobileMenuToggle"><span></span><span></span><span></span></button>
     <div class="navbar-top-header">
       <div class="navbar-logo">
@@ -584,7 +684,19 @@
           <span class="navbar-phone-number">+92-333-3610109</span>
         </span>
         <span class="navbar-divider">|</span>
-        <a href="#" class="navbar-cart"><ion-icon name="cart"></ion-icon></a>
+        {% if request.user.is_authenticated %}
+        <a href="{% url 'parts:cart_view' %}" class="navbar-cart position-relative">
+        {% else %}
+        <a href="{% url 'users:register_page' %}?next={% url 'parts:cart_view' %}&msg=Please login to view your cart" class="navbar-cart position-relative">
+        {% endif %}
+            <ion-icon name="cart"></ion-icon>
+            <span id="cart-badge" class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle" style="font-size: 0.6rem; padding: 0.3em 0.6em;">
+               {{ cart_count|default:0 }}
+            </span>
+        </a>
+        
+        <!-- Toast Container for HTMX messages -->
+        <div id="messages-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1050"></div>
 
         <div class="navbar-user-profile-dropdown">
           <div class="navbar-profile-trigger">
@@ -595,8 +707,7 @@
           </div>
           <div class="navbar-dropdown-menu">
               {% if user.is_authenticated %}
-                {# <a href="{% url 'admin_panel:dashboard' %}" class="navbar-dropdown-link">Dashboard</a> #}
-                {# Disabled - admin_panel app not in INSTALLED_APPS #}
+                <a href="#" class="navbar-dropdown-link">My Profile</a>
                 <span class="navbar-dropdown-divider">|</span>
                 <a href="{% url 'logout' %}" class="navbar-dropdown-link">Logout</a>
               {% else %}
@@ -890,10 +1001,12 @@
                         <div class="part-card">
                             <a href="{% url 'parts:part_detail' part.pk %}" style="text-decoration: none;">
                                 <div class="part-image-container">
-                                    {% if part.image_url %}
-                                    <img src="{{ part.image_url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
+                                    {% if part.image %}
+                                    <img src="{{ part.image.url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:250px; object-fit:cover;" />
+                                    {% elif part.image_url %}
+                                    <img src="{{ part.image_url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:250px; object-fit:cover;" />
                                     {% elif part.images.first %}
-                                    <img src="{{ part.images.first.image.url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
+                                    <img src="{{ part.images.first.image.url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:250px; object-fit:cover;" />
                                     {% else %}
                                     <img src="https://images.unsplash.com/photo-1613214150384-14921ff659b2?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
                                     {% endif %}
@@ -1026,7 +1139,7 @@
 
     <div id="signupModal" class="signup-modal-overlay">
         <div class="signup-modal-content">
-            <button class="signup-close-btn" onclick="closeSignupModal()">
+            <button class="signup-close-btn" type="button" id="closeSignupBtn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -1038,7 +1151,7 @@
             </div>
 
             <div class="signup-options">
-                <a href="#" class="signup-option individual">
+                <a href="{% url 'users:register_page' %}" class="signup-option individual">
                     <div class="left-content">
                         <span class="icon-box">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1145,7 +1258,7 @@
 
         if (view === 'list') {
             container.classList.add('list-view');
-            listHeader.style.display = 'flex'; 
+            listHeader.style.display = 'grid'; 
             gridBtn.classList.remove('active');
             listBtn.classList.add('active');
         } else {
@@ -1167,22 +1280,54 @@
         window.location.href = url.toString();
     }
     function openSignupModal() {
-        document.getElementById('signupModal').classList.add('active');
-        document.body.style.overflow = 'hidden'; 
+        const modal = document.getElementById('signupModal');
+        if (modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden'; 
+        }
     }
 
     function closeSignupModal() {
-        document.getElementById('signupModal').classList.remove('active');
-        document.body.style.overflow = 'auto'; 
+        const modal = document.getElementById('signupModal');
+        if (modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto'; 
+        }
     }
 
-    document.getElementById('signupModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeSignupModal();
-        }
-    });
-
     document.addEventListener("DOMContentLoaded", function() {
+        // Modal Close Button
+        const closeBtn = document.getElementById('closeSignupBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                closeSignupModal();
+            });
+        }
+
+        // Modal Outside Click
+        const signupModal = document.getElementById('signupModal');
+        if (signupModal) {
+            signupModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeSignupModal();
+                }
+            });
+        }
+        
+        // Navbar Signup Link
+        const navbarLinks = document.querySelectorAll('.navbar-dropdown-link');
+        navbarLinks.forEach(link => {
+            if (link.textContent.trim() === 'Signup') {
+                link.setAttribute('href', '#');
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    openSignupModal();
+                });
+                link.removeAttribute('onclick');
+            }
+        });
+
         const openSections = document.querySelectorAll('.filter-body.open');
         openSections.forEach(section => {
             section.style.maxHeight = section.scrollHeight + "px";

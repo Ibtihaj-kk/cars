@@ -1,0 +1,147 @@
+{% extends 'vendors/base.html' %}
+{% load static %}
+
+{% block title %}{{ customer.get_full_name }} | Corporate Dock{% endblock %}
+{% block header_title %}Customer Profile{% endblock %}
+{% block header_subtitle %}View details for {{ customer.get_full_name }}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'business_partners:vendor_customers_list' %}" class="hidden sm:flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 shadow-sm transition">
+    <i class="fas fa-arrow-left mr-2"></i> Back to List
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <div class="lg:col-span-1 space-y-6">
+        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm text-center">
+            <div class="relative w-24 h-24 mx-auto mb-4">
+                {% if customer.avatar %}
+                    <img src="{{ customer.avatar.url }}" alt="Avatar" class="w-full h-full rounded-full object-cover border-4 border-gray-50">
+                {% else %}
+                    <div class="w-full h-full rounded-full bg-black text-white flex items-center justify-center font-bold text-3xl border-4 border-gray-50">
+                        {{ customer.first_name|first }}{{ customer.last_name|first }}
+                    </div>
+                {% endif %}
+            </div>
+            <h2 class="text-xl font-bold text-gray-900">{{ customer.get_full_name }}</h2>
+            <p class="text-sm text-gray-500 mb-4">{{ customer.email }}</p>
+            <div class="flex justify-center gap-2 mb-6">
+                <span class="px-3 py-1 bg-gray-100 text-gray-800 text-xs font-bold rounded-full uppercase">Customer</span>
+                {% if customer.is_active %}
+                <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full uppercase">Active</span>
+                {% endif %}
+            </div>
+            
+            <div class="border-t border-gray-100 pt-6 text-left space-y-4">
+                <div class="flex justify-between">
+                    <span class="text-xs font-bold text-gray-400 uppercase">Phone</span>
+                    <span class="text-sm font-bold text-gray-900">{{ customer.phone|default:"--" }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-xs font-bold text-gray-400 uppercase">Location</span>
+                    <span class="text-sm font-bold text-gray-900">{{ customer.city|default:"Unknown" }}, {{ customer.country }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-xs font-bold text-gray-400 uppercase">Joined</span>
+                    <span class="text-sm font-bold text-gray-900">{{ customer.date_joined|date:"M d, Y" }}</span>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-gray-100">
+                <button class="w-full py-2 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-800 transition">Send Message</button>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h3 class="text-sm font-bold text-gray-900 uppercase mb-4 tracking-wider">Shipping Address</h3>
+            {% if customer.shipping_address %}
+                <div class="flex items-start gap-3 bg-gray-50 p-4 rounded-lg">
+                    <div class="mt-1 text-gray-400"><i class="fas fa-map-marker-alt"></i></div>
+                    <div class="text-sm text-gray-600 leading-relaxed">
+                        <span class="font-bold text-gray-900 block mb-1">{{ customer.get_full_name }}</span>
+                        {{ customer.shipping_address.street }}<br>
+                        {{ customer.shipping_address.city }}, {{ customer.shipping_address.zip_code }}<br>
+                        {{ customer.shipping_address.country }}
+                    </div>
+                </div>
+            {% else %}
+                <p class="text-sm text-gray-500 italic">No default address set.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="lg:col-span-2 space-y-6">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <p class="text-xs font-bold text-gray-400 uppercase">Total Orders (Yours)</p>
+                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ orders_count }}</h3>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <p class="text-xs font-bold text-gray-400 uppercase">Total Spent (Yours)</p>
+                <h3 class="text-2xl font-extrabold text-green-600 mt-1">PKR {{ vendor_total_spent|floatformat:0 }}</h3>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <p class="text-xs font-bold text-gray-400 uppercase">Last Order</p>
+                <h3 class="text-sm font-bold text-gray-900 mt-2">{{ last_order_date|date:"M d, Y"|default:"Never" }}</h3>
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-900">Order History (Your Items)</h3>
+                <span class="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded-md">{{ orders_count }} Records</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Order ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Items (Yours)</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Amount (Yours)</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
+                            <th class="px-6 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for order in orders %}
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="font-mono text-sm font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded">#{{ order.order_number }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ order.created_at|date:"M d, Y" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ order.vendor_items_count }} items
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                                PKR {{ order.vendor_total|floatformat:0 }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if order.status == 'delivered' %}
+                                    <span class="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 uppercase">Delivered</span>
+                                {% elif order.status == 'processing' %}
+                                    <span class="px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 uppercase">Processing</span>
+                                {% else %}
+                                    <span class="px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 uppercase">{{ order.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                                <a href="{% url 'business_partners:vendor_order_detail' order.id %}" class="text-blue-600 hover:text-blue-900 text-sm font-bold">View</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No orders found for this customer.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}

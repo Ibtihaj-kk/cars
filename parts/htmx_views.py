@@ -6,7 +6,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.http import HttpResponse
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.contrib import messages
 
 from .models import Part, PartCategory, Order, OrderItem, Cart, CartItem
@@ -123,11 +123,38 @@ def add_to_cart_htmx(request, part_id):
     part = get_object_or_404(Part, id=part_id, is_active=True)
     quantity = int(request.POST.get('quantity', 1))
 
+    if quantity < 1:
+        return HttpResponse('<span class="text-danger">Invalid quantity</span>')
+
+    # Check stock availability
+    available_stock = part.quantity
+    if quantity > available_stock:
+        context = {
+            'cart_count': Cart.objects.filter(user=request.user, is_active=True).first().items.aggregate(total=Sum('quantity'))['total'] or 0,
+            'message': f'Error: Only {available_stock} items available.',
+            'message_type': 'error'
+        }
+        return render(request, 'parts/htmx/cart_badge.html', context)
+
     # Get or create cart
     cart, created = Cart.objects.get_or_create(
         user=request.user,
         is_active=True
     )
+
+    # Check if adding this quantity exceeds stock (considering existing cart item)
+    current_cart_quantity = 0
+    cart_item = CartItem.objects.filter(cart=cart, part=part).first()
+    if cart_item:
+        current_cart_quantity = cart_item.quantity
+
+    if current_cart_quantity + quantity > available_stock:
+         context = {
+            'cart_count': cart.items.aggregate(total=Sum('quantity'))['total'] or 0,
+            'message': f'Error: Only {available_stock} items available (You have {current_cart_quantity} in cart).',
+            'message_type': 'error'
+        }
+         return render(request, 'parts/htmx/cart_badge.html', context)
 
     # Add or update cart item
     cart_item, created = CartItem.objects.get_or_create(
@@ -147,6 +174,7 @@ def add_to_cart_htmx(request, part_id):
     context = {
         'cart_count': cart_count,
         'message': f'{part.name} added to cart',
+        'message_type': 'success'
     }
 
     return render(request, 'parts/htmx/cart_badge.html', context)
@@ -198,6 +226,10 @@ def update_cart_item_htmx(request, item_id):
     quantity = int(request.POST.get('quantity', 1))
 
     if quantity > 0:
+        # Check stock
+        if quantity > cart_item.part.quantity:
+            quantity = cart_item.part.quantity
+            
         cart_item.quantity = quantity
         cart_item.save()
     else:
@@ -317,6 +349,14 @@ def place_order_htmx(request):
             quantity=cart_item.quantity,
             price=cart_item.part.price,
         )
+        
+    # Subtract inventory using the model method which handles both Inventory and Part models
+    try:
+        order.deduct_inventory()
+    except ValueError as e:
+        # If stock runs out during checkout
+        order.delete()
+        return render(request, 'parts/htmx/error_message.html', {'message': str(e)})
 
     # Clear cart
     cart.is_active = False

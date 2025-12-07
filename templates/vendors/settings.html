@@ -1,0 +1,134 @@
+{% extends 'vendors/base.html' %}
+{% load static %}
+
+{% block title %}Business Settings | Corporate Dock{% endblock %}
+{% block header_title %}Business Settings{% endblock %}
+{% block header_subtitle %}Manage your vendor profile, branding, and contact information{% endblock %}
+
+{% block content %}
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div class="lg:col-span-1 space-y-6">
+            
+            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm text-center">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Business Logo</h3>
+                
+                <div class="relative w-32 h-32 mx-auto mb-4 bg-gray-50 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group cursor-pointer hover:border-black transition">
+                    {% if vendor.logo %}
+                        <img src="{{ vendor.logo.url }}" alt="Logo" class="w-full h-full object-cover">
+                    {% else %}
+                        <img src="{% static 'images/logo.png' %}" alt="Default Logo" class="w-full h-full object-contain p-4 opacity-50">
+                        <div class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-50 opacity-0 group-hover:opacity-100 transition duration-200">
+                            <i class="fas fa-camera text-gray-800 text-2xl mb-1"></i>
+                            <span class="block text-xs text-gray-800 font-bold">Upload Logo</span>
+                        </div>
+                    {% endif %}
+                    <input type="file" name="logo" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title="Upload Vendor Logo">
+                </div>
+                
+                <p class="text-xs text-gray-500 mb-4">Recommended: 500x500px, PNG or JPG.</p>
+                {% if vendor.logo %}
+                    <button type="submit" name="action" value="remove_logo" class="w-full py-2 px-4 border border-gray-200 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50 transition">
+                        Remove Logo
+                    </button>
+                {% endif %}
+            </div>
+
+            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Public Profile</h3>
+                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200 mb-3">
+                    <span class="text-xs text-gray-600 truncate mr-2" id="profileUrl">corporatedock.com/v/{{ vendor.slug }}</span>
+                    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('profileUrl').innerText)" class="text-black hover:text-gray-600">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <a href="#" class="text-sm font-bold text-blue-600 hover:underline flex items-center">
+                    View Live Store <i class="fas fa-external-link-alt ml-2 text-xs"></i>
+                </a>
+            </div>
+
+        </div>
+
+        <div class="lg:col-span-2 space-y-6">
+            
+            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                    <h3 class="text-lg font-bold text-gray-900">General Information</h3>
+                    <i class="fas fa-building text-gray-400"></i>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Business Name</label>
+                        {{ form.business_name }} 
+                        </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Registration Number</label>
+                        {{ form.registration_number }}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">About Business</label>
+                        {{ form.description }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                    <h3 class="text-lg font-bold text-gray-900">Contact Details</h3>
+                    <i class="fas fa-map-marked-alt text-gray-400"></i>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
+                        {{ form.contact_email }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Phone Number</label>
+                        {{ form.contact_phone }}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Address</label>
+                        {{ form.address }}
+                        <div class="grid grid-cols-2 gap-4 mt-3">
+                            {{ form.city }}
+                            {{ form.zip_code }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-4 pt-2">
+                <button type="reset" class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-8 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 shadow-md transition-transform transform hover:-translate-y-0.5">
+                    Save Changes
+                </button>
+            </div>
+
+        </div>
+    </div>
+</form>
+
+<style>
+    /* Auto-style inputs to match theme */
+    input[type="text"], input[type="email"], input[type="tel"], textarea {
+        width: 100%;
+        padding: 0.5rem 1rem;
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        outline: none;
+        transition: all 0.2s;
+    }
+    input:focus, textarea:focus {
+        background-color: white;
+        border-color: black;
+        box-shadow: 0 0 0 1px black;
+    }
+</style>
+{% endblock %}

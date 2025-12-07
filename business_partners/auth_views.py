@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_protect
@@ -22,7 +22,7 @@ import io
 import base64
 from .models import BusinessPartner, VendorProfile
 from .permissions import get_vendor_profile
-from .forms import VendorLoginForm, VendorPasswordResetForm, Vendor2FAForm
+from .forms import VendorLoginForm, VendorPasswordResetForm, Vendor2FAForm, VendorSettingsForm
 from .rate_limiting import rate_limit_operation
 from .audit_logger import VendorAuditLogger
 
@@ -422,3 +422,100 @@ def vendor_profile_settings_view(request):
     except AttributeError:
         messages.error(request, 'Vendor profile not found.')
         return redirect('business_partners:vendor_dashboard')
+
+
+@login_required
+def vendor_profile_view(request):
+    """Vendor profile view"""
+    # Handle profile picture upload if present
+    if request.method == 'POST' and request.FILES.get('profile_picture'):
+        request.user.profile_picture = request.FILES['profile_picture']
+        request.user.save()
+        messages.success(request, 'Profile picture updated successfully.')
+        return redirect('business_partners:vendor_profile')
+        
+    vendor_profile = get_vendor_profile(request.user)
+    
+    return render(request, 'vendors/profile.html', {
+        'vendor_profile': vendor_profile
+    })
+
+
+@login_required
+def vendor_profile_update_view(request):
+    """Handle vendor profile personal info update"""
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        phone_number = request.POST.get('phone_number')
+        
+        user = request.user
+        user.first_name = first_name
+        user.last_name = last_name
+        user.phone_number = phone_number
+        user.save()
+        
+        messages.success(request, 'Profile updated successfully.')
+    
+    return redirect('business_partners:vendor_profile')
+
+
+@login_required
+def vendor_password_change_view(request):
+    """Handle vendor password change"""
+    if request.method == 'POST':
+        old_password = request.POST.get('old_password')
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        user = request.user
+        
+        if not user.check_password(old_password):
+            messages.error(request, 'Current password is incorrect.')
+        elif new_password != confirm_password:
+            messages.error(request, 'New passwords do not match.')
+        elif len(new_password) < 8:
+            messages.error(request, 'Password must be at least 8 characters long.')
+        else:
+            user.set_password(new_password)
+            user.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Password updated successfully.')
+            
+    return redirect('business_partners:vendor_profile')
+
+
+@login_required
+def vendor_settings_view(request):
+    """Vendor business settings view"""
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile or not vendor_profile.business_partner:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_dashboard')
+        
+    business_partner = vendor_profile.business_partner
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'remove_logo':
+            if business_partner.logo:
+                business_partner.logo.delete()
+                business_partner.save()
+                messages.success(request, 'Logo removed successfully.')
+            return redirect('business_partners:vendor_settings')
+            
+        form = VendorSettingsForm(request.POST, request.FILES, business_partner=business_partner)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Business settings updated successfully.')
+            return redirect('business_partners:vendor_settings')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = VendorSettingsForm(business_partner=business_partner)
+    
+    return render(request, 'vendors/settings.html', {
+        'form': form,
+        'vendor': business_partner,
+        'vendor_profile': vendor_profile
+    })

@@ -1,0 +1,366 @@
+{% extends 'user/base.html' %}
+{% load static %}
+
+{% block title %}Corporate Dock Registration{% endblock %}
+
+{% block css_dependencies %}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block extra_css %}
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Modern Input Styling */
+        .modern-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: #f9fafb; /* gray-50 */
+            border: 1px solid #e5e7eb; /* gray-200 */
+            border-radius: 0.5rem;
+            outline: none;
+            transition: all 0.2s ease-in-out;
+            color: #1f2937;
+        }
+        .modern-input:focus {
+            background-color: #ffffff;
+            border-color: #000000;
+            box-shadow: 0 0 0 4px rgba(0,0,0,0.05);
+        }
+        .input-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Step 3 Service Pills - White to Grey Gradient */
+        .service-pill {
+            background: linear-gradient(180deg, #ffffff 0%, #e5e7eb 100%);
+            border: 1px solid #d1d5db;
+            color: #374151;
+            transition: all 0.3s ease;
+        }
+        .service-pill:active { transform: scale(0.98); } /* Mobile tap effect */
+        .service-pill.selected {
+            background: #1f2937;
+            color: white;
+            border-color: #1f2937;
+        }
+
+        /* Animation */
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+{% endblock %}
+
+{% block layout %}
+    <!-- Wrapper div replacing body -->
+    <div class="bg-white min-h-screen flex flex-col md:flex-row text-gray-800">
+    
+    <aside class="w-full md:w-1/3 md:max-w-sm border-b p-6 md:p-10 md:h-screen md:sticky md:top-0 flex flex-col justify-between z-10">
+        
+        <div class="flex justify-between items-center md:block">
+            <a href="{% url 'home' %}">
+            <img src="{% static 'images/logo.png' %}" alt="Logo-Image" class="h-20"></a>
+            <div class="md:hidden text-sm font-bold text-gray-400">
+                Step <span id="mobile-step-count">1</span>/3
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-row md:flex-col justify-between md:justify-center gap-4 md:gap-10 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
+            <div id="tab-1" class="nav-item text-sm md:text-2xl font-bold text-gray-900 cursor-pointer whitespace-nowrap transition-colors" onclick="goToStep(1)">
+                Account Creation
+            </div>
+            <div id="tab-2" class="nav-item text-sm md:text-2xl font-medium text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(2)">
+                Personal Info
+            </div>
+            <div id="tab-3" class="nav-item text-sm md:text-2xl font-medium text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(3)">
+                Finish
+            </div>
+        </div>
+        
+    </aside>
+
+    <main class="flex-1 mt-20 w-full p-6 md:p-16 lg:p-24 flex flex-col items-center">
+        
+        {% if messages %}
+        <div class="w-full max-w-lg mb-6">
+            {% for message in messages %}
+            <div class="p-4 mb-4 text-sm text-white rounded-lg {% if message.tags == 'error' %}bg-red-500{% else %}bg-green-500{% endif %}" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'users:register_page' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" class="w-full flex flex-col items-center">
+            {% csrf_token %}
+            <input type="hidden" name="services" id="services-input">
+            
+            <section id="step-1" class="step-content w-full max-w-lg text-center fade-in">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4 mt-8 md:mt-0">Create your Account</h1>
+                <p class="text-gray-500 mb-10">Sign up to get started with Corporate Dock</p>
+                
+                <div class="flex flex-col items-center space-y-5 w-full">
+                    <div class="w-full text-left">
+                        <label class="input-label ml-1">Email Address</label>
+                        <input type="email" name="email" placeholder="name@example.com" class="modern-input py-3 md:py-4 text-lg text-center" required>
+                    </div>
+                    
+                    <div class="w-full text-left">
+                        <label class="input-label ml-1">Password</label>
+                        <input type="password" name="password" placeholder="Create a password" class="modern-input py-3 md:py-4 text-lg text-center" required>
+                    </div>
+                    
+                    <button type="button" onclick="goToStep(2)" class="w-full bg-black text-white py-4 text-lg font-bold rounded-lg shadow-md hover:bg-gray-800 hover:shadow-lg transition-all transform hover:-translate-y-1">
+                        Get Started
+                    </button>
+                    
+                    <div class="pt-6 w-full border-t border-gray-100 mt-4">
+                        <a href="{% url 'login' %}" class="flex items-center justify-center space-x-2 w-full text-gray-500 hover:text-black font-medium transition-colors py-2">
+                            <span>Already have an account? Login</span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <section id="step-2" class="step-content w-full max-w-3xl hidden fade-in">
+                <div class="mb-8 text-center md:text-left">
+                    <h1 class="text-3xl font-bold text-gray-800">Personal Details</h1>
+                    <p class="text-gray-500 mt-2">Please fill in your information below</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                    <div class="md:col-span-2">
+                        <label class="input-label">Account Type</label>
+                        <div class="flex space-x-4">
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="role" value="client" class="w-5 h-5 text-black focus:ring-black" checked>
+                                <span>Client (Buyer)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="role" value="seller" class="w-5 h-5 text-black focus:ring-black">
+                                <span>Dealer (Seller)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="input-label">Full Name</label>
+                        <input type="text" name="full_name" class="modern-input" placeholder="e.g. John Doe" required>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="input-label">Address</label>
+                        <input type="text" name="address" class="modern-input" placeholder="House/Apartment No, Street Name">
+                    </div>
+                    
+                    <div>
+                        <label class="input-label">Postal Code</label>
+                        <input type="text" name="postal_code" class="modern-input" placeholder="Zip/Postal Code">
+                    </div>
+
+                    <div>
+                        <label class="input-label">City</label>
+                        <select name="city_id" id="regCitySelect" class="modern-input cursor-pointer bg-white" required>
+                            <option value="" disabled selected>Select City</option>
+                            {% for city in cities %}
+                                <option value="{{ city.id }}">{{ city.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div id="regCityAreaContainer" style="display:none;">
+                        <label class="input-label">City Area</label>
+                        <select name="city_area_id" id="regCityAreaSelect" class="modern-input cursor-pointer bg-white">
+                            <option value="">Select Area</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Country</label>
+                        <select name="country" class="modern-input cursor-pointer bg-white">
+                            <option value="Saudi Arabia" selected>Saudi Arabia</option>
+                            <option value="USA">USA</option>
+                            <option value="UK">UK</option>
+                            <option value="Canada">Canada</option>
+                            <option value="Pakistan">Pakistan</option>
+                            <option value="UAE">UAE</option>
+                        </select>
+                    </div>
+                    
+                    <div class="md:col-span-1">
+                        <label class="input-label">Phone Number</label>
+                        <div class="flex">
+                            <select class="modern-input w-28 rounded-r-none border-r-0 bg-gray-50 text-sm">
+                                <option>Mobile</option>
+                                <option>Work</option>
+                            </select>
+                            <input type="text" name="phone" class="modern-input rounded-l-none" placeholder="(555) 000-0000">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="input-label">National ID</label>
+                        <input type="text" name="national_id" class="modern-input" placeholder="ID Number">
+                    </div>
+                    
+                    <div>
+                        <label class="input-label">Tax ID No</label>
+                        <input type="text" name="tax_id" class="modern-input" placeholder="Optional">
+                    </div>
+                </div>
+
+                <div class="mt-10 flex justify-end">
+                    <button type="button" onclick="goToStep(3)" class="w-full md:w-auto bg-black text-white px-10 py-3 rounded-lg font-bold shadow-md hover:bg-gray-800 transition-all">
+                        Next Step &rarr;
+                    </button>
+                </div>
+            </section>
+
+            <section id="step-3" class="step-content w-full max-w-2xl hidden text-center fade-in pb-10">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4 mt-8 md:mt-0">Almost Finished</h1>
+                <p class="text-gray-500 text-lg mb-10">Select the Services you want to use</p>
+                
+                <div class="flex flex-col items-center w-full">
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 w-full mb-8">
+                        <button type="button" class="service-pill py-4 md:py-5 rounded-full text-lg font-bold shadow-sm" onclick="toggleSelect(this)">
+                            Car
+                        </button>
+                        <button type="button" class="service-pill py-4 md:py-5 rounded-full text-lg font-bold shadow-sm" onclick="toggleSelect(this)">
+                            Parts
+                        </button>
+                        <button type="button" class="service-pill py-4 md:py-5 rounded-full text-lg font-bold shadow-sm" onclick="toggleSelect(this)">
+                            Service
+                        </button>
+                        <button type="button" class="service-pill py-4 md:py-5 rounded-full text-lg font-bold shadow-sm" onclick="toggleSelect(this)">
+                            Rent & Leasing
+                        </button>
+                    </div>
+
+                    <div class="flex items-center mb-8">
+                        <input id="terms-checkbox" name="terms" type="checkbox" class="w-5 h-5 text-black border-gray-300 rounded focus:ring-black cursor-pointer" required>
+                        <label for="terms-checkbox" class="ml-2 text-sm text-gray-600 cursor-pointer">
+                            I accept the <a href="#" class="text-black font-bold hover:underline">Terms & Conditions</a> and <a href="#" class="text-black font-bold hover:underline">Privacy Policy</a>
+                        </label>
+                    </div>
+
+                    <button id="finish-btn" type="submit" class="w-full md:w-3/4 bg-gradient-to-r from-green-500 to-green-600 text-white text-xl font-bold py-4 md:py-5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 uppercase tracking-wide opacity-50 cursor-not-allowed" disabled>
+                        Click to Finish
+                    </button>
+                </div>
+            </section>
+        </form>
+
+    </main>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        function goToStep(stepNumber) {
+            // Simple validation before proceeding
+            if (stepNumber === 2) {
+                const email = document.querySelector('input[name="email"]').value;
+                const password = document.querySelector('input[name="password"]').value;
+                if (!email || !password) {
+                    alert('Please fill in email and password');
+                    return;
+                }
+            }
+            
+            document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`step-${stepNumber}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('text-gray-900', 'font-bold');
+                el.classList.add('text-gray-400', 'font-medium');
+            });
+
+            const activeTab = document.getElementById(`tab-${stepNumber}`);
+            activeTab.classList.remove('text-gray-400', 'font-medium');
+            activeTab.classList.add('text-gray-900', 'font-bold');
+
+            const mobileCounter = document.getElementById('mobile-step-count');
+            if(mobileCounter) mobileCounter.innerText = stepNumber;
+        }
+
+        function toggleSelect(element) {
+            element.classList.toggle('selected');
+            updateServicesInput();
+        }
+
+        function updateServicesInput() {
+            const selected = Array.from(document.querySelectorAll('.service-pill.selected'))
+                .map(el => el.innerText.trim());
+            document.getElementById('services-input').value = JSON.stringify(selected);
+        }
+
+        // Logic for Terms & Conditions Checkbox
+        const termsCheckbox = document.getElementById('terms-checkbox');
+        const finishBtn = document.getElementById('finish-btn');
+
+        if(termsCheckbox && finishBtn) {
+            termsCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    finishBtn.disabled = false;
+                    finishBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    finishBtn.disabled = true;
+                    finishBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            });
+        }
+
+        // City Area Logic
+        document.addEventListener('DOMContentLoaded', function() {
+            const citySelect = document.getElementById('regCitySelect');
+            const cityAreaSelect = document.getElementById('regCityAreaSelect');
+            const cityAreaContainer = document.getElementById('regCityAreaContainer');
+
+            function fetchAreas(cityId) {
+                if (!cityId) {
+                    cityAreaContainer.style.display = 'none';
+                    return;
+                }
+
+                fetch(`/parts/ajax/city-areas/?city_id=${cityId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.areas.length > 0) {
+                            cityAreaContainer.style.display = 'block';
+                            cityAreaSelect.innerHTML = '<option value="">Select Area</option>';
+                            
+                            data.areas.forEach(area => {
+                                const option = document.createElement('option');
+                                option.value = area.id;
+                                option.textContent = area.name;
+                                cityAreaSelect.appendChild(option);
+                            });
+                        } else {
+                            cityAreaContainer.style.display = 'none';
+                        }
+                    })
+                    .catch(error => console.error('Error fetching areas:', error));
+            }
+
+            if (citySelect) {
+                citySelect.addEventListener('change', function() {
+                    fetchAreas(this.value);
+                });
+                
+                // If re-rendering with value selected
+                if (citySelect.value) {
+                    fetchAreas(citySelect.value);
+                }
+            }
+        });
+    </script>
+{% endblock %}

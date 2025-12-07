@@ -4,22 +4,79 @@ Comprehensive inventory CRUD operations for vendor portal
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, F, Sum, Count, Case, When, Value
 from django.db import transaction
 from django.core.paginator import Paginator
 from django.http import JsonResponse, HttpResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.utils import timezone
 from datetime import datetime, timedelta
 import csv
 import io
 
-from parts.models import Part, Inventory, InventoryTransaction
+from parts.models import Part, Inventory, InventoryTransaction, OrderItem
 from business_partners.models import VendorProfile, BusinessPartner
 from business_partners.permissions import get_vendor_profile, vendor_required
 from parts.forms import InventoryForm, PartForm
+from .forms import VendorPartForm
+
+
+@login_required
+@vendor_required
+def vendor_inventory_overview(request):
+    """
+    Overview page for vendor inventory features.
+    """
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'You do not have vendor access.')
+        return redirect('home')
+    
+    business_partner = vendor_profile.business_partner
+    
+    # Calculate statistics
+    # 1. Order Amount (Total Revenue from confirmed/delivered orders)
+    order_items = OrderItem.objects.filter(
+        part__vendor=business_partner,
+        order__status__in=['confirmed', 'processing', 'shipped', 'delivered']
+    )
+    
+    total_revenue = order_items.aggregate(
+        total=Sum(F('price') * F('quantity'))
+    )['total'] or 0
+    
+    # 2. Order Units (Total units sold)
+    total_units = order_items.aggregate(total=Sum('quantity'))['total'] or 0
+    
+    # 3. Monthly Sales (Revenue last 30 days)
+    last_30_days = timezone.now() - timedelta(days=30)
+    monthly_sales = order_items.filter(
+        order__created_at__gte=last_30_days
+    ).aggregate(
+        total=Sum(F('price') * F('quantity'))
+    )['total'] or 0
+    
+    # 4. Inventory Value (Current stock value)
+    inventory_value = Part.objects.filter(
+        vendor=business_partner
+    ).aggregate(
+        total=Sum(F('price') * F('quantity'))
+    )['total'] or 0
+    
+    context = {
+        'vendor_profile': vendor_profile,
+        'business_partner': business_partner,
+        'stats': {
+            'total_revenue': total_revenue,
+            'total_units': total_units,
+            'monthly_sales': monthly_sales,
+            'inventory_value': inventory_value,
+        }
+    }
+    return render(request, 'vendors/inventory_feature.html', context)
 
 
 @login_required
@@ -164,6 +221,7 @@ def vendor_inventory_list(request):
         'total_parts': total_parts,
         'total_value': total_value,
         'stock_stats': stock_stats,
+        'incoming_stock': 0,  # Placeholder for incoming stock
         'categories': categories,
         'brands': brands,
         'search_query': search_query,
@@ -177,9 +235,9 @@ def vendor_inventory_list(request):
     
     # Check if this is an HTMX request
     if request.headers.get('HX-Request'):
-        return render(request, 'vendors/inventory_table.html', context)
+        return render(request, 'vendors/inventory_management_table.html', context)
     
-    return render(request, 'vendors/inventory.html', context)
+    return render(request, 'vendors/inventory_management.html', context)
 
 
 @login_required
@@ -490,6 +548,11 @@ def vendor_inventory_adjustment(request, part_id):
         except ValueError:
             messages.error(request, 'Invalid quantity provided.')
         
+        # Check for next parameter to redirect back to list if needed
+        next_url = request.POST.get('next')
+        if next_url:
+            return redirect(next_url)
+            
         return redirect('business_partners:vendor_inventory_detail', part_id=part.id)
     
     # If not POST, redirect to detail view
@@ -703,17 +766,20 @@ def add_part(request):
     business_partner = vendor_profile.business_partner
     
     if request.method == 'POST':
-        form = PartForm(request.POST, request.FILES)
+        form = VendorPartForm(request.POST, request.FILES, vendor=business_partner)
         if form.is_valid():
             part = form.save(commit=False)
             part.vendor = business_partner
             part.save()
             
             # Create inventory record for the new part
+            # Use inventory_threshold from form if available, else default to 10
+            reorder_level = form.cleaned_data.get('inventory_threshold') or 10
+            
             Inventory.objects.create(
                 part=part,
                 stock=part.quantity,
-                reorder_level=10,
+                reorder_level=reorder_level,
                 last_restock_date=timezone.now() if part.quantity > 0 else None
             )
             
@@ -726,7 +792,7 @@ def add_part(request):
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
-        form = PartForm()
+        form = VendorPartForm(vendor=business_partner)
     
     return render(request, 'vendors/add_part.html', {
         'form': form,
@@ -739,52 +805,207 @@ def add_part(request):
 def add_part_htmx(request):
     """
     HTMX-compatible API endpoint for adding new parts.
-    Returns JSON response instead of redirecting.
+    Returns HTML partial with validation errors or triggers redirect on success.
     """
     vendor_profile = get_vendor_profile(request.user)
     if not vendor_profile:
-        return JsonResponse({
-            'success': False,
-            'error': 'You do not have vendor access.'
-        }, status=403)
+        return HttpResponse("You do not have vendor access.", status=403)
     
     business_partner = vendor_profile.business_partner
     
     if request.method == 'POST':
-        form = PartForm(request.POST, request.FILES)
+        form = VendorPartForm(request.POST, request.FILES, vendor=business_partner)
         if form.is_valid():
             part = form.save(commit=False)
             part.vendor = business_partner
             part.save()
             
             # Create inventory record for the new part
+            reorder_level = form.cleaned_data.get('inventory_threshold') or 10
+            
             Inventory.objects.create(
                 part=part,
                 stock=part.quantity,
-                reorder_level=10,
+                reorder_level=reorder_level,
                 last_restock_date=timezone.now() if part.quantity > 0 else None
             )
             
-            return JsonResponse({
-                'success': True,
-                'message': f'Part "{part.material_description}" saved successfully.',
-                'part_id': part.id,
-                'status': part.status,
-                'redirect_url': reverse('business_partners:vendor_inventory_list')
-            })
-        else:
-            # Return form errors in JSON format
-            errors = {}
-            for field, field_errors in form.errors.items():
-                errors[field] = [str(error) for error in field_errors]
+            # Success message
+            msg = f'Part "{part.material_description}" saved successfully.'
+            messages.success(request, msg)
             
-            return JsonResponse({
-                'success': False,
-                'errors': errors,
-                'error_message': 'Please correct the errors below.'
-            }, status=400)
+            # Return empty response with HX-Redirect header to redirect client
+            response = HttpResponse()
+            response['HX-Redirect'] = reverse('business_partners:vendor_inventory_list')
+            return response
+        else:
+            # Return form with errors rendered as HTML partial
+            return render(request, 'vendors/partials/part_form.html', {
+                'form': form
+            })
     
-    return JsonResponse({
-        'success': False,
-        'error': 'Invalid request method.'
-    }, status=405)
+    return HttpResponse("Invalid request method.", status=405)
+
+
+@login_required
+@vendor_required
+@require_http_methods(["DELETE"])
+def vendor_inventory_delete_htmx(request, part_id):
+    """
+    HTMX endpoint to delete a part from inventory/catalog.
+    """
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        return HttpResponse("Unauthorized", status=403)
+    
+    business_partner = vendor_profile.business_partner
+    
+    # Get the part and ensure it belongs to this vendor
+    part = get_object_or_404(Part, id=part_id, vendor=business_partner)
+    
+    # Delete the part
+    part.delete()
+    
+    # Return empty response to remove the row
+    return HttpResponse("")
+
+
+@login_required
+@vendor_required
+def vendor_catalog_management(request):
+    """
+    Catalog management view for vendors.
+    Similar to inventory list but uses the inventory.html template.
+    """
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'You do not have vendor access.')
+        return redirect('home')
+    
+    business_partner = vendor_profile.business_partner
+    
+    # Get all vendor parts with inventory data
+    parts_queryset = Part.objects.filter(vendor=business_partner).select_related('inventory', 'category', 'brand')
+    
+    # Apply filters
+    search_query = request.GET.get('search', '')
+    if search_query:
+        parts_queryset = parts_queryset.filter(
+            Q(parts_number__icontains=search_query) |
+            Q(material_description__icontains=search_query) |
+            Q(manufacturer_part_number__icontains=search_query) |
+            Q(manufacturer_oem_number__icontains=search_query)
+        )
+    
+    # Stock status filter
+    stock_status = request.GET.get('stock_status', '')
+    if stock_status:
+        if stock_status == 'in_stock':
+            parts_queryset = parts_queryset.filter(quantity__gt=10)
+        elif stock_status == 'low_stock':
+            parts_queryset = parts_queryset.filter(quantity__gt=0, quantity__lte=10)
+        elif stock_status == 'out_of_stock':
+            parts_queryset = parts_queryset.filter(quantity=0)
+        elif stock_status == 'below_safety':
+            parts_queryset = parts_queryset.filter(
+                safety_stock__isnull=False,
+                quantity__lt=F('safety_stock')
+            )
+        elif stock_status == 'dead_stock':
+            # Filter for dead stock - items not sold for over a month
+            one_month_ago = timezone.now() - timedelta(days=30)
+            dead_stock_part_ids = []
+            
+            for part in parts_queryset:
+                recent_sales = InventoryTransaction.objects.filter(
+                    inventory__part=part,
+                    transaction_type='sale',
+                    timestamp__gte=one_month_ago
+                ).exists()
+                
+                if not recent_sales and part.quantity > 0:
+                    dead_stock_part_ids.append(part.id)
+            
+            if dead_stock_part_ids:
+                parts_queryset = parts_queryset.filter(id__in=dead_stock_part_ids)
+            else:
+                parts_queryset = parts_queryset.none()
+    
+    # Category filter
+    category_filter = request.GET.get('category', '')
+    if category_filter:
+        parts_queryset = parts_queryset.filter(category_id=category_filter)
+    
+    # Brand filter
+    brand_filter = request.GET.get('brand', '')
+    if brand_filter:
+        parts_queryset = parts_queryset.filter(brand_id=brand_filter)
+    
+    # Sorting
+    sort_by = request.GET.get('sort', '-created_at')
+    valid_sort_fields = [
+        'parts_number', '-parts_number',
+        'material_description', '-material_description',
+        'price', '-price',
+        'quantity', '-quantity',
+        'created_at', '-created_at'
+    ]
+    if sort_by in valid_sort_fields:
+        parts_queryset = parts_queryset.order_by(sort_by)
+    
+    # Pagination
+    paginator = Paginator(parts_queryset, 25)
+    page_number = request.GET.get('page')
+    parts = paginator.get_page(page_number)
+    
+    # Calculate inventory statistics
+    total_parts = parts_queryset.count()
+    total_value = parts_queryset.aggregate(
+        total=Sum(F('price') * F('quantity'))
+    )['total'] or 0
+    
+    # Stock status breakdown
+    stock_stats = parts_queryset.aggregate(
+        in_stock=Count(Case(When(quantity__gt=10, then=1))),
+        low_stock=Count(Case(When(quantity__gt=0, quantity__lte=10, then=1))),
+        out_of_stock=Count(Case(When(quantity=0, then=1))),
+        below_safety=Count(Case(
+            When(safety_stock__isnull=False, quantity__lt=F('safety_stock'), then=1)
+        ))
+    )
+    
+    # Calculate dead stock
+    one_month_ago = timezone.now() - timedelta(days=30)
+    dead_stock_parts = []
+    for part in parts_queryset:
+        recent_sales = InventoryTransaction.objects.filter(
+            inventory__part=part,
+            transaction_type='sale',
+            timestamp__gte=one_month_ago
+        ).exists()
+        if not recent_sales and part.quantity > 0:
+            dead_stock_parts.append(part.id)
+    
+    stock_stats['dead_stock'] = len(dead_stock_parts)
+    
+    # Get categories and brands for filters
+    categories = parts_queryset.values('category__id', 'category__name').distinct().order_by('category__name')
+    
+    context = {
+        'vendor_profile': vendor_profile,
+        'business_partner': business_partner,
+        'parts': parts,
+        'total_parts': total_parts,
+        'total_value': total_value,
+        'stock_stats': stock_stats,
+        'categories': categories,
+        'search_query': search_query,
+        'stock_status': stock_status,
+        'category_filter': category_filter,
+    }
+    
+    # Check if this is an HTMX request
+    if request.headers.get('HX-Request'):
+        return render(request, 'vendors/inventory_table.html', context)
+    
+    return render(request, 'vendors/inventory.html', context)

@@ -5,7 +5,9 @@
     <div class="part-card">
         <a href="{% url 'parts:part_detail' part.pk %}" style="text-decoration: none;">
             <div class="part-image-container">
-                {% if part.image_url %}
+                {% if part.image %}
+                <img src="{{ part.image.url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
+                {% elif part.image_url %}
                 <img src="{{ part.image_url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
                 {% elif part.images.first %}
                 <img src="{{ part.images.first.image.url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />

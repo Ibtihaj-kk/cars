@@ -48,11 +48,11 @@ def custom_login_view(request):
         elif vendor_profile:
             return redirect('business_partners:vendor_registration_status')
         else:
-            # Regular authenticated user
-            if request.user.is_staff or request.user.is_superuser:
-                return redirect('/admin/')
-            else:
-                return redirect('home')
+                # Regular authenticated user
+                if request.user.is_staff or request.user.is_superuser:
+                    return redirect('/admin/')
+                else:
+                    return redirect('users:user-dashboard')
     
     if request.method == 'POST':
         email = request.POST.get('username', '').strip().lower()
@@ -75,11 +75,6 @@ def custom_login_view(request):
             # Check if user is vendor or seller
             is_vendor = False
             
-            # Check user role
-            if hasattr(user, 'role') and user.role in [UserRole.SELLER, UserRole.ADMIN]:
-                is_vendor = True
-                print(f"User role indicates vendor: {user.role}")
-            
             # Check if user has vendor profile
             vendor_profile = get_vendor_profile(user)
             if vendor_profile and vendor_profile.is_approved:
@@ -89,14 +84,22 @@ def custom_login_view(request):
             # Debug logging
             print(f"User {user.email} logged in. Role: {getattr(user, 'role', 'unknown')}, Vendor profile: {vendor_profile is not None}, Is vendor: {is_vendor}")
             
-            # Redirect based on role
+            # Redirect based on role or next parameter
+            next_url = request.GET.get('next') or request.POST.get('next')
+            
+            if next_url:
+                messages.success(request, f'Welcome back, {user.get_full_name() or user.email}!')
+                return redirect(next_url)
+                
             if is_vendor:
                 messages.success(request, f'Welcome back, {user.get_full_name() or user.email}!')
                 return redirect('business_partners:vendor_dashboard')
+            elif request.user.is_superuser or request.user.is_staff:
+                 return redirect('/admin/')
             else:
                 # Show popup message for non-vendors
                 messages.info(request, 'Welcome! You are logged in as a regular user.')
-                return redirect('home')
+                return redirect('users:user-dashboard')
         else:
             messages.error(request, 'Invalid email or password.')
             print(f"Failed login attempt for email: {email}")

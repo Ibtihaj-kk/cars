@@ -19,7 +19,7 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Orders</p>
-                    <h3 class="mt-2 text-3xl font-extrabold text-gray-900">{{ stats.total_orders|default:"150" }}</h3>
+                    <h3 class="mt-2 text-3xl font-extrabold text-gray-900">{{ stats.total_orders|default:"0" }}</h3>
                 </div>
                 <div class="p-2 bg-green-50 rounded-lg text-green-600"><i class="fas fa-shopping-bag"></i></div>
             </div>
@@ -29,7 +29,7 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Monthly Sales</p>
-                    <h3 class="mt-2 text-3xl font-extrabold text-yellow-600">{{ stats.monthly_sales|default:"1.2M" }}</h3>
+                    <h3 class="mt-2 text-3xl font-extrabold text-yellow-600">{{ stats.monthly_sales|default:"0" }}</h3>
                 </div>
                 <div class="p-2 bg-yellow-50 rounded-lg text-yellow-600"><i class="fas fa-rupee-sign"></i></div>
             </div>
@@ -39,7 +39,7 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Pending Action</p>
-                    <h3 class="mt-2 text-3xl font-extrabold text-red-500">80</h3>
+                    <h3 class="mt-2 text-3xl font-extrabold text-red-500">{{ stats.pending_actions|default:"0" }}</h3>
                 </div>
                 <div class="p-2 bg-red-50 rounded-lg text-red-500"><i class="fas fa-exclamation-triangle"></i></div>
             </div>
@@ -49,11 +49,11 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Inventory Value</p>
-                    <h3 class="mt-2 text-3xl font-extrabold text-blue-600">1.5M</h3>
+                    <h3 class="mt-2 text-3xl font-extrabold text-blue-600">{{ stats.total_value_display|default:"0" }}</h3>
                 </div>
                 <div class="p-2 bg-blue-50 rounded-lg text-blue-600"><i class="fas fa-cubes"></i></div>
             </div>
-            <div class="mt-4 flex items-center text-xs text-gray-500">Across 200 active SKUs</div>
+            <div class="mt-4 flex items-center text-xs text-gray-500">Across {{ stats.active_parts|default:"0" }} active SKUs</div>
         </div>
     </div>
 
@@ -61,7 +61,7 @@
         <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-bold text-gray-800">Revenue Analytics</h3>
-                <select class="bg-gray-50 border-none text-sm rounded-md px-3 py-1 text-gray-500 outline-none"><option>Last 30 Days</option></select>
+                <select class="bg-gray-50 border-none text-sm rounded-md px-3 py-1 text-gray-500 outline-none"><option>Last 6 Months</option></select>
             </div>
             <div class="h-64 w-full"><canvas id="revenueChart"></canvas></div>
         </div>
@@ -70,7 +70,7 @@
             <div class="h-48 w-full flex justify-center relative">
                 <canvas id="statusChart"></canvas>
                 <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span class="text-2xl font-bold text-gray-800">230</span>
+                    <span class="text-2xl font-bold text-gray-800">{{ stats.total_fulfillment|default:"0" }}</span>
                     <span class="text-xs text-gray-400">Total</span>
                 </div>
             </div>
@@ -87,10 +87,10 @@
         new Chart(ctxRevenue, {
             type: 'line',
             data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                labels: {{ stats.revenue_labels|safe }},
                 datasets: [{
                     label: 'Revenue',
-                    data: [120, 150, 130, 170, 160, 180],
+                    data: {{ stats.revenue_data|safe }},
                     borderColor: 'black',
                     backgroundColor: 'rgba(0,0,0,0.05)',
                     fill: true,
@@ -106,7 +106,7 @@
             data: {
                 labels: ['Delivered', 'Pending'],
                 datasets: [{
-                    data: [65, 35],
+                    data: [{{ stats.delivered_count }}, {{ stats.pending_processing_count }}],
                     backgroundColor: ['#10B981', '#EF4444'],
                     borderWidth: 0,
                     hoverOffset: 4

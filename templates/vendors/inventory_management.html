@@ -1,0 +1,81 @@
+{% extends 'vendors/base.html' %}
+{% load static %}
+
+{% block title %}Stock Management | Corporate Dock{% endblock %}
+{% block header_title %}Stock Management{% endblock %}
+{% block header_subtitle %}Manage inventory levels and warehouse locations{% endblock %}
+
+{% block header_actions %}
+<button class="p-2 text-gray-400 hover:text-black relative">
+    <i class="far fa-bell text-lg"></i>
+    <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-500 uppercase">Total Items</p>
+                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ total_parts|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-gray-100 rounded-lg text-gray-600"><i class="fas fa-cubes"></i></div>
+        </div>
+        <div class="mt-3 text-xs text-green-600 font-bold flex items-center">
+            <i class="fas fa-arrow-up mr-1"></i> Active
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-yellow-400">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-500 uppercase">Low Stock</p>
+                <h3 class="text-2xl font-extrabold text-yellow-600 mt-1">{{ stock_stats.low_stock|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-yellow-50 rounded-lg text-yellow-600"><i class="fas fa-exclamation-circle"></i></div>
+        </div>
+        <div class="mt-3 text-xs text-gray-500">Below reorder point</div>
+    </div>
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-red-500">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-500 uppercase">Out of Stock</p>
+                <h3 class="text-2xl font-extrabold text-red-600 mt-1">{{ stock_stats.out_of_stock|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-red-50 rounded-lg text-red-600"><i class="fas fa-times-circle"></i></div>
+        </div>
+        <div class="mt-3 text-xs text-gray-500">Restock needed immediately</div>
+    </div>
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-500 uppercase">Incoming</p>
+                <h3 class="text-2xl font-extrabold text-blue-600 mt-1">{{ incoming_stock|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-blue-50 rounded-lg text-blue-600"><i class="fas fa-truck-loading"></i></div>
+        </div>
+        <div class="mt-3 text-xs text-gray-500">Arriving next 7 days</div>
+    </div>
+</div>
+
+<div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 flex flex-col lg:flex-row gap-4 justify-between items-center">
+    <form method="GET" class="relative w-full lg:w-96" hx-get="{% url 'business_partners:vendor_inventory_list' %}" hx-target="#inventory-table" hx-trigger="keyup changed delay:500ms from:[name='search']">
+        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fas fa-search"></i></span>
+        <input type="text" name="search" value="{{ search_query }}" class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black" placeholder="Search by Name, SKU, or Location...">
+        {% if category_filter %}<input type="hidden" name="category" value="{{ category_filter }}">{% endif %}
+        {% if stock_status %}<input type="hidden" name="stock_status" value="{{ stock_status }}">{% endif %}
+    </form>
+    
+    <div class="flex gap-2 w-full lg:w-auto overflow-x-auto">
+        <a href="{% url 'business_partners:vendor_inventory_export' %}?{{ request.GET.urlencode }}" class="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 flex items-center gap-2 whitespace-nowrap">
+            <i class="fas fa-file-export"></i> Export
+        </a>
+        <a href="{% url 'business_partners:vendor_part_create' %}" class="px-4 py-2.5 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-800 shadow-lg flex items-center gap-2 whitespace-nowrap">
+            <i class="fas fa-plus"></i> Add Part
+        </a>
+    </div>
+</div>
+
+{% include 'vendors/inventory_management_table.html' %}
+
+{% endblock %}

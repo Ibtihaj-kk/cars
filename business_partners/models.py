@@ -47,6 +47,17 @@ class BusinessPartner(models.Model):
         null=True,
         help_text="Tax ID, Registration number, etc."
     )
+    logo = models.ImageField(
+        upload_to='vendor_logos/', 
+        blank=True, 
+        null=True, 
+        help_text="Business logo"
+    )
+    description = models.TextField(
+        blank=True, 
+        null=True, 
+        help_text="Business description"
+    )
     status = models.CharField(
         max_length=20, 
         choices=STATUS_CHOICES, 

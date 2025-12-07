@@ -12,7 +12,12 @@ from .views import (
     AdminUserViewSet,
     UserAuditLogViewSet,
     ProfileUpdateView,
-    DashboardView
+    DashboardView,
+    register_page,
+    user_dashboard,
+    user_profile,
+    user_orders,
+    logout_view
 )
 
 app_name = 'users'
@@ -31,6 +36,7 @@ audit_router.register(r'', UserAuditLogViewSet, basename='audit-logs')
 
 urlpatterns = [
     # Authentication endpoints
+    path('signup/', register_page, name='register_page'),
     path('register/', UserRegistrationView.as_view(), name='user-register'),
     path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
@@ -43,9 +49,15 @@ urlpatterns = [
     path('password/reset/', PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('password/reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     
-    # New endpoints
-    path('profile/update/', ProfileUpdateView.as_view(), name='profile-update'),
-    path('dashboard/', DashboardView.as_view(), name='user-dashboard'),
+    # Template Views
+    path('dashboard/', user_dashboard, name='user-dashboard'),
+    path('profile/', user_profile, name='user-profile'),
+    path('orders/', user_orders, name='user-orders'),
+    path('logout/', logout_view, name='logout'),
+    
+    # API Endpoints
+    path('api/profile/update/', ProfileUpdateView.as_view(), name='api-profile-update'),
+    path('api/dashboard/', DashboardView.as_view(), name='api-dashboard'),
     
     # Admin endpoints
     path('admin/', include(admin_router.urls)),

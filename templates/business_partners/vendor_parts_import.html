@@ -1,0 +1,203 @@
+{% extends 'vendors/base.html' %}
+{% load static %}
+
+{% block title %}Bulk Import | Corporate Dock{% endblock %}
+{% block header_title %}Bulk Import{% endblock %}
+{% block header_subtitle %}Upload CSV/Excel files to update products and stock{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Dropzone Styling */
+    .dropzone {
+        border: 2px dashed #e5e7eb;
+        transition: all 0.2s ease;
+        background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%23E5E7EBFF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+        background-color: #f9fafb;
+    }
+    .dropzone:hover, .dropzone.dragover {
+        border-color: #000;
+        background-color: #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <div class="lg:col-span-2 space-y-6">
+        
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <span class="w-6 h-6 bg-black text-white rounded-full flex items-center justify-center text-xs mr-2">1</span>
+                Select Import Type
+            </h3>
+            <form method="POST" enctype="multipart/form-data" id="importForm">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="import_type" value="products" class="peer sr-only" checked>
+                        <div class="p-4 border border-gray-200 rounded-lg hover:border-black peer-checked:bg-black peer-checked:text-white peer-checked:border-black transition-all text-center">
+                            <i class="fas fa-box-open mb-2 text-xl"></i>
+                            <div class="text-sm font-bold">New Products</div>
+                        </div>
+                    </label>
+                    <label class="cursor-not-allowed opacity-60">
+                        <input type="radio" name="import_type" value="stock" class="peer sr-only" disabled>
+                        <div class="p-4 border border-gray-200 rounded-lg bg-gray-50 text-center relative overflow-hidden">
+                            <div class="absolute top-2 right-2">
+                                <span class="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Coming Soon</span>
+                            </div>
+                            <i class="fas fa-cubes mb-2 text-xl text-gray-400"></i>
+                            <div class="text-sm font-bold text-gray-500">Stock Update</div>
+                        </div>
+                    </label>
+                    <label class="cursor-not-allowed opacity-60">
+                        <input type="radio" name="import_type" value="price" class="peer sr-only" disabled>
+                        <div class="p-4 border border-gray-200 rounded-lg bg-gray-50 text-center relative overflow-hidden">
+                            <div class="absolute top-2 right-2">
+                                <span class="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Coming Soon</span>
+                            </div>
+                            <i class="fas fa-tag mb-2 text-xl text-gray-400"></i>
+                            <div class="text-sm font-bold text-gray-500">Price Update</div>
+                        </div>
+                    </label>
+                </div>
+                
+                <!-- Hidden fields from the original form -->
+                <div class="mt-4 space-y-2 hidden">
+                    <div class="flex items-center">
+                        {{ form.update_existing }}
+                        <label for="{{ form.update_existing.id_for_label }}" class="ml-2 text-sm text-gray-700">Update existing records</label>
+                    </div>
+                    <div class="flex items-center">
+                        {{ form.validate_only }}
+                        <label for="{{ form.validate_only.id_for_label }}" class="ml-2 text-sm text-gray-700">Validate only</label>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <span class="w-6 h-6 bg-black text-white rounded-full flex items-center justify-center text-xs mr-2">2</span>
+                Download Template
+            </h3>
+            <div class="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div>
+                    <p class="text-sm font-bold text-gray-900">Standard Product Template.xlsx</p>
+                    <p class="text-xs text-gray-500">Includes columns for SKU, Name, Price, and Stock.</p>
+                </div>
+                <a href="/media/parts/part_import_template.xlsx" download class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-100 flex items-center gap-2 transition">
+                    <i class="fas fa-download"></i> Download
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <span class="w-6 h-6 bg-black text-white rounded-full flex items-center justify-center text-xs mr-2">3</span>
+                Upload File
+            </h3>
+            
+            <div class="dropzone rounded-xl p-10 text-center cursor-pointer relative" id="dropzone">
+                <input type="file" name="file" form="importForm" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="updateFileName(this)" accept=".csv,.xlsx,.xls">
+                <i class="fas fa-cloud-upload-alt text-4xl text-gray-300 mb-3"></i>
+                <p class="text-sm font-bold text-gray-900" id="file-label">Drag & Drop your file here</p>
+                <p class="text-xs text-gray-500 mt-1">or click to browse</p>
+                <p class="text-xs text-gray-400 mt-4 uppercase font-bold tracking-wide">Supported: CSV, XLS, XLSX</p>
+            </div>
+            
+            {% if form.file.errors %}
+            <p class="mt-2 text-sm text-red-600">{{ form.file.errors.0 }}</p>
+            {% endif %}
+
+            <div class="mt-6 flex justify-end">
+                <button type="submit" form="importForm" class="px-8 py-3 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-900 shadow-lg flex items-center gap-2 transition transform hover:-translate-y-0.5">
+                    <i class="fas fa-play"></i> Start Import
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="lg:col-span-1 space-y-6">
+        
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-6">
+            <h3 class="text-blue-800 font-bold mb-3 flex items-center gap-2">
+                <i class="fas fa-info-circle"></i> Guidelines
+            </h3>
+            <ul class="text-sm text-blue-700 space-y-2 list-disc list-inside">
+                <li>File size must not exceed <strong>10MB</strong>.</li>
+                <li>Ensure Part Number is unique for new products.</li>
+                <li>Date format should be <strong>YYYY-MM-DD</strong>.</li>
+                <li>Do not reorder columns in the template.</li>
+            </ul>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="font-bold text-gray-900">Recent History</h3>
+                <a href="#" class="text-xs text-gray-500 hover:text-black">View All</a>
+            </div>
+            <div class="divide-y divide-gray-100">
+                
+                <div class="p-4 hover:bg-gray-50 transition">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-sm font-bold text-gray-900">stock_update_nov.csv</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 uppercase">Success</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-2">Nov 28, 2024 • 142 Records</p>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5 mb-1">
+                        <div class="bg-green-500 h-1.5 rounded-full" style="width: 100%"></div>
+                    </div>
+                </div>
+
+                <div class="p-4 hover:bg-gray-50 transition">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-sm font-bold text-gray-900">new_products_v2.xlsx</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 uppercase">Processing</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-2">Just Now • Est. 5 mins</p>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5 mb-1 animate-pulse">
+                        <div class="bg-yellow-500 h-1.5 rounded-full" style="width: 45%"></div>
+                    </div>
+                </div>
+
+                <div class="p-4 hover:bg-gray-50 transition">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-sm font-bold text-gray-900">price_list_Q4.csv</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 uppercase">Failed</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-2">Oct 15, 2024 • Format Error</p>
+                    <a href="#" class="text-xs text-red-600 font-bold hover:underline">View Report</a>
+                </div>
+
+                </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function updateFileName(input) {
+        const label = document.getElementById('file-label');
+        if (input.files && input.files.length > 0) {
+            label.textContent = input.files[0].name;
+            label.classList.add('text-green-600');
+        } else {
+            label.textContent = "Drag & Drop your file here";
+            label.classList.remove('text-green-600');
+        }
+    }
+</script>
+{% endblock %}

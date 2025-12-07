@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmed | Corporate Dock</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <style>
+        /* --- GLOBAL THEME --- */
+        :root {
+            --primary-black: #0f0f0f;
+            --text-main: #1a1a1a;
+            --text-muted: #6b7280;
+            --bg-grey: #f9fafb;
+            --border-subtle: #e5e7eb;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #ffffff;
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        a { text-decoration: none; color: inherit; }
+        ul { list-style: none; padding: 0; margin: 0; }
+
+        /* --- HEADER STYLES --- */
+        .navbar-top-header {
+            padding: 15px 40px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            position: relative;
+            z-index: 50;
+        }
+        .navbar-logo img { height: 50px; }
+        .navbar-right-info { display: flex; align-items: center; gap: 20px; }
+        .navbar-phone-info { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+        .navbar-divider { color: #ddd; }
+        .sell-car-button {
+            background: black; color: white; padding: 10px 20px; border-radius: 8px; 
+            font-weight: 700; font-size: 14px; transition: 0.2s;
+        }
+        .sell-car-button:hover { background: #333; color: white; }
+        .navbar-cart { font-size: 24px; color: #333; }
+
+        /* Main Navigation Bar */
+        .navbar { border-bottom: 1px solid var(--border-subtle); background: white; }
+        .nav-links { display: flex; justify-content: center; gap: 40px; padding: 15px 0; }
+        .nav-link { font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s; }
+        .nav-link:hover { color: #666; }
+
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; }
+        .mobile-menu-toggle span { width: 25px; height: 3px; background: black; }
+        
+        @media (max-width: 992px) {
+            .navbar-top-header { padding: 15px 20px; }
+            .navbar-right-info, .navbar { display: none; }
+            .mobile-menu-toggle { display: flex; }
+        }
+
+        /* --- THANK YOU PAGE STYLES --- */
+        .success-container {
+            max-width: 1000px;
+            margin: 60px auto;
+            padding: 0 20px;
+        }
+        
+        /* Success Banner */
+        .success-banner {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeIn 0.5s ease-out;
+        }
+        .check-icon-circle {
+            width: 80px; height: 80px;
+            background: black;
+            color: white;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 25px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .order-title { font-size: 36px; font-weight: 900; margin-bottom: 15px; letter-spacing: -1px; }
+        .order-subtitle { font-size: 16px; color: #666; max-width: 500px; margin: 0 auto; line-height: 1.6; }
+        .order-id-badge {
+            background: #f4f4f4; color: #333;
+            padding: 5px 15px; border-radius: 8px;
+            font-family: monospace; font-weight: 700;
+            margin-left: 5px;
+        }
+
+        /* Order Details Grid */
+        .order-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 50px;
+            align-items: start;
+        }
+
+        .info-card {
+            background: white;
+            border: 1px solid #f0f0f0;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.03);
+        }
+
+        .card-title {
+            font-size: 14px; font-weight: 800; text-transform: uppercase;
+            margin-bottom: 20px; padding-bottom: 15px;
+            border-bottom: 1px solid #eee; letter-spacing: 0.5px;
+        }
+
+        /* Item Row */
+        .order-item {
+            display: flex; align-items: center; gap: 20px;
+            padding-bottom: 20px; margin-bottom: 20px;
+            border-bottom: 1px solid #f9f9f9;
+        }
+        .order-item:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+        
+        .item-img {
+            width: 70px; height: 70px; border-radius: 8px;
+            background: #f8f9fa; object-fit: cover; border: 1px solid #eee;
+        }
+        .item-info h4 { font-size: 15px; font-weight: 700; margin: 0 0 5px 0; }
+        .item-meta { font-size: 13px; color: #888; }
+        .item-price { margin-left: auto; font-weight: 800; font-size: 15px; }
+
+        /* Right Column Info */
+        .detail-group { margin-bottom: 25px; }
+        .detail-label { font-size: 12px; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 5px; }
+        .detail-value { font-size: 14px; font-weight: 600; color: #111; line-height: 1.6; }
+
+        .btn-track {
+            display: block; width: 100%; text-align: center;
+            background: black; color: white;
+            padding: 15px; border-radius: 8px;
+            font-weight: 800; text-transform: uppercase; text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-track:hover { background: #333; transform: translateY(-2px); color: white; }
+
+        .btn-shopping {
+            display: block; width: 100%; text-align: center;
+            background: white; color: black;
+            border: 1px solid #ddd; padding: 15px; border-radius: 8px;
+            font-weight: 700; text-transform: uppercase; text-decoration: none;
+            margin-top: 15px; transition: all 0.2s;
+        }
+        .btn-shopping:hover { border-color: black; background: #f9f9f9; color: black; }
+
+        /* Animation */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 992px) {
+            .order-grid { grid-template-columns: 1fr; gap: 30px; }
+        }
+
+        /* --- FOOTER --- */
+        .footer { border-top: 1px solid #eee; padding-top: 60px; margin-top: 60px; }
+        .footer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px; padding: 0 40px; }
+        .footer h3 { font-size: 14px; font-weight: 800; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .footer ul li { margin-bottom: 10px; font-size: 14px; color: #666; }
+        .footer ul li a:hover { color: black; text-decoration: underline; }
+        .newsletter-input { width: 100%; padding: 10px; border: 1px solid #eee; margin-bottom: 10px; border-radius: 6px; }
+        .newsletter-btn { width: 100%; background: black; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }
+        
+        .footer-bottom { border-top: 1px solid #eee; padding: 30px 40px; display: flex; justify-content: space-between; margin-top: 40px; font-size: 13px; color: #888; }
+
+        /* --- MODAL --- */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-card { background: white; padding: 40px; border-radius: 24px; width: 100%; max-width: 450px; position: relative; }
+        .modal-close { position: absolute; top: 20px; right: 20px; background: none; border: none; cursor: pointer; }
+        .signup-option { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 12px; margin-bottom: 15px; transition: 0.2s; }
+        .signup-option:hover { border-color: black; background: #f9f9f9; }
+    </style>
+</head>
+<body>
+
+    <button class="mobile-menu-toggle p-4"><span></span><span></span><span></span></button>
+    <div class="navbar-top-header">
+        <div class="navbar-logo">
+            <a href="index.html"><img src="./assets/images/logo.png" alt="Logo"></a>
+        </div>
+        <div class="navbar-right-info">
+            <div class="navbar-phone-info"><i class="fas fa-phone"></i> +92-333-3610109</div>
+            <span class="navbar-divider">|</span>
+            <a href="selling.html" class="sell-car-button">Sell My Car</a>
+            <a href="cart.html" class="navbar-cart"><ion-icon name="cart"></ion-icon></a>
+            <div style="cursor: pointer;" onclick="openSignupModal()"><i class="fas fa-user-circle fa-lg"></i></div>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <div class="nav-links">
+            <a href="#" class="nav-link">New</a>
+            <a href="#" class="nav-link">Used</a>
+            <a href="parts.html" class="nav-link" style="color:black;">Parts</a>
+            <a href="#" class="nav-link">Services</a>
+            <a href="#" class="nav-link">Financing</a>
+        </div>
+    </nav>
+
+    <div class="success-container">
+        
+        <div class="success-banner">
+            <div class="check-icon-circle">
+                <i class="fas fa-check"></i>
+            </div>
+            <h1 class="order-title">Thank You, {{ order.customer.first_name|default:order.guest_name|default:"Guest" }}!</h1>
+            <p class="order-subtitle">
+                Your order <span class="order-id-badge">#{{ order.order_number }}</span> has been placed successfully.
+                <br>
+                We have sent a confirmation email to <strong>{{ email }}</strong>.
+            </p>
+        </div>
+
+        <div class="order-grid">
+            
+            <div class="info-card">
+                <h3 class="card-title">Order Details</h3>
+                
+                {% for item in order.items.all %}
+                <div class="order-item">
+                    {% if item.part.image %}
+                    <img src="{{ item.part.image.url }}" class="item-img" alt="{{ item.part.name }}" onerror="this.onerror=null;this.src='https://via.placeholder.com/70';">
+                    {% else %}
+                    <img src="https://via.placeholder.com/70" class="item-img" alt="{{ item.part.name }}">
+                    {% endif %}
+                    <div class="item-info">
+                        <h4>{{ item.part.name }}</h4>
+                        <div class="item-meta">Brand: {{ item.part.brand.name }} | Qty: {{ item.quantity }}</div>
+                    </div>
+                    <div class="item-price">{{ item.price }} ر.س.</div>
+                </div>
+                {% endfor %}
+
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #000; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 700; font-size: 16px;">Total Amount</span>
+                    <span style="font-weight: 900; font-size: 24px;">{{ total }} ر.س.</span>
+                </div>
+            </div>
+
+            <div>
+                <div class="info-card mb-4">
+                    <h3 class="card-title">Shipping & Payment</h3>
+                    
+                    <div class="detail-group">
+                        <div class="detail-label">Shipping Address</div>
+                        <div class="detail-value">
+                            {{ order.shipping_info.contact_name }}<br>
+                            {{ order.shipping_info.address }}<br>
+                            {{ order.shipping_info.city.name_en|default:order.shipping_info.city }}
+                        </div>
+                    </div>
+
+                    <div class="detail-group">
+                        <div class="detail-label">Payment Method</div>
+                        <div class="detail-value">
+                            <i class="fab fa-cc-visa mr-1"></i> {{ order.get_payment_method_display }}
+                        </div>
+                    </div>
+
+                    <div class="detail-group">
+                        <div class="detail-label">Estimated Delivery</div>
+                        <div class="detail-value" style="color: #1b5e20;">
+                            {{ order.shipping_info.estimated_delivery_date|default:"3-5 Business Days" }}
+                        </div>
+                    </div>
+                </div>
+
+                {% if user.is_authenticated %}
+                <a href="{% url 'parts:order_detail' order.id %}" class="btn-track">Track My Order</a>
+                {% endif %}
+                <a href="{% url 'parts:part_list' %}" class="btn-shopping">Continue Shopping</a>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div id="signupModal" class="modal-overlay">
+        <div class="modal-card">
+            <button class="modal-close" onclick="closeSignupModal()"><i class="fas fa-times"></i></button>
+            <div style="text-align:center; margin-bottom:30px;">
+                <h2 style="font-size:24px; font-weight:800; margin-bottom:5px;">Join Corporate Dock</h2>
+                <p style="color:#666;">Select your account type</p>
+            </div>
+            
+            <a href="user_registration.html" class="signup-option" style="color:black; text-decoration:none;">
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <div style="background:#f3f4f6; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px;"><i class="fas fa-user"></i></div>
+                    <span style="font-weight:700;">Individual</span>
+                </div>
+                <i class="fas fa-arrow-right"></i>
+            </a>
+
+            <a href="vendor_registration.html" class="signup-option" style="background:black; color:white; border-color:black; text-decoration:none;">
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <div style="background:#333; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px;"><i class="fas fa-briefcase"></i></div>
+                    <span style="font-weight:700;">Business</span>
+                </div>
+                <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-grid">
+            <div>
+                <h3>Company Info</h3>
+                <ul>
+                    <li><a href="#">About Us</a></li>
+                    <li><a href="#">Careers</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </div>
+            <div>
+                <h3>Useful Links</h3>
+                <ul>
+                    <li><a href="#">Shipping Policy</a></li>
+                    <li><a href="#">Returns</a></li>
+                    <li><a href="#">FAQ</a></li>
+                </ul>
+            </div>
+            <div>
+                <h3>Subscribe</h3>
+                <form class="newsletter-form">
+                    <input type="email" placeholder="Enter email" class="newsletter-input">
+                    <button class="newsletter-btn">Subscribe</button>
+                </form>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div>© 2025 AutoDealer. All rights reserved.</div>
+            <div style="display:flex; gap:20px;">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Modal Logic
+        function openSignupModal() {
+            document.getElementById('signupModal').classList.add('active');
+            document.body.style.overflow = 'hidden'; 
+        }
+        function closeSignupModal() {
+            document.getElementById('signupModal').classList.remove('active');
+            document.body.style.overflow = 'auto'; 
+        }
+        document.getElementById('signupModal').addEventListener('click', function(e) {
+            if (e.target === this) closeSignupModal();
+        });
+    </script>
+</body>
+</html>

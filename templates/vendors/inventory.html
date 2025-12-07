@@ -14,6 +14,9 @@
                         <a href="{% url 'business_partners:vendor_inventory_export' %}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 shadow-sm transition">
                             <i class="fas fa-file-export mr-2"></i> Export
                         </a>
+                        <a href="{% url 'business_partners:vendor_parts_import' %}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 shadow-sm transition">
+                            <i class="fas fa-file-import mr-2"></i> Import
+                        </a>
                         <a href="{% url 'business_partners:vendor_part_create' %}" class="px-4 py-2 bg-black text-white font-bold rounded-lg hover:bg-gray-800 shadow-lg transition flex items-center">
                             <i class="fas fa-plus mr-2"></i> Add New Product
                         </a>
@@ -48,7 +51,7 @@
                 </div>
 
                 <form method="get" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6" 
-                      hx-get="{% url 'business_partners:vendor_inventory_list' %}" 
+                      hx-get="{% url 'business_partners:vendor_catalog_management' %}" 
                       hx-trigger="input delay:500ms, change delay:500ms" 
                       hx-target="#inventory-table" 
                       hx-push-url="true"
@@ -61,7 +64,7 @@
                             <input type="text" name="search" value="{{ search_query }}" 
                                    class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black sm:text-sm" 
                                    placeholder="Search by Name, SKU, or Part Number..."
-                                   hx-get="{% url 'business_partners:vendor_inventory_list' %}"
+                                   hx-get="{% url 'business_partners:vendor_catalog_management' %}"
                                    hx-trigger="keyup changed delay:500ms"
                                    hx-target="#inventory-table"
                                    hx-push-url="true"
@@ -69,7 +72,7 @@
                         </div>
                         <div class="relative">
                             <select name="category" class="block w-full pl-3 pr-10 py-2.5 border border-gray-300 bg-white rounded-lg focus:ring-black focus:border-black sm:text-sm appearance-none"
-                                    hx-get="{% url 'business_partners:vendor_inventory_list' %}"
+                                    hx-get="{% url 'business_partners:vendor_catalog_management' %}"
                                     hx-trigger="change"
                                     hx-target="#inventory-table"
                                     hx-push-url="true"
@@ -85,7 +88,7 @@
                         </div>
                         <div class="relative">
                             <select name="stock_status" class="block w-full pl-3 pr-10 py-2.5 border border-gray-300 bg-white rounded-lg focus:ring-black focus:border-black sm:text-sm appearance-none"
-                                    hx-get="{% url 'business_partners:vendor_inventory_list' %}"
+                                    hx-get="{% url 'business_partners:vendor_catalog_management' %}"
                                     hx-trigger="change"
                                     hx-target="#inventory-table"
                                     hx-push-url="true"
@@ -104,127 +107,6 @@
                     </div>
                 </form>
 
-                <div id="inventory-table" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
-                                    <th class="p-4 w-4"><input type="checkbox" class="rounded border-gray-300 text-black focus:ring-black"></th>
-                                    <th class="px-4 py-4 font-medium">Product Details</th>
-                                    <th class="px-4 py-4 font-medium hidden lg:table-cell">SKU</th>
-                                    <th class="px-4 py-4 font-medium hidden xl:table-cell">Compatibility</th>
-                                    <th class="px-4 py-4 font-medium">Stock</th>
-                                    <th class="px-4 py-4 font-medium">Price</th>
-                                    <th class="px-4 py-4 font-medium">Status</th>
-                                    <th class="px-4 py-4 font-medium text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100 text-sm">
-                                {% for part in parts %}
-                                <tr class="hover:bg-gray-50 transition">
-                                    <td class="p-4"><input type="checkbox" class="rounded border-gray-300 text-black focus:ring-black"></td>
-                                    
-                                    <td class="px-4 py-4 max-w-[200px]">
-                                        <div class="flex items-center">
-                                            <div class="h-10 w-10 rounded-lg bg-gray-200 flex-shrink-0 flex items-center justify-center text-gray-500">
-                                                <i class="fas fa-cog"></i>
-                                            </div>
-                                            <div class="ml-4 overflow-hidden">
-                                                <div class="font-bold text-gray-900 truncate" title="{{ part.material_description }}">{{ part.material_description|default:part.parts_number }}</div>
-                                                <div class="text-xs text-gray-500 truncate">Category: {{ part.category.name|default:"Uncategorized" }}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    
-                                    <td class="px-4 py-4 font-mono text-gray-600 hidden lg:table-cell">{{ part.parts_number }}</td>
-                                    
-                                    <td class="px-4 py-4 hidden xl:table-cell max-w-[150px]">
-                                        {% if part.brand %}
-                                        <span class="inline-block w-full truncate px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800" title="{{ part.brand.name }}">
-                                            {{ part.brand.name }}
-                                        </span>
-                                        {% else %}
-                                        <span class="inline-block w-full truncate px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
-                                            No Brand
-                                        </span>
-                                        {% endif %}
-                                    </td>
-                                    
-                                    <td class="px-4 py-4 whitespace-nowrap">
-                                        <div class="flex items-center">
-                                            <span class="font-medium mr-2">{{ part.quantity|default:0 }}</span>
-                                            {% if part.quantity > 0 %}
-                                            <div class="w-16 bg-gray-200 rounded-full h-1.5 hidden sm:block">
-                                                {% if part.quantity > 10 %}
-                                                <div class="bg-green-500 h-1.5 rounded-full" style="width: 80%"></div>
-                                                {% else %}
-                                                <div class="bg-yellow-500 h-1.5 rounded-full" style="width: 30%"></div>
-                                                {% endif %}
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-4 font-bold whitespace-nowrap">{{ part.price|default:0|floatformat:2|intcomma }} AED</td>
-                                    <td class="px-4 py-4 whitespace-nowrap">
-                                        {% if part.quantity > 10 %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            In Stock
-                                        </span>
-                                        {% elif part.quantity > 0 %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                            Low Stock
-                                        </span>
-                                        {% else %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            Out of Stock
-                                        </span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="px-4 py-4 text-right whitespace-nowrap">
-                                        <a href="{% url 'business_partners:vendor_inventory_detail' part.id %}" class="text-gray-400 hover:text-blue-600 mx-1">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <button class="text-gray-400 hover:text-red-600 mx-1"><i class="fas fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">
-                                        <i class="fas fa-box-open text-4xl text-gray-300 mb-4"></i>
-                                        <p class="text-lg font-medium">No inventory items found</p>
-                                        <p class="text-sm">Try adjusting your search or filter criteria</p>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between sm:px-6">
-                        <div class="flex-1 flex items-center justify-between">
-                            <p class="text-sm text-gray-700">
-                                Showing <span class="font-medium">{{ parts.start_index|default:"0" }}</span> to <span class="font-medium">{{ parts.end_index|default:"0" }}</span> of <span class="font-medium">{{ parts.paginator.count|default:"0" }}</span> results
-                            </p>
-                            {% if parts.paginator.num_pages > 1 %}
-                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                                {% if parts.has_previous %}
-                                <a href="?page={{ parts.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if stock_status %}&stock_status={{ stock_status }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                                    <i class="fas fa-chevron-left"></i>
-                                </a>
-                                {% endif %}
-                                
-                                <span class="z-10 bg-black border-black text-white relative inline-flex items-center px-4 py-2 border text-sm font-medium">
-                                    Page {{ parts.number }} of {{ parts.paginator.num_pages }}
-                                </span>
-                                
-                                {% if parts.has_next %}
-                                <a href="?page={{ parts.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if stock_status %}&stock_status={{ stock_status }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                                    <i class="fas fa-chevron-right"></i>
-                                </a>
-                                {% endif %}
-                            </nav>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
+                {% include 'vendors/inventory_table.html' %}
+
 {% endblock %}

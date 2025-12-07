@@ -8,6 +8,7 @@ from . import views
 from . import vendor_views
 from . import auth_views
 from . import vendor_order_views
+from . import vendor_customer_views
 from . import vendor_inventory_views
 from . import order_processing_views
 from . import api_views
@@ -42,9 +43,27 @@ urlpatterns = [
          auth_views.VendorPasswordResetConfirmView.as_view(), 
          name='vendor_password_reset_confirm'),
     
+    # Vendor Profile & Settings
+    path('vendor/profile/', 
+         auth_views.vendor_profile_view, 
+         name='vendor_profile'),
+
+    path('vendor/profile/update/', 
+         auth_views.vendor_profile_update_view, 
+         name='vendor_profile_update'),
+
+    path('vendor/profile/password/', 
+         auth_views.vendor_password_change_view, 
+         name='vendor_password_change'),
+    
+    path('vendor/settings/', 
+         auth_views.vendor_settings_view, 
+         name='vendor_settings'),
+    
+    # Legacy/Old settings view (kept for backward compatibility if needed)
     path('vendor/profile/settings/', 
          auth_views.vendor_profile_settings_view, 
-         name='vendor_profile_settings'),
+         name='vendor_profile_settings_old'),
     
     # Vendor Registration Workflow
     # Vendor Registration Workflow
@@ -187,9 +206,21 @@ urlpatterns = [
     
     # Vendor Inventory Management URLs
     path('vendor/inventory/', 
+         vendor_inventory_views.vendor_inventory_overview, 
+         name='vendor_inventory_overview'),
+
+    path('vendor/inventory/management/', 
          vendor_inventory_views.vendor_inventory_list, 
          name='vendor_inventory_list'),
+
+    path('vendor/catalog/management/', 
+         vendor_inventory_views.vendor_catalog_management, 
+         name='vendor_catalog_management'),
     
+    path('vendor/inventory/<int:part_id>/delete/htmx/', 
+         vendor_inventory_views.vendor_inventory_delete_htmx, 
+         name='vendor_inventory_delete_htmx'),
+
     path('vendor/inventory/<int:part_id>/', 
          vendor_inventory_views.vendor_inventory_detail, 
          name='vendor_inventory_detail'),
@@ -315,6 +346,15 @@ urlpatterns = [
     path('vendor/orders/reports/', 
          vendor_order_views.vendor_order_reports, 
          name='vendor_order_reports'),
+    
+    # Vendor Customer Management
+    path('vendor/customers/', 
+         vendor_customer_views.VendorCustomerListView.as_view(), 
+         name='vendor_customers_list'),
+    
+    path('vendor/customers/<int:pk>/', 
+         vendor_customer_views.VendorCustomerDetailView.as_view(), 
+         name='vendor_customer_detail'),
     
     # Order processing workflow
     path('order-processing/', order_processing_views.OrderProcessingDashboardView.as_view(), name='order_processing_dashboard'),

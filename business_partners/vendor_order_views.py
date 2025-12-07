@@ -11,7 +11,7 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods, require_POST
 from django.views.generic import ListView, DetailView, UpdateView
 from django.urls import reverse_lazy
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, Http404
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Count, Sum, F, Prefetch, Case, When, Value, Avg
 from django.db import transaction
@@ -30,7 +30,7 @@ from .utils import get_vendor_profile
 class VendorOrderListView(LoginRequiredMixin, ListView):
     """Vendor-specific view to list orders containing their parts."""
     model = Order
-    template_name = 'business_partners/vendor_orders_list_standardized.html'
+    template_name = 'vendors/orders.html'
     context_object_name = 'orders'
     paginate_by = 20
     
@@ -42,10 +42,37 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
         if not vendor_profile:
             return Order.objects.none()
         
-        # Get orders that contain parts from this vendor
-        return Order.objects.filter(
+        # Base queryset: orders with vendor's parts
+        qs = Order.objects.filter(
             items__part__vendor=vendor_profile.business_partner
-        ).distinct().select_related(
+        ).exclude(status='created').distinct()
+
+        # Apply status filter
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+
+        # Apply search filter
+        search = self.request.GET.get('search')
+        if search:
+            qs = qs.filter(
+                Q(order_number__icontains=search) |
+                Q(customer__first_name__icontains=search) |
+                Q(customer__last_name__icontains=search) |
+                Q(customer__email__icontains=search) |
+                Q(guest_name__icontains=search) |
+                Q(guest_email__icontains=search)
+            )
+        
+        # Annotate with vendor-specific total
+        qs = qs.annotate(
+            vendor_total=Sum(
+                F('items__quantity') * F('items__price'),
+                filter=Q(items__part__vendor=vendor_profile.business_partner)
+            )
+        )
+
+        return qs.select_related(
             'customer', 'shipping_info'
         ).prefetch_related(
             'items__part',
@@ -61,42 +88,45 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
         # Get vendor profile
         vendor_profile = get_vendor_profile(self.request.user)
         if vendor_profile:
-            # Add vendor profile to context for template
             context['vendor_profile'] = vendor_profile
-            # Order statistics for this vendor
-            vendor_orders = self.get_queryset()
             
-            context['total_orders'] = vendor_orders.count()
+            # Base queryset for counts (unfiltered by status/search)
+            base_qs = Order.objects.filter(
+                items__part__vendor=vendor_profile.business_partner
+            ).distinct()
             
-            # Status counts for dashboard cards
+            context['total_orders'] = base_qs.count()
+            
+            # Status counts for dashboard cards and tabs
             context['status_counts'] = {
-                'pending': vendor_orders.filter(status='pending').count(),
-                'processing': vendor_orders.filter(status='processing').count(),
-                'completed': vendor_orders.filter(status='delivered').count(),  # Using 'delivered' as 'completed'
+                'pending': base_qs.filter(status='pending').count(),
+                'processing': base_qs.filter(status='processing').count(),
+                'completed': base_qs.filter(status='delivered').count(),
             }
             
-            # Keep individual counts for backward compatibility
-            context['pending_orders'] = vendor_orders.filter(status='pending').count()
-            context['confirmed_orders'] = vendor_orders.filter(status='confirmed').count()
-            context['processing_orders'] = vendor_orders.filter(status='processing').count()
-            context['shipped_orders'] = vendor_orders.filter(status='shipped').count()
-            context['delivered_orders'] = vendor_orders.filter(status='delivered').count()
-            context['cancelled_orders'] = vendor_orders.filter(status='cancelled').count()
+            # Individual counts
+            context['pending_orders'] = base_qs.filter(status='pending').count()
+            context['confirmed_orders'] = base_qs.filter(status='confirmed').count()
+            context['processing_orders'] = base_qs.filter(status='processing').count()
+            context['shipped_orders'] = base_qs.filter(status='shipped').count()
+            context['delivered_orders'] = base_qs.filter(status='delivered').count()
+            context['cancelled_orders'] = base_qs.filter(status='cancelled').count()
             
-            # Revenue statistics
-            context['total_revenue'] = vendor_orders.filter(
-                status__in=['delivered', 'shipped']
+            # Revenue statistics (Vendor Specific)
+            context['total_revenue'] = OrderItem.objects.filter(
+                part__vendor=vendor_profile.business_partner,
+                order__status__in=['delivered', 'shipped']
             ).aggregate(
-                total=Sum(F('items__quantity') * F('items__price'))
+                total=Sum(F('quantity') * F('price'))
             )['total'] or 0
             
             # Recent activity
-            context['recent_orders'] = vendor_orders[:5]
+            context['recent_orders'] = base_qs.order_by('-created_at')[:5]
             
             # Status filter from URL
             status_filter = self.request.GET.get('status')
             if status_filter:
-                context['status_filter'] = status_filter  # Changed from current_status_filter to match template
+                context['status_filter'] = status_filter
             
             # Filter parameters for form persistence
             context['search_query'] = self.request.GET.get('search', '')
@@ -111,12 +141,17 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
 class VendorOrderDetailView(LoginRequiredMixin, DetailView):
     """Detailed view of an order for vendors (only shows their parts)."""
     model = Order
-    template_name = 'business_partners/vendor_order_detail.html'
+    template_name = 'vendors/order_details.html'
     context_object_name = 'order'
     
     def get_object(self):
         """Get order and verify vendor has parts in this order."""
         order = super().get_object()
+        
+        # Hide draft/created orders from vendors
+        if order.status == 'created':
+            raise Http404("Order not found")
+            
         user = self.request.user
         vendor_profile = get_vendor_profile(user)
         
@@ -170,12 +205,17 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
 @login_required
 @require_POST
 def vendor_update_order_status(request, order_id):
-    """AJAX endpoint for vendors to update order status for their parts."""
+    """
+    Endpoint for vendors to update order status for their parts.
+    Supports both standard form submission and HTMX.
+    """
     try:
         order = get_object_or_404(Order, id=order_id)
         vendor_profile = get_vendor_profile(request.user)
         
         if not vendor_profile:
+            if request.headers.get('HX-Request'):
+                 return HttpResponseForbidden("Vendor profile not found.")
             return JsonResponse({
                 'success': False,
                 'error': 'Vendor profile not found.'
@@ -184,6 +224,8 @@ def vendor_update_order_status(request, order_id):
         # Check if this order contains parts from this vendor
         vendor_items = order.items.filter(part__vendor=vendor_profile.business_partner)
         if not vendor_items.exists():
+            if request.headers.get('HX-Request'):
+                 return HttpResponseForbidden("This order doesn't contain any of your parts.")
             return JsonResponse({
                 'success': False,
                 'error': 'This order doesn\'t contain any of your parts.'
@@ -206,9 +248,13 @@ def vendor_update_order_status(request, order_id):
         }
         
         if new_status not in valid_transitions.get(order.status, []):
+            error_msg = f'Invalid status transition from {order.status} to {new_status}.'
+            if request.headers.get('HX-Request'):
+                from django.http import HttpResponseBadRequest
+                return HttpResponseBadRequest(error_msg)
             return JsonResponse({
                 'success': False,
-                'error': f'Invalid status transition from {order.status} to {new_status}.'
+                'error': error_msg
             })
         
         # Update order status
@@ -241,6 +287,13 @@ def vendor_update_order_status(request, order_id):
             order.delivered_at = timezone.now()
             order.save()
         
+        if request.headers.get('HX-Request'):
+            # Return a response that triggers a client-side redirect or refresh
+            from django.http import HttpResponse
+            response = HttpResponse("Status updated")
+            response['HX-Refresh'] = "true"
+            return response
+
         return JsonResponse({
             'success': True,
             'message': f'Order status updated to {new_status} successfully.',
@@ -249,6 +302,9 @@ def vendor_update_order_status(request, order_id):
         })
         
     except Exception as e:
+        if request.headers.get('HX-Request'):
+            from django.http import HttpResponseServerError
+            return HttpResponseServerError(str(e))
         return JsonResponse({
             'success': False,
             'error': str(e)

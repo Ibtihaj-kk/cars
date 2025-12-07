@@ -281,7 +281,7 @@
             <i class="fa-solid fa-chevron-down navbar-dropdown-arrow"></i>
           </div>
           <div class="navbar-dropdown-menu">
-              <a href="./login.html" class="navbar-dropdown-link">Login</a>
+              <a href="{% url 'login' %}" class="navbar-dropdown-link">Login</a>
               <span class="navbar-dropdown-divider">|</span>
               <a href="#" class="navbar-dropdown-link" onclick="openSignupModal(); return false;">Signup</a>
           </div>
@@ -464,7 +464,7 @@
                 <p class="signup-subtitle">Select your account type to continue</p>
             </div>
             <div class="signup-options">
-                <a href="user_registration.html" class="signup-option individual">
+                <a href="{% url 'users:register_page' %}" class="signup-option individual">
                     <div class="left-content">
                         <span class="icon-box">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>

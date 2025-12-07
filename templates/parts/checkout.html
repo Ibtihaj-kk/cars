@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secure Checkout - CarPortal</title>
+    
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="//fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet"/>
+
+    <script type="module" src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <link rel="stylesheet" href="{% static 'home/css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'home/css/navbar.css' %}" />
+
+    <style>
+        /* --- THEME VARIABLES --- */
+        :root {
+            --primary-color: #000000;
+            --text-main: #111111;
+            --text-light: #666666;
+            --bg-grey: #f8f9fa;
+            --border-color: #e5e5e5;
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #fcfcfc;
+            color: var(--text-main);
+        }
+
+        /* --- BUTTONS --- */
+        .btn-primary {
+            background-color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+            color: white !important;
+        }
+        .btn-primary:hover {
+            background-color: #333333 !important;
+        }
+
+        /* --- LAYOUT --- */
+        .checkout-container {
+            max-width: 1200px;
+            margin: 100px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 60px;
+        }
+
+        /* --- LEFT COLUMN (FORMS) --- */
+        .section-title {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .form-section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.02);
+        }
+
+        /* Modern Inputs */
+        .form-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #555 !important; /* Ensure label is visible */
+            margin-bottom: 6px;
+        }
+        .form-control, .form-select {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px 15px;
+            font-size: 14px;
+            color: #000 !important; /* Ensure input text is black */
+            background: #fcfcfc;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: black;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+            background: white;
+        }
+
+        /* Payment Methods */
+        .payment-options {
+            display: grid;
+            gap: 15px;
+        }
+        .payment-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            opacity: 0.6; /* Default dim for disabled */
+        }
+        .payment-card.active {
+            border-color: black;
+            background: #f9f9f9;
+            box-shadow: 0 0 0 1px black;
+            opacity: 1;
+        }
+        .payment-card.disabled {
+            cursor: not-allowed;
+            background: #f0f0f0;
+        }
+        
+        .radio-custom {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .payment-card.active .radio-custom::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: black;
+            border-radius: 50%;
+        }
+        .card-icons { margin-left: auto; display: flex; gap: 8px; opacity: 0.6; }
+        
+        /* --- RIGHT COLUMN (SUMMARY) --- */
+        .order-summary-wrapper {
+            position: sticky;
+            top: 100px;
+        }
+        .order-summary {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+        }
+
+        .summary-item {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .item-img {
+            width: 70px;
+            height: 70px;
+            border-radius: 6px;
+            background: #f4f4f4;
+            object-fit: cover;
+            border: 1px solid #eee;
+        }
+        .item-details h4 {
+            font-size: 14px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+            line-height: 1.4;
+        }
+        .item-meta {
+            font-size: 12px;
+            color: #888;
+        }
+        .item-price {
+            margin-left: auto;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        /* Totals */
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #555;
+        }
+        .price-row.total {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #000;
+            font-size: 20px;
+            font-weight: 900;
+            color: black;
+        }
+
+        /* Place Order Button */
+        .btn-place-order {
+            width: 100%;
+            background: black;
+            color: white;
+            padding: 18px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 16px;
+            margin-top: 25px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .btn-place-order:hover {
+            background: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+
+        /* Promo Input */
+        .promo-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn-apply {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            color: black;
+            font-weight: 700;
+            padding: 0 20px;
+            border-radius: 6px;
+        }
+        .btn-apply:hover { background: #e0e0e0; }
+
+        @media (max-width: 992px) {
+            .checkout-container { grid-template-columns: 1fr; gap: 30px; }
+            .order-summary-wrapper { position: static; }
+            .order-summary { order: -1; } 
+        }
+    </style>
+  </head>
+  <body>
+
+    <!-- Navbar -->
+    
+
+    <div class="checkout-container">
+        
+        <form method="post" action="{% url 'parts:checkout' %}" class="checkout-forms" id="checkout-form">
+            {% csrf_token %}
+            
+            <div class="accordion" id="checkoutAccordion">
+                
+                <!-- Contact Info -->
+                <div class="accordion-item mb-3 border rounded overflow-hidden">
+                    <h2 class="accordion-header" id="headingContact">
+                        <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseContact" aria-expanded="true" aria-controls="collapseContact">
+                            Contact Information
+                        </button>
+                    </h2>
+                    <div id="collapseContact" class="accordion-collapse collapse show" aria-labelledby="headingContact" data-bs-parent="#checkoutAccordion">
+                        <div class="accordion-body bg-white">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" name="email" class="form-control" value="{{ user_data.email|default:'' }}" required>
+                            <div class="form-check mt-3">
+                                <input class="form-check-input" type="checkbox" id="newsCheck" checked>
+                                <label class="form-check-label" for="newsCheck" style="font-size:13px; color:#555;">
+                                    Email me with news and offers
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shipping Address -->
+                <div class="accordion-item mb-3 border rounded overflow-hidden">
+                    <h2 class="accordion-header" id="headingShipping">
+                        <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseShipping" aria-expanded="false" aria-controls="collapseShipping">
+                            Shipping Address
+                        </button>
+                    </h2>
+                    <div id="collapseShipping" class="accordion-collapse collapse" aria-labelledby="headingShipping" data-bs-parent="#checkoutAccordion">
+                        <div class="accordion-body bg-white">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" name="first_name" class="form-control" value="{{ user_data.first_name|default:'' }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Last Name</label>
+                                    <input type="text" name="last_name" class="form-control" value="{{ user_data.last_name|default:'' }}" required>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Address</label>
+                                    <input type="text" name="address" class="form-control" placeholder="Building, Street, etc." value="{{ user_data.address|default:'' }}" required>
+                                </div>
+                                
+                                <div class="col-md-5">
+                                    <label class="form-label">Country</label>
+                                    <select class="form-select" disabled>
+                                        <option selected>Saudi Arabia</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">City</label>
+                                    <select name="city" id="city-select" class="form-select" required>
+                                        <option value="">Select City</option>
+                                        {% for city in cities %}
+                                        <option value="{{ city.id }}" {% if user_data.city_id == city.id %}selected{% endif %}>{{ city.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Area (Optional)</label>
+                                    <select name="area" id="area-select" class="form-select" disabled>
+                                        <option value="">Select Area</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Postal Code (Optional)</label>
+                                    <input type="text" name="postal_code" class="form-control" value="{{ user_data.postal_code|default:'' }}" placeholder="12345">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="text" name="phone" class="form-control" value="{{ user_data.phone|default:'' }}" placeholder="+966..." required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="accordion-item mb-3 border rounded overflow-hidden">
+                    <h2 class="accordion-header" id="headingPayment">
+                        <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePayment" aria-expanded="false" aria-controls="collapsePayment">
+                            Payment Method <i class="fas fa-credit-card ms-2" style="color:#aaa;"></i>
+                        </button>
+                    </h2>
+                    <div id="collapsePayment" class="accordion-collapse collapse" aria-labelledby="headingPayment" data-bs-parent="#checkoutAccordion">
+                        <div class="accordion-body bg-white">
+                            <input type="hidden" name="payment_method" value="cod">
+                            <div class="payment-options">
+                                
+                                <div class="payment-card disabled" title="Coming Soon">
+                                    <div class="radio-custom"></div>
+                                    <div style="flex:1;">
+                                        <div style="font-weight:700; font-size:14px;">Credit / Debit Card</div>
+                                        <div style="font-size:12px; color:#888;">Coming Soon</div>
+                                    </div>
+                                    <div class="card-icons">
+                                        <i class="fab fa-cc-visa fa-lg"></i>
+                                        <i class="fab fa-cc-mastercard fa-lg"></i>
+                                        <i class="fab fa-cc-amex fa-lg"></i>
+                                    </div>
+                                </div>
+
+                                <div class="payment-card disabled" title="Coming Soon">
+                                    <div class="radio-custom"></div>
+                                    <div style="flex:1; font-weight:700; font-size:14px;">PayPal</div>
+                                    <div style="font-size:12px; color:#888; margin-left: 10px;">Coming Soon</div>
+                                    <i class="fab fa-paypal fa-lg text-muted" style="margin-left: auto;"></i>
+                                </div>
+
+                                <div class="payment-card active">
+                                    <div class="radio-custom"></div>
+                                    <div style="flex:1;">
+                                        <div style="font-weight:700; font-size:14px;">Cash on Delivery</div>
+                                        <div style="font-size:12px; color:#888;">Pay when you receive</div>
+                                    </div>
+                                    <i class="fas fa-money-bill-wave fa-lg text-muted"></i>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+
+        <!-- Order Summary -->
+        <div class="order-summary-wrapper">
+            <div class="order-summary">
+                <h3 class="section-title" style="margin-bottom:25px;">Order Summary</h3>
+                
+                {% for item in cart_items %}
+                <div class="summary-item">
+                    {% if item.part.image %}
+                    <img src="{{ item.part.image.url }}" class="item-img" alt="{{ item.part.name }}" onerror="this.onerror=null;this.src='https://via.placeholder.com/70';">
+                    {% else %}
+                    <img src="https://via.placeholder.com/70" class="item-img" alt="{{ item.part.name }}">
+                    {% endif %}
+                    <div class="item-details">
+                        <h4>{{ item.part.name }}</h4>
+                        <div class="item-meta">Qty: {{ item.quantity }}</div>
+                    </div>
+                    <div class="item-price">{{ item.item_total|floatformat:2 }} ر.س.</div>
+                </div>
+                {% endfor %}
+
+                <div class="promo-group">
+                    <input type="text" class="form-control" placeholder="Gift card or discount code">
+                    <button class="btn btn-apply">Apply</button>
+                </div>
+                <hr style="margin: 25px 0; border-color:#eee;">
+
+                <div class="price-row">
+                    <span>Subtotal</span>
+                    <span style="font-weight:700; color:black;">{{ items_total|floatformat:2 }} ر.س.</span>
+                </div>
+                <div class="price-row">
+                    <span>Shipping</span>
+                    <span style="font-size:12px;">{{ shipping_cost|floatformat:2 }} ر.س.</span>
+                </div>
+                <div class="price-row">
+                    <span>Tax (15%)</span>
+                    <span>{{ tax_amount|floatformat:2 }} ر.س.</span>
+                </div>
+
+                <div class="price-row total">
+                    <span>Total</span>
+                    <span>{{ grand_total|floatformat:2 }} ر.س.</span>
+                </div>
+
+                <button type="submit" form="checkout-form" class="btn-place-order">Place Order</button>
+                
+                <div style="text-align:center; margin-top:15px; font-size:12px; color:#999;">
+                    <i class="fas fa-shield-alt"></i> SSL Encrypted Payment
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'home/js/navbar.js' %}"></script>
+    <script>
+        // City/Area Dynamic Loading
+        document.getElementById('city-select').addEventListener('change', function() {
+            const cityId = this.value;
+            const areaSelect = document.getElementById('area-select');
+            
+            if (cityId) {
+                fetch(`{% url 'parts:get_city_areas' %}?city_id=${cityId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        areaSelect.innerHTML = '<option value="">Select Area</option>';
+                        if (data.success && data.areas.length > 0) {
+                            data.areas.forEach(area => {
+                                const option = document.createElement('option');
+                                option.value = area.id;
+                                option.textContent = area.name;
+                                areaSelect.appendChild(option);
+                            });
+                            areaSelect.disabled = false;
+                        } else {
+                            areaSelect.disabled = true;
+                        }
+                    });
+            } else {
+                areaSelect.innerHTML = '<option value="">Select Area</option>';
+                areaSelect.disabled = true;
+            }
+        });
+    </script>
+
+  </body>
+</html>

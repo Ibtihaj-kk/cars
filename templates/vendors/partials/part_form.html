@@ -1,0 +1,439 @@
+<form id="add-part-form" method="post" enctype="multipart/form-data" 
+      hx-post="{% url 'business_partners:vendor_part_create_htmx' %}"
+      hx-target="#form-container"
+      hx-swap="innerHTML"
+      hx-indicator="#loading-indicator"
+      class="space-y-6">
+    {% csrf_token %}
+    {{ form.status }}
+    {{ form.is_active }}
+    
+    <!-- HTMX Response Container -->
+    <div id="form-response" class="mb-4">
+        {% if form.errors %}
+            <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-sm animate-pulse" role="alert">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-circle text-red-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="font-bold text-sm">Please correct the following errors:</p>
+                        <ul class="mt-2 list-disc list-inside text-sm space-y-1">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                    <li><span class="font-medium">{{ field|title }}:</span> {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="hidden fixed top-4 right-4 z-50 bg-white border-l-4 border-blue-500 text-blue-700 p-4 rounded-lg shadow-xl flex items-center transition-all duration-300">
+        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mr-3"></div>
+        <span class="font-medium">Saving part...</span>
+    </div>
+
+    <!-- General Tab -->
+    <div id="tab-general" class="tab-content active">
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-lg font-bold text-gray-900 mb-6 pb-2 border-b flex items-center">
+                <i class="fas fa-info-circle mr-2 text-gray-400"></i> Core Product Data
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label for="{{ form.material_description.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Material Description (English) <span class="text-red-500">*</span></label>
+                    {{ form.material_description }}
+                    {% if form.material_description.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.material_description.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.material_description_ar.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Material Description (Arabic)</label>
+                    {{ form.material_description_ar }}
+                    {% if form.material_description_ar.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.material_description_ar.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="{{ form.parts_number.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Parts Number (Internal) <span class="text-red-500">*</span></label>
+                    {{ form.parts_number }}
+                    {% if form.parts_number.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.parts_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.manufacturer_part_number.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Manufacturer Part No.</label>
+                    {{ form.manufacturer_part_number }}
+                </div>
+
+                <div>
+                    <label for="{{ form.manufacturer_oem_number.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Manufacturer OEM Number</label>
+                    {{ form.manufacturer_oem_number }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.old_material_number.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Old Material Number</label>
+                    {{ form.old_material_number }}
+                </div>
+
+                <div>
+                    <label for="{{ form.material_type.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Material Type</label>
+                    {{ form.material_type }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.material_group.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Material Group</label>
+                    {{ form.material_group }}
+                </div>
+
+                <div>
+                    <label for="{{ form.external_material_group.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">External Material Group</label>
+                    {{ form.external_material_group }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.division.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Division</label>
+                    {{ form.division }}
+                </div>
+
+                <div>
+                    <label for="{{ form.industry_sector.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Industry Sector</label>
+                    {{ form.industry_sector }}
+                </div>
+            </div>
+            
+            <!-- Legacy Fields Section (Collapsible or Separated) -->
+            <div class="mt-8 pt-6 border-t border-gray-100">
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Legacy Fields</h4>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label for="{{ form.price.id_for_label }}" class="block text-xs font-medium text-gray-500 mb-1">Price (Legacy) <span class="text-red-500">*</span></label>
+                        {{ form.price }}
+                        {% if form.price.errors %}<p class="text-red-500 text-xs mt-1">{{ form.price.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.quantity.id_for_label }}" class="block text-xs font-medium text-gray-500 mb-1">Quantity (Legacy) <span class="text-red-500">*</span></label>
+                        {{ form.quantity }}
+                        {% if form.quantity.errors %}<p class="text-red-500 text-xs mt-1">{{ form.quantity.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.category.id_for_label }}" class="block text-xs font-medium text-gray-500 mb-1">Category (Legacy) <span class="text-red-500">*</span></label>
+                        {{ form.category }}
+                         {% if form.category.errors %}<p class="text-red-500 text-xs mt-1">{{ form.category.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.brand.id_for_label }}" class="block text-xs font-medium text-gray-500 mb-1">Brand (Legacy) <span class="text-red-500">*</span></label>
+                        {{ form.brand }}
+                        {% if form.brand.errors %}<p class="text-red-500 text-xs mt-1">{{ form.brand.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pricing Tab -->
+    <div id="tab-pricing" class="tab-content">
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-lg font-bold text-gray-900 mb-6 pb-2 border-b flex items-center">
+                <i class="fas fa-tag mr-2 text-gray-400"></i> Financial & Sales Data
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label for="{{ form.cost_price.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Cost Price</label>
+                    <div class="relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 sm:text-sm">PKR</span>
+                        </div>
+                        {{ form.cost_price }}
+                    </div>
+                    {% if form.cost_price.errors %}<p class="text-red-500 text-xs mt-1">{{ form.cost_price.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Profit Margin</label>
+                    <div id="profit-margin-display" class="flex items-center px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700 font-medium h-[38px]">
+                        <span>-- %</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="{{ form.standard_price.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Standard Price <span class="text-red-500">*</span></label>
+                    <div class="relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 sm:text-sm">PKR</span>
+                        </div>
+                        {{ form.standard_price }}
+                    </div>
+                    {% if form.standard_price.errors %}<p class="text-red-500 text-xs mt-1">{{ form.standard_price.errors.0 }}</p>{% endif %}
+                </div>
+                
+                <div>
+                    <label for="{{ form.moving_average_price.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Moving Avg. Price</label>
+                    {{ form.moving_average_price }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.price_unit_peinh.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Price Unit (PEINH)</label>
+                    {{ form.price_unit_peinh }}
+                </div>
+
+                <div>
+                    <label for="{{ form.valuation_class.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Valuation Class</label>
+                    {{ form.valuation_class }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.valuation_category.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Valuation Category</label>
+                    {{ form.valuation_category }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.price_control_indicator.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Price Control Indicator</label>
+                    {{ form.price_control_indicator }}
+                </div>
+
+                <div>
+                    <label for="{{ form.sales_organization.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Sales Organization</label>
+                    {{ form.sales_organization }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.distribution_channel.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Distribution Channel</label>
+                    {{ form.distribution_channel }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.profit_center.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Profit Center</label>
+                    {{ form.profit_center }}
+                </div>
+
+                <div>
+                    <label for="{{ form.tax_classification_material.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Tax Classification</label>
+                    {{ form.tax_classification_material }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.account_assignment_group.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Acct. Assignment Group</label>
+                    {{ form.account_assignment_group }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.item_category_group.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Item Category Group</label>
+                    {{ form.item_category_group }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logistics Tab -->
+    <div id="tab-logistics" class="tab-content">
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-lg font-bold text-gray-900 mb-6 pb-2 border-b flex items-center">
+                <i class="fas fa-truck mr-2 text-gray-400"></i> Inventory & Shipping Specs
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div>
+                    <label for="{{ form.plant.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Plant</label>
+                    {{ form.plant }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.storage_location.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Storage Location</label>
+                    {{ form.storage_location }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.warehouse_number.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Warehouse No.</label>
+                    {{ form.warehouse_number }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.storage_bin.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Storage Bin</label>
+                    {{ form.storage_bin }}
+                </div>
+
+                <div>
+                    <label for="{{ form.base_unit_of_measure.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Base Unit of Measure <span class="text-red-500">*</span></label>
+                    {{ form.base_unit_of_measure }}
+                    {% if form.base_unit_of_measure.errors %}<p class="text-red-500 text-xs mt-1">{{ form.base_unit_of_measure.errors.0 }}</p>{% endif %}
+                </div>
+                
+                <div>
+                    <label for="{{ form.gross_weight.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Gross Weight</label>
+                    {{ form.gross_weight }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.net_weight.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Net Weight</label>
+                    {{ form.net_weight }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.size_dimensions.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Size / Dimensions</label>
+                    {{ form.size_dimensions }}
+                </div>
+
+                <div>
+                    <label for="{{ form.minimum_order_quantity.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Min. Order Qty</label>
+                    {{ form.minimum_order_quantity }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.transportation_group.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Transportation Grp</label>
+                    {{ form.transportation_group }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.loading_group.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Loading Group</label>
+                    {{ form.loading_group }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.abc_indicator.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">ABC Indicator</label>
+                    {{ form.abc_indicator }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Planning Tab -->
+    <div id="tab-planning" class="tab-content">
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-lg font-bold text-gray-900 mb-6 pb-2 border-b flex items-center">
+                <i class="fas fa-calendar-alt mr-2 text-gray-400"></i> Material Requirements Planning
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label for="{{ form.inventory_threshold.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Low Stock Alert Threshold</label>
+                    {{ form.inventory_threshold }}
+                </div>
+
+                <div>
+                    <label for="{{ form.mrp_type.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">MRP Type</label>
+                    {{ form.mrp_type }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.mrp_controller.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">MRP Controller</label>
+                    {{ form.mrp_controller }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.procurement_type.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Procurement Type</label>
+                    {{ form.procurement_type }}
+                    {% if form.procurement_type.errors %}<p class="text-red-500 text-xs mt-1">{{ form.procurement_type.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.reorder_point.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Reorder Point</label>
+                    {{ form.reorder_point }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.safety_stock.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Safety Stock</label>
+                    {{ form.safety_stock }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.minimum_safety_stock.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Min. Safety Stock</label>
+                    {{ form.minimum_safety_stock }}
+                </div>
+
+                <div>
+                    <label for="{{ form.planned_delivery_time_days.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Planned Delivery Time</label>
+                    {{ form.planned_delivery_time_days }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.goods_receipt_processing_time_days.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">GR Processing Time</label>
+                    {{ form.goods_receipt_processing_time_days }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.total_replenishment_lead_time.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Total Replenish Lead Time</label>
+                    {{ form.total_replenishment_lead_time }}
+                </div>
+
+                <div>
+                    <label for="{{ form.purchasing_group.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Purchasing Group</label>
+                    {{ form.purchasing_group }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.lot_size.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Lot Size</label>
+                    {{ form.lot_size }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.availability_check.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">Availability Check</label>
+                    {{ form.availability_check }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fitment Tab -->
+    <div id="tab-fitment" class="tab-content">
+        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-lg font-bold text-gray-900 mb-6 pb-2 border-b flex items-center">
+                <i class="fas fa-images mr-2 text-gray-400"></i> Media & Vehicle Compatibility
+            </h3>
+            
+            <div class="mb-8">
+                <label class="block text-sm font-bold text-gray-700 mb-2 uppercase">Product Images</label>
+                
+                {% if form.instance.image %}
+                <div class="mb-4">
+                    <p class="text-xs font-medium text-gray-500 mb-2">Current Image:</p>
+                    <img src="{{ form.instance.image.url }}" alt="Current Part Image" class="h-32 w-auto object-cover rounded border border-gray-200">
+                </div>
+                {% endif %}
+
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition cursor-pointer">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
+                    <p class="text-sm font-medium text-gray-900">Click to upload or drag and drop</p>
+                    <p class="text-xs text-gray-500">SVG, PNG, JPG or GIF (MAX. 800x400px)</p>
+                </div>
+                <!-- Image field logic if needed -->
+                <div class="mt-2">
+                    {{ form.image }}
+                </div>
+            </div>
+
+            <!-- Vehicle Compatibility Section Placeholder -->
+            <div class="opacity-50">
+                 <div class="flex justify-between items-center mb-4">
+                    <label class="block text-sm font-bold text-gray-700 uppercase">Compatible Vehicles</label>
+                    <button type="button" class="text-sm text-blue-600 font-bold hover:underline" disabled><i class="fas fa-plus mr-1"></i> Add Vehicle</button>
+                </div>
+                <p class="text-sm text-gray-500 italic">Vehicle compatibility features are coming soon.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Preserve Tab State -->
+    <script>
+        // Re-initialize tabs if needed
+        if (typeof switchTab === 'function') {
+            // find active tab
+            const activeTab = document.querySelector('.tab-content.active');
+            if (activeTab) {
+                // ensure button is active
+                const tabId = activeTab.id.replace('tab-', '');
+                switchTab(tabId);
+            }
+        }
+    </script>
+
+</form>

@@ -1007,10 +1007,14 @@ def vendor_login_validate_htmx(request):
     email = request.POST.get('email', '').strip()
     password = request.POST.get('password', '').strip()
     
+    field_name = ''
+    field_value = ''
     errors = {}
     
     # Validate email field
     if 'email' in request.POST:
+        field_name = 'email'
+        field_value = email
         # Basic email format validation
         import re
         if not email:
@@ -1020,6 +1024,8 @@ def vendor_login_validate_htmx(request):
     
     # Validate password field
     elif 'password' in request.POST:
+        field_name = 'password'
+        field_value = password
         if not password:
             errors['password'] = 'Password is required'
         elif len(password) < 6:
@@ -1044,6 +1050,7 @@ def vendor_login_submit_htmx(request):
     from django.contrib.auth import authenticate, login
     from django.contrib.auth import get_user_model
     from .permissions import get_vendor_profile
+    from users.models import UserRole
     
     User = get_user_model()
     
@@ -1070,9 +1077,12 @@ def vendor_login_submit_htmx(request):
     
     try:
         # Authenticate user
-        user = User.objects.get(email=email)
-        # Handle case where username is None (use email as username)
-        username = user.username if user.username else user.email
+        try:
+            user_obj = User.objects.get(email=email)
+            username = user_obj.username if user_obj.username else user_obj.email
+        except User.DoesNotExist:
+            username = email
+
         user = authenticate(request, username=username, password=password)
         
         if user is not None:
@@ -1099,15 +1109,32 @@ def vendor_login_submit_htmx(request):
                 response_data['redirect_url'] = '/business-partners/registration/status/'
                 
             else:
-                # Authenticated user but no vendor profile
-                response_data['message'] = 'You don\'t have vendor access. Please apply for vendor status.'
-                response_data['redirect_url'] = '/business-partners/registration/'
+                # Authenticated user but no vendor profile (Client/User/Staff/Admin)
+                login(request, user)
+                
+                # Set session expiry based on remember me
+                if remember_me:
+                    request.session.set_expiry(2592000)  # 30 days
+                else:
+                    request.session.set_expiry(0)  # Browser session
+                
+                response_data['success'] = True
+                response_data['message'] = 'Login successful! Redirecting...'
+                
+                # Determine redirect URL based on role
+                if user.is_superuser or user.is_staff:
+                    response_data['redirect_url'] = '/admin_panel/' 
+                elif user.role == UserRole.CLIENT:
+                    response_data['redirect_url'] = '/api/users/dashboard/'  # Redirect clients to user dashboard
+                else:
+                    response_data['redirect_url'] = '/'  # Default redirect
+                    
         else:
             # Authentication failed
             response_data['message'] = 'Invalid email or password'
             response_data['errors']['general'] = 'Invalid credentials. Please try again.'
             
-    except User.DoesNotExist:
+    except Exception as e:
         response_data['message'] = 'Invalid email or password'
         response_data['errors']['general'] = 'Invalid credentials. Please try again.'
     

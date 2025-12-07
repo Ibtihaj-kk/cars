@@ -186,8 +186,12 @@
                         </span>
                     </div>
                     
-                    <div class="h-10 w-10 bg-black text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white ring-1 ring-gray-100 group-hover:ring-gray-300 transition-all">
-                        {{ user.username|slice:":2"|upper }}
+                    <div class="h-10 w-10 bg-black text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white ring-1 ring-gray-100 group-hover:ring-gray-300 transition-all overflow-hidden">
+                        {% if user.business_partners.first.logo %}
+                            <img src="{{ user.business_partners.first.logo.url }}" alt="Profile" class="w-full h-full object-cover">
+                        {% else %}
+                            {{ user.username|slice:":2"|upper }}
+                        {% endif %}
                     </div>
 
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 group-hover:text-black transition-transform duration-300 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -337,7 +341,7 @@
             </div>
 
             <div class="space-y-4">
-                <a href="#" class="group block w-full py-5 px-6 border-2 border-black rounded-2xl hover:bg-black hover:text-white transition-all duration-300 flex items-center justify-between">
+                <a href="{% url 'users:register_page' %}" class="group block w-full py-5 px-6 border-2 border-black rounded-2xl hover:bg-black hover:text-white transition-all duration-300 flex items-center justify-between">
                     <div class="flex items-center gap-4">
                         <span class="p-2 bg-gray-100 rounded-lg group-hover:bg-gray-800 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -145,7 +145,8 @@ class PasswordHistoryValidator:
         self.history_count = history_count
     
     def validate(self, password, user=None):
-        if not user:
+        # Skip validation if user is not provided or if the user is not saved yet (e.g. creating superuser)
+        if not user or not user.pk:
             return
         
         # Check recent password history

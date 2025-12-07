@@ -58,6 +58,10 @@ urlpatterns = [
     path('guest-order/', views.PartListView.as_view(), name='guest_order'),  # Placeholder
     path('guest-order/success/', views.PartListView.as_view(), name='guest_order_success'),  # Placeholder
     
+    # HTMX Cart Actions
+    path('cart/hx-update/<int:item_id>/', views.hx_update_cart_quantity, name='hx_update_cart_quantity'),
+    path('cart/hx-remove/<int:item_id>/', views.hx_remove_from_cart, name='hx_remove_from_cart'),
+    
     # Cart functionality
     path('cart/', views.cart_view, name='cart_view'),
     path('cart/add/<int:part_id>/', views.add_to_cart, name='add_to_cart'),
@@ -70,6 +74,7 @@ urlpatterns = [
     path('api/cart/count/', views.cart_count_api, name='cart_count_api'),
     
     # Multi-step Checkout functionality
+    path('checkout/', views.checkout_view, name='checkout'),
     path('checkout/step1/', views.checkout_step1_order_summary, name='checkout_step1'),
     path('checkout/step2/', views.checkout_step2_shipping_info, name='checkout_step2'),
     path('checkout/step3/', views.checkout_step3_payment_method, name='checkout_step3'),

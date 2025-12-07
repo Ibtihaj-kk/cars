@@ -1,0 +1,64 @@
+{% extends 'vendors/base.html' %}
+
+{% block title %}Import Results | Corporate Dock{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Import Results</h1>
+    <p class="text-gray-500 text-sm mt-1">Summary of your bulk import operation.</p>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <div class="text-sm text-gray-500 uppercase font-bold">Total Rows</div>
+                <div class="text-3xl font-bold text-gray-900">{{ results.total_rows }}</div>
+            </div>
+            <div class="p-4 bg-green-50 rounded-lg">
+                <div class="text-sm text-green-600 uppercase font-bold">Created</div>
+                <div class="text-3xl font-bold text-green-700">{{ results.created_count }}</div>
+            </div>
+            <div class="p-4 bg-blue-50 rounded-lg">
+                <div class="text-sm text-blue-600 uppercase font-bold">Updated</div>
+                <div class="text-3xl font-bold text-blue-700">{{ results.updated_count }}</div>
+            </div>
+            <div class="p-4 bg-red-50 rounded-lg">
+                <div class="text-sm text-red-600 uppercase font-bold">Errors</div>
+                <div class="text-3xl font-bold text-red-700">{{ results.error_count }}</div>
+            </div>
+        </div>
+    </div>
+    
+    {% if results.errors %}
+    <div class="p-6 bg-red-50 border-b border-red-100">
+        <h3 class="text-lg font-bold text-red-800 mb-3">Error Details</h3>
+        <ul class="list-disc list-inside space-y-1 text-red-700 text-sm max-h-60 overflow-y-auto">
+            {% for error in results.errors %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    {% if results.warnings %}
+    <div class="p-6 bg-yellow-50 border-b border-yellow-100">
+        <h3 class="text-lg font-bold text-yellow-800 mb-3">Warnings</h3>
+        <ul class="list-disc list-inside space-y-1 text-yellow-700 text-sm max-h-60 overflow-y-auto">
+            {% for warning in results.warnings %}
+            <li>{{ warning }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <div class="p-6 bg-gray-50 flex justify-end">
+        <a href="{% url 'business_partners:vendor_parts_import' %}" class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-100 shadow-sm transition mr-3">
+            Import Another File
+        </a>
+        <a href="{% url 'business_partners:vendor_inventory_list' %}" class="px-6 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 shadow-lg transition">
+            View Inventory
+        </a>
+    </div>
+</div>
+{% endblock %}

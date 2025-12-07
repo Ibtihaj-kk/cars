@@ -167,7 +167,52 @@ def vendor_dashboard(request):
         monthly_sales_display = f"{monthly_sales / 1000:.0f}K"
     else:
         monthly_sales_display = f"{monthly_sales:.0f}"
+
+    # Calculate Pending Actions (Orders needing attention + Critical notifications)
+    pending_orders_count = vendor_order_items.filter(
+        order__status__in=['confirmed', 'processing']
+    ).values('order').distinct().count()
     
+    pending_actions = pending_orders_count + critical_notifications
+
+    # Format Inventory Value
+    if total_value >= 1000000:
+        total_value_display = f"{total_value / 1000000:.1f}M"
+    elif total_value >= 1000:
+        total_value_display = f"{total_value / 1000:.0f}K"
+    else:
+        total_value_display = f"{total_value:.0f}"
+
+    # Revenue Chart Data (Last 6 months)
+    revenue_labels = []
+    revenue_data = []
+    today = timezone.now()
+    
+    for i in range(6):
+        month_target = today.month - i
+        year_target = today.year
+        if month_target <= 0:
+            month_target += 12
+            year_target -= 1
+            
+        # Get data for this month
+        monthly_revenue = vendor_order_items.filter(
+            order__created_at__year=year_target,
+            order__created_at__month=month_target
+        ).aggregate(total=Sum(F('price') * F('quantity')))['total'] or 0
+        
+        # Add to lists (prepend because we are going backwards)
+        # Create a date object safely
+        import datetime as dt
+        month_name = dt.date(year_target, month_target, 1).strftime('%b')
+        revenue_labels.insert(0, month_name)
+        revenue_data.insert(0, float(monthly_revenue))
+
+    # Fulfillment Stats
+    delivered_count = vendor_order_items.filter(order__status='delivered').values('order').distinct().count()
+    pending_processing_count = vendor_order_items.filter(order__status__in=['confirmed', 'processing']).values('order').distinct().count()
+    total_fulfillment = delivered_count + pending_processing_count
+
     context = {
         'vendor_profile': vendor_profile,
         'business_partner': business_partner,
@@ -180,6 +225,7 @@ def vendor_dashboard(request):
             'below_safety_stock': below_safety_stock,
             'needs_reorder': needs_reorder,
             'total_value': total_value,
+            'total_value_display': total_value_display,
             'avg_price': avg_price,
             'inventory_health': inventory_health,
             'inventory_health_percentage': round(inventory_health, 1),
@@ -189,6 +235,12 @@ def vendor_dashboard(request):
             'overdue_notifications': overdue_notifications,
             'total_orders': total_orders,
             'monthly_sales': monthly_sales_display,
+            'pending_actions': pending_actions,
+            'revenue_labels': json.dumps(revenue_labels),
+            'revenue_data': json.dumps(revenue_data),
+            'delivered_count': delivered_count,
+            'pending_processing_count': pending_processing_count,
+            'total_fulfillment': total_fulfillment,
         },
         'recent_notifications': recent_notifications,
         'recent_parts': recent_parts,
@@ -324,7 +376,7 @@ def vendor_part_create(request):
         if form.is_valid():
             part = form.save()
             messages.success(request, f'Part "{part.parts_number}" created successfully.')
-            return redirect('vendor_parts_list')
+            return redirect('business_partners:vendor_parts_list')
     else:
         form = VendorPartForm(vendor=business_partner)
     
@@ -357,7 +409,7 @@ def vendor_part_edit(request, part_id):
         if form.is_valid():
             part = form.save()
             messages.success(request, f'Part "{part.parts_number}" updated successfully.')
-            return redirect('vendor_parts_list')
+            return redirect('business_partners:vendor_parts_list')
     else:
         form = VendorPartForm(instance=part, vendor=business_partner)
     
@@ -445,7 +497,7 @@ def vendor_parts_bulk_update(request):
             
             if not parts.exists():
                 messages.error(request, 'No valid parts selected.')
-                return redirect('vendor_parts_list')
+                return redirect('business_partners:vendor_parts_list')
             
             updated_count = 0
             
@@ -521,7 +573,7 @@ def vendor_parts_bulk_update(request):
                         updated_count += 1
             
             messages.success(request, f'Successfully updated {updated_count} parts.')
-            return redirect('vendor_parts_list')
+            return redirect('business_partners:vendor_parts_list')
         else:
             if not part_ids:
                 messages.error(request, 'No parts selected for bulk update.')
@@ -1061,7 +1113,7 @@ def vendor_reorder_notification_detail(request, notification_id):
         )
     except ReorderNotification.DoesNotExist:
         messages.error(request, 'Notification not found.')
-        return redirect('vendor_reorder_notifications')
+        return redirect('business_partners:vendor_reorder_notifications')
     
     # Get part inventory information
     inventory = getattr(notification.part, 'inventory', None)
@@ -1136,30 +1188,42 @@ def vendor_parts_import(request):
     if request.method == 'POST':
         form = VendorPartBulkImportForm(request.POST, request.FILES)
         if form.is_valid():
-            import_file = form.cleaned_data['import_file']
+            import_file = form.cleaned_data['file']
             update_existing = form.cleaned_data['update_existing']
             validate_only = form.cleaned_data['validate_only']
             
             try:
-                # Process the import file
-                results = process_import_file(
-                    import_file, 
-                    business_partner, 
-                    update_existing, 
-                    validate_only
-                )
-                
-                if validate_only:
-                    messages.info(request, f'Validation complete. {results["valid_count"]} valid rows, {results["error_count"]} errors.')
-                else:
-                    messages.success(request, f'Import complete. {results["created_count"]} parts created, {results["updated_count"]} parts updated.')
+                # Use transaction to ensure data integrity
+                with transaction.atomic():
+                    # Process the import file
+                    results = process_import_file(
+                        import_file, 
+                        business_partner, 
+                        update_existing, 
+                        validate_only
+                    )
+                    
+                    # If validation only or critical errors occurred, rollback
+                    if validate_only:
+                        messages.info(request, f'Validation complete. {results["valid_count"]} valid rows, {results["error_count"]} errors.')
+                        transaction.set_rollback(True)
+                    elif results['error_count'] > 0 and results['created_count'] == 0 and results['updated_count'] == 0:
+                        # If everything failed, treat as error but don't rollback (nothing happened anyway)
+                        messages.error(request, f'Import failed. {results["error_count"]} errors found. No parts were imported.')
+                    else:
+                        if results['error_count'] > 0:
+                            messages.warning(request, f'Import completed with errors. {results["created_count"]} created, {results["updated_count"]} updated, {results["error_count"]} failed.')
+                        else:
+                            messages.success(request, f'Import success! {results["created_count"]} parts created, {results["updated_count"]} parts updated.')
                 
                 # Store results in session for display
                 request.session['import_results'] = results
-                return redirect('vendor_parts_import_results')
+                return redirect('business_partners:vendor_parts_import_results')
                 
             except Exception as e:
-                messages.error(request, f'Import failed: {str(e)}')
+                import traceback
+                print(traceback.format_exc())
+                messages.error(request, f'System Error during import: {str(e)}')
     else:
         form = VendorPartBulkImportForm()
     
@@ -1184,7 +1248,7 @@ def vendor_parts_import_results(request):
     results = request.session.get('import_results', {})
     if not results:
         messages.warning(request, 'No import results found.')
-        return redirect('vendor_parts_import')
+        return redirect('business_partners:vendor_parts_import')
     
     # Clear results from session
     if 'import_results' in request.session:
@@ -1274,13 +1338,47 @@ def process_import_file(import_file, business_partner, update_existing, validate
     # Define field validation rules
     REQUIRED_FIELDS = ['parts_number', 'material_description', 'base_unit_of_measure', 'category_name', 'brand_name', 'price']
     
+    # Map Excel/CSV headers to model fields
+    HEADER_MAPPINGS = {
+        'Part Number': 'parts_number',
+        'Part No': 'parts_number',
+        'Material Description': 'material_description',
+        'Description': 'material_description',  # Alias
+        'Arabic Description': 'material_description_ar',
+        'Category': 'category_name',
+        'Brand': 'brand_name',
+        'Price': 'price',
+        'Quantity': 'quantity',
+        'Qty': 'quantity',
+        'Stock': 'quantity',  # Alias
+        'Base Unit': 'base_unit_of_measure',
+        'Unit': 'base_unit_of_measure',  # Alias
+        'UOM': 'base_unit_of_measure',
+        'Image URL': 'image_url',
+        'Image': 'image_url',
+        'Compatible Vehicles': 'vehicle_variants',
+        'Vehicles': 'vehicle_variants',  # Alias
+        'Manufacturer Part Number': 'manufacturer_part_number',
+        'MPN': 'manufacturer_part_number',
+        'OEM Number': 'manufacturer_oem_number',
+        'OEM': 'manufacturer_oem_number',
+        'Weight': 'gross_weight',
+        'Gross Weight': 'gross_weight',
+        'Net Weight': 'net_weight',
+        'Dimensions': 'size_dimensions',
+        'Size': 'size_dimensions',
+        'Safety Stock': 'safety_stock',
+        'Reorder Point': 'reorder_point',
+        'Active': 'is_active',
+        'Featured': 'is_featured'
+    }
+    
     FIELD_MAPPINGS = {
-        'parts_number': 'part_number',
-        'material_description': 'name',
-        'material_description_ar': 'description_ar',
-        'category_name': 'category',
-        'brand_name': 'brand',
-        'vehicle_variants': 'compatible_vehicles'
+        'parts_number': 'parts_number',
+        'material_description': 'material_description',
+        'material_description_ar': 'material_description_ar',
+        'vehicle_variants': 'compatible_vehicles',
+        'image_url': 'image_url'
     }
     
     NUMERIC_FIELDS = {
@@ -1290,7 +1388,6 @@ def process_import_file(import_file, business_partner, update_existing, validate
         'minimum_safety_stock': {'min': 0, 'max': 999999, 'decimal_places': 0},
         'reorder_point': {'min': 0, 'max': 999999, 'decimal_places': 0},
         'minimum_order_quantity': {'min': 1, 'max': 999999, 'decimal_places': 0},
-        'inventory_threshold': {'min': 0, 'max': 999999, 'decimal_places': 0},
         'gross_weight': {'min': 0, 'max': 99999.999, 'decimal_places': 3},
         'net_weight': {'min': 0, 'max': 99999.999, 'decimal_places': 3},
         'planned_delivery_time_days': {'min': 0, 'max': 365, 'decimal_places': 0},
@@ -1298,7 +1395,6 @@ def process_import_file(import_file, business_partner, update_existing, validate
         'warranty_period': {'min': 0, 'max': 120, 'decimal_places': 0},
         'standard_price': {'min': 0, 'max': 999999.99, 'decimal_places': 2},
         'moving_average_price': {'min': 0, 'max': 999999.99, 'decimal_places': 2},
-        'cost_price': {'min': 0, 'max': 999999.99, 'decimal_places': 2},
         'price_unit_peinh': {'min': 1, 'max': 99999, 'decimal_places': 0}
     }
     
@@ -1418,10 +1514,16 @@ def process_import_file(import_file, business_partner, update_existing, validate
         
         for variant_name in variant_names:
             try:
-                variant = VehicleVariant.objects.get(name=variant_name)
-                valid_variants.append(variant)
-            except VehicleVariant.DoesNotExist:
-                errors.append(f"Row {row_num}: Vehicle variant '{variant_name}' not found in system")
+                # Use filter().first() instead of get() to handle duplicates gracefully
+                variant = VehicleVariant.objects.filter(name__iexact=variant_name).first()
+                if variant:
+                    valid_variants.append(variant)
+                else:
+                    # If exact match fails, try partial match or log error
+                    # For now, we'll treat it as not found to be safe
+                    errors.append(f"Row {row_num}: Vehicle variant '{variant_name}' not found in system")
+            except Exception as e:
+                errors.append(f"Row {row_num}: Error validating variant '{variant_name}': {str(e)}")
         
         return errors, valid_variants
 
@@ -1455,6 +1557,45 @@ def process_import_file(import_file, business_partner, update_existing, validate
             raise Exception("Unsupported file format. Please use CSV or Excel files.")
         
         results['total_rows'] = len(rows)
+        
+        # Normalize headers in rows
+        normalized_rows = []
+        for row in rows:
+            normalized_row = {}
+            for key, value in row.items():
+                if key is None: continue
+                
+                # Check if key matches a mapping (case insensitive)
+                key_str = str(key).strip()
+                mapped_key = None
+                
+                # Try direct match
+                if key_str in HEADER_MAPPINGS:
+                    mapped_key = HEADER_MAPPINGS[key_str]
+                # Try case-insensitive match
+                else:
+                    for header, field in HEADER_MAPPINGS.items():
+                        if header.lower() == key_str.lower():
+                            mapped_key = field
+                            break
+                
+                # If no mapping found, check if it matches a field name directly
+                if not mapped_key:
+                    # Clean the key to snake_case
+                    clean_key = key_str.lower().replace(' ', '_')
+                    
+                    # Check if it's a known field
+                    all_known_fields = set(REQUIRED_FIELDS) | set(NUMERIC_FIELDS.keys()) | set(STRING_FIELDS.keys()) | set(BOOLEAN_FIELDS) | set(DATE_FIELDS) | set(URL_FIELDS)
+                    
+                    if clean_key in all_known_fields:
+                        mapped_key = clean_key
+                    else:
+                        mapped_key = key_str # Keep original if unknown
+                
+                normalized_row[mapped_key] = value
+            normalized_rows.append(normalized_row)
+        
+        rows = normalized_rows
         
         # Initialize field error tracking
         for field in REQUIRED_FIELDS + list(NUMERIC_FIELDS.keys()) + list(STRING_FIELDS.keys()) + BOOLEAN_FIELDS + DATE_FIELDS + URL_FIELDS:
@@ -1496,7 +1637,16 @@ def process_import_file(import_file, business_partner, update_existing, validate
                 # Validate category and brand existence
                 if 'category_name' in validated_data:
                     try:
-                        category = Category.objects.get(name=validated_data['category_name'])
+                        category_val = validated_data['category_name']
+                        # Try exact match first
+                        try:
+                            category = Category.objects.filter(name__iexact=category_val).first()
+                            if not category:
+                                raise Category.DoesNotExist
+                        except Category.DoesNotExist:
+                            # Try contains if exact fails? No, safer to be strict or fallback to default
+                            raise Category.DoesNotExist
+                            
                         validated_data['category'] = category
                         del validated_data['category_name']
                     except Category.DoesNotExist:
@@ -1505,7 +1655,14 @@ def process_import_file(import_file, business_partner, update_existing, validate
                 
                 if 'brand_name' in validated_data:
                     try:
-                        brand = Brand.objects.get(name=validated_data['brand_name'])
+                        brand_val = validated_data['brand_name']
+                        try:
+                            brand = Brand.objects.filter(name__iexact=brand_val).first()
+                            if not brand:
+                                raise Brand.DoesNotExist
+                        except Brand.DoesNotExist:
+                            raise Brand.DoesNotExist
+                            
                         validated_data['brand'] = brand
                         del validated_data['brand_name']
                     except Brand.DoesNotExist:
@@ -1513,18 +1670,18 @@ def process_import_file(import_file, business_partner, update_existing, validate
                         results['field_errors']['brand_name'] = results['field_errors'].get('brand_name', 0) + 1
                 
                 # Check for duplicate part number
-                if 'part_number' in validated_data:
+                if 'parts_number' in validated_data:
                     existing_part = None
-                    try:
-                        existing_part = Part.objects.get(
-                            part_number=validated_data['part_number'],
-                            vendor=business_partner
-                        )
-                    except Part.DoesNotExist:
-                        pass
+                    # Filter by parts_number AND vendor to allow different vendors to sell the same part number
+                    existing_parts = Part.objects.filter(
+                        parts_number=validated_data['parts_number'],
+                        vendor=business_partner
+                    )
+                    if existing_parts.exists():
+                        existing_part = existing_parts.first()
                     
                     if existing_part and not update_existing:
-                        row_warnings.append(f"Row {row_num}: Part {validated_data['part_number']} already exists (skipped)")
+                        row_warnings.append(f"Row {row_num}: Part {validated_data['parts_number']} already exists (skipped)")
                         continue
                 
                 # Business logic validations
@@ -1535,10 +1692,6 @@ def process_import_file(import_file, business_partner, update_existing, validate
                 if 'reorder_point' in validated_data and 'safety_stock' in validated_data:
                     if validated_data['reorder_point'] < validated_data['safety_stock']:
                         row_warnings.append(f"Row {row_num}: Reorder point should be higher than safety stock")
-                
-                if 'cost_price' in validated_data and 'price' in validated_data:
-                    if validated_data['cost_price'] > validated_data['price']:
-                        row_warnings.append(f"Row {row_num}: Cost price is higher than selling price (negative margin)")
                 
                 # Add vendor to validated data
                 validated_data['vendor'] = business_partner
@@ -1565,7 +1718,7 @@ def process_import_file(import_file, business_partner, update_existing, validate
                         existing_part.save()
                         
                         # Update vehicle compatibility
-                        if compatible_vehicles:
+                        if compatible_vehicles and hasattr(existing_part, 'compatible_vehicles'):
                             existing_part.compatible_vehicles.set(compatible_vehicles)
                         
                         results['updated_count'] += 1
@@ -1574,7 +1727,7 @@ def process_import_file(import_file, business_partner, update_existing, validate
                         new_part = Part.objects.create(**validated_data)
                         
                         # Set vehicle compatibility
-                        if compatible_vehicles:
+                        if compatible_vehicles and hasattr(new_part, 'compatible_vehicles'):
                             new_part.compatible_vehicles.set(compatible_vehicles)
                         
                         results['created_count'] += 1
@@ -1642,8 +1795,8 @@ def generate_excel_export(queryset, include_images):
         # Add data rows
         for row_num, part in enumerate(queryset, 2):
             data = [
-                part.part_number,
-                part.name,
+                part.parts_number,
+                part.material_description,
                 part.description or '',
                 part.material_type or '',
                 part.plant or '',
