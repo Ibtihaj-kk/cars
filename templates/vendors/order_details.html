@@ -8,8 +8,13 @@
         <div>
             <div class="flex items-center gap-3">
                 <h1 class="text-2xl font-bold text-gray-900">Order #{{ order.order_number }}</h1>
-                <span class="{% if order.status == 'delivered' %}bg-green-100 text-green-800{% elif order.status == 'shipped' %}bg-blue-100 text-blue-800{% elif order.status == 'cancelled' %}bg-red-100 text-red-800{% else %}bg-yellow-100 text-yellow-800{% endif %} text-xs px-2.5 py-0.5 rounded-full font-bold border border-opacity-20">
-                    {{ order.get_status_display }}
+                <span class="
+                    {% if vendor_overall_status == 'delivered' %}bg-green-100 text-green-800
+                    {% elif vendor_overall_status == 'shipped' %}bg-blue-100 text-blue-800
+                    {% elif vendor_overall_status == 'cancelled' %}bg-red-100 text-red-800
+                    {% else %}bg-yellow-100 text-yellow-800{% endif %} 
+                    text-xs px-2.5 py-0.5 rounded-full font-bold border border-opacity-20">
+                    {{ vendor_overall_status_display }}
                 </span>
                 <span class="{% if order.payment_status == 'completed' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %} text-xs px-2.5 py-0.5 rounded-full font-bold border border-opacity-20">
                     {{ order.get_payment_status_display }}
@@ -18,83 +23,119 @@
             <p class="text-gray-500 text-sm mt-1"><i class="far fa-calendar mr-1"></i> Placed on {{ order.created_at|date:"M d, Y" }} at {{ order.created_at|date:"h:i A" }}</p>
         </div>
         <div class="flex gap-3">
-            <button class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 shadow-sm">
+            <button class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 shadow-sm transition">
                 <i class="fas fa-print mr-2"></i> Print Invoice
             </button>
             
-            {% if order.status == 'pending' %}
-            <button hx-post="{% url 'business_partners:vendor_update_order_status' order.id %}" 
-                    hx-vals='{"status": "confirmed"}'
-                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                    class="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-green-700 shadow-lg flex items-center">
-                <i class="fas fa-check mr-2"></i> Confirm Order
-            </button>
-            {% elif order.status == 'confirmed' %}
-            <button hx-post="{% url 'business_partners:vendor_update_order_status' order.id %}" 
-                    hx-vals='{"status": "processing"}'
-                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                    class="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-lg flex items-center">
-                <i class="fas fa-cog mr-2"></i> Start Processing
-            </button>
-            {% elif order.status == 'processing' %}
-            <button onclick="openShipModal()" class="bg-black text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 shadow-lg flex items-center">
-                <i class="fas fa-shipping-fast mr-2"></i> Ship Order
-            </button>
-            {% elif order.status == 'shipped' %}
-            <button hx-post="{% url 'business_partners:vendor_update_order_status' order.id %}" 
-                    hx-vals='{"status": "delivered"}'
-                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                    hx-confirm="Are you sure you want to mark this order as delivered?"
-                    class="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-green-700 shadow-lg flex items-center">
-                <i class="fas fa-check-circle mr-2"></i> Mark Delivered
-            </button>
+            {% if vendor_next_action %}
+                {% if vendor_next_action == 'confirm' %}
+                <button hx-post="{% url 'business_partners:vendor_update_order_status' order.id %}" 
+                        hx-vals='{"status": "confirmed"}'
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                        class="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-green-700 shadow-lg flex items-center transition">
+                    <i class="fas fa-check mr-2"></i> Confirm Order
+                </button>
+                {% elif vendor_next_action == 'process' %}
+                <button hx-post="{% url 'business_partners:vendor_update_order_status' order.id %}" 
+                        hx-vals='{"status": "processing"}'
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                        class="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-lg flex items-center transition">
+                    <i class="fas fa-cog mr-2"></i> Start Processing
+                </button>
+                {% elif vendor_next_action == 'ship' %}
+                <button onclick="openShipModal()" class="bg-black text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 shadow-lg flex items-center transition">
+                    <i class="fas fa-shipping-fast mr-2"></i> Ship Order
+                </button>
+                {% elif vendor_next_action == 'deliver' %}
+                <button hx-post="{% url 'business_partners:vendor_update_order_status' order.id %}" 
+                        hx-vals='{"status": "delivered"}'
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                        hx-confirm="Are you sure you want to mark this order as delivered?"
+                        class="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-green-700 shadow-lg flex items-center transition">
+                    <i class="fas fa-check-circle mr-2"></i> Mark Delivered
+                </button>
+                {% endif %}
             {% endif %}
         </div>
     </div>
 
+    <!-- Timeline / Progress Bar -->
     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
         <div class="relative">
             <div class="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-gray-100"></div>
             <div class="flex justify-between relative">
-                <!-- Placed/Pending -->
+                
+                {# Step 1: Placed (Always Active if viewed) #}
                 <div class="flex flex-col items-center">
-                    <div class="w-8 h-8 rounded-full {% if order.created_at %}bg-green-500 text-white border-green-500{% else %}bg-gray-200 text-gray-400 border-white{% endif %} flex items-center justify-center border-4 shadow-sm z-10">
+                    <div class="w-8 h-8 rounded-full bg-green-500 text-white border-green-500 flex items-center justify-center border-4 shadow-sm z-10">
                         <i class="fas fa-check text-xs"></i>
                     </div>
-                    <span class="text-xs font-bold mt-2 {% if order.created_at %}text-green-600{% else %}text-gray-400{% endif %}">Placed</span>
+                    <span class="text-xs font-bold mt-2 text-green-600">Placed</span>
                 </div>
 
-                <!-- Confirmed -->
+                {# Step 2: Confirmed #}
+                {% with status=vendor_overall_status %}
                 <div class="flex flex-col items-center">
-                    <div class="w-8 h-8 rounded-full {% if order.status == 'confirmed' or order.status == 'processing' or order.status == 'shipped' or order.status == 'delivered' %}bg-green-500 text-white border-green-500{% else %}bg-gray-200 text-gray-400 border-white{% endif %} flex items-center justify-center border-4 shadow-sm z-10">
+                    <div class="w-8 h-8 rounded-full z-10 flex items-center justify-center border-4 shadow-sm transition-colors duration-300
+                        {% if status == 'confirmed' or status == 'processing' or status == 'shipped' or status == 'delivered' %}
+                            bg-green-500 text-white border-green-500
+                        {% else %}
+                            bg-gray-200 text-gray-400 border-white
+                        {% endif %}">
                         <i class="fas fa-check text-xs"></i>
                     </div>
-                    <span class="text-xs font-bold mt-2 {% if order.status == 'confirmed' or order.status == 'processing' or order.status == 'shipped' or order.status == 'delivered' %}text-green-600{% else %}text-gray-400{% endif %}">Confirmed</span>
+                    <span class="text-xs font-bold mt-2 {% if status == 'confirmed' or status == 'processing' or status == 'shipped' or status == 'delivered' %}text-green-600{% else %}text-gray-400{% endif %}">Confirmed</span>
                 </div>
 
-                <!-- Processing -->
+                {# Step 3: Processing #}
                 <div class="flex flex-col items-center">
-                    <div class="w-8 h-8 rounded-full {% if order.status == 'processing' or order.status == 'shipped' or order.status == 'delivered' %}bg-green-500 text-white border-green-500{% elif order.status == 'confirmed' %}bg-yellow-500 text-white border-yellow-500 animate-pulse{% else %}bg-gray-200 text-gray-400 border-white{% endif %} flex items-center justify-center border-4 shadow-sm z-10">
+                    <div class="w-8 h-8 rounded-full z-10 flex items-center justify-center border-4 shadow-sm transition-colors duration-300
+                        {% if status == 'processing' %}
+                            bg-yellow-500 text-white border-yellow-500 animate-pulse
+                        {% elif status == 'shipped' or status == 'delivered' %}
+                            bg-green-500 text-white border-green-500
+                        {% else %}
+                            bg-gray-200 text-gray-400 border-white
+                        {% endif %}">
                         <i class="fas fa-cog text-xs"></i>
                     </div>
-                    <span class="text-xs font-bold mt-2 {% if order.status == 'processing' or order.status == 'shipped' or order.status == 'delivered' %}text-green-600{% elif order.status == 'confirmed' %}text-yellow-600{% else %}text-gray-400{% endif %}">Processing</span>
+                    <span class="text-xs font-bold mt-2 
+                        {% if status == 'processing' %}text-yellow-600
+                        {% elif status == 'shipped' or status == 'delivered' %}text-green-600
+                        {% else %}text-gray-400{% endif %}">Processing</span>
                 </div>
 
-                <!-- Shipped -->
+                {# Step 4: Shipped #}
                 <div class="flex flex-col items-center">
-                    <div class="w-8 h-8 rounded-full {% if order.status == 'shipped' or order.status == 'delivered' %}bg-green-500 text-white border-green-500{% elif order.status == 'processing' %}bg-yellow-500 text-white border-yellow-500 animate-pulse{% else %}bg-gray-200 text-gray-400 border-white{% endif %} flex items-center justify-center border-4 shadow-sm z-10">
+                    <div class="w-8 h-8 rounded-full z-10 flex items-center justify-center border-4 shadow-sm transition-colors duration-300
+                        {% if status == 'shipped' %}
+                            bg-yellow-500 text-white border-yellow-500 animate-pulse
+                        {% elif status == 'delivered' %}
+                            bg-green-500 text-white border-green-500
+                        {% else %}
+                            bg-gray-200 text-gray-400 border-white
+                        {% endif %}">
                         <i class="fas fa-truck text-xs"></i>
                     </div>
-                    <span class="text-xs font-bold mt-2 {% if order.status == 'shipped' or order.status == 'delivered' %}text-green-600{% elif order.status == 'processing' %}text-yellow-600{% else %}text-gray-400{% endif %}">Shipped</span>
+                    <span class="text-xs font-bold mt-2 
+                        {% if status == 'shipped' %}text-yellow-600
+                        {% elif status == 'delivered' %}text-green-600
+                        {% else %}text-gray-400{% endif %}">Shipped</span>
                 </div>
 
-                <!-- Delivered -->
+                {# Step 5: Delivered #}
                 <div class="flex flex-col items-center">
-                    <div class="w-8 h-8 rounded-full {% if order.status == 'delivered' %}bg-green-500 text-white border-green-500{% elif order.status == 'shipped' %}bg-yellow-500 text-white border-yellow-500 animate-pulse{% else %}bg-gray-200 text-gray-400 border-white{% endif %} flex items-center justify-center border-4 shadow-sm z-10">
+                    <div class="w-8 h-8 rounded-full z-10 flex items-center justify-center border-4 shadow-sm transition-colors duration-300
+                        {% if status == 'delivered' %}
+                            bg-green-500 text-white border-green-500
+                        {% else %}
+                            bg-gray-200 text-gray-400 border-white
+                        {% endif %}">
                         <i class="fas fa-home text-xs"></i>
                     </div>
-                    <span class="text-xs font-bold mt-2 {% if order.status == 'delivered' %}text-green-600{% elif order.status == 'shipped' %}text-yellow-600{% else %}text-gray-400{% endif %}">Delivered</span>
+                    <span class="text-xs font-bold mt-2 {% if status == 'delivered' %}text-green-600{% else %}text-gray-400{% endif %}">Delivered</span>
                 </div>
+                {% endwith %}
             </div>
         </div>
     </div>
@@ -104,26 +145,45 @@
         <div class="lg:col-span-2 space-y-6">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                    <h3 class="font-bold text-gray-900">Items to Fulfill ({{ vendor_items|length }})</h3>
+                    <h3 class="font-bold text-gray-900">Items to Fulfill ({{ enhanced_vendor_items|length }})</h3>
                 </div>
                 <div class="divide-y divide-gray-100">
-                    {% for item in vendor_items %}
+                    {% for item_data in enhanced_vendor_items %}
                     <div class="p-6 flex flex-col sm:flex-row gap-4">
                         <div class="h-20 w-20 bg-gray-200 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
-                            {% if item.part.image %}
-                            <img src="{{ item.part.image.url }}" alt="{{ item.part.name }}" class="h-full w-full object-cover">
+                            {% if item_data.item.part.image %}
+                            <img src="{{ item_data.item.part.image.url }}" alt="{{ item_data.item.part.name }}" class="h-full w-full object-cover">
                             {% else %}
-                            <i class="fas fa-image text-gray-400"></i>
+                            <i class="fas fa-image text-gray-400 fa-2x"></i>
                             {% endif %}
                         </div>
                         <div class="flex-1">
                             <div class="flex justify-between mb-1">
-                                <h4 class="font-bold text-gray-900">{{ item.part.name }}</h4>
-                                <span class="font-bold text-gray-900">PKR {{ item.price|floatformat:0 }}</span>
+                                <h4 class="font-bold text-gray-900">{{ item_data.item.part.name }}</h4>
+                                <span class="font-bold text-gray-900">PKR {{ item_data.item.price|floatformat:0 }}</span>
                             </div>
-                            <p class="text-sm text-gray-500 mb-2">SKU: {{ item.part.parts_number }}</p>
-                            <div class="flex items-center text-sm">
-                                <span class="text-gray-500">Qty: <strong class="text-black">{{ item.quantity }}</strong></span>
+                            <p class="text-sm text-gray-500 mb-2">SKU: {{ item_data.item.part.parts_number }}</p>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center text-sm">
+                                    <span class="text-gray-500">Qty: <strong class="text-black">{{ item_data.item.quantity }}</strong></span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs px-2 py-1 rounded-full font-medium border
+                                        {% if item_data.current_status == 'pending' %}bg-yellow-100 text-yellow-800 border-yellow-200
+                                        {% elif item_data.current_status == 'confirmed' %}bg-blue-100 text-blue-800 border-blue-200
+                                        {% elif item_data.current_status == 'processing' %}bg-purple-100 text-purple-800 border-purple-200
+                                        {% elif item_data.current_status == 'shipped' %}bg-indigo-100 text-indigo-800 border-indigo-200
+                                        {% elif item_data.current_status == 'delivered' %}bg-green-100 text-green-800 border-green-200
+                                        {% elif item_data.current_status == 'cancelled' %}bg-red-100 text-red-800 border-red-200{% endif %}
+                                    ">
+                                        {{ item_data.status_display }}
+                                    </span>
+                                    {% if item_data.tracking_number %}
+                                    <span class="text-xs text-gray-500" title="Tracking Number">
+                                        <i class="fas fa-truck mr-1"></i>{{ item_data.tracking_number }}
+                                    </span>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -142,6 +202,7 @@
                 </div>
             </div>
 
+            <!-- Payment Info Block -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <h3 class="font-bold text-gray-900 mb-4">Payment Information</h3>
                 <div class="flex items-center justify-between">
@@ -160,14 +221,19 @@
         </div>
 
         <div class="space-y-6">
+            <!-- Customer Info -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <h3 class="font-bold text-gray-900 mb-4">Customer</h3>
                 <div class="flex items-center mb-6">
                     <div class="h-12 w-12 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 font-bold text-lg mr-3">
-                        {{ order.customer_name|slice:":2"|upper }}
+                        {% if order.customer_name %}
+                            {{ order.customer_name|slice:":2"|upper }}
+                        {% else %}
+                            G
+                        {% endif %}
                     </div>
                     <div>
-                        <p class="font-bold text-gray-900">{{ order.customer_name }}</p>
+                        <p class="font-bold text-gray-900">{{ order.customer_name|default:"Guest" }}</p>
                         {% if order.customer %}
                         <span class="text-sm text-blue-600">Registered Customer</span>
                         {% else %}
@@ -193,6 +259,7 @@
                 </div>
             </div>
             
+            <!-- Notes -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <h3 class="font-bold text-gray-900 mb-4">Notes</h3>
                 {% if order.notes %}
@@ -202,28 +269,28 @@
                 {% endif %}
             </div>
 
+            <!-- Side Actions -->
              <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <h3 class="font-bold text-gray-900 mb-4">Actions</h3>
-                <button class="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg text-sm text-gray-700 border mb-2">
+                <button class="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg text-sm text-gray-700 border mb-2 transition">
                     <i class="fas fa-print w-5 mr-2 text-gray-400"></i> Print Packing Slip
                 </button>
-                {% if order.status != 'cancelled' and order.status != 'delivered' and order.status != 'shipped' %}
+                {% if vendor_overall_status != 'cancelled' and vendor_overall_status != 'delivered' and vendor_overall_status != 'shipped' %}
                 <button hx-post="{% url 'business_partners:vendor_update_order_status' order.id %}" 
                         hx-vals='{"status": "cancelled"}'
                         hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
                         hx-confirm="Are you sure you want to cancel this order? This action cannot be undone."
-                        class="w-full text-left px-4 py-3 hover:bg-red-50 hover:text-red-600 rounded-lg text-sm text-gray-700 border border-transparent hover:border-red-100">
+                        class="w-full text-left px-4 py-3 hover:bg-red-50 hover:text-red-600 rounded-lg text-sm text-gray-700 border border-transparent hover:border-red-100 transition">
                     <i class="fas fa-times-circle w-5 mr-2 text-gray-400"></i> Cancel Order
                 </button>
                 {% endif %}
             </div>
         </div>
-
     </div>
 
     <!-- Ship Order Modal -->
     <div id="shipModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 overflow-hidden transform transition-all">
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 class="font-bold text-gray-900">Ship Order</h3>
                 <button onclick="closeShipModal()" class="text-gray-400 hover:text-gray-500">
@@ -269,5 +336,12 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
+        
+        // Close modal on click outside
+        document.getElementById('shipModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeShipModal();
+            }
+        });
     </script>
 {% endblock %}

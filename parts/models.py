@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.urls import reverse
+from django.utils import timezone
 from decimal import Decimal
 import uuid
 
@@ -1936,3 +1937,81 @@ class OrderDiscount(models.Model):
     
     def __str__(self):
         return f"{self.discount_code.code} applied to Order {self.order.order_number}"
+
+
+class VendorOrderItemStatus(models.Model):
+    """Model to track vendor-specific item statuses in multi-vendor orders."""
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
+        ('processing', 'Processing'),
+        ('shipped', 'Shipped'),
+        ('delivered', 'Delivered'),
+        ('cancelled', 'Cancelled'),
+        ('refunded', 'Refunded'),
+    ]
+    
+    order_item = models.ForeignKey(
+        OrderItem,
+        on_delete=models.CASCADE,
+        related_name='vendor_statuses'
+    )
+    vendor = models.ForeignKey(
+        'business_partners.BusinessPartner',
+        on_delete=models.CASCADE,
+        related_name='item_statuses'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+    tracking_number = models.CharField(max_length=100, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Status change timestamps for audit trail
+    pending_at = models.DateTimeField(blank=True, null=True)
+    confirmed_at = models.DateTimeField(blank=True, null=True)
+    processing_at = models.DateTimeField(blank=True, null=True)
+    shipped_at = models.DateTimeField(blank=True, null=True)
+    delivered_at = models.DateTimeField(blank=True, null=True)
+    cancelled_at = models.DateTimeField(blank=True, null=True)
+    refunded_at = models.DateTimeField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = "Vendor Order Item Status"
+        verbose_name_plural = "Vendor Order Item Statuses"
+        unique_together = ['order_item', 'vendor']
+        ordering = ['-updated_at']
+    
+    def __str__(self):
+        return f"{self.vendor.name} - {self.order_item.product.name} - {self.status}"
+    
+    def save(self, *args, **kwargs):
+        """Update status timestamps when status changes."""
+        if self.pk:
+            old_instance = VendorOrderItemStatus.objects.get(pk=self.pk)
+            if old_instance.status != self.status:
+                # Update the appropriate timestamp
+                timestamp_field = f"{self.status}_at"
+                if hasattr(self, timestamp_field):
+                    setattr(self, timestamp_field, timezone.now())
+        else:
+            # Set initial status timestamp
+            if self.status == 'pending':
+                self.pending_at = timezone.now()
+        
+        super().save(*args, **kwargs)
+    
+    def get_status_display_with_time(self):
+        """Get status display with timestamp."""
+        timestamp_field = f"{self.status}_at"
+        timestamp = getattr(self, timestamp_field, None)
+        if timestamp:
+            return f"{self.get_status_display()} - {timestamp.strftime('%Y-%m-%d %H:%M')}"
+        return self.get_status_display()

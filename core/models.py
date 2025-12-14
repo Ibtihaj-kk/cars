@@ -5,6 +5,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.serializers.json import DjangoJSONEncoder
 import json
+from .rbac_models import *  # Import RBAC models to ensure they are detected
 
 User = get_user_model()
 

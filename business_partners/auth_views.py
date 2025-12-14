@@ -38,12 +38,10 @@ class VendorLoginView(View):
         # If user is already authenticated, redirect them away from login page
         if request.user.is_authenticated:
             vendor_profile = get_vendor_profile(request.user)
-            if vendor_profile and vendor_profile.is_approved:
-                # Approved vendor - redirect to dashboard
+            if vendor_profile:
+                # Redirect to dashboard regardless of approval status
+                # Dashboard will show pending approval message if needed
                 return redirect('business_partners:vendor_dashboard')
-            elif vendor_profile:
-                # Vendor with profile but not approved - redirect to status page
-                return redirect('business_partners:vendor_registration_status')
             else:
                 # Authenticated user but no vendor profile - redirect to dashboard or home
                 # This prevents regular users from accessing vendor login
@@ -71,11 +69,9 @@ class VendorLoginView(View):
                 vendor_profile = get_vendor_profile(user)
                 
                 if vendor_profile is None:
-                    messages.error(request, 'Invalid vendor credentials.')
-                elif not vendor_profile.is_approved:
-                    messages.error(request, 'Your vendor application is still under review. Please wait for approval.')
-                    return redirect('business_partners:vendor_registration_status')
+                    messages.error(request, 'No vendor profile found. Please complete your vendor registration.')
                 else:
+                    # Allow login regardless of approval status
                     # Check if 2FA is enabled
                     if vendor_profile.two_factor_enabled:
                         # Store user in session and redirect to 2FA verification
@@ -85,6 +81,8 @@ class VendorLoginView(View):
                         # Login directly
                         login(request, user)
                         messages.success(request, f'Welcome back, {user.get_full_name() or user.email}!')
+                        
+                        # Redirect to dashboard regardless of approval status
                         return redirect('business_partners:vendor_dashboard')
             else:
                 messages.error(request, 'Invalid email or password.')

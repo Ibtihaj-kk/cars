@@ -1,4 +1,8 @@
 {% if success %}
+    {% if redirect_url %}
+        <!-- Meta refresh for immediate redirect -->
+        <meta http-equiv="refresh" content="1;url={{ redirect_url }}">
+    {% endif %}
     <div class="bg-green-50 border border-green-200 rounded-md p-4">
         <div class="flex">
             <div class="flex-shrink-0">
@@ -10,6 +14,9 @@
                 <h3 class="text-sm font-medium text-green-800">Success!</h3>
                 <div class="mt-2 text-sm text-green-700">
                     <p>{{ message }}</p>
+                    {% if redirect_url %}
+                        <p class="mt-1 text-xs">Redirecting to dashboard...</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -17,10 +24,10 @@
     
     {% if redirect_url %}
         <script>
-            // Redirect after successful login
+            // Redirect after successful login - reduced delay for better session persistence
             setTimeout(function() {
                 window.location.href = '{{ redirect_url }}';
-            }, 1500);
+            }, 500);  // Reduced from 1500ms to 500ms
         </script>
     {% endif %}
 {% else %}

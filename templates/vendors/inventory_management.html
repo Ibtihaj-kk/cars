@@ -70,6 +70,9 @@
         <a href="{% url 'business_partners:vendor_inventory_export' %}?{{ request.GET.urlencode }}" class="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 flex items-center gap-2 whitespace-nowrap">
             <i class="fas fa-file-export"></i> Export
         </a>
+        <a href="{% url 'business_partners:vendor_parts_import' %}" class="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 flex items-center gap-2 whitespace-nowrap">
+            <i class="fas fa-file-import"></i> Import
+        </a>
         <a href="{% url 'business_partners:vendor_part_create' %}" class="px-4 py-2.5 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-800 shadow-lg flex items-center gap-2 whitespace-nowrap">
             <i class="fas fa-plus"></i> Add Part
         </a>

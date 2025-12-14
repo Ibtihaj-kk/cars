@@ -252,7 +252,60 @@
                             <div id="business-name-validation"></div>
                         </div>
                         
+                        
+
+                        <div>
+                            <label class="input-label">Country</label>
+                            <div class="relative">
+                                <select name="country" id="vendorCountrySelect" class="modern-input appearance-none cursor-pointer" required>
+                                    <option value="" disabled selected>Select Country</option>
+                                    <option value="Saudi Arabia">Saudi Arabia</option>
+                                    <option value="USA">United States</option>
+                                    <option value="UK">United Kingdom</option>
+                                    <option value="Canada">Canada</option>
+                                    <option value="Pakistan">Pakistan</option>
+                                    <option value="UAE">United Arab Emirates</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="input-label">City</label>
+                            <select name="city_id" id="vendorCitySelect" class="modern-input cursor-pointer bg-white" 
+                                hx-post="/business-partners/htmx/registration/validate/" 
+                                hx-trigger="change"
+                                hx-target="#city-validation"
+                                hx-swap="outerHTML" required>
+                                <option value="" disabled selected>Select City</option>
+                                {% for city in cities %}
+                                    <option value="{{ city.id }}">{{ city.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div id="city-validation"></div>
+                        </div>
+
+                        <div id="vendorCityAreaContainer" style="display:none;">
+                            <label class="input-label">City Area</label>
+                            <select name="city_area_id" id="vendorCityAreaSelect" class="modern-input cursor-pointer bg-white">
+                                <option value="">Select Area</option>
+                            </select>
+                        </div>
+
                         <div class="md:col-span-2">
+                            <label class="input-label">Street Address</label>
+                            <input type="text" name="address" placeholder="123 Business Ave, Suite 100" class="modern-input" hx-post="/business-partners/htmx/registration/validate/" hx-trigger="blur" hx-target="#address-validation" hx-swap="outerHTML" required>
+                            <div id="address-validation"></div>
+                        </div>
+
+                        <div>
+                            <label class="input-label">Postal / Zip Code</label>
+                            <input type="text" name="postal_code" placeholder="00000" class="modern-input" required>
+                        </div>
+
+                        <div>
                             <label class="input-label">Preferred Currency</label>
                             <div class="relative">
                                 <select name="currency" class="modern-input appearance-none cursor-pointer bg-white" required>
@@ -270,38 +323,7 @@
                             </div>
                         </div>
 
-                        <div class="md:col-span-2">
-                            <label class="input-label">Street Address</label>
-                            <input type="text" name="address" placeholder="123 Business Ave, Suite 100" class="modern-input" hx-post="/business-partners/htmx/registration/validate/" hx-trigger="blur" hx-target="#address-validation" hx-swap="outerHTML" required>
-                            <div id="address-validation"></div>
-                        </div>
-
-                        <div>
-                            <label class="input-label">City</label>
-                            <input type="text" name="city" placeholder="City" class="modern-input" required>
-                        </div>
                         
-                        <div>
-                            <label class="input-label">Postal / Zip Code</label>
-                            <input type="text" name="postal_code" placeholder="00000" class="modern-input" required>
-                        </div>
-
-                        <div>
-                            <label class="input-label">Country</label>
-                            <div class="relative">
-                                <select name="country" class="modern-input appearance-none cursor-pointer" required>
-                                    <option value="" disabled selected>Select Country</option>
-                                    <option value="UAE">United Arab Emirates</option>
-                                    <option value="KSA">Saudi Arabia</option>
-                                    <option value="USA">United States</option>
-                                    <option value="UK">United Kingdom</option>
-                                    <option value="PK">Pakistan</option>
-                                </select>
-                                <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </div>
-                            </div>
-                        </div>
 
                         <div>
                             <label class="input-label">Business Phone</label>
@@ -327,6 +349,7 @@
                                 </div>
                                 <input type="file" name="commercial_register_file" accept=".pdf,.jpg,.png" required>
                             </div>
+                            <div id="commercial-register-validation"></div>
                         </div>
 
                         <div class="md:col-span-2">
@@ -338,6 +361,7 @@
                                 </div>
                                 <input type="file" name="tax_certificate_file" accept=".pdf,.jpg,.png" required>
                             </div>
+                            <div id="tax-certificate-validation"></div>
                         </div>
                     </div>
                     
@@ -626,6 +650,257 @@
                      }
                 });
             }
+        });
+
+        // File upload preview functionality
+        function setupFileUploadPreview() {
+            const fileInputs = document.querySelectorAll('input[type="file"]');
+            
+            fileInputs.forEach(input => {
+                input.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    const wrapper = e.target.closest('.file-upload-wrapper');
+                    const placeholder = wrapper.querySelector('.file-upload-placeholder');
+                    
+                    if (file) {
+                        // Validate file type and size
+                        const validTypes = ['.pdf', '.jpg', '.jpeg', '.png'];
+                        const fileName = file.name.toLowerCase();
+                        const fileExtension = '.' + fileName.split('.').pop();
+                        const fileSize = file.size / 1024 / 1024; // MB
+                        
+                        if (!validTypes.includes(fileExtension)) {
+                            alert('Please upload only PDF, JPG, or PNG files.');
+                            input.value = '';
+                            return;
+                        }
+                        
+                        if (fileSize > 10) { // 10MB limit
+                            alert('File size must be less than 10MB.');
+                            input.value = '';
+                            return;
+                        }
+                        
+                        // Remove existing preview if any
+                        const existingPreview = wrapper.querySelector('.file-preview');
+                        if (existingPreview) {
+                            existingPreview.remove();
+                        }
+                        
+                        // Create preview element
+                        const preview = document.createElement('div');
+                        preview.className = 'file-preview mt-3 p-3 bg-gray-50 rounded-lg border';
+                        
+                        const fileSizeFormatted = fileSize.toFixed(2); // MB
+                        
+                        let previewContent = '';
+                        
+                        if (['jpg', 'jpeg', 'png'].includes(fileExtension.substring(1))) {
+                            // Image preview
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                previewContent = `
+                                    <div class="flex items-center space-x-3">
+                                        <img src="${e.target.result}" alt="Preview" class="w-16 h-16 object-cover rounded border">
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-medium text-gray-900 truncate">${file.name}</p>
+                                            <p class="text-xs text-gray-500">${fileSizeFormatted} MB</p>
+                                        </div>
+                                        <button type="button" class="remove-file text-red-500 hover:text-red-700">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                `;
+                                preview.innerHTML = previewContent;
+                                setupRemoveFileButton(preview, input);
+                            };
+                            reader.readAsDataURL(file);
+                        } else if (fileExtension === '.pdf') {
+                            // PDF preview
+                            previewContent = `
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-16 h-16 bg-red-100 rounded border flex items-center justify-center">
+                                        <svg class="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3.5v1c0 .83-.67 1.5-1.5 1.5H17v2h-1.5V7H20c.83 0 1.5.67 1.5 1.5z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900 truncate">${file.name}</p>
+                                        <p class="text-xs text-gray-500">${fileSizeFormatted} MB</p>
+                                    </div>
+                                    <button type="button" class="remove-file text-red-500 hover:text-red-700">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            `;
+                            preview.innerHTML = previewContent;
+                            setupRemoveFileButton(preview, input);
+                        }
+                        
+                        // Hide placeholder and show preview
+                        placeholder.style.display = 'none';
+                        wrapper.appendChild(preview);
+                        
+                        // Clear any validation errors for this field
+                        clearFieldValidation(input.name);
+                    }
+                });
+            });
+        }
+        
+        function setupRemoveFileButton(preview, input) {
+            const removeBtn = preview.querySelector('.remove-file');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    // Clear the file input
+                    input.value = '';
+                    
+                    // Remove preview and show placeholder
+                    const wrapper = input.closest('.file-upload-wrapper');
+                    const placeholder = wrapper.querySelector('.file-upload-placeholder');
+                    
+                    preview.remove();
+                    placeholder.style.display = 'flex';
+                });
+            }
+        }
+        
+        function clearFieldValidation(fieldName) {
+            // Clear validation errors for file upload fields
+            const validationDiv = document.getElementById(fieldName.replace('_file', '-validation').replace('_', '-'));
+            if (validationDiv) {
+                validationDiv.innerHTML = '';
+            }
+        }
+        
+        // Validate files before form submission
+        function validateFilesBeforeSubmission() {
+            const commercialRegisterFile = document.querySelector('input[name="commercial_register_file"]').files[0];
+            const taxCertificateFile = document.querySelector('input[name="tax_certificate_file"]').files[0];
+            
+            let isValid = true;
+            
+            if (!commercialRegisterFile) {
+                showFileValidationError('commercial_register_file', 'Commercial Register file is required');
+                isValid = false;
+            } else {
+                clearFieldValidation('commercial_register_file');
+            }
+            
+            if (!taxCertificateFile) {
+                showFileValidationError('tax_certificate_file', 'Tax Certificate file is required');
+                isValid = false;
+            } else {
+                clearFieldValidation('tax_certificate_file');
+            }
+            
+            return isValid;
+        }
+        
+        function showFileValidationError(fieldName, message) {
+            const validationDiv = document.getElementById(fieldName.replace('_file', '-validation').replace('_', '-'));
+            if (validationDiv) {
+                validationDiv.innerHTML = `
+                    <div class="mt-1 text-sm text-red-600 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                        </svg>
+                        ${message}
+                    </div>
+                `;
+            }
+        }
+
+        // City Area Logic for Vendor Registration
+        document.addEventListener('DOMContentLoaded', function() {
+            const citySelect = document.getElementById('vendorCitySelect');
+            const cityAreaSelect = document.getElementById('vendorCityAreaSelect');
+            const cityAreaContainer = document.getElementById('vendorCityAreaContainer');
+            const countrySelect = document.getElementById('vendorCountrySelect');
+            const currencySelect = document.querySelector('select[name="currency"]');
+
+            function fetchAreas(cityId) {
+                if (!cityId) {
+                    cityAreaContainer.style.display = 'none';
+                    return;
+                }
+
+                fetch(`/parts/ajax/city-areas/?city_id=${cityId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.areas.length > 0) {
+                            cityAreaContainer.style.display = 'block';
+                            cityAreaSelect.innerHTML = '<option value="">Select Area</option>';
+                            
+                            data.areas.forEach(area => {
+                                const option = document.createElement('option');
+                                option.value = area.id;
+                                option.textContent = area.name;
+                                cityAreaSelect.appendChild(option);
+                            });
+                        } else {
+                            cityAreaContainer.style.display = 'none';
+                        }
+                    })
+                    .catch(error => console.error('Error fetching areas:', error));
+            }
+
+            // Auto-select currency based on country
+            function autoSelectCurrency(country) {
+                if (!currencySelect) return;
+                
+                const currencyMap = {
+                    'Saudi Arabia': 'SAR',
+                    'United States': 'USD',
+                    'USA': 'USD',
+                    'United Kingdom': 'GBP',
+                    'UK': 'GBP',
+                    'Canada': 'CAD',
+                    'Pakistan': 'PKR',
+                    'UAE': 'AED',
+                    'United Arab Emirates': 'AED'
+                };
+
+                const currencyCode = currencyMap[country];
+                if (currencyCode) {
+                    for (let i = 0; i < currencySelect.options.length; i++) {
+                        if (currencySelect.options[i].value === currencyCode) {
+                            currencySelect.value = currencyCode;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Set up event listeners
+            if (citySelect) {
+                citySelect.addEventListener('change', function() {
+                    fetchAreas(this.value);
+                });
+                
+                // If re-rendering with value selected
+                if (citySelect.value) {
+                    fetchAreas(citySelect.value);
+                }
+            }
+
+            if (countrySelect && currencySelect) {
+                countrySelect.addEventListener('change', function() {
+                    autoSelectCurrency(this.value);
+                });
+                
+                // Auto-select currency on page load if country is already selected
+                if (countrySelect.value) {
+                    autoSelectCurrency(countrySelect.value);
+                }
+            }
+            
+            // Setup file upload preview
+            setupFileUploadPreview();
         });
     </script>
 </body>

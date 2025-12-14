@@ -1,0 +1,292 @@
+{% extends 'vendors/base.html' %}
+{% load static %}
+
+{% block title %}Inventory Alerts{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Inventory Alerts</h1>
+                <p class="text-gray-600 mt-1">Monitor stock levels and take action on critical inventory items</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{% url 'business_partners:vendor_inventory_overview' %}" 
+                   class="px-4 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition">
+                    <i class="fas fa-chart-line mr-2"></i>Overview
+                </a>
+                <a href="{% url 'business_partners:vendor_inventory_list' %}" 
+                   class="px-4 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 transition">
+                    <i class="fas fa-boxes mr-2"></i>All Inventory
+                </a>
+            </div>
+        </div>
+
+        <!-- Alert Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Out of Stock -->
+            <div class="bg-white rounded-xl border border-red-200 shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                    </div>
+                    <span class="text-2xl font-extrabold text-red-600">{{ out_of_stock.count }}</span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-1">Out of Stock</h3>
+                <p class="text-sm text-gray-600">Items that need immediate restocking</p>
+            </div>
+
+            <!-- Low Stock -->
+            <div class="bg-white rounded-xl border border-yellow-200 shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-exclamation-circle text-yellow-600 text-xl"></i>
+                    </div>
+                    <span class="text-2xl font-extrabold text-yellow-600">{{ low_stock.count }}</span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-1">Low Stock</h3>
+                <p class="text-sm text-gray-600">Items running low on inventory</p>
+            </div>
+
+            <!-- Below Safety Stock -->
+            <div class="bg-white rounded-xl border border-orange-200 shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-shield-alt text-orange-600 text-xl"></i>
+                    </div>
+                    <span class="text-2xl font-extrabold text-orange-600">{{ below_safety_stock.count }}</span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-1">Below Safety Stock</h3>
+                <p class="text-sm text-gray-600">Items below minimum safety levels</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Sections -->
+    <div class="space-y-8">
+        <!-- Out of Stock Section -->
+        {% if out_of_stock %}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-gray-900">
+                        <i class="fas fa-times-circle text-red-500 mr-2"></i>
+                        Out of Stock ({{ out_of_stock.count }})
+                    </h2>
+                    <span class="text-sm font-medium text-gray-500">Requires Immediate Action</span>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Part Number</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Description</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Brand</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Category</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for part in out_of_stock %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                <td class="py-3 px-4">
+                                    <span class="font-medium text-gray-900">{{ part.parts_number|default:"N/A" }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="max-w-xs">
+                                        <p class="text-gray-900 font-medium truncate">{{ part.material_description|default:"N/A" }}</p>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-gray-700">{{ part.brand.name|default:"N/A" }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-gray-700">{{ part.category.name|default:"N/A" }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="flex gap-2">
+                                        <a href="{% url 'business_partners:vendor_inventory_update' part.id %}" 
+                                           class="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded hover:bg-red-700">
+                                            Restock
+                                        </a>
+                                        <a href="{% url 'business_partners:vendor_inventory_detail' part.id %}" 
+                                           class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200">
+                                            View
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Low Stock Section -->
+        {% if low_stock %}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-gray-900">
+                        <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                        Low Stock ({{ low_stock.count }})
+                    </h2>
+                    <span class="text-sm font-medium text-gray-500">Stock ≤ 10 units</span>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Part Number</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Description</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Current Stock</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Brand</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Category</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for part in low_stock %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                <td class="py-3 px-4">
+                                    <span class="font-medium text-gray-900">{{ part.parts_number|default:"N/A" }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="max-w-xs">
+                                        <p class="text-gray-900 font-medium truncate">{{ part.material_description|default:"N/A" }}</p>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="font-bold text-yellow-600">{{ part.quantity }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-gray-700">{{ part.brand.name|default:"N/A" }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-gray-700">{{ part.category.name|default:"N/A" }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="flex gap-2">
+                                        <a href="{% url 'business_partners:vendor_inventory_update' part.id %}" 
+                                           class="px-3 py-1.5 bg-yellow-600 text-white text-xs font-bold rounded hover:bg-yellow-700">
+                                            Update
+                                        </a>
+                                        <a href="{% url 'business_partners:vendor_inventory_detail' part.id %}" 
+                                           class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200">
+                                            View
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Below Safety Stock Section -->
+        {% if below_safety_stock %}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-gray-900">
+                        <i class="fas fa-shield-alt text-orange-500 mr-2"></i>
+                        Below Safety Stock ({{ below_safety_stock.count }})
+                    </h2>
+                    <span class="text-sm font-medium text-gray-500">Below minimum safety levels</span>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Part Number</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Description</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Current Stock</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Safety Stock</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Brand</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for part in below_safety_stock %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                <td class="py-3 px-4">
+                                    <span class="font-medium text-gray-900">{{ part.parts_number|default:"N/A" }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="max-w-xs">
+                                        <p class="text-gray-900 font-medium truncate">{{ part.material_description|default:"N/A" }}</p>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="font-bold text-orange-600">{{ part.quantity }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="font-bold text-gray-700">{{ part.safety_stock }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-gray-700">{{ part.brand.name|default:"N/A" }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="flex gap-2">
+                                        <a href="{% url 'business_partners:vendor_inventory_update' part.id %}" 
+                                           class="px-3 py-1.5 bg-orange-600 text-white text-xs font-bold rounded hover:bg-orange-700">
+                                            Restock
+                                        </a>
+                                        <a href="{% url 'business_partners:vendor_inventory_detail' part.id %}" 
+                                           class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200">
+                                            View
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- No Alerts Message -->
+        {% if not out_of_stock and not low_stock and not below_safety_stock %}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-check-circle text-green-600 text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">All Clear!</h3>
+            <p class="text-gray-600">No inventory alerts at the moment. All your stock levels are healthy.</p>
+            <div class="mt-6">
+                <a href="{% url 'business_partners:vendor_inventory_list' %}" 
+                   class="px-6 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 transition">
+                    View All Inventory
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh alerts every 5 minutes
+document.addEventListener('DOMContentLoaded', function() {
+    setInterval(function() {
+        location.reload();
+    }, 300000); // 5 minutes
+});
+</script>
+{% endblock %}

@@ -500,6 +500,12 @@ class VendorRegistrationStatusView(TemplateView):
         
         context['current_application'] = current_application
         
+        # Get vendor profile if exists
+        from .permissions import get_vendor_profile
+        vendor_profile = get_vendor_profile(self.request.user)
+        context['vendor_profile'] = vendor_profile
+        context['is_approved'] = vendor_profile.is_approved if vendor_profile else False
+        
         return context
 
 
@@ -701,9 +707,14 @@ class VendorSinglePageRegistrationView(VendorRegistrationMixin, View):
         """Display the single-page registration form"""
         application = self.get_or_create_application(request.user)
         
+        # Get cities for dropdown
+        from parts.models import SaudiCity
+        cities = SaudiCity.objects.filter(is_active=True).order_by('name')
+        
         context = {
             'application': application,
-            'user_authenticated': request.user.is_authenticated
+            'user_authenticated': request.user.is_authenticated,
+            'cities': cities
         }
         
         return render(request, self.template_name, context)

@@ -72,6 +72,19 @@ def custom_login_view(request):
             login(request, user)
             print(f"User logged in successfully: {user.email}")
             
+            # Ensure session is properly persisted and available to middleware
+            # This fixes the first-time login redirect issue
+            from django.contrib.auth import update_session_auth_hash
+            update_session_auth_hash(request, user)  # Persists session and updates auth
+            
+            # Explicitly save session to ensure all changes are persisted
+            request.session.save()
+            print(f"Session explicitly saved for user: {user.email}")
+            
+            # Set a flag to indicate recent login to help middleware
+            request.session['_just_logged_in'] = True
+            request.session.modified = True
+            
             # Check if user is vendor or seller
             is_vendor = False
             

@@ -26,6 +26,20 @@ def home(request):
     from django.shortcuts import render
     return render(request, 'home/index.html' if settings.DEBUG else 'base.html', {})
 
+# Custom 404 handler
+def custom_404_view(request, exception):
+    from django.shortcuts import render
+    response = render(request, 'home/coming_soon.html', {'status_code': 404})
+    response.status_code = 404
+    return response
+
+# Custom 500 handler
+def custom_500_view(request):
+    from django.shortcuts import render
+    response = render(request, 'home/coming_soon.html', {'status_code': 500})
+    response.status_code = 500
+    return response
+
 # API Documentation imports
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
@@ -64,3 +78,7 @@ urlpatterns = [
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Custom error handlers
+handler404 = 'yallamotor_project.urls.custom_404_view'
+handler500 = 'yallamotor_project.urls.custom_500_view'

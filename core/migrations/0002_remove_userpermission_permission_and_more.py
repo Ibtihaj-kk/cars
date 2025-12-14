@@ -10,39 +10,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # 1. Clear unique constraints first
-        migrations.AlterUniqueTogether(
-            name='rolepermission',
-            unique_together=None,
-        ),
-        migrations.AlterUniqueTogether(
-            name='userpermission',
-            unique_together=None,
-        ),
-        migrations.AlterUniqueTogether(
-            name='userroleassignment',
-            unique_together=None,
-        ),
-
-        # 2. Delete models
-        # We skip RemoveField operations because they are redundant when deleting the model
-        # and can cause "field does not exist" errors if the schema is inconsistent.
-        migrations.DeleteModel(
-            name='Permission',
-        ),
-        migrations.DeleteModel(
-            name='PermissionAuditLog',
-        ),
-        migrations.DeleteModel(
-            name='Role',
-        ),
-        migrations.DeleteModel(
-            name='RolePermission',
-        ),
-        migrations.DeleteModel(
-            name='UserPermission',
-        ),
-        migrations.DeleteModel(
-            name='UserRoleAssignment',
-        ),
+        # Operations removed to fix migration history inconsistency
     ]

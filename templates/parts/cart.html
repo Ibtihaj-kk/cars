@@ -14,9 +14,9 @@
     <script nomodule src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <script src="https://unpkg.com/htmx.org@1.9.6"></script>
 
-    <link rel="stylesheet" href="{% static 'home/css/styles.css' %}" />
-    <link rel="stylesheet" href="{% static 'home/css/navbar.css' %}" />
-    <link rel="stylesheet" href="{% static 'home/css/parts.css' %}">
+    <link rel="stylesheet" href="{% static './css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static './css/navbar.css' %}" />
+    <link rel="stylesheet" href="{% static './css/parts.css' %}">
 
     <style>
         /* --- THEME VARIABLES --- */
@@ -297,10 +297,130 @@
   </head>
   <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
-    <!-- Navbar would typically be included here -->
-    
+    <button class="mobile-menu-toggle" id="mobileMenuToggle"><span></span><span></span><span></span></button>
+    <div class="navbar-top-header">
+      <div class="navbar-logo">
+        <a href="{% url 'home' %}">
+          <img src="{% static 'images/logo.png' %}" alt="CorporateDock Logo"/>
+        </a>
+      </div>
+      <div class="navbar-right-info">
+        <span class="navbar-phone-info">
+          <i class="fa-solid fa-phone"></i>
+          <span class="navbar-phone-number">+92-333-3610109</span>
+        </span>
+        <span class="navbar-divider">|</span>
+        {% if request.user.is_authenticated %}
+        <a href="{% url 'parts:cart_view' %}" class="navbar-cart position-relative">
+        {% else %}
+        <a href="{% url 'users:register_page' %}?next={% url 'parts:cart_view' %}&msg=Please login to view your cart" class="navbar-cart position-relative">
+        {% endif %}
+            <ion-icon name="cart"></ion-icon>
+            <span id="cart-badge" class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle" style="font-size: 0.6rem; padding: 0.3em 0.6em;">
+               {{ cart_count|default:0 }}
+            </span>
+        </a>
+        
+        <!-- Toast Container for HTMX messages -->
+        <div id="messages-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1050"></div>
+
+        <div class="navbar-user-profile-dropdown">
+          <div class="navbar-profile-trigger">
+            <div class="navbar-profile-icon">
+              <i class="fa-solid fa-user"></i>
+            </div>
+            <i class="fa-solid fa-chevron-down navbar-dropdown-arrow"></i>
+          </div>
+          <div class="navbar-dropdown-menu">
+              {% if user.is_authenticated %}
+                {% if user.vendor_profile or user.business_partners.exists %}
+                  <a href="{% url 'business_partners:vendor_dashboard' %}" class="navbar-dropdown-link">Dashboard</a>
+                  <span class="navbar-dropdown-divider">|</span>
+                  <a href="{% url 'business_partners:vendor_profile' %}" class="navbar-dropdown-link">My Profile</a>
+                {% else %}
+                  <a href="{% url 'users:user-dashboard' %}" class="navbar-dropdown-link">Dashboard</a>
+                  <span class="navbar-dropdown-divider">|</span>
+                  <a href="{% url 'users:user-profile' %}" class="navbar-dropdown-link">My Profile</a>
+                {% endif %}
+                <span class="navbar-dropdown-divider">|</span>
+                <a href="{% url 'users:logout' %}" class="navbar-dropdown-link">Logout</a>
+              {% else %}
+                <a href="{% url 'login' %}" class="navbar-dropdown-link">Login</a>
+                <span class="navbar-dropdown-divider">|</span>
+                <a href="#" class="navbar-dropdown-link" onclick="openSignupModal(); return false;">Signup</a>
+              {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay">
+      <div class="mobile-menu-content">
+        <div class="mobile-menu-header">
+          <div class="mobile-logo">
+            <a href="{% url 'home' %}">
+                <img src="{% static 'images/logo.png' %}" alt="CorporateDock Logo"/>
+            </a>
+          </div>
+          <button class="mobile-menu-close" id="mobileMenuClose"></button>
+        </div>
+        <div class="mobile-menu-items">
+            </div>
+      </div>
+    </div>
 
     {% include 'parts/cart_partial.html' %}
+
+    <footer class="footer">
+      <div class="social-section">
+        <div class="social-container">
+          <div class="social-icons">
+            <a href="#" class="social-icon facebook"><svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> FACEBOOK</a>
+            </div>
+        </div>
+      </div>
+
+      <div class="footer-content">
+        <div class="footer-grid">
+          <div class="footer-column company-info">
+            <p>We deliver all the tools you need to create a powerful auto parts e-commerce store built for showcasing, selling, and managing automotive components.</p>
+            <ul class="contact-info">
+              <li>220E Front St, Burlington NC 27215</li>
+              <li>+92-333-3610109</li>
+              <li>support@corporatedock.com</li>
+            </ul>
+          </div>
+
+          <div class="footer-column useful-links">
+            <h3>USEFUL LINKS</h3>
+            <ul>
+                <li><a href="#">Engine Oil & Filters</a></li>
+                <li><a href="#">Brake Pads & Rotors</a></li>
+                </ul>
+          </div>
+          
+          <div class="footer-column newsletter">
+            <h3>SUBSCRIBE OUR NEWSLETTER</h3>
+            <p>Keep up on our always evolving products. Enter your e-mail.</p>
+            <form class="newsletter-form">
+              <input type="email" placeholder="Enter Your Email" class="newsletter-input" required />
+              <button type="submit" class="newsletter-btn">SUBSCRIBE</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-bottom-content">
+          <div class="copyright">© Powered by Corporate Dock LLC-2025 All rights Reserved</div>
+          <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Contact</a>
+          </div>
+        </div>
+      </div>
+    </footer>
 
     <!-- Scripts -->
     <!-- Assuming navbar.js is still needed or compatible -->

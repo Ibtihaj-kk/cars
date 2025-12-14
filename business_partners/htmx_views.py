@@ -59,6 +59,8 @@ def vendor_dashboard_htmx(request):
 
     context = {
         'vendor': vendor_profile,
+        'vendor_profile': vendor_profile,
+        'is_approved': vendor_profile.is_approved if vendor_profile else False,
         'total_parts': total_parts,
         'active_parts': active_parts,
         'low_stock': low_stock,
@@ -538,6 +540,15 @@ def vendor_registration_validate_htmx(request):
         elif len(field_value) < 2:
             errors['city'] = 'Please enter a valid city name'
             
+    elif 'city_id' in request.POST:
+        field_name = 'city_id'
+        field_value = request.POST.get('city_id', '').strip()
+        
+        if not field_value:
+            errors['city'] = 'City is required'  # Use 'city' for consistency with main validation
+        elif not field_value.isdigit():
+            errors['city'] = 'Please select a valid city'  # Use 'city' for consistency with main validation
+            
     elif 'country' in request.POST:
         field_name = 'country'
         field_value = request.POST.get('country', '').strip()
@@ -616,7 +627,7 @@ def vendor_registration_validate_step_htmx(request, step_number):
         # Step 2: Business Details
         business_name = request.POST.get('business_name', '').strip()
         country = request.POST.get('country', '').strip()
-        city = request.POST.get('city', '').strip()
+        city = request.POST.get('city_id', '').strip()
         address = request.POST.get('address', '').strip()
         business_phone = request.POST.get('business_phone', '').strip()
         commercial_register_no = request.POST.get('commercial_register_no', '').strip()
@@ -655,6 +666,9 @@ def vendor_registration_validate_step_htmx(request, step_number):
         if not tax_id_no:
             errors['tax_id_no'] = 'Tax ID number is required'
             step_valid = False
+            
+        # Note: File validation is handled client-side and during final submission
+        # HTMX step validation doesn't include files in the request
     
     elif step_number == 3:
         # Step 3: User Account
@@ -775,7 +789,19 @@ def vendor_registration_submit_htmx(request):
         business_email = request.POST.get('business_email', '').strip()
         business_name = request.POST.get('business_name', '').strip()
         address = request.POST.get('address', '').strip()
+        
+        # Handle city (check city_id first as it's a select box now)
+        city_id = request.POST.get('city_id', '').strip()
         city = request.POST.get('city', '').strip()
+        
+        if not city and city_id:
+            try:
+                from parts.models import SaudiCity
+                if city_id.isdigit():
+                    city = SaudiCity.objects.get(id=int(city_id)).name
+            except Exception:
+                pass
+                
         country = request.POST.get('country', '').strip()
         phone_type = request.POST.get('phone_type', 'mobile').strip()
         business_phone = request.POST.get('business_phone', '').strip()
@@ -820,6 +846,13 @@ def vendor_registration_submit_htmx(request):
         for field_key, field_label in required_fields.items():
             if not locals().get(field_key):
                 response_data['errors'][field_key] = f'{field_label} is required'
+                
+        # Validate file uploads
+        if 'commercial_register_file' not in request.FILES:
+            response_data['errors']['commercial_register_file'] = 'Commercial Register file is required'
+            
+        if 'tax_certificate_file' not in request.FILES:
+            response_data['errors']['tax_certificate_file'] = 'Tax Certificate file is required'
         
         # Validate services selection
         if not services or len(services) == 0:
@@ -864,6 +897,7 @@ def vendor_registration_submit_htmx(request):
                     type='company',
                     status='pending',
                     legal_identifier=tax_id_no,  # Store tax ID as legal identifier
+                    user=user,  # Link to the created user account
                     created_at=current_time,  # Set creation timestamp
                     updated_at=current_time   # Set initial update timestamp
                 )
@@ -941,7 +975,7 @@ def vendor_registration_submit_htmx(request):
                     )
                 
                 # Create vendor application for admin review
-                VendorApplication.objects.create(
+                application = VendorApplication.objects.create(
                     user=user,
                     company_name=business_name,
                     contact_person_name=username,
@@ -955,9 +989,13 @@ def vendor_registration_submit_htmx(request):
                     status='submitted',
                     current_step=4
                 )
+                
+                # Create provisional profile for immediate access
+                application.create_provisional_profile()
             
             response_data['success'] = True
-            response_data['message'] = 'Registration submitted successfully! Your application is pending admin approval.'
+            response_data['message'] = 'Registration successful. Please log in to access your account.'
+            # Do not auto-login, redirect to login page
             response_data['redirect_url'] = '/accounts/login/'
             
         except Exception as e:
@@ -1089,8 +1127,8 @@ def vendor_login_submit_htmx(request):
             # Check if user has vendor profile
             vendor_profile = get_vendor_profile(user)
             
-            if vendor_profile and vendor_profile.is_approved:
-                # Approved vendor - login successful
+            if vendor_profile:
+                # Allow login regardless of approval status
                 login(request, user)
                 
                 # Set session expiry based on remember me
@@ -1099,14 +1137,19 @@ def vendor_login_submit_htmx(request):
                 else:
                     request.session.set_expiry(0)  # Browser session
                 
+                # Set flag to indicate recent login for middleware
+                request.session['_just_logged_in'] = True
+                request.session['_login_timestamp'] = timezone.now().isoformat()
+                request.session.modified = True
+                
+                # Force session save to ensure middleware can see it
+                request.session.save()
+                
                 response_data['success'] = True
                 response_data['message'] = 'Login successful! Redirecting...'
+                print(f"Vendor login successful for user: {user}")
+                # Redirect to dashboard regardless of approval status
                 response_data['redirect_url'] = '/business-partners/vendor/dashboard/'
-                
-            elif vendor_profile:
-                # Vendor with profile but not approved
-                response_data['message'] = 'Your vendor application is pending approval'
-                response_data['redirect_url'] = '/business-partners/registration/status/'
                 
             else:
                 # Authenticated user but no vendor profile (Client/User/Staff/Admin)
@@ -1117,6 +1160,14 @@ def vendor_login_submit_htmx(request):
                     request.session.set_expiry(2592000)  # 30 days
                 else:
                     request.session.set_expiry(0)  # Browser session
+                
+                # Set flag to indicate recent login for middleware
+                request.session['_just_logged_in'] = True
+                request.session['_login_timestamp'] = timezone.now().isoformat()
+                request.session.modified = True
+                
+                # Force session save to ensure middleware can see it
+                request.session.save()
                 
                 response_data['success'] = True
                 response_data['message'] = 'Login successful! Redirecting...'
@@ -1133,7 +1184,7 @@ def vendor_login_submit_htmx(request):
             # Authentication failed
             response_data['message'] = 'Invalid email or password'
             response_data['errors']['general'] = 'Invalid credentials. Please try again.'
-            
+        print(response_data,'Kuch bhi');
     except Exception as e:
         response_data['message'] = 'Invalid email or password'
         response_data['errors']['general'] = 'Invalid credentials. Please try again.'
@@ -1148,6 +1199,7 @@ def vendor_login_status_htmx(request):
     Returns login status for progress saving
     """
     from django.contrib.auth import get_user_model
+    from .permissions import get_vendor_profile
     
     User = get_user_model()
     

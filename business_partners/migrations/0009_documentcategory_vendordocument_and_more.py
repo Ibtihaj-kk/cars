@@ -119,7 +119,13 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='vendordocument',
-            constraint=models.CheckConstraint(condition=models.Q(('vendor_application__isnull', False), ('business_partner__isnull', False), _connector='OR'), name='vendor_document_must_have_application_or_partner'),
+            constraint=models.CheckConstraint(
+                check=(
+                    models.Q(vendor_application__isnull=False) |
+                    models.Q(business_partner__isnull=False)
+                ),
+                name='vendor_document_must_have_application_or_partner',
+            ),
         ),
         migrations.AddIndex(
             model_name='documentverificationqueue',

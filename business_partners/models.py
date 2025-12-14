@@ -892,59 +892,55 @@ class VendorApplication(models.Model):
             self.is_step_completed(3)
         ])
     
-    def submit_for_review(self):
-        """Submit application for admin review."""
-        if self.can_submit():
-            from django.utils import timezone
-            self.status = 'submitted'
-            self.submitted_at = timezone.now()
-            self.save()
-            return True
-        return False
-    
-    def approve(self, admin_user, notes=None):
-        """Approve the vendor application and create business partner."""
-        from django.utils import timezone
-        
-        # Cannot approve anonymous applications
+    def create_provisional_profile(self):
+        """Create provisional BusinessPartner and VendorProfile for immediate access."""
         if not self.user:
             return None
+            
+        # Get or Create BusinessPartner
+        business_partner = BusinessPartner.objects.filter(user=self.user).first()
         
-        # Create BusinessPartner
-        business_partner = BusinessPartner.objects.create(
-            name=self.company_name,
-            type='company',
-            legal_identifier=self.legal_identifier,
-            status='active',
-            user=self.user,  # Link the business partner to the user
-            created_by=admin_user
-        )
+        if not business_partner:
+            # Create BusinessPartner
+            business_partner = BusinessPartner.objects.create(
+                name=self.company_name,
+                type='company',
+                legal_identifier=self.legal_identifier,
+                status='active', # Set active so they can access system
+                user=self.user,
+                created_by=self.user
+            )
+        else:
+            # Ensure it is active
+            if business_partner.status != 'active':
+                business_partner.status = 'active'
+                business_partner.save(update_fields=['status'])
         
-        # Add vendor role
-        BusinessPartnerRole.objects.create(
+        # Add vendor role if not exists
+        BusinessPartnerRole.objects.get_or_create(
             business_partner=business_partner,
             role_type='vendor'
         )
         
         # Create contact information
         if self.business_email:
-            ContactInfo.objects.create(
+            ContactInfo.objects.get_or_create(
                 business_partner=business_partner,
                 contact_type='email',
                 value=self.business_email,
-                is_primary=True
+                defaults={'is_primary': True}
             )
         
         if self.business_phone:
-            ContactInfo.objects.create(
+            ContactInfo.objects.get_or_create(
                 business_partner=business_partner,
                 contact_type='phone',
                 value=self.business_phone,
-                is_primary=True
+                defaults={'is_primary': True}
             )
         
         if self.website:
-            ContactInfo.objects.create(
+            ContactInfo.objects.get_or_create(
                 business_partner=business_partner,
                 contact_type='website',
                 value=self.website
@@ -952,16 +948,17 @@ class VendorApplication(models.Model):
         
         # Create address
         if any([self.street_address, self.city, self.country]):
-            Address.objects.create(
-                business_partner=business_partner,
-                address_type='business',
-                street=self.street_address or '',
-                city=self.city or '',
-                state_province=self.state_province or '',
-                postal_code=self.postal_code or '',
-                country=self.country or '',
-                is_primary=True
-            )
+            if not Address.objects.filter(business_partner=business_partner, address_type='office').exists():
+                Address.objects.create(
+                    business_partner=business_partner,
+                    address_type='office',
+                    street=self.street_address or '',
+                    city=self.city or '',
+                    state_province=self.state_province or '',
+                    postal_code=self.postal_code or '',
+                    country=self.country or '',
+                    is_primary=True
+                )
         
         # Create vendor profile with bank details
         bank_details = f"""
@@ -973,18 +970,84 @@ IBAN: {self.iban}
 SWIFT: {self.swift_code}
         """.strip()
         
-        VendorProfile.objects.create(
+        VendorProfile.objects.update_or_create(
             business_partner=business_partner,
-            bank_account_details=bank_details,
-            tax_id=self.legal_identifier,
-            is_approved=True  # Set the vendor profile as approved
+            defaults={
+                'bank_account_details': bank_details,
+                'tax_id': self.legal_identifier,
+                'is_approved': False # Not approved yet
+            }
         )
         
-        # Update user role to include vendor access
-        if self.user.role == 'user':
-            self.user.role = 'seller'  # Sellers can be vendors
+        # Update user role
+        if hasattr(self.user, 'role') and self.user.role == 'user':
+            self.user.role = 'seller'
             self.user.save()
+            
+        return business_partner
+
+    def submit_for_review(self):
+        """Submit application for admin review."""
+        if self.can_submit():
+            from django.utils import timezone
+            self.status = 'submitted'
+            self.submitted_at = timezone.now()
+            self.save()
+            
+            # Create provisional profile for immediate access
+            self.create_provisional_profile()
+            
+            # Notify admins
+            try:
+                from django.core.mail import send_mail
+                from django.conf import settings
+                from django.contrib.auth import get_user_model
+                
+                User = get_user_model()
+                admin_emails = list(User.objects.filter(is_superuser=True).exclude(email='').values_list('email', flat=True))
+                
+                if admin_emails:
+                    subject = f'New Vendor Application: {self.company_name}'
+                    message = f"""
+A new vendor application has been submitted.
+
+Company: {self.company_name}
+Contact: {self.contact_person_name}
+Email: {self.business_email}
+Date: {self.submitted_at}
+
+Please review the application in the admin panel.
+                    """.strip()
+                    
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        admin_emails,
+                        fail_silently=True,
+                    )
+            except Exception as e:
+                print(f"Failed to send admin notification: {e}")
+            
+            return True
+        return False
+    
+    def approve(self, admin_user, notes=None):
+        """Approve the vendor application and create business partner."""
+        from django.utils import timezone
         
+        # Cannot approve anonymous applications
+        if not self.user:
+            return None
+        
+        # Ensure BusinessPartner and VendorProfile exist using the robust method
+        business_partner = self.create_provisional_profile()
+            
+        # Update VendorProfile approval status
+        if hasattr(business_partner, 'vendor_profile'):
+            business_partner.vendor_profile.is_approved = True
+            business_partner.vendor_profile.save()
+            
         # Update application status
         self.status = 'approved'
         self.reviewed_by = admin_user
@@ -992,6 +1055,41 @@ SWIFT: {self.swift_code}
         self.reviewed_at = timezone.now()
         self.approved_at = timezone.now()
         self.save()
+        
+        # Send welcome email
+        if self.user and self.user.email:
+            try:
+                from django.core.mail import send_mail
+                from django.conf import settings
+                
+                subject = 'Welcome to Corporate Dock - Application Approved'
+                message = f"""
+Dear {self.contact_person_name},
+
+Congratulations! Your vendor application for {self.company_name} has been approved.
+
+You now have full access to your vendor dashboard, including:
+- Adding products and services
+- Order management
+- Payment settings
+- Promotional tools
+
+You can log in here: {getattr(settings, 'SITE_URL', 'http://localhost:8000')}/business-partners/vendor/login/
+
+Best regards,
+Corporate Dock Team
+                """.strip()
+                
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [self.user.email],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                # Log error but don't fail the approval
+                print(f"Failed to send approval email: {e}")
         
         return business_partner
     
@@ -1005,6 +1103,40 @@ SWIFT: {self.swift_code}
         self.review_notes = notes
         self.reviewed_at = timezone.now()
         self.save()
+        
+        # Notify vendor
+        if self.user and self.user.email:
+            try:
+                from django.core.mail import send_mail
+                from django.conf import settings
+                
+                subject = 'Update on your Vendor Application - Corporate Dock'
+                message = f"""
+Dear {self.contact_person_name},
+
+Your vendor application for {self.company_name} has been reviewed.
+Unfortunately, we cannot approve your application at this time.
+
+Reason:
+{reason}
+
+{f"Additional Notes: {notes}" if notes else ""}
+
+Please contact support if you have any questions.
+
+Best regards,
+Corporate Dock Team
+                """.strip()
+                
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [self.user.email],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                print(f"Failed to send rejection email: {e}")
     
     def request_changes(self, admin_user, reason, notes=None):
         """Request changes to the vendor application."""

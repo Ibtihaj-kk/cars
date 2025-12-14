@@ -102,7 +102,7 @@ def vendor_required(view_func):
             return business_partner.roles.filter(role_type='vendor').exists()
         return False
     
-    return user_passes_test(check_vendor_permissions, login_url='business_partners:registration')(view_func)
+    return user_passes_test(check_vendor_permissions, login_url='business_partners:vendor_login')(view_func)
 
 
 def vendor_part_owner_required(view_func):
@@ -274,10 +274,10 @@ def get_vendor_profile(user):
     if not user or not user.is_authenticated:
         return None
     
-    # Get all business partners for this user that are active vendors
+    # Get all business partners for this user that are vendors
+    # Include both active and approved vendors to fix redirect loop
     business_partners = BusinessPartner.objects.filter(
         user=user,
-        status='active',
         roles__role_type='vendor'
     ).distinct()
     
@@ -288,6 +288,7 @@ def get_vendor_profile(user):
     for business_partner in business_partners:
         try:
             vendor_profile = business_partner.vendor_profile
+            # Return the first vendor profile found
             return vendor_profile
         except VendorProfile.DoesNotExist:
             continue

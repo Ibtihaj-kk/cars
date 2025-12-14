@@ -84,12 +84,12 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'business_partners.middleware.VendorAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'users.middleware.UserRestrictionMiddleware',
     # 'admin_panel.middleware.AdminSecurityMiddleware',  # Disabled - admin_panel app not in INSTALLED_APPS
     # 'admin_panel.middleware.AdminActivityTrackingMiddleware',  # Disabled - admin_panel app not in INSTALLED_APPS
     # 'admin_panel.middleware.AdminBruteForceProtectionMiddleware',  # Disabled - admin_panel app not in INSTALLED_APPS
-    'business_partners.middleware.VendorAccessMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'csp.middleware.CSPMiddleware',
 ]

@@ -3,7 +3,8 @@ Vendor Order Management Views
 Handles vendor-specific order processing, order management, and order-related functionality
 for business partners (vendors).
 """
-
+import logging
+import traceback
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -11,7 +12,7 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods, require_POST
 from django.views.generic import ListView, DetailView, UpdateView
 from django.urls import reverse_lazy
-from django.http import JsonResponse, HttpResponseForbidden, Http404
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseBadRequest, JsonResponse, HttpResponseServerError, Http404
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Count, Sum, F, Prefetch, Case, When, Value, Avg
 from django.db import transaction
@@ -21,7 +22,7 @@ from django.utils import timezone
 from datetime import timedelta, datetime
 import json
 
-from parts.models import Order, OrderItem, OrderStatusHistory, OrderShipping, OrderDiscount
+from parts.models import Order, OrderItem, OrderStatusHistory, OrderShipping, OrderDiscount, VendorOrderItemStatus
 from .models import BusinessPartner, VendorProfile
 from .decorators import vendor_required
 from .utils import get_vendor_profile
@@ -146,21 +147,29 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
     
     def get_object(self):
         """Get order and verify vendor has parts in this order."""
-        order = super().get_object()
+        # Use select_related to reduce initial DB hits
+        queryset = super().get_queryset().select_related('customer')
+        
+        try:
+            order = queryset.get(pk=self.kwargs.get('pk'))
+        except self.model.DoesNotExist:
+            raise Http404("Order not found")
         
         # Hide draft/created orders from vendors
         if order.status == 'created':
             raise Http404("Order not found")
             
         user = self.request.user
+        # Assuming get_vendor_profile is a helper function you have defined
         vendor_profile = get_vendor_profile(user)
         
         if not vendor_profile:
             raise PermissionDenied("You don't have vendor access.")
         
         # Check if this order contains parts from this vendor
-        vendor_items = order.items.filter(part__vendor=vendor_profile.business_partner)
-        if not vendor_items.exists():
+        # We check existence efficiently
+        has_items = order.items.filter(part__vendor=vendor_profile.business_partner).exists()
+        if not has_items:
             raise PermissionDenied("This order doesn't contain any of your parts.")
         
         return order
@@ -169,146 +178,232 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['title'] = f'Order #{self.object.order_number}'
         
-        # Get vendor profile
         vendor_profile = get_vendor_profile(self.request.user)
+        vendor_partner = vendor_profile.business_partner
         
-        # Get only the vendor's items from this order
+        # Prefetch specifically the status for THIS vendor to avoid fetching other vendors' statuses
+        status_prefetch = Prefetch(
+            'vendor_statuses',
+            queryset=VendorOrderItemStatus.objects.filter(vendor=vendor_partner),
+            to_attr='current_vendor_status' # Store in a specific attribute
+        )
+
+        # Get vendor's items with optimized queries
         vendor_items = self.object.items.filter(
-            part__vendor=vendor_profile.business_partner
+            part__vendor=vendor_partner
         ).select_related(
             'part', 'part__brand', 'part__category'
+        ).prefetch_related(
+            status_prefetch
         )
         
-        context['vendor_items'] = vendor_items
+        enhanced_vendor_items = []
+        vendor_statuses_list = []
+
+        for item in vendor_items:
+            # PERFORMANCE FIX: Use the prefetched list (to_attr) instead of .filter()
+            # which would hit the DB again for every item.
+            vendor_status_obj = item.current_vendor_status[0] if item.current_vendor_status else None
+            
+            current_status = vendor_status_obj.status if vendor_status_obj else self.object.status
+            # Fallback for display if no vendor specific status exists
+            status_display = vendor_status_obj.get_status_display() if vendor_status_obj else self.object.get_status_display()
+
+            item_data = {
+                'item': item,
+                'vendor_status': vendor_status_obj,
+                'current_status': current_status,
+                'status_display': status_display,
+                'tracking_number': vendor_status_obj.tracking_number if vendor_status_obj else None,
+                'status_updated_at': vendor_status_obj.updated_at if vendor_status_obj else None,
+            }
+            enhanced_vendor_items.append(item_data)
+            vendor_statuses_list.append(current_status)
+        
+        # Calculate vendor's overall status
+        vendor_overall_status = 'pending'
+        vendor_overall_status_display = 'Pending'
+        vendor_next_action = 'confirm'
+
+        if vendor_statuses_list:
+            if all(s == 'delivered' for s in vendor_statuses_list):
+                vendor_overall_status = 'delivered'
+                vendor_overall_status_display = 'Delivered'
+                vendor_next_action = None
+            elif all(s == 'cancelled' for s in vendor_statuses_list):
+                vendor_overall_status = 'cancelled'
+                vendor_overall_status_display = 'Cancelled'
+                vendor_next_action = None
+            elif 'shipped' in vendor_statuses_list:
+                vendor_overall_status = 'shipped'
+                vendor_overall_status_display = 'Shipped'
+                vendor_next_action = 'deliver'
+            elif 'processing' in vendor_statuses_list:
+                vendor_overall_status = 'processing'
+                vendor_overall_status_display = 'Processing'
+                vendor_next_action = 'ship'
+            elif 'confirmed' in vendor_statuses_list:
+                vendor_overall_status = 'confirmed'
+                vendor_overall_status_display = 'Confirmed'
+                vendor_next_action = 'process'
+            elif all(s == 'pending' for s in vendor_statuses_list):
+                vendor_overall_status = 'pending'
+                vendor_overall_status_display = 'Pending'
+                vendor_next_action = 'confirm'
+            else:
+                # Mixed/Fallthrough state
+                vendor_overall_status = 'pending'
+                vendor_overall_status_display = 'Pending'
+        
+        context['enhanced_vendor_items'] = enhanced_vendor_items
+        # context['vendor_items'] = vendor_items # Removed redundant queryset to prevent confusion in template
+        context['vendor_overall_status'] = vendor_overall_status
+        context['vendor_overall_status_display'] = vendor_overall_status_display
+        context['vendor_next_action'] = vendor_next_action
+        
+        # Calculate Total Price (Quantity * Price)
         context['vendor_items_total'] = vendor_items.aggregate(
             total=Sum(F('quantity') * F('price'))
         )['total'] or 0
         
-        # Get order status history
+        # Status History
+        context['vendor_status_history'] = VendorOrderItemStatus.objects.filter(
+            order_item__order=self.object,
+            vendor=vendor_partner
+        ).select_related('order_item', 'order_item__part').order_by('-updated_at')
+        
         context['status_history'] = self.object.status_history.order_by('-timestamp')
         
-        # Get shipping information
-        try:
-            context['shipping_info'] = self.object.shipping_info
-        except OrderShipping.DoesNotExist:
-            context['shipping_info'] = None
-        
-        # Get discount information
-        try:
-            context['discount_info'] = self.object.discount_info
-        except OrderDiscount.DoesNotExist:
-            context['discount_info'] = None
+        # Handle RelatedObjectDoesNotExist safely
+        context['shipping_info'] = getattr(self.object, 'shipping_info', None)
+        context['discount_info'] = getattr(self.object, 'discount_info', None)
         
         return context
 
 
+logger = logging.getLogger(__name__)
+
 @login_required
 @require_POST
+@transaction.atomic
 def vendor_update_order_status(request, order_id):
     """
-    Endpoint for vendors to update order status for their parts.
-    Supports both standard form submission and HTMX.
+    Endpoint for vendors to update order status for their specific items.
     """
+    # Helper to return error based on request type
+    def send_error(message, status_code=400):
+        if request.headers.get('HX-Request'):
+            return HttpResponse(message, status=status_code)
+        return JsonResponse({'success': False, 'error': message}, status=status_code)
+
     try:
         order = get_object_or_404(Order, id=order_id)
-        vendor_profile = get_vendor_profile(request.user)
         
+        # Ensure get_vendor_profile is defined/imported
+        try:
+            vendor_profile = get_vendor_profile(request.user)
+        except NameError:
+            print("ERROR: 'get_vendor_profile' is not imported.")
+            return send_error("Server configuration error: missing helper function.", 500)
+            
         if not vendor_profile:
-            if request.headers.get('HX-Request'):
-                 return HttpResponseForbidden("Vendor profile not found.")
-            return JsonResponse({
-                'success': False,
-                'error': 'Vendor profile not found.'
-            })
+            return send_error("Vendor profile not found.", 403)
         
+        vendor_partner = vendor_profile.business_partner
+
         # Check if this order contains parts from this vendor
-        vendor_items = order.items.filter(part__vendor=vendor_profile.business_partner)
-        if not vendor_items.exists():
-            if request.headers.get('HX-Request'):
-                 return HttpResponseForbidden("This order doesn't contain any of your parts.")
-            return JsonResponse({
-                'success': False,
-                'error': 'This order doesn\'t contain any of your parts.'
-            })
+        vendor_items = order.items.filter(part__vendor=vendor_partner).select_related('part')
         
-        # Get new status and tracking info
+        if not vendor_items.exists():
+            return send_error("This order doesn't contain any of your parts.", 403)
+        
+        # Get inputs
         new_status = request.POST.get('status')
         tracking_number = request.POST.get('tracking_number', '').strip()
         notes = request.POST.get('notes', '').strip()
         
-        # Validate status transition
-        valid_transitions = {
-            'pending': ['confirmed', 'cancelled'],
-            'confirmed': ['processing', 'cancelled'],
-            'processing': ['shipped', 'cancelled'],
-            'shipped': ['delivered'],
-            'delivered': [],
-            'cancelled': [],
-            'refunded': []
-        }
+        if not new_status:
+            return send_error('Status parameter is required.')
         
-        if new_status not in valid_transitions.get(order.status, []):
-            error_msg = f'Invalid status transition from {order.status} to {new_status}.'
-            if request.headers.get('HX-Request'):
-                from django.http import HttpResponseBadRequest
-                return HttpResponseBadRequest(error_msg)
-            return JsonResponse({
-                'success': False,
-                'error': error_msg
-            })
+        # Validate status
+        valid_statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded']
+        if new_status not in valid_statuses:
+            return send_error(f'Invalid status: {new_status}')
         
-        # Update order status
-        previous_status = order.status
-        order.status = new_status
+        # Update Items
+        updated_count = 0
+        for item in vendor_items:
+            # Get or create vendor-specific status
+            vendor_status, created = VendorOrderItemStatus.objects.get_or_create(
+                order_item=item,
+                vendor=vendor_partner,
+                defaults={'status': 'pending'}
+            )
+            
+            previous_status = vendor_status.status
+            
+            # Update fields
+            vendor_status.status = new_status
+            if tracking_number:
+                vendor_status.tracking_number = tracking_number
+            if notes:
+                vendor_status.notes = notes
+            vendor_status.save()
+            
+            # Create History Log
+            if previous_status != new_status or notes:
+                OrderStatusHistory.objects.create(
+                    order=order,
+                    previous_status=previous_status,
+                    new_status=new_status,
+                    changed_by=request.user,
+                    change_reason=f'Updated by {vendor_partner.name}',
+                    notes=f"Item: {item.part.name} - {notes}" if notes else f"Item: {item.part.name} status updated"
+                )
+            
+            updated_count += 1
         
-        if tracking_number:
-            order.tracking_number = tracking_number
+        # Update Overall Order Status (Simplified Logic)
+        all_order_items = order.items.all()
+        status_list = []
         
-        if notes:
-            order.notes = notes
+        for item in all_order_items:
+            # Safely get the status using related manager
+            # Adjust 'vendor_statuses' if your related_name is different
+            v_stats = item.vendor_statuses.all() 
+            if v_stats.exists():
+                status_list.append(v_stats.latest('updated_at').status)
+            else:
+                status_list.append(order.status)
         
-        order.save()
+        new_order_status = order.status
+        if status_list:
+            if all(s == 'cancelled' for s in status_list): new_order_status = 'cancelled'
+            elif all(s == 'delivered' for s in status_list): new_order_status = 'delivered'
+            elif any(s == 'shipped' for s in status_list): new_order_status = 'shipped'
+            elif any(s == 'processing' for s in status_list): new_order_status = 'processing'
+            elif any(s == 'confirmed' for s in status_list): new_order_status = 'confirmed'
         
-        # Create status history entry
-        OrderStatusHistory.objects.create(
-            order=order,
-            previous_status=previous_status,
-            new_status=new_status,
-            changed_by=request.user,
-            change_reason=f'Updated by vendor {vendor_profile.business_partner.name}',
-            notes=notes
-        )
-        
-        # Update timestamps for specific statuses
-        if new_status == 'shipped':
-            order.shipped_at = timezone.now()
+        if new_order_status != order.status:
+            order.status = new_order_status
             order.save()
-        elif new_status == 'delivered':
-            order.delivered_at = timezone.now()
-            order.save()
-        
+
+        # HTMX Success Response
         if request.headers.get('HX-Request'):
-            # Return a response that triggers a client-side redirect or refresh
-            from django.http import HttpResponse
-            response = HttpResponse("Status updated")
+            response = HttpResponse("Status Updated")
             response['HX-Refresh'] = "true"
             return response
 
         return JsonResponse({
             'success': True,
-            'message': f'Order status updated to {new_status} successfully.',
-            'new_status': new_status,
-            'status_display': order.get_status_display()
+            'message': f'Updated items to {new_status}.',
         })
         
     except Exception as e:
-        if request.headers.get('HX-Request'):
-            from django.http import HttpResponseServerError
-            return HttpResponseServerError(str(e))
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
+        # Print actual error to console for debugging
+        print("\n!!!!!!!!!!!! SERVER ERROR !!!!!!!!!!!!")
+        print(traceback.format_exc())
+        return HttpResponseServerError(f"Server Error: {str(e)}")
 
 
 @login_required

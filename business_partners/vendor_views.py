@@ -46,17 +46,25 @@ def get_vendor_profile_legacy(user):
 
 
 @vendor_required
+@login_required
 def vendor_dashboard(request):
     """
     Main vendor dashboard with overview of parts, orders, and analytics.
     """
     vendor_profile = get_vendor_profile(request.user)
+    
+    # Check if vendor profile exists
     if not vendor_profile:
-        messages.error(request, 'You do not have vendor access.')
-        return redirect('home')
+        messages.error(request, 'Vendor profile not found. Please contact support.')
+        return redirect('business_partners:vendor_registration_single')
     
     # Get vendor's business partner
     business_partner = vendor_profile.business_partner
+    
+    # Check if business partner exists
+    if not business_partner:
+        messages.error(request, 'Business partner not found. Please contact support.')
+        return redirect('business_partners:vendor_registration_start')
     
     # Get parts statistics
     parts_queryset = Part.objects.filter(vendor=business_partner)
@@ -245,6 +253,8 @@ def vendor_dashboard(request):
         'recent_notifications': recent_notifications,
         'recent_parts': recent_parts,
         'top_categories': top_categories,
+        'vendor_profile': vendor_profile,
+        'is_approved': vendor_profile.is_approved if vendor_profile else False,
     }
     
     return render(request, 'vendors/dashboard.html', context)

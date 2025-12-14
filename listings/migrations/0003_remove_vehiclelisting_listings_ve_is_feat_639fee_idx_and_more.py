@@ -163,14 +163,24 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='vehiclelisting',
-            constraint=models.CheckConstraint(condition=models.Q(('price__gte', 0)), name='positive_price'),
+            constraint=models.CheckConstraint(
+                check=models.Q(price__gte=0),
+                name='positive_price',
+            ),
         ),
         migrations.AddConstraint(
             model_name='vehiclelisting',
-            constraint=models.CheckConstraint(condition=models.Q(('year__gte', 1900)), name='valid_year'),
+            constraint=models.CheckConstraint(
+                check=models.Q(year__gte=1900),
+                name='valid_year',
+            ),
         ),
+
         migrations.AddConstraint(
             model_name='vehiclelisting',
-            constraint=models.CheckConstraint(condition=models.Q(('kilometers__gte', 0)), name='positive_kilometers'),
+            constraint=models.CheckConstraint(
+                check=models.Q(kilometers__gte=0),
+                name='positive_kilometers',
+            ),
         ),
     ]

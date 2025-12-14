@@ -5,70 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Confirmed | Corporate Dock</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    {% load static %}
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="//fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet"/>
     
-    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script type="module" src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    
+    <link rel="stylesheet" href="{% static './css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static './css/navbar.css' %}" />
 
     <style>
-        /* --- GLOBAL THEME --- */
+        /* --- THEME VARIABLES --- */
         :root {
-            --primary-black: #0f0f0f;
-            --text-main: #1a1a1a;
-            --text-muted: #6b7280;
-            --bg-grey: #f9fafb;
-            --border-subtle: #e5e7eb;
+            --primary-color: #000000;
+            --text-main: #111111;
+            --text-light: #666666;
+            --bg-grey: #f8f9fa;
+            --border-color: #e5e5e5;
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #ffffff;
+            font-family: 'Lato', sans-serif;
+            background-color: white;
             color: var(--text-main);
-            overflow-x: hidden;
-        }
-
-        a { text-decoration: none; color: inherit; }
-        ul { list-style: none; padding: 0; margin: 0; }
-
-        /* --- HEADER STYLES --- */
-        .navbar-top-header {
-            padding: 15px 40px;
-            border-bottom: 1px solid var(--border-subtle);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: white;
-            position: relative;
-            z-index: 50;
-        }
-        .navbar-logo img { height: 50px; }
-        .navbar-right-info { display: flex; align-items: center; gap: 20px; }
-        .navbar-phone-info { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
-        .navbar-divider { color: #ddd; }
-        .sell-car-button {
-            background: black; color: white; padding: 10px 20px; border-radius: 8px; 
-            font-weight: 700; font-size: 14px; transition: 0.2s;
-        }
-        .sell-car-button:hover { background: #333; color: white; }
-        .navbar-cart { font-size: 24px; color: #333; }
-
-        /* Main Navigation Bar */
-        .navbar { border-bottom: 1px solid var(--border-subtle); background: white; }
-        .nav-links { display: flex; justify-content: center; gap: 40px; padding: 15px 0; }
-        .nav-link { font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s; }
-        .nav-link:hover { color: #666; }
-
-        /* Mobile Menu Toggle */
-        .mobile-menu-toggle { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; }
-        .mobile-menu-toggle span { width: 25px; height: 3px; background: black; }
-        
-        @media (max-width: 992px) {
-            .navbar-top-header { padding: 15px 20px; }
-            .navbar-right-info, .navbar { display: none; }
-            .mobile-menu-toggle { display: flex; }
         }
 
         /* --- THANK YOU PAGE STYLES --- */
@@ -171,16 +132,7 @@
             .order-grid { grid-template-columns: 1fr; gap: 30px; }
         }
 
-        /* --- FOOTER --- */
-        .footer { border-top: 1px solid #eee; padding-top: 60px; margin-top: 60px; }
-        .footer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px; padding: 0 40px; }
-        .footer h3 { font-size: 14px; font-weight: 800; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
-        .footer ul li { margin-bottom: 10px; font-size: 14px; color: #666; }
-        .footer ul li a:hover { color: black; text-decoration: underline; }
-        .newsletter-input { width: 100%; padding: 10px; border: 1px solid #eee; margin-bottom: 10px; border-radius: 6px; }
-        .newsletter-btn { width: 100%; background: black; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }
-        
-        .footer-bottom { border-top: 1px solid #eee; padding: 30px 40px; display: flex; justify-content: space-between; margin-top: 40px; font-size: 13px; color: #888; }
+
 
         /* --- MODAL --- */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; }
@@ -193,29 +145,62 @@
 </head>
 <body>
 
-    <button class="mobile-menu-toggle p-4"><span></span><span></span><span></span></button>
+    <button class="mobile-menu-toggle" id="mobileMenuToggle"><span></span><span></span><span></span></button>
     <div class="navbar-top-header">
-        <div class="navbar-logo">
-            <a href="index.html"><img src="./assets/images/logo.png" alt="Logo"></a>
-        </div>
-        <div class="navbar-right-info">
-            <div class="navbar-phone-info"><i class="fas fa-phone"></i> +92-333-3610109</div>
-            <span class="navbar-divider">|</span>
-            <a href="selling.html" class="sell-car-button">Sell My Car</a>
-            <a href="cart.html" class="navbar-cart"><ion-icon name="cart"></ion-icon></a>
-            <div style="cursor: pointer;" onclick="openSignupModal()"><i class="fas fa-user-circle fa-lg"></i></div>
-        </div>
-    </div>
+      <div class="navbar-logo">
+        <a href="{% url 'home' %}">
+          <img src="{% static 'images/logo.png' %}" alt="CorporateDock Logo"/>
+        </a>
+      </div>
+      <div class="navbar-right-info">
+        <span class="navbar-phone-info">
+          <i class="fa-solid fa-phone"></i>
+          <span class="navbar-phone-number">+92-333-3610109</span>
+        </span>
+        <span class="navbar-divider">|</span>
+        {% if request.user.is_authenticated %}
+        <a href="{% url 'parts:cart_view' %}" class="navbar-cart position-relative">
+        {% else %}
+        <a href="{% url 'users:register_page' %}?next={% url 'parts:cart_view' %}&msg=Please login to view your cart" class="navbar-cart position-relative">
+        {% endif %}
+            <ion-icon name="cart"></ion-icon>
+            <span id="cart-badge" class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle" style="font-size: 0.6rem; padding: 0.3em 0.6em;">
+               {{ cart_count|default:0 }}
+            </span>
+        </a>
+        
+        <!-- Toast Container for HTMX messages -->
+        <div id="messages-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1050"></div>
 
-    <nav class="navbar">
-        <div class="nav-links">
-            <a href="#" class="nav-link">New</a>
-            <a href="#" class="nav-link">Used</a>
-            <a href="parts.html" class="nav-link" style="color:black;">Parts</a>
-            <a href="#" class="nav-link">Services</a>
-            <a href="#" class="nav-link">Financing</a>
+        <div class="navbar-user-profile-dropdown">
+          <div class="navbar-profile-trigger">
+            <div class="navbar-profile-icon">
+              <i class="fa-solid fa-user"></i>
+            </div>
+            <i class="fa-solid fa-chevron-down navbar-dropdown-arrow"></i>
+          </div>
+          <div class="navbar-dropdown-menu">
+              {% if user.is_authenticated %}
+                {% if user.vendor_profile or user.business_partners.exists %}
+                  <a href="{% url 'business_partners:vendor_dashboard' %}" class="navbar-dropdown-link">Dashboard</a>
+                  <span class="navbar-dropdown-divider">|</span>
+                  <a href="{% url 'business_partners:vendor_profile' %}" class="navbar-dropdown-link">My Profile</a>
+                {% else %}
+                  <a href="{% url 'users:user-dashboard' %}" class="navbar-dropdown-link">Dashboard</a>
+                  <span class="navbar-dropdown-divider">|</span>
+                  <a href="{% url 'users:user-profile' %}" class="navbar-dropdown-link">My Profile</a>
+                {% endif %}
+                <span class="navbar-dropdown-divider">|</span>
+                <a href="{% url 'users:logout' %}" class="navbar-dropdown-link">Logout</a>
+              {% else %}
+                <a href="{% url 'login' %}" class="navbar-dropdown-link">Login</a>
+                <span class="navbar-dropdown-divider">|</span>
+                <a href="#" class="navbar-dropdown-link" onclick="openSignupModal(); return false;">Signup</a>
+              {% endif %}
+          </div>
         </div>
-    </nav>
+      </div>
+    </div>
 
     <div class="success-container">
         
@@ -322,40 +307,58 @@
     </div>
 
     <footer class="footer">
+      <div class="social-section">
+        <div class="social-container">
+          <div class="social-icons">
+            <a href="#" class="social-icon facebook"><svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> FACEBOOK</a>
+            </div>
+        </div>
+      </div>
+
+      <div class="footer-content">
         <div class="footer-grid">
-            <div>
-                <h3>Company Info</h3>
-                <ul>
-                    <li><a href="#">About Us</a></li>
-                    <li><a href="#">Careers</a></li>
-                    <li><a href="#">Contact</a></li>
+          <div class="footer-column company-info">
+            <p>We deliver all the tools you need to create a powerful auto parts e-commerce store built for showcasing, selling, and managing automotive components.</p>
+            <ul class="contact-info">
+              <li>220E Front St, Burlington NC 27215</li>
+              <li>+92-333-3610109</li>
+              <li>support@corporatedock.com</li>
+            </ul>
+          </div>
+
+          <div class="footer-column useful-links">
+            <h3>USEFUL LINKS</h3>
+            <ul>
+                <li><a href="#">Engine Oil & Filters</a></li>
+                <li><a href="#">Brake Pads & Rotors</a></li>
                 </ul>
-            </div>
-            <div>
-                <h3>Useful Links</h3>
-                <ul>
-                    <li><a href="#">Shipping Policy</a></li>
-                    <li><a href="#">Returns</a></li>
-                    <li><a href="#">FAQ</a></li>
-                </ul>
-            </div>
-            <div>
-                <h3>Subscribe</h3>
-                <form class="newsletter-form">
-                    <input type="email" placeholder="Enter email" class="newsletter-input">
-                    <button class="newsletter-btn">Subscribe</button>
-                </form>
-            </div>
+          </div>
+          
+          <div class="footer-column newsletter">
+            <h3>SUBSCRIBE OUR NEWSLETTER</h3>
+            <p>Keep up on our always evolving products. Enter your e-mail.</p>
+            <form class="newsletter-form">
+              <input type="email" placeholder="Enter Your Email" class="newsletter-input" required />
+              <button type="submit" class="newsletter-btn">SUBSCRIBE</button>
+            </form>
+          </div>
         </div>
-        <div class="footer-bottom">
-            <div>© 2025 AutoDealer. All rights reserved.</div>
-            <div style="display:flex; gap:20px;">
-                <a href="#">Privacy Policy</a>
-                <a href="#">Terms</a>
-            </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-bottom-content">
+          <div class="copyright">© Powered by Corporate Dock LLC-2025 All rights Reserved</div>
+          <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Contact</a>
+          </div>
         </div>
+      </div>
     </footer>
 
+    <script src="{% static 'js/navbar.js' %}"></script>
+    <script src="{% static 'js/parts.js' %}"></script>
     <script>
         // Modal Logic
         function openSignupModal() {

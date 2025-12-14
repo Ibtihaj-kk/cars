@@ -650,7 +650,7 @@
                             </div>
                         </div>
                     </div>
-                    <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close" onclick="this.closest('.toast').remove()"></button>
+                    <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close" onclick="closeMessage(this)"></button>
                 </div>
             </div>
         {% endfor %}
@@ -707,9 +707,17 @@
           </div>
           <div class="navbar-dropdown-menu">
               {% if user.is_authenticated %}
-                <a href="#" class="navbar-dropdown-link">My Profile</a>
+                {% if user.vendor_profile or user.business_partners.exists %}
+                  <a href="{% url 'business_partners:vendor_dashboard' %}" class="navbar-dropdown-link">Dashboard</a>
+                  <span class="navbar-dropdown-divider">|</span>
+                  <a href="{% url 'business_partners:vendor_profile' %}" class="navbar-dropdown-link">My Profile</a>
+                {% else %}
+                  <a href="{% url 'users:user-dashboard' %}" class="navbar-dropdown-link">Dashboard</a>
+                  <span class="navbar-dropdown-divider">|</span>
+                  <a href="{% url 'users:user-profile' %}" class="navbar-dropdown-link">My Profile</a>
+                {% endif %}
                 <span class="navbar-dropdown-divider">|</span>
-                <a href="{% url 'logout' %}" class="navbar-dropdown-link">Logout</a>
+                <a href="{% url 'users:logout' %}" class="navbar-dropdown-link">Logout</a>
               {% else %}
                 <a href="{% url 'login' %}" class="navbar-dropdown-link">Login</a>
                 <span class="navbar-dropdown-divider">|</span>
@@ -1333,6 +1341,54 @@
             section.style.maxHeight = section.scrollHeight + "px";
             section.previousElementSibling.classList.add('active');
         });
+
+        // Handle HTMX messages auto-hide and close functionality
+        function setupAutoHide() {
+            const messages = document.querySelectorAll('#messages-container .toast');
+            messages.forEach(function(toast) {
+                // Skip if already has auto-hide setup
+                if (toast.dataset.autoHideSetup) return;
+                
+                // Mark as setup
+                toast.dataset.autoHideSetup = 'true';
+                
+                // Auto-hide after 5 seconds
+                setTimeout(function() {
+                    toast.classList.remove('show');
+                    setTimeout(function() {
+                        toast.remove();
+                    }, 300);
+                }, 5000);
+            });
+        }
+
+        // Initial setup
+        setupAutoHide();
+        
+        // Monitor for new messages added via HTMX
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    setupAutoHide();
+                }
+            });
+        });
+        
+        const messagesContainer = document.getElementById('messages-container');
+        if (messagesContainer) {
+            observer.observe(messagesContainer, { childList: true });
+        }
+
+        // Global function to close messages (for onclick handlers)
+        window.closeMessage = function(button) {
+            const toast = button.closest('.toast');
+            if (toast) {
+                toast.classList.remove('show');
+                setTimeout(function() {
+                    toast.remove();
+                }, 300);
+            }
+        };
     });
     </script>
   </body>

@@ -313,7 +313,7 @@ class VehicleListing(models.Model):
         if not update_fields and self.id and self.slug and 'temp' in self.slug:
             try:
                 if self.make and self.model:
-                    new_slug = f"{slugify(f"{self.make.name}-{self.model.name}-{self.year}")}-{self.id}"
+                    new_slug = f"{slugify(self.make.name + '-' + self.model.name + '-' + str(self.year))}-{self.id}"
                 else:
                     new_slug = f"listing-{self.year}-{self.id}"
                 self.slug = new_slug

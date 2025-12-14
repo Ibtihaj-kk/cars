@@ -66,8 +66,10 @@
                 
                 <a href="{% url 'business_partners:vendor_orders_list' %}" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
                     <i class="fas fa-shopping-cart w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                    <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Orders</span>
-                    <span class="nav-text ml-auto bg-red-500 text-white py-0.5 px-2 rounded-full text-xs font-bold">3</span>
+                        <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Orders</span>
+                    {% if stats.pending_processing_count > 0 %}
+                    <span class="nav-text ml-auto bg-red-500 text-white py-0.5 px-2 rounded-full text-xs font-bold">{{ stats.pending_processing_count }}</span>
+                    {% endif %}
                 </a>
                 
                 <a href="{% url 'business_partners:vendor_customers_list' %}" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
@@ -105,7 +107,9 @@
                 <div class="flex items-center space-x-4">
                     <button class="p-2 text-gray-400 hover:text-black relative">
                         <i class="fas fa-bell text-lg"></i>
+                        {% if stats.critical_notifications > 0 %}
                         <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                        {% endif %}
                     </button>
                     
                     <div class="h-8 w-px bg-gray-200 mx-2"></div>
@@ -113,8 +117,23 @@
                     <div class="relative">
                         <button onclick="toggleUserDropdown()" class="flex items-center focus:outline-none">
                             <div class="text-right mr-3 hidden sm:block">
-                                <p class="text-sm font-bold text-gray-900">{{ user.username|default:"AutoPro Parts Ltd" }}</p>
-                                <p class="text-xs text-green-600 font-medium">Verified Vendor</p>
+                                <p class="text-sm font-bold text-gray-900">
+                                    {% if vendor_profile and vendor_profile.business_partner %}
+                                        {{ vendor_profile.business_partner.name }}
+                                    {% elif user.business_partners.first %}
+                                        {{ user.business_partners.first.name }}
+                                    {% else %}
+                                        {{ user.get_full_name|default:user.email|default:"AutoPro Parts Ltd" }}
+                                    {% endif %}
+                                </p>
+                                <p class="text-xs 
+                                    {% if vendor_profile and vendor_profile.is_approved %}text-green-600{% else %}text-yellow-600{% endif %} font-medium">
+                                    {% if vendor_profile %}
+                                        {% if vendor_profile.is_approved %}Verified Vendor{% else %}Pending Approval{% endif %}
+                                    {% else %}
+                                        Vendor Account
+                                    {% endif %}
+                                </p>
                             </div>
                             <div class="h-10 w-10 rounded-full bg-gray-800 text-white flex items-center justify-center font-bold border-2 border-white shadow-sm hover:ring-2 hover:ring-black transition overflow-hidden">
                                 {% if user.business_partners.first.logo %}
@@ -128,7 +147,15 @@
 
                         <div id="user-dropdown" class="hidden absolute right-0 mt-3 w-48 bg-white rounded-lg shadow-xl py-2 z-50 ring-1 ring-black ring-opacity-5 transform origin-top-right transition-all">
                             <div class="px-4 py-2 border-b border-gray-100 sm:hidden">
-                                <p class="text-sm font-bold text-gray-900">{{ user.username|default:"AutoPro Parts Ltd" }}</p>
+                                <p class="text-sm font-bold text-gray-900">
+                                    {% if vendor_profile and vendor_profile.business_partner %}
+                                        {{ vendor_profile.business_partner.name }}
+                                    {% elif user.business_partners.first %}
+                                        {{ user.business_partners.first.name }}
+                                    {% else %}
+                                        {{ user.get_full_name|default:user.email|default:"AutoPro Parts Ltd" }}
+                                    {% endif %}
+                                </p>
                             </div>
                             <a href="{% url 'business_partners:vendor_profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
                                 <i class="fas fa-user-circle mr-2 text-gray-400"></i> Profile
