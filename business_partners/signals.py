@@ -60,8 +60,9 @@ def check_suspicious_activity(sender, instance, created, **kwargs):
             vendor = BusinessPartner.objects.filter(user=instance, type='vendor').first()
             if vendor:
                 VendorAuditLogger.log_security_event(
+                    user=instance,
                     vendor=vendor,
-                    action='security_suspicious_activity',
+                    event_type='suspicious_activity',
                     details={
                         'activity_type': 'multiple_password_changes',
                         'changes_in_hour': recent_password_changes

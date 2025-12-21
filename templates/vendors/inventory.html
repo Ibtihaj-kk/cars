@@ -1,6 +1,7 @@
 {% extends 'vendors/base.html' %}
 {% load static %}
 {% load humanize %}
+{% load vendor_currency %}
 
 {% block title %}Inventory | Corporate Dock{% endblock %}
 
@@ -27,7 +28,7 @@
                     </div>
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                         <div class="text-xs font-bold text-gray-400 uppercase">Stock Value</div>
-                        <div class="text-2xl font-bold text-gray-900 mt-1">{{ total_value|floatformat:0|intcomma }} AED</div>
+                        <div class="text-2xl font-bold text-gray-900 mt-1">{% vendor_currency total_value %}</div>
                     </div>
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-yellow-100">
                         <div class="flex justify-between items-center">

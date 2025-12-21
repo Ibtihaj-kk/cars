@@ -3,6 +3,8 @@
 
 {% block title %}Orders - Corporate Dock{% endblock %}
 
+{% load vendor_currency %}
+
 {% block content %}
 {% now "Y-m-d" as current_date %}
 <div class="flex-1 overflow-y-auto p-4 sm:p-8 bg-gray-100" onclick="closeDropdownsIfOpen()">
@@ -111,7 +113,7 @@
                                 {{ order.get_status_display }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 font-bold whitespace-nowrap">PKR {{ order.vendor_total|floatformat:0 }}</td>
+                        <td class="px-6 py-4 font-bold whitespace-nowrap">{% vendor_currency order.vendor_total %}</td>
                         <td class="px-6 py-4 text-right whitespace-nowrap">
                             <a href="{% url 'business_partners:vendor_order_detail' order.id %}" class="bg-black text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-gray-800 shadow-sm inline-block">
                                 Manage Order

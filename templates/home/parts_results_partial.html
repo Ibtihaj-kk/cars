@@ -1,4 +1,5 @@
 <!-- Parts results partial for HTMX -->
+{% load vendor_currency %}
 <div class="parts-grid" id="productsContainer">
     
     {% for part in parts %}
@@ -36,7 +37,7 @@
                     <div class="list-cell model-name">{{ part.name }}</div>
                     <div class="list-cell make">{{ part.brand.name }}</div>
                     <div class="list-cell part-number">{{ part.parts_number }}</div>
-                    <div class="list-cell price">{{ part.price }} ر.س.</div>
+                    <div class="list-cell price">{% vendor_currency part.price %}</div>
                     <div class="list-cell stock">
                         {% if part.inventory and part.inventory.stock > 0 %}
                             <span class="badge bg-success">In Stock ({{ part.inventory.stock }})</span>

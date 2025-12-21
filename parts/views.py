@@ -101,12 +101,14 @@ class PartListView(ListView):
         """Get optimized queryset with select_related and prefetch_related for performance."""
         from business_partners.models import BusinessPartner, VendorProfile
         
-        queryset = Part.objects.filter(is_active=True).select_related(
+        # Filter for active AND published parts
+        queryset = Part.objects.filter(is_active=True, status='published').select_related(
             'category', 'brand', 'dealer', 'inventory', 'vendor'
         ).prefetch_related(
             Prefetch('reviews', queryset=Review.objects.select_related('user')),
             'cart_items',
-            Prefetch('vendor__vendor_profile', queryset=VendorProfile.objects.all())
+            # FIX: Don't use .all() - only fetch profiles for parts in queryset
+            'vendor__vendor_profile'
         ).annotate(
             # Pre-calculate aggregated fields to avoid N+1 queries
             annotated_review_count=Count('reviews', filter=Q(reviews__is_approved=True)),
@@ -1592,6 +1594,11 @@ class CSVUploadView(DealerAdminRequiredMixin, FormView):
                         sku = row.get('sku', '').strip()
                         description = row.get('description', '').strip()
                         image_url = row.get('image_url', '').strip()
+                        original_currency = row.get('original_currency', 'USD').strip().upper()
+                        
+                        # Validate currency code (must be 3 letters, default to USD if invalid)
+                        if not original_currency or len(original_currency) != 3:
+                            original_currency = 'USD'
                         
                         # Validate required fields
                         if not all([name, category_name, brand_name, price_str, quantity_str, sku]):
@@ -1620,6 +1627,7 @@ class CSVUploadView(DealerAdminRequiredMixin, FormView):
                             elif update_existing:
                                 # Update existing part
                                 existing_part.price = price
+                                existing_part.original_currency = original_currency
                                 existing_part.quantity = quantity
                                 if description:
                                     existing_part.description = description
@@ -1646,6 +1654,7 @@ class CSVUploadView(DealerAdminRequiredMixin, FormView):
                             sku=sku,
                             description=description,
                             price=price,
+                            original_currency=original_currency,
                             quantity=quantity,
                             category=category,
                             brand=brand,
@@ -2447,8 +2456,27 @@ def checkout_view(request):
         return redirect('parts:cart_view')
     
     # 2. Calculate Initial Totals (Tax, etc.)
-    # Standard 15% tax
-    tax_amount = items_total * Decimal('0.15')
+    # Dynamic tax calculation based on tax_classification_material
+    tax_amount = Decimal('0.00')
+    for item in cart_items_list:
+        part = item.part
+        # Default to 15% if not specified or unrecognized
+        item_tax_rate = Decimal('0.15')
+        
+        if hasattr(part, 'tax_classification_material'):
+            classification = part.tax_classification_material
+            if classification == 'VAT_5':
+                item_tax_rate = Decimal('0.05')
+            elif classification in ['ZERO', 'EXEMPT']:
+                item_tax_rate = Decimal('0.00')
+            elif classification == 'VAT_15':
+                item_tax_rate = Decimal('0.15')
+        
+        # Calculate tax for this item
+        # Handle both MockItem and model object
+        item_val = item.item_total if hasattr(item, 'item_total') else item.total_price
+        tax_amount += item_val * item_tax_rate
+
     shipping_cost = Decimal('0.00') # Free shipping for now
     
     grand_total = items_total + tax_amount + shipping_cost
@@ -2851,14 +2879,39 @@ def cart_view(request):
             except Part.DoesNotExist:
                 continue
     
+    # Calculate tax based on item classification
+    cart_tax = Decimal('0.00')
+    for item in cart_items_list:
+        # Determine tax rate for this item
+        item_tax_rate = Decimal('0.15') # Default standard rate
+        
+        # Check for tax classification
+        part = item.part if hasattr(item, 'part') else None
+        if part and hasattr(part, 'tax_classification_material'):
+            if part.tax_classification_material == 'VAT_5':
+                item_tax_rate = Decimal('0.05')
+            elif part.tax_classification_material == 'ZERO':
+                item_tax_rate = Decimal('0.00')
+            elif part.tax_classification_material == 'EXEMPT':
+                item_tax_rate = Decimal('0.00')
+        
+        # Calculate tax for this item
+        item_price_total = Decimal('0.00')
+        if hasattr(item, 'total_price'):
+             item_price_total = item.total_price
+        elif hasattr(item, 'item_total'):
+             item_price_total = item.item_total
+             
+        cart_tax += item_price_total * item_tax_rate
+    
     context = {
         'cart': cart,
         'cart_total': cart_total,
         'cart_count': len(cart),
         'title': 'Shopping Cart',
         'cart_items': cart_items_list,
-        'cart_tax': cart_total * Decimal('0.15'),
-        'cart_grand_total': cart_total * Decimal('1.15'),
+        'cart_tax': cart_tax,
+        'cart_grand_total': cart_total + cart_tax,
         'can_checkout': len(cart) > 0,
     }
     
@@ -2914,8 +2967,31 @@ def checkout_view(request):
         return redirect('parts:cart_view')
 
     # 2. Calculate Initial Totals (Tax, etc.)
-    # Standard 15% tax
-    tax_amount = items_total * Decimal('0.15')
+    # Calculate tax based on item classification
+    tax_amount = Decimal('0.00')
+    for item in cart_items_list:
+        # Determine tax rate for this item
+        item_tax_rate = Decimal('0.15') # Default standard rate
+        
+        # Check for tax classification
+        part = item.part if hasattr(item, 'part') else None
+        if part and hasattr(part, 'tax_classification_material'):
+            if part.tax_classification_material == 'VAT_5':
+                item_tax_rate = Decimal('0.05')
+            elif part.tax_classification_material == 'ZERO':
+                item_tax_rate = Decimal('0.00')
+            elif part.tax_classification_material == 'EXEMPT':
+                item_tax_rate = Decimal('0.00')
+        
+        # Calculate tax for this item
+        item_price_total = Decimal('0.00')
+        if hasattr(item, 'total_price'):
+             item_price_total = item.total_price
+        elif hasattr(item, 'item_total'):
+             item_price_total = item.item_total
+             
+        tax_amount += item_price_total * item_tax_rate
+
     shipping_cost = Decimal('0.00') # Free shipping for now
     
     grand_total = items_total + tax_amount + shipping_cost
@@ -3157,7 +3233,39 @@ def checkout_step1_order_summary(request):
         
     # Calculate totals - items_total is already calculated above
     shipping_cost = Decimal('0.00')  # Will be calculated in step 2
-    tax_amount = Decimal('0.00')  # Will be calculated based on location
+    
+    # Calculate tax based on item classification
+    tax_amount = Decimal('0.00')
+    
+    # Use cart_items_data which is unified above
+    for item_data in cart_items_data:
+        # Handle both object and dict formats
+        part = None
+        quantity = 0
+        total_price = Decimal('0.00')
+        
+        if isinstance(item_data, dict):
+            part = item_data.get('part')
+            quantity = item_data.get('quantity', 0)
+            total_price = item_data.get('total_price', Decimal('0.00'))
+        else:
+            # Assume it's a CartItem object
+            part = item_data.part
+            quantity = item_data.quantity
+            total_price = item_data.total_price
+            
+        if part:
+            item_tax_rate = Decimal('0.15') # Default standard rate
+            if hasattr(part, 'tax_classification_material'):
+                if part.tax_classification_material == 'VAT_5':
+                    item_tax_rate = Decimal('0.05')
+                elif part.tax_classification_material == 'ZERO':
+                    item_tax_rate = Decimal('0.00')
+                elif part.tax_classification_material == 'EXEMPT':
+                    item_tax_rate = Decimal('0.00')
+            
+            tax_amount += total_price * item_tax_rate
+
     discount_amount = Decimal('0.00')
     
     # Check for applied discount
@@ -3344,8 +3452,77 @@ def checkout_step2_shipping_info(request):
                 
                 # Calculate tax (15% VAT in Saudi Arabia)
                 tax_rate = Decimal('0.15')
-                tax_amount = (items_total + shipping_cost - discount_amount) * tax_rate
+                tax_amount = Decimal('0.00')
                 
+                # Check if this is a buy now order to calculate tax per item
+                if buy_now_order:
+                    for item in buy_now_order.items.all():
+                        item_tax_rate = Decimal('0.15') # Default
+                        
+                        if hasattr(item.part, 'tax_classification_material'):
+                            if item.part.tax_classification_material == 'VAT_5':
+                                item_tax_rate = Decimal('0.05')
+                            elif item.part.tax_classification_material == 'ZERO':
+                                item_tax_rate = Decimal('0.00')
+                            elif item.part.tax_classification_material == 'EXEMPT':
+                                item_tax_rate = Decimal('0.00')
+                        
+                        tax_amount += item.quantity * item.price * item_tax_rate
+                else:
+                    # Regular cart checkout
+                    cart = None
+                    if request.user.is_authenticated:
+                        try:
+                            cart = Cart.objects.get(user=request.user)
+                            items = cart.items.all()
+                        except Cart.DoesNotExist:
+                            items = []
+                    else:
+                        # For guest checkout, we need to reconstruct items from session
+                        # This is complex, but we can iterate through the cart items data
+                        # However, for now, let's use a simpler approach if cart items are not readily available as objects
+                        # But wait, we can't easily get cart items here without reconstructing them
+                        pass
+                    
+                    # If we can't iterate items easily here, we might need to rely on the passed total or reconstruct
+                    # Let's try to reconstruct for tax calculation if possible, or fall back to flat rate if not
+                    # Re-fetching cart items for accurate tax calculation
+                    if request.user.is_authenticated:
+                        try:
+                            cart = Cart.objects.get(user=request.user)
+                            for item in cart.items.all():
+                                item_tax_rate = Decimal('0.15')
+                                if hasattr(item.part, 'tax_classification_material'):
+                                    if item.part.tax_classification_material == 'VAT_5':
+                                        item_tax_rate = Decimal('0.05')
+                                    elif item.part.tax_classification_material == 'ZERO':
+                                        item_tax_rate = Decimal('0.00')
+                                    elif item.part.tax_classification_material == 'EXEMPT':
+                                        item_tax_rate = Decimal('0.00')
+                                tax_amount += item.quantity * item.part.price * item_tax_rate
+                        except Cart.DoesNotExist:
+                            tax_amount = (items_total + shipping_cost - discount_amount) * tax_rate
+                    else:
+                        # Guest cart tax calculation
+                        cart_data = get_cart(request)
+                        if cart_data:
+                            for part_id, item_data in cart_data.items():
+                                try:
+                                    part = Part.objects.get(id=part_id)
+                                    item_tax_rate = Decimal('0.15')
+                                    if hasattr(part, 'tax_classification_material'):
+                                        if part.tax_classification_material == 'VAT_5':
+                                            item_tax_rate = Decimal('0.05')
+                                        elif part.tax_classification_material == 'ZERO':
+                                            item_tax_rate = Decimal('0.00')
+                                        elif part.tax_classification_material == 'EXEMPT':
+                                            item_tax_rate = Decimal('0.00')
+                                    tax_amount += item_data['quantity'] * part.price * item_tax_rate
+                                except Part.DoesNotExist:
+                                    continue
+                        else:
+                             tax_amount = (items_total + shipping_cost - discount_amount) * tax_rate
+
                 grand_total = items_total + shipping_cost + tax_amount - discount_amount
                 
                 # Update checkout data
@@ -3495,27 +3672,30 @@ def checkout_step3_payment_method(request):
                         if not buy_now_order:
                             if request.user.is_authenticated:
                                 # Database cart for authenticated users
-                                for cart_item in cart.items.all():
-                                    OrderItem.objects.create(
-                                        order=order,
-                                        part=cart_item.part,
-                                        quantity=cart_item.quantity,
-                                        price=cart_item.part.price
-                                    )
-                            else:
-                                # Session cart for guest users
-                                for part_id, item_data in cart.items():
-                                    try:
-                                        part = Part.objects.get(id=part_id, is_active=True)
+                                if cart:
+                                    for cart_item in cart.items.all():
                                         OrderItem.objects.create(
                                             order=order,
-                                            part=part,
-                                            quantity=item_data['quantity'],
-                                            price=part.price
+                                            part=cart_item.part,
+                                            quantity=cart_item.quantity,
+                                            price=cart_item.part.price
                                         )
-                                    except Part.DoesNotExist:
-                                        logger.warning(f"Part {part_id} not found for guest cart item")
-                                        continue
+                            else:
+                                # Session cart for guest users
+                                cart_data = get_cart(request)
+                                if cart_data:
+                                    for part_id, item_data in cart_data.items():
+                                        try:
+                                            part = Part.objects.get(id=part_id, is_active=True)
+                                            OrderItem.objects.create(
+                                                order=order,
+                                                part=part,
+                                                quantity=item_data['quantity'],
+                                                price=part.price
+                                            )
+                                        except Part.DoesNotExist:
+                                            logger.warning(f"Part {part_id} not found for guest cart item")
+                                            continue
                             
                             # Deduct inventory using the robust model method
                             # This handles both Inventory model and Part.quantity field sync
@@ -3612,8 +3792,36 @@ def order_confirmation(request, order_number):
                 messages.error(request, 'Order not found or access denied.')
                 return redirect('parts:cart_view')
         
+        # Calculate tax for each item
+        enhanced_items = []
+        for item in order.items.select_related('part', 'part__brand').all():
+            tax_rate = Decimal('0.15') # Default
+            tax_rate_display = '15%'
+            
+            if hasattr(item.part, 'tax_classification_material'):
+                if item.part.tax_classification_material == 'VAT_5':
+                    tax_rate = Decimal('0.05')
+                    tax_rate_display = '5%'
+                elif item.part.tax_classification_material == 'ZERO':
+                    tax_rate = Decimal('0.00')
+                    tax_rate_display = '0% (Zero Rated)'
+                elif item.part.tax_classification_material == 'EXEMPT':
+                    tax_rate = Decimal('0.00')
+                    tax_rate_display = 'Exempt'
+            
+            item_tax = item.quantity * item.price * tax_rate
+            
+            enhanced_items.append({
+                'item': item,
+                'tax_rate': tax_rate,
+                'tax_rate_display': tax_rate_display,
+                'tax_amount': item_tax,
+                'total_with_tax': (item.quantity * item.price) + item_tax
+            })
+
         context = {
             'order': order,  # Pass the order object itself as well, not just attributes
+            'enhanced_order_items': enhanced_items,
             'order_number': order.order_number,
             'email': order.customer_email if order.customer_email else order.guest_email,
             'total': order.total_price,
@@ -3807,9 +4015,39 @@ class OrderDetailView(LoginRequiredMixin, DetailView):
         context['title'] = f'Order #{self.object.order_number}'
         
         # Get order items with related data
-        context['order_items'] = self.object.items.select_related(
+        order_items = self.object.items.select_related(
             'part', 'part__brand', 'part__category'
         )
+        
+        # Calculate tax for each item
+        enhanced_items = []
+        for item in order_items:
+            tax_rate = Decimal('0.15') # Default
+            tax_rate_display = '15%'
+            
+            if hasattr(item.part, 'tax_classification_material'):
+                if item.part.tax_classification_material == 'VAT_5':
+                    tax_rate = Decimal('0.05')
+                    tax_rate_display = '5%'
+                elif item.part.tax_classification_material == 'ZERO':
+                    tax_rate = Decimal('0.00')
+                    tax_rate_display = '0% (Zero Rated)'
+                elif item.part.tax_classification_material == 'EXEMPT':
+                    tax_rate = Decimal('0.00')
+                    tax_rate_display = 'Exempt'
+            
+            item_tax = item.quantity * item.price * tax_rate
+            
+            enhanced_items.append({
+                'item': item,
+                'tax_rate': tax_rate,
+                'tax_rate_display': tax_rate_display,
+                'tax_amount': item_tax,
+                'total_with_tax': (item.quantity * item.price) + item_tax
+            })
+            
+        context['enhanced_order_items'] = enhanced_items
+        context['order_items'] = order_items # Keep original for backward compatibility if needed
         
         # Get status history
         context['status_history'] = self.object.status_history.order_by('-timestamp')

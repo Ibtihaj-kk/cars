@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
+{% load vendor_currency %}
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -12,7 +13,7 @@
 
     <script type="module" src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 
     <link rel="stylesheet" href="{% static 'home/css/styles.css' %}" />
     <link rel="stylesheet" href="{% static 'home/css/navbar.css' %}" />
@@ -359,7 +360,7 @@
                         </div>
                     </div>
 
-                    <div class="item-price">{{ item.item_total|floatformat:2 }} ر.س.</div>
+                    <div class="item-price">{% vendor_currency item.item_total %}</div>
                     
                     <button class="remove-btn" title="Remove Item"
                             hx-post="{% url 'parts:hx_remove_from_cart' item.id %}"
@@ -397,7 +398,7 @@
 
                     <div class="summary-row total">
                         <span>Total</span>
-                        <span>{{ cart_grand_total|floatformat:2 }} ر.س.</span>
+                        <span>{% vendor_currency cart_grand_total %}</span>
                     </div>
 
                     {% if can_checkout %}

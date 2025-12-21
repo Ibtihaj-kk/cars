@@ -589,7 +589,12 @@ class Part(models.Model):
         validators=[MinValueValidator(Decimal('0.01'))],
         blank=True,
         null=True,
-        help_text="Selling price"
+        help_text="Selling price in original currency"
+    )
+    original_currency = models.CharField(
+        max_length=3,
+        default='USD',
+        help_text="Currency code the vendor used when setting the price (USD, SAR, GBP, etc.)"
     )
     quantity = models.PositiveIntegerField(default=0, help_text="Available quantity")
     
@@ -746,6 +751,71 @@ class Part(models.Model):
     def review_count(self):
         return self.reviews.count()
     
+    def get_display_price(self, currency_code='USD'):
+        """
+        Get price in specified currency with proper formatting
+        
+        Conversion flow: original_currency (vendor's input) → USD (base) → display_currency (user's preference)
+        
+        Args:
+            currency_code (str): ISO currency code for display (e.g., 'USD', 'SAR', 'AED')
+            
+        Returns:
+            str: Formatted price string in requested currency (e.g., "$100.00", "375.00 ﷼")
+        """
+        from core.models import Currency, ExchangeRate
+        from decimal import Decimal as D
+        
+        # Handle null/zero price
+        if not self.price:
+            return "Price not available"
+        
+        try:
+            # Get display currency object
+            display_currency = Currency.objects.get(code=currency_code, is_active=True)
+        except Currency.DoesNotExist:
+            # Fallback to USD if currency not found
+            try:
+                display_currency = Currency.objects.get(is_base=True)
+            except Currency.DoesNotExist:
+                # Last resort: return price without formatting
+                return f"${self.price}"
+        
+        try:
+            # Step 1: Convert from original currency to USD (base currency)
+            original_curr_code = getattr(self, 'original_currency', 'USD') or 'USD'
+            
+            if original_curr_code == 'USD':
+                # Price is already in USD (base currency)
+                price_in_usd = self.price
+            else:
+                # Convert from original currency to USD
+                # Example: GBP → USD (if vendor entered £100, we convert to ~$130)
+                rate_to_usd = ExchangeRate.get_current_rate(original_curr_code, 'USD')
+                price_in_usd = self.price * D(str(rate_to_usd))
+            
+            # Step 2: Convert from USD to display currency
+            if display_currency.code == 'USD':
+                # Display currency is USD, no further conversion needed
+                display_amount = price_in_usd
+            else:
+                # Convert from USD to display currency
+                # Example: USD → SAR (if user wants to see in SAR, convert $100 to 375 SAR)
+                rate_from_usd = ExchangeRate.get_current_rate('USD', display_currency.code)
+                display_amount = price_in_usd * D(str(rate_from_usd))
+            
+            # Format using display currency rules
+            return display_currency.format_price(display_amount)
+            
+        except (ValueError, Exception) as e:
+            # If conversion fails, return price in original currency with basic formatting
+            try:
+                original_currency_obj = Currency.objects.get(code=original_curr_code)
+                return original_currency_obj.format_price(self.price)
+            except:
+                return f"{self.price} {original_curr_code}"
+    
+
     def user_visible_fields(self):
         """
         Returns a dictionary containing only user-visible fields.
@@ -1192,6 +1262,39 @@ class Order(models.Model):
     def customer_email(self):
         return self.customer.email if self.customer else self.guest_email
     
+    @property
+    def discount_amount_val(self):
+        """Get discount amount safely."""
+        if hasattr(self, 'discount_info'):
+            return self.discount_info.discount_amount
+        return Decimal('0.00')
+
+    @property
+    def discount_percentage(self):
+        """Get discount percentage if applicable."""
+        if hasattr(self, 'discount_info'):
+            code = self.discount_info.discount_code
+            if code.discount_type == 'percentage':
+                return code.discount_value
+        return None
+
+    @property
+    def gross_price_val(self):
+        """Calculate gross price (Total - Tax)."""
+        return self.total_price - self.tax_amount
+
+    @property
+    def part_price_val(self):
+        """Calculate part price (Gross + Discount - Shipping)."""
+        return self.gross_price_val + self.discount_amount_val - self.shipping_cost
+
+    @property
+    def tax_percentage(self):
+        """Calculate tax percentage."""
+        if self.gross_price_val > 0:
+            return (self.tax_amount / self.gross_price_val) * 100
+        return Decimal('0.00')
+
     def update_status(self, new_status, changed_by=None, change_reason=None, notes=None, request=None):
         """Update order status with audit logging."""
         from django.utils import timezone

@@ -868,15 +868,48 @@ class VendorPasswordResetForm(forms.Form):
 
 
 class VendorSettingsForm(forms.Form):
+    # Basic Information
     business_name = forms.CharField(max_length=255, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
     registration_number = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    business_structure = forms.ChoiceField(choices=VendorProfile.BUSINESS_TYPES, required=False, widget=forms.Select(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    establishment_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors', 'type': 'date'}))
     description = forms.CharField(widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors', 'rows': 4}), required=False)
+    
+    # Contact Details
+    contact_person_name = forms.CharField(max_length=200, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    contact_person_title = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
     contact_email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
     contact_phone = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    
+    # Address
     address = forms.CharField(widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors', 'rows': 3}))
     city = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
     zip_code = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    
+    # Logo & Documents
     logo = forms.ImageField(required=False, widget=forms.FileInput(attrs={'class': 'absolute inset-0 w-full h-full opacity-0 cursor-pointer'}))
+    cr_document = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
+    business_license = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
+    
+    # Bank Details
+    bank_name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    bank_branch = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    account_holder_name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    account_number = forms.CharField(max_length=50, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    iban = forms.CharField(max_length=34, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    swift_code = forms.CharField(max_length=11, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    bank_statement = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
+    
+    # Business Details (Financial & Additional)
+    tax_id = forms.CharField(max_length=50, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    preferred_currency = forms.ChoiceField(choices=[('USD', 'USD'), ('SAR', 'SAR'), ('PKR', 'PKR')], required=False, widget=forms.Select(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    payment_terms = forms.ChoiceField(choices=[('net_15', 'Net 15 days'), ('net_30', 'Net 30 days'), ('net_45', 'Net 45 days'), ('net_60', 'Net 60 days'), ('cod', 'Cash on Delivery'), ('prepaid', 'Prepaid')], required=False, widget=forms.Select(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    
+    # Additional Info
+    expected_monthly_volume = forms.DecimalField(required=False, widget=forms.NumberInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    years_in_business = forms.IntegerField(required=False, widget=forms.NumberInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    product_categories = forms.CharField(widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors', 'rows': 3}), required=False)
+    references = forms.CharField(widget=forms.Textarea(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors', 'rows': 3}), required=False)
 
     def __init__(self, *args, **kwargs):
         self.business_partner = kwargs.pop('business_partner', None)
@@ -899,6 +932,39 @@ class VendorSettingsForm(forms.Form):
                 self.fields['address'].initial = primary_address.street
                 self.fields['city'].initial = primary_address.city
                 self.fields['zip_code'].initial = primary_address.postal_code
+            
+            # Initialize vendor profile fields
+            if hasattr(self.business_partner, 'vendor_profile'):
+                vendor_profile = self.business_partner.vendor_profile
+                self.fields['tax_id'].initial = vendor_profile.tax_id
+                self.fields['preferred_currency'].initial = vendor_profile.preferred_currency
+                self.fields['payment_terms'].initial = vendor_profile.payment_terms
+                
+                # New fields initialization
+                self.fields['business_structure'].initial = vendor_profile.business_structure
+                self.fields['establishment_date'].initial = vendor_profile.establishment_date
+                self.fields['contact_person_name'].initial = vendor_profile.contact_person_name
+                self.fields['contact_person_title'].initial = vendor_profile.contact_person_title
+                self.fields['swift_code'].initial = vendor_profile.swift_code
+                self.fields['expected_monthly_volume'].initial = vendor_profile.expected_monthly_volume
+                self.fields['product_categories'].initial = vendor_profile.product_categories
+                self.fields['years_in_business'].initial = vendor_profile.years_in_business
+                self.fields['references'].initial = vendor_profile.references
+                
+                # Parse bank details from text field
+                if vendor_profile.bank_account_details:
+                    bank_lines = vendor_profile.bank_account_details.strip().split('\n')
+                    for line in bank_lines:
+                        if line.startswith('Bank:'):
+                            self.fields['bank_name'].initial = line.replace('Bank:', '').strip()
+                        elif line.startswith('Branch:'):
+                            self.fields['bank_branch'].initial = line.replace('Branch:', '').strip()
+                        elif line.startswith('Account Holder:'):
+                            self.fields['account_holder_name'].initial = line.replace('Account Holder:', '').strip()
+                        elif line.startswith('Account Number:'):
+                            self.fields['account_number'].initial = line.replace('Account Number:', '').strip()
+                        elif line.startswith('IBAN:'):
+                            self.fields['iban'].initial = line.replace('IBAN:', '').strip()
 
     def save(self):
         if not self.business_partner:
@@ -942,6 +1008,47 @@ class VendorSettingsForm(forms.Form):
                 'address_type': 'office' # Default
             }
         )
+        
+        # Update vendor profile fields
+        if hasattr(self.business_partner, 'vendor_profile'):
+            vendor_profile = self.business_partner.vendor_profile
+            vendor_profile.tax_id = self.cleaned_data['tax_id']
+            vendor_profile.preferred_currency = self.cleaned_data['preferred_currency']
+            vendor_profile.payment_terms = self.cleaned_data['payment_terms']
+            
+            # Save new fields
+            vendor_profile.business_structure = self.cleaned_data['business_structure']
+            vendor_profile.establishment_date = self.cleaned_data['establishment_date']
+            vendor_profile.contact_person_name = self.cleaned_data['contact_person_name']
+            vendor_profile.contact_person_title = self.cleaned_data['contact_person_title']
+            vendor_profile.swift_code = self.cleaned_data['swift_code']
+            vendor_profile.expected_monthly_volume = self.cleaned_data['expected_monthly_volume']
+            vendor_profile.product_categories = self.cleaned_data['product_categories']
+            vendor_profile.years_in_business = self.cleaned_data['years_in_business']
+            vendor_profile.references = self.cleaned_data['references']
+            
+            if self.cleaned_data.get('cr_document'):
+                vendor_profile.cr_document = self.cleaned_data['cr_document']
+            if self.cleaned_data.get('business_license'):
+                vendor_profile.business_license = self.cleaned_data['business_license']
+            if self.cleaned_data.get('bank_statement'):
+                vendor_profile.bank_statement = self.cleaned_data['bank_statement']
+            
+            # Build bank details from form fields
+            bank_details = []
+            if self.cleaned_data['bank_name']:
+                bank_details.append(f"Bank: {self.cleaned_data['bank_name']}")
+            if self.cleaned_data['bank_branch']:
+                bank_details.append(f"Branch: {self.cleaned_data['bank_branch']}")
+            if self.cleaned_data['account_holder_name']:
+                bank_details.append(f"Account Holder: {self.cleaned_data['account_holder_name']}")
+            if self.cleaned_data['account_number']:
+                bank_details.append(f"Account Number: {self.cleaned_data['account_number']}")
+            if self.cleaned_data['iban']:
+                bank_details.append(f"IBAN: {self.cleaned_data['iban']}")
+            
+            vendor_profile.bank_account_details = '\n'.join(bank_details) if bank_details else None
+            vendor_profile.save()
 
 
 class VendorApplicationReviewForm(forms.Form):

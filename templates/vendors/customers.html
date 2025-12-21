@@ -1,5 +1,6 @@
 {% extends 'vendors/base.html' %}
 {% load static %}
+{% load vendor_currency %}
 
 {% block title %}Customer Management | Corporate Dock{% endblock %}
 {% block header_title %}Customer Management{% endblock %}
@@ -42,7 +43,7 @@
     <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-start">
         <div>
             <p class="text-xs font-bold text-gray-400 uppercase">Avg. Spend</p>
-            <h3 class="text-2xl font-extrabold text-yellow-600 mt-1">PKR {{ avg_spend|default:"--" }}</h3>
+            <h3 class="text-2xl font-extrabold text-yellow-600 mt-1">{% vendor_currency avg_spend|default:"--" %}</h3>
         </div>
         <div class="p-2 bg-yellow-50 rounded-lg text-yellow-600"><i class="fas fa-coins"></i></div>
     </div>
@@ -114,7 +115,7 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                        PKR {{ customer.vendor_total_spent|floatformat:0 }}
+                        {% vendor_currency customer.vendor_total_spent %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         {% if customer.is_active %}

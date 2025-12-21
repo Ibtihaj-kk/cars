@@ -607,8 +607,10 @@ def vendor_registration_validate_step_htmx(request, step_number):
     step_valid = True
     
     if step_number == 1:
-        # Step 1: Account Creation (Business Email)
+        # Step 1: Account Creation (Business Email & Password)
         business_email = request.POST.get('business_email', '').strip()
+        password = request.POST.get('password', '')
+        confirm_password = request.POST.get('confirm_password', '')
         
         if not business_email:
             errors['business_email'] = 'Business email is required'
@@ -622,6 +624,26 @@ def vendor_registration_validate_step_htmx(request, step_number):
             elif User.objects.filter(email=business_email).exists():
                 errors['business_email'] = 'This email is already registered'
                 step_valid = False
+        
+        if not password:
+            errors['password'] = 'Password is required'
+            step_valid = False
+        elif len(password) < 8:
+            errors['password'] = 'Password must be at least 8 characters'
+            step_valid = False
+        elif not re.search(r'[A-Z]', password):
+            errors['password'] = 'Password must contain at least one uppercase letter'
+            step_valid = False
+        elif not re.search(r'[a-z]', password):
+            errors['password'] = 'Password must contain at least one lowercase letter'
+            step_valid = False
+        elif not re.search(r'\d', password):
+            errors['password'] = 'Password must contain at least one number'
+            step_valid = False
+            
+        if password != confirm_password:
+            errors['confirm_password'] = 'Passwords do not match'
+            step_valid = False
     
     elif step_number == 2:
         # Step 2: Business Details
@@ -671,40 +693,7 @@ def vendor_registration_validate_step_htmx(request, step_number):
         # HTMX step validation doesn't include files in the request
     
     elif step_number == 3:
-        # Step 3: User Account
-        username = request.POST.get('username', '').strip()
-        password = request.POST.get('password', '')
-        confirm_password = request.POST.get('confirm_password', '')
-        
-        if not username:
-            errors['username'] = 'Username is required'
-            step_valid = False
-        elif len(username) < 3:
-            errors['username'] = 'Username must be at least 3 characters'
-            step_valid = False
-            
-        if not password:
-            errors['password'] = 'Password is required'
-            step_valid = False
-        elif len(password) < 8:
-            errors['password'] = 'Password must be at least 8 characters'
-            step_valid = False
-        elif not re.search(r'[A-Z]', password):
-            errors['password'] = 'Password must contain at least one uppercase letter'
-            step_valid = False
-        elif not re.search(r'[a-z]', password):
-            errors['password'] = 'Password must contain at least one lowercase letter'
-            step_valid = False
-        elif not re.search(r'\d', password):
-            errors['password'] = 'Password must contain at least one number'
-            step_valid = False
-            
-        if password != confirm_password:
-            errors['confirm_password'] = 'Passwords do not match'
-            step_valid = False
-    
-    elif step_number == 4:
-        # Step 4: Subscription Plan
+        # Step 3: Subscription Plan
         subscription_plan = request.POST.get('subscription_plan', '').strip()
         
         if not subscription_plan:
@@ -714,8 +703,8 @@ def vendor_registration_validate_step_htmx(request, step_number):
             errors['subscription_plan'] = 'Please select a valid subscription plan'
             step_valid = False
     
-    elif step_number == 5:
-        # Step 5: Final Step (Services and Terms)
+    elif step_number == 4:
+        # Step 4: Final Step (Services and Terms)
         selected_services = request.POST.getlist('selected_services', [])
         terms_accepted = request.POST.get('terms_accepted', '') == 'on'
         
@@ -838,7 +827,6 @@ def vendor_registration_submit_htmx(request):
             'business_phone': 'Business phone',
             'commercial_register_no': 'Commercial register number',
             'tax_id_no': 'Tax ID number',
-            'username': 'Username',
             'password': 'Password',
             'confirm_password': 'Confirm password'
         }
@@ -881,7 +869,7 @@ def vendor_registration_submit_htmx(request):
                 user = User.objects.create_user(
                     email=business_email,  # Use email as username since it's the USERNAME_FIELD
                     password=password,
-                    first_name=username[:30],  # Store provided username as first name
+                    first_name=business_name[:30],  # Use business name as first name since username field is removed
                     last_name='',  # Empty last name for vendor accounts
                     is_active=True,  # Set user as active
                     is_staff=False,  # Not a staff member
@@ -890,17 +878,17 @@ def vendor_registration_submit_htmx(request):
                 )
                 
                 # Create BusinessPartner with enhanced details and timestamps
-                business_partner = BusinessPartner.objects.create(
-                    bp_number=f'VEN{uuid.uuid4().hex[:8].upper()}',
+                # Note: We use save() to trigger auto-generation of BP number
+                business_partner = BusinessPartner(
                     name=business_name,
                     slug=f'vendor-{business_email.split("@")[0]}',  # Use email prefix for slug
                     type='company',
                     status='pending',
                     legal_identifier=tax_id_no,  # Store tax ID as legal identifier
                     user=user,  # Link to the created user account
-                    created_at=current_time,  # Set creation timestamp
-                    updated_at=current_time   # Set initial update timestamp
+                    created_by=user
                 )
+                business_partner.save() # This generates the BP number (BPxxxxxx)
                 
                 # Create vendor role
                 BusinessPartnerRole.objects.create(
@@ -924,6 +912,9 @@ def vendor_registration_submit_htmx(request):
                 )
                 
                 # Create vendor profile with enhanced details and timestamps
+                from .utils import get_currency_for_country
+                currency = get_currency_for_country(country)
+                
                 vendor_profile = VendorProfile.objects.create(
                     business_partner=business_partner,
                     user=user,  # Link to Django user account
@@ -931,7 +922,8 @@ def vendor_registration_submit_htmx(request):
                     is_approved=False,
                     registration_date=current_time.date(),  # Set registration date
                     created_at=current_time,  # Set creation timestamp
-                    updated_at=current_time   # Set initial update timestamp
+                    updated_at=current_time,   # Set initial update timestamp
+                    preferred_currency=currency
                 )
                 
                 # Handle file uploads
@@ -974,29 +966,70 @@ def vendor_registration_submit_htmx(request):
                         uploaded_by=None
                     )
                 
-                # Create vendor application for admin review
-                application = VendorApplication.objects.create(
-                    user=user,
-                    company_name=business_name,
-                    contact_person_name=username,
-                    business_email=business_email,
-                    business_phone=business_phone,
-                    street_address=address,
-                    city=city,
-                    country=country,
-                    business_type='other',
-                    legal_identifier=tax_id_no,
-                    status='submitted',
-                    current_step=4
-                )
+                # Handle Vendor Application (Find existing or create new)
+                # Check for existing anonymous application in session
+                session_key = request.session.session_key
+                application = None
                 
-                # Create provisional profile for immediate access
-                application.create_provisional_profile()
+                if session_key:
+                    # Find the most recent anonymous application for this session
+                    application = VendorApplication.objects.filter(
+                        session_key=session_key, 
+                        user__isnull=True
+                    ).order_by('-updated_at').first()
+                
+                if not application:
+                    # Fallback: Check by email to avoid duplicates
+                    application = VendorApplication.objects.filter(
+                        business_email=business_email, 
+                        user__isnull=True
+                    ).order_by('-created_at').first()
+                
+                if application:
+                    # Update existing application
+                    application.user = user
+                    application.company_name = business_name
+                    application.contact_person_name = business_name # Use business name as contact person since username is removed
+                    application.business_email = business_email
+                    application.business_phone = business_phone
+                    application.street_address = address
+                    application.city = city
+                    application.country = country
+                    application.business_type = 'other'
+                    application.legal_identifier = tax_id_no
+                    application.status = 'submitted'
+                    application.current_step = 4
+                    application.submitted_at = current_time
+                    application.save()
+                else:
+                    # Create new vendor application if none exists
+                    application = VendorApplication.objects.create(
+                        user=user,
+                        company_name=business_name,
+                        contact_person_name=business_name, # Use business name as contact person since username is removed
+                        business_email=business_email,
+                        business_phone=business_phone,
+                        street_address=address,
+                        city=city,
+                        country=country,
+                        business_type='other',
+                        legal_identifier=tax_id_no,
+                        status='submitted',
+                        current_step=4,
+                        submitted_at=current_time
+                    )
+                
+                # No need to call create_provisional_profile() as we manually created the full profile above
+                # application.create_provisional_profile()
             
+            # Auto-login the user
+            from django.contrib.auth import login
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+
             response_data['success'] = True
-            response_data['message'] = 'Registration successful. Please log in to access your account.'
-            # Do not auto-login, redirect to login page
-            response_data['redirect_url'] = '/accounts/login/'
+            response_data['message'] = 'Registration successful.'
+            # Redirect to dashboard
+            response_data['redirect_url'] = '/business-partners/vendor/dashboard/'
             
         except Exception as e:
             response_data['message'] = f'Registration failed: {str(e)}'
@@ -1129,7 +1162,7 @@ def vendor_login_submit_htmx(request):
             
             if vendor_profile:
                 # Allow login regardless of approval status
-                login(request, user)
+                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                 
                 # Set session expiry based on remember me
                 if remember_me:
@@ -1153,7 +1186,7 @@ def vendor_login_submit_htmx(request):
                 
             else:
                 # Authenticated user but no vendor profile (Client/User/Staff/Admin)
-                login(request, user)
+                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                 
                 # Set session expiry based on remember me
                 if remember_me:

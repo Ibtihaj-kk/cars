@@ -1,5 +1,6 @@
 {% extends 'user/base.html' %}
 {% load static %}
+{% load vendor_currency %}
 
 {% block title %}My Dashboard | CorporateDock{% endblock %}
 
@@ -74,7 +75,7 @@
                 <div class="stat-icon"><i class="fas fa-wallet"></i></div>
                 <span style="font-size:20px;">...</span>
             </div>
-            <div class="stat-value">${{ total_spent|floatformat:2 }}</div>
+            <div class="stat-value">{% vendor_currency total_spent %}</div>
             <div class="stat-trend"><i class="fas fa-arrow-up"></i> Total Spent</div>
         </div>
         <div class="stat-card">
@@ -165,7 +166,7 @@
                                 {% endfor %}
                             </td>
                             <td>{{ order.created_at|date:"M d" }}</td>
-                            <td>${{ order.total_price }}</td>
+                            <td>{% vendor_currency order.total_price %}</td>
                             <td><span class="status {{ order.status|lower }}">{{ order.get_status_display }}</span></td>
                         </tr>
                         {% empty %}

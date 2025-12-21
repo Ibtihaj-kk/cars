@@ -1,4 +1,42 @@
-from .models import VendorProfile, BusinessPartner
+from .models import VendorProfile, BusinessPartner, CustomerProfile
+
+
+COUNTRY_TO_CURRENCY = {
+    'United States': 'USD',
+    'USA': 'USD',
+    'United Kingdom': 'GBP',
+    'UK': 'GBP',
+    'Saudi Arabia': 'SAR',
+    'United Arab Emirates': 'AED',
+    'UAE': 'AED',
+    'Pakistan': 'PKR',
+    'Canada': 'CAD',
+    'Australia': 'AUD',
+    'Japan': 'JPY',
+    'China': 'CNY',
+    'India': 'INR',
+    'Germany': 'EUR',
+    'France': 'EUR',
+    'Italy': 'EUR',
+    'Spain': 'EUR',
+    'Netherlands': 'EUR',
+    # Add more as needed
+}
+
+def get_currency_for_country(country_name):
+    """
+    Get the currency code for a given country name.
+    Returns 3-letter currency code (e.g., 'USD', 'AED').
+    Defaults to 'USD' if not found.
+    """
+    if not country_name:
+        return 'USD'
+    
+    # Get currency code from mapping
+    currency_code = COUNTRY_TO_CURRENCY.get(country_name, 'USD')
+    
+    # Return the currency code (3-letter string)
+    return currency_code
 
 
 def get_vendor_profile(user):
@@ -23,6 +61,54 @@ def get_vendor_profile(user):
         return business_partner.vendor_profile
     except VendorProfile.DoesNotExist:
         return None
+
+
+def get_customer_profile(user):
+    """
+    Get the customer profile for a given user.
+    """
+    if not user.is_authenticated:
+        return None
+        
+    try:
+        # Get all business partners for this user that are active customers
+        business_partners = BusinessPartner.objects.filter(
+            user=user,
+            status='active',
+            roles__role_type='customer'
+        ).distinct()
+        
+        if not business_partners.exists():
+            return None
+            
+        # Return the customer profile for the first active customer business partner
+        business_partner = business_partners.first()
+        if hasattr(business_partner, 'customer_profile'):
+            return business_partner.customer_profile
+        return None
+    except Exception:
+        return None
+
+
+def get_user_currency(user):
+    """
+    Get the preferred currency for a user (Vendor or Customer).
+    Defaults to 'USD'.
+    """
+    if not user or not user.is_authenticated:
+        return 'USD'
+
+    # Check vendor profile
+    vendor_profile = get_vendor_profile(user)
+    if vendor_profile:
+        return vendor_profile.preferred_currency
+    
+    # Check customer profile
+    customer_profile = get_customer_profile(user)
+    if customer_profile:
+        return customer_profile.preferred_currency
+        
+    return 'USD'
 
 
 def get_vendor_from_request(request):

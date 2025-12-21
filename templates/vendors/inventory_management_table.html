@@ -75,7 +75,7 @@
                     </td>
                     <td class="px-6 py-4 text-right text-sm font-medium">
                         <a href="{% url 'business_partners:vendor_inventory_detail' part.id %}" class="text-gray-400 hover:text-black mx-2" title="Movement History"><i class="fas fa-history"></i></a>
-                        <a href="{% url 'business_partners:vendor_inventory_update' part.id %}" class="text-gray-400 hover:text-black mx-2" title="Update Inventory"><i class="fas fa-edit"></i></a>
+                        <a href="{% url 'business_partners:vendor_inventory_detail' part.id %}" class="text-gray-400 hover:text-black mx-2" title="Update Inventory"><i class="fas fa-edit"></i></a>
                         <button class="text-gray-400 hover:text-red-600 mx-2" 
                                 hx-delete="{% url 'business_partners:vendor_inventory_delete_htmx' part.id %}" 
                                 hx-confirm="Are you sure you want to delete this item? This action cannot be undone." 

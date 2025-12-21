@@ -24,7 +24,7 @@ from django.views.generic import TemplateView
 # Simple home view since core app is disabled
 def home(request):
     from django.shortcuts import render
-    return render(request, 'home/index.html' if settings.DEBUG else 'base.html', {})
+    return render(request, 'home/index.html', {})
 
 # Custom 404 handler
 def custom_404_view(request, exception):

@@ -22,6 +22,7 @@ from .workflow_engine import (
     VendorPriorityQueue, VendorStatus
 )
 from .forms import VendorApplicationReviewForm, VendorComplianceOverrideForm
+from .utils import get_currency_for_country
 
 logger = logging.getLogger(__name__)
 
@@ -402,6 +403,7 @@ class VendorApplicationReviewView(LoginRequiredMixin, UserPassesTestMixin, Detai
     
     def _create_vendor_profile(self, application, business_partner):
         """Create vendor profile from approved application"""
+        currency = get_currency_for_country(application.country)
         vendor_profile = VendorProfile.objects.create(
             business_partner=business_partner,
             user=application.user,
@@ -411,7 +413,8 @@ class VendorApplicationReviewView(LoginRequiredMixin, UserPassesTestMixin, Detai
             references=application.references or '',
             is_verified=True,
             verification_date=timezone.now(),
-            verified_by=self.request.user
+            verified_by=self.request.user,
+            preferred_currency=currency
         )
         
         return vendor_profile

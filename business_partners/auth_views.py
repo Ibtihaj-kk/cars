@@ -79,7 +79,7 @@ class VendorLoginView(View):
                         return redirect('business_partners:vendor_2fa_verify')
                     else:
                         # Login directly
-                        login(request, user)
+                        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                         messages.success(request, f'Welcome back, {user.get_full_name() or user.email}!')
                         
                         # Redirect to dashboard regardless of approval status
@@ -149,14 +149,14 @@ class Vendor2FAVerifyView(View):
                     
                     if totp.verify(token, valid_window=1):
                         # Login user
-                        login(request, user)
+                        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                         del request.session['pre_2fa_user_id']
                         messages.success(request, f'Welcome back, {user.get_full_name() or user.email}!')
                         return redirect('business_partners:vendor_dashboard')
                     else:
                         # Check if it's a backup code
                         if vendor_profile.use_backup_code(token):
-                            login(request, user)
+                            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                             del request.session['pre_2fa_user_id']
                             messages.success(request, 'Login successful using backup code.')
                             return redirect('business_partners:vendor_dashboard')

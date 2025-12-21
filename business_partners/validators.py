@@ -1,7 +1,7 @@
 """
 File upload validators for security.
 """
-import magic
+import puremagic
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 import hashlib
@@ -60,10 +60,14 @@ def validate_file_mime_type(file):
     file_head = file.read(1024)
     file.seek(0)
     
-    # Detect MIME type
-    mime_type = magic.from_buffer(file_head, mime=True)
+    # Detect MIME type using puremagic
+    try:
+        matches = puremagic.from_string(file_head)
+        mime_type = matches[0].mime_type if matches else None
+    except Exception:
+        mime_type = None
     
-    if mime_type not in ALLOWED_DOCUMENT_TYPES:
+    if mime_type and mime_type not in ALLOWED_DOCUMENT_TYPES:
         raise ValidationError(
             f'File type not allowed: {mime_type}. '
             f'Allowed types: {", ".join(ALLOWED_DOCUMENT_TYPES)}'

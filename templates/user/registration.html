@@ -110,12 +110,14 @@
                 <div class="flex flex-col items-center space-y-5 w-full">
                     <div class="w-full text-left">
                         <label class="input-label ml-1">Email Address</label>
-                        <input type="email" name="email" placeholder="name@example.com" class="modern-input py-3 md:py-4 text-lg text-center" required>
+                        <input type="email" name="email" id="emailInput" placeholder="name@example.com" class="modern-input py-3 md:py-4 text-lg text-center" required>
+                        <p id="emailError" class="text-red-500 text-sm mt-1 hidden"></p>
                     </div>
                     
                     <div class="w-full text-left">
                         <label class="input-label ml-1">Password</label>
-                        <input type="password" name="password" placeholder="Create a password" class="modern-input py-3 md:py-4 text-lg text-center" required>
+                        <input type="password" name="password" id="passwordInput" placeholder="Create a password" class="modern-input py-3 md:py-4 text-lg text-center" required>
+                        <p id="passwordError" class="text-red-500 text-sm mt-1 hidden"></p>
                     </div>
                     
                     <button type="button" onclick="goToStep(2)" class="w-full bg-black text-white py-4 text-lg font-bold rounded-lg shadow-md hover:bg-gray-800 hover:shadow-lg transition-all transform hover:-translate-y-1">
@@ -137,33 +139,30 @@
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-                    <div class="md:col-span-2">
-                        <label class="input-label">Account Type</label>
-                        <div class="flex space-x-4">
-                            <label class="flex items-center space-x-2 cursor-pointer">
-                                <input type="radio" name="role" value="client" class="w-5 h-5 text-black focus:ring-black" checked>
-                                <span>Client (Buyer)</span>
-                            </label>
-                            <label class="flex items-center space-x-2 cursor-pointer">
-                                <input type="radio" name="role" value="seller" class="w-5 h-5 text-black focus:ring-black">
-                                <span>Dealer (Seller)</span>
-                            </label>
-                        </div>
+                    <input type="hidden" name="role" value="client">
+                    
+                    <div class="md:col-span-1">
+                        <label class="input-label">First Name</label>
+                        <input type="text" name="first_name" id="firstNameInput" class="modern-input" placeholder="e.g. John" required>
+                        <p id="firstNameError" class="text-red-500 text-sm mt-1 hidden"></p>
                     </div>
-
-                    <div class="md:col-span-2">
-                        <label class="input-label">Full Name</label>
-                        <input type="text" name="full_name" class="modern-input" placeholder="e.g. John Doe" required>
+                    
+                    <div class="md:col-span-1">
+                        <label class="input-label">Last Name</label>
+                        <input type="text" name="last_name" id="lastNameInput" class="modern-input" placeholder="e.g. Doe" required>
+                        <p id="lastNameError" class="text-red-500 text-sm mt-1 hidden"></p>
                     </div>
 
                     <div class="md:col-span-2">
                         <label class="input-label">Address</label>
-                        <input type="text" name="address" class="modern-input" placeholder="House/Apartment No, Street Name">
+                        <input type="text" name="address" id="addressInput" class="modern-input" placeholder="House/Apartment No, Street Name">
+                        <p id="addressError" class="text-red-500 text-sm mt-1 hidden"></p>
                     </div>
                     
                     <div>
                         <label class="input-label">Postal Code</label>
-                        <input type="text" name="postal_code" class="modern-input" placeholder="Zip/Postal Code">
+                        <input type="text" name="postal_code" id="postalCodeInput" class="modern-input" placeholder="Zip/Postal Code">
+                        <p id="postalCodeError" class="text-red-500 text-sm mt-1 hidden"></p>
                     </div>
 
                     <div>
@@ -174,6 +173,7 @@
                                 <option value="{{ city.id }}">{{ city.name }}</option>
                             {% endfor %}
                         </select>
+                        <p id="cityError" class="text-red-500 text-sm mt-1 hidden"></p>
                     </div>
 
                     <div id="regCityAreaContainer" style="display:none;">
@@ -202,19 +202,18 @@
                                 <option>Mobile</option>
                                 <option>Work</option>
                             </select>
-                            <input type="text" name="phone" class="modern-input rounded-l-none" placeholder="(555) 000-0000">
+                            <input type="text" name="phone" id="phoneInput" class="modern-input rounded-l-none" placeholder="(555) 000-0000">
                         </div>
+                        <p id="phoneError" class="text-red-500 text-sm mt-1 hidden"></p>
                     </div>
                     
                     <div>
                         <label class="input-label">National ID</label>
-                        <input type="text" name="national_id" class="modern-input" placeholder="ID Number">
+                        <input type="text" name="national_id" id="nationalIdInput" class="modern-input" placeholder="ID Number">
+                        <p id="nationalIdError" class="text-red-500 text-sm mt-1 hidden"></p>
                     </div>
                     
-                    <div>
-                        <label class="input-label">Tax ID No</label>
-                        <input type="text" name="tax_id" class="modern-input" placeholder="Optional">
-                    </div>
+
                 </div>
 
                 <div class="mt-10 flex justify-end">
@@ -265,15 +264,126 @@
 
 {% block extra_js %}
     <script>
+        let isEmailValid = false;
+
         function goToStep(stepNumber) {
+            // Reset all errors first
+            document.querySelectorAll('.text-red-500').forEach(el => el.classList.add('hidden'));
+
             // Simple validation before proceeding
             if (stepNumber === 2) {
-                const email = document.querySelector('input[name="email"]').value;
-                const password = document.querySelector('input[name="password"]').value;
-                if (!email || !password) {
-                    alert('Please fill in email and password');
-                    return;
+                const email = document.getElementById('emailInput').value;
+                const password = document.getElementById('passwordInput').value;
+                let hasError = false;
+
+                if (!email) {
+                    const emailError = document.getElementById('emailError');
+                    emailError.textContent = 'Email address is required';
+                    emailError.classList.remove('hidden');
+                    hasError = true;
                 }
+
+                if (!password) {
+                    const passwordError = document.getElementById('passwordError');
+                    passwordError.textContent = 'Password is required';
+                    passwordError.classList.remove('hidden');
+                    hasError = true;
+                }
+                
+                if (hasError) return;
+                
+                if (!isEmailValid) {
+                     const emailError = document.getElementById('emailError');
+                     if (emailError.textContent === '') {
+                         emailError.textContent = 'Please enter a valid and available email address.';
+                     }
+                     emailError.classList.remove('hidden');
+                     return;
+                }
+            }
+
+            if (stepNumber === 3) {
+                const firstNameInput = document.getElementById('firstNameInput');
+                const lastNameInput = document.getElementById('lastNameInput');
+                const addressInput = document.getElementById('addressInput');
+                const postalCodeInput = document.getElementById('postalCodeInput');
+                const citySelect = document.getElementById('regCitySelect');
+                const phoneInput = document.getElementById('phoneInput');
+                const nationalIdInput = document.getElementById('nationalIdInput');
+                
+                let hasError = false;
+                
+                // First Name Validation
+                if (!firstNameInput || !firstNameInput.value) {
+                    const firstNameError = document.getElementById('firstNameError');
+                    if (firstNameError) {
+                        firstNameError.textContent = 'First name is required';
+                        firstNameError.classList.remove('hidden');
+                    }
+                    hasError = true;
+                }
+
+                // Last Name Validation
+                if (!lastNameInput || !lastNameInput.value) {
+                    const lastNameError = document.getElementById('lastNameError');
+                    if (lastNameError) {
+                        lastNameError.textContent = 'Last name is required';
+                        lastNameError.classList.remove('hidden');
+                    }
+                    hasError = true;
+                }
+
+                // Address Validation
+                if (!addressInput || !addressInput.value) {
+                    const addressError = document.getElementById('addressError');
+                    if (addressError) {
+                        addressError.textContent = 'Address is required';
+                        addressError.classList.remove('hidden');
+                    }
+                    hasError = true;
+                }
+
+                // Postal Code Validation
+                if (!postalCodeInput || !postalCodeInput.value) {
+                    const postalCodeError = document.getElementById('postalCodeError');
+                    if (postalCodeError) {
+                        postalCodeError.textContent = 'Postal code is required';
+                        postalCodeError.classList.remove('hidden');
+                    }
+                    hasError = true;
+                }
+                
+                // City Validation
+                if (citySelect && !citySelect.value) {
+                    const cityError = document.getElementById('cityError');
+                    if (cityError) {
+                        cityError.textContent = 'Please select a city';
+                        cityError.classList.remove('hidden');
+                    }
+                    hasError = true;
+                }
+
+                // Phone Validation
+                if (!phoneInput || !phoneInput.value) {
+                    const phoneError = document.getElementById('phoneError');
+                    if (phoneError) {
+                        phoneError.textContent = 'Phone number is required';
+                        phoneError.classList.remove('hidden');
+                    }
+                    hasError = true;
+                }
+
+                // National ID Validation
+                if (!nationalIdInput || !nationalIdInput.value) {
+                    const nationalIdError = document.getElementById('nationalIdError');
+                    if (nationalIdError) {
+                        nationalIdError.textContent = 'National ID is required';
+                        nationalIdError.classList.remove('hidden');
+                    }
+                    hasError = true;
+                }
+
+                if (hasError) return;
             }
             
             document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
@@ -321,6 +431,74 @@
 
         // City Area Logic
         document.addEventListener('DOMContentLoaded', function() {
+            // Email Validation Logic
+            const emailInput = document.getElementById('emailInput');
+            const emailError = document.getElementById('emailError');
+            
+            // Helper to clear error on input
+            function clearErrorOnInput(inputId, errorId) {
+                const input = document.getElementById(inputId);
+                const error = document.getElementById(errorId);
+                if (input && error) {
+                    input.addEventListener('input', function() {
+                        error.classList.add('hidden');
+                        error.textContent = '';
+                    });
+                }
+            }
+
+            clearErrorOnInput('passwordInput', 'passwordError');
+            clearErrorOnInput('firstNameInput', 'firstNameError');
+            clearErrorOnInput('lastNameInput', 'lastNameError');
+            clearErrorOnInput('addressInput', 'addressError');
+            clearErrorOnInput('postalCodeInput', 'postalCodeError');
+            clearErrorOnInput('phoneInput', 'phoneError');
+            clearErrorOnInput('nationalIdInput', 'nationalIdError');
+            
+            const citySelectElement = document.getElementById('regCitySelect');
+            if (citySelectElement) {
+                citySelectElement.addEventListener('change', function() {
+                    const error = document.getElementById('cityError');
+                    if (error) {
+                         error.classList.add('hidden');
+                         error.textContent = '';
+                    }
+                });
+            }
+
+            if (emailInput) {
+                emailInput.addEventListener('input', function() {
+                    // Reset state on input
+                    emailError.classList.add('hidden');
+                    emailError.textContent = '';
+                    isEmailValid = false; 
+                });
+
+                emailInput.addEventListener('blur', function() {
+                    const email = this.value;
+                    if (email && email.includes('@')) {
+                        checkEmailAvailability(email);
+                    }
+                });
+            }
+
+            function checkEmailAvailability(email) {
+                fetch(`/api/users/check-email/?email=${encodeURIComponent(email)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.available) {
+                            isEmailValid = true;
+                            emailError.classList.add('hidden');
+                            emailError.textContent = '';
+                        } else {
+                            isEmailValid = false;
+                            emailError.classList.remove('hidden');
+                            emailError.textContent = data.message || 'Email is already taken';
+                        }
+                    })
+                    .catch(err => console.error('Error checking email:', err));
+            }
+
             const citySelect = document.getElementById('regCitySelect');
             const cityAreaSelect = document.getElementById('regCityAreaSelect');
             const cityAreaContainer = document.getElementById('regCityAreaContainer');

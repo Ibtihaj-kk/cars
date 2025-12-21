@@ -17,7 +17,8 @@ from .views import (
     user_dashboard,
     user_profile,
     user_orders,
-    logout_view
+    logout_view,
+    check_email_availability
 )
 
 app_name = 'users'
@@ -44,6 +45,7 @@ urlpatterns = [
     # Verification endpoints
     path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     path('verify-email/<str:token>/', EmailVerificationView.as_view(), name='verify-email'),
+    path('check-email/', check_email_availability, name='check-email-availability'),
     
     # Password reset endpoints
     path('password/reset/', PasswordResetRequestView.as_view(), name='password-reset-request'),

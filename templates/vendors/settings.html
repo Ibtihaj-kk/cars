@@ -52,53 +52,180 @@
 
         </div>
 
-        <div class="lg:col-span-2 space-y-6">
+        <div class="lg:col-span-2 space-y-4">
             
-            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-                    <h3 class="text-lg font-bold text-gray-900">General Information</h3>
-                    <i class="fas fa-building text-gray-400"></i>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Business Name</label>
-                        {{ form.business_name }} 
+            <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" open>
+                <summary class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center gap-4">
+                        <i class="fas fa-building text-gray-400 text-lg"></i>
+                        <h3 class="text-lg font-bold text-gray-900">General Information</h3>
+                    </div>
+                    <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180"></i>
+                </summary>
+                <div class="px-6 pb-6 border-t border-gray-100">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Business Name</label>
+                            {{ form.business_name }} 
                         </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Registration Number</label>
-                        {{ form.registration_number }}
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">About Business</label>
-                        {{ form.description }}
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Registration Number</label>
+                            {{ form.registration_number }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Business Structure</label>
+                            {{ form.business_structure }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Establishment Date</label>
+                            {{ form.establishment_date }}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">About Business</label>
+                            {{ form.description }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">CR Document</label>
+                            {{ form.cr_document }}
+                            {% if vendor.vendor_profile.cr_document %}
+                                <a href="{{ vendor.vendor_profile.cr_document.url }}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 block">View Current Document</a>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Business License</label>
+                            {{ form.business_license }}
+                            {% if vendor.vendor_profile.business_license %}
+                                <a href="{{ vendor.vendor_profile.business_license.url }}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 block">View Current Document</a>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </details>
 
-            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-                    <h3 class="text-lg font-bold text-gray-900">Contact Details</h3>
-                    <i class="fas fa-map-marked-alt text-gray-400"></i>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
-                        {{ form.contact_email }}
+            <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" open>
+                <summary class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center gap-4">
+                        <i class="fas fa-map-marked-alt text-gray-400 text-lg"></i>
+                        <h3 class="text-lg font-bold text-gray-900">Contact Details</h3>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Phone Number</label>
-                        {{ form.contact_phone }}
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Address</label>
-                        {{ form.address }}
-                        <div class="grid grid-cols-2 gap-4 mt-3">
-                            {{ form.city }}
-                            {{ form.zip_code }}
+                    <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180"></i>
+                </summary>
+                <div class="px-6 pb-6 border-t border-gray-100">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Contact Person Name</label>
+                            {{ form.contact_person_name }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Title/Position</label>
+                            {{ form.contact_person_title }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
+                            {{ form.contact_email }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Phone Number</label>
+                            {{ form.contact_phone }}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Address</label>
+                            {{ form.address }}
+                            <div class="grid grid-cols-2 gap-4 mt-3">
+                                {{ form.city }}
+                                {{ form.zip_code }}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </details>
+
+            <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" open>
+                <summary class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center gap-4">
+                        <i class="fas fa-university text-gray-400 text-lg"></i>
+                        <h3 class="text-lg font-bold text-gray-900">Bank Details</h3>
+                    </div>
+                    <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180"></i>
+                </summary>
+                <div class="px-6 pb-6 border-t border-gray-100">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Bank Name</label>
+                            {{ form.bank_name }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Bank Branch</label>
+                            {{ form.bank_branch }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Account Holder Name</label>
+                            {{ form.account_holder_name }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Account Number</label>
+                            {{ form.account_number }}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">IBAN</label>
+                            {{ form.iban }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">SWIFT/BIC Code</label>
+                            {{ form.swift_code }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Bank Statement</label>
+                            {{ form.bank_statement }}
+                            {% if vendor.vendor_profile.bank_statement %}
+                                <a href="{{ vendor.vendor_profile.bank_statement.url }}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 block">View Current Statement</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" open>
+                <summary class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center gap-4">
+                        <i class="fas fa-briefcase text-gray-400 text-lg"></i>
+                        <h3 class="text-lg font-bold text-gray-900">Business Details</h3>
+                    </div>
+                    <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180"></i>
+                </summary>
+                <div class="px-6 pb-6 border-t border-gray-100">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Tax ID</label>
+                            {{ form.tax_id }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Preferred Currency</label>
+                            {{ form.preferred_currency }}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Payment Terms</label>
+                            {{ form.payment_terms }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Expected Monthly Volume</label>
+                            {{ form.expected_monthly_volume }}
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Years in Business</label>
+                            {{ form.years_in_business }}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Product Categories</label>
+                            {{ form.product_categories }}
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">References</label>
+                            {{ form.references }}
+                        </div>
+                    </div>
+                </div>
+            </details>
 
             <div class="flex justify-end gap-4 pt-2">
                 <button type="reset" class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition">
@@ -115,7 +242,7 @@
 
 <style>
     /* Auto-style inputs to match theme */
-    input[type="text"], input[type="email"], input[type="tel"], textarea {
+    input[type="text"], input[type="email"], input[type="tel"], textarea, select {
         width: 100%;
         padding: 0.5rem 1rem;
         background-color: #f9fafb;
@@ -125,10 +252,51 @@
         outline: none;
         transition: all 0.2s;
     }
-    input:focus, textarea:focus {
+    input:focus, textarea:focus, select:focus {
         background-color: white;
         border-color: black;
         box-shadow: 0 0 0 1px black;
+    }
+    
+    /* Collapsible section styles */
+    details {
+        transition: all 0.3s ease;
+    }
+    
+    details summary {
+        list-style: none;
+        position: relative;
+    }
+    
+    details summary::-webkit-details-marker {
+        display: none;
+    }
+    
+    details summary .fa-chevron-down {
+        transition: transform 0.3s ease;
+    }
+    
+    details[open] summary .fa-chevron-down {
+        transform: rotate(180deg);
+    }
+    
+    details > div {
+        animation: slideDown 0.3s ease-out;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    details summary:hover {
+        background-color: #f9fafb;
     }
 </style>
 {% endblock %}

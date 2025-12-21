@@ -1,0 +1,110 @@
+{% extends 'vendors/base.html' %}
+{% load static %}
+{% load humanize %}
+{% load vendor_currency %}
+
+{% block title %}Inventory | Corporate Dock{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Product List</h1>
+                        <p class="text-gray-500 text-sm mt-1">Manage your catalog, prices, and inventory.</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <a href="{% url 'business_partners:vendor_parts_export' %}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 shadow-sm transition">
+                            <i class="fas fa-file-export mr-2"></i> Export
+                        </a>
+                        <a href="{% url 'business_partners:vendor_part_create' %}" class="px-4 py-2 bg-black text-white font-bold rounded-lg hover:bg-gray-800 shadow-lg transition flex items-center">
+                            <i class="fas fa-plus mr-2"></i> Add New Product
+                        </a>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                        <div class="text-xs font-bold text-gray-400 uppercase">Total Items</div>
+                        <div class="text-2xl font-bold text-gray-900 mt-1">{{ total_parts|floatformat:0 }}</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                        <div class="text-xs font-bold text-gray-400 uppercase">Stock Value</div>
+                        <div class="text-2xl font-bold text-gray-900 mt-1">{% vendor_currency total_value %}</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-yellow-100">
+                        <div class="flex justify-between items-center">
+                            <div class="text-xs font-bold text-yellow-600 uppercase">Low Stock</div>
+                            <i class="fas fa-exclamation-circle text-yellow-500"></i>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900 mt-1">{{ stock_stats.low_stock }}</div>
+                        <div class="text-xs text-yellow-600 mt-1">Needs Reordering</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-red-100">
+                        <div class="flex justify-between items-center">
+                            <div class="text-xs font-bold text-red-600 uppercase">Dead Stock</div>
+                            <i class="fas fa-spider text-red-500"></i>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900 mt-1">{{ stock_stats.dead_stock|default:0 }}</div>
+                        <div class="text-xs text-red-600 mt-1">Not sold for 30+ days</div>
+                    </div>
+                </div>
+
+                <form method="get" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6" 
+                      hx-get="{% url 'business_partners:vendor_parts_list' %}" 
+                      hx-trigger="input delay:500ms, change delay:500ms" 
+                      hx-target="#inventory-table" 
+                      hx-push-url="true"
+                      onsubmit="return false;">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="relative md:col-span-2">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-search text-gray-400"></i>
+                            </div>
+                            <input type="text" name="search" value="{{ search_query }}" 
+                                   class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black sm:text-sm" 
+                                   placeholder="Search by Name, SKU, or Part Number..."
+                                   hx-get="{% url 'business_partners:vendor_parts_list' %}"
+                                   hx-trigger="keyup changed delay:500ms"
+                                   hx-target="#inventory-table"
+                                   hx-push-url="true"
+                                   hx-include="[name='category'], [name='stock_status']">
+                        </div>
+                        <div class="relative">
+                            <select name="category" class="block w-full pl-3 pr-10 py-2.5 border border-gray-300 bg-white rounded-lg focus:ring-black focus:border-black sm:text-sm appearance-none"
+                                    hx-get="{% url 'business_partners:vendor_parts_list' %}"
+                                    hx-trigger="change"
+                                    hx-target="#inventory-table"
+                                    hx-push-url="true"
+                                    hx-include="[name='search'], [name='stock_status']">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                <option value="{{ category.category__id }}" {% if category_filter == category.category__id|stringformat:"s" %}selected{% endif %}>{{ category.category__name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                                <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <select name="stock_status" class="block w-full pl-3 pr-10 py-2.5 border border-gray-300 bg-white rounded-lg focus:ring-black focus:border-black sm:text-sm appearance-none"
+                                    hx-get="{% url 'business_partners:vendor_parts_list' %}"
+                                    hx-trigger="change"
+                                    hx-target="#inventory-table"
+                                    hx-push-url="true"
+                                    hx-include="[name='search'], [name='category']">
+                                <option value="">All Status</option>
+                                <option value="in_stock" {% if stock_status == 'in_stock' %}selected{% endif %}>In Stock</option>
+                                <option value="low_stock" {% if stock_status == 'low_stock' %}selected{% endif %}>Low Stock</option>
+                                <option value="out_of_stock" {% if stock_status == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
+                                <option value="below_safety" {% if stock_status == 'below_safety' %}selected{% endif %}>Below Safety Stock</option>
+                                <option value="dead_stock" {% if stock_status == 'dead_stock' %}selected{% endif %}>Dead Stock (30+ days)</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                                <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                {% include 'vendors/inventory_table.html' %}
+
+{% endblock %}

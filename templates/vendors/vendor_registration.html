@@ -162,12 +162,9 @@
                 Business Details
             </div>
             <div id="tab-3" class="nav-item text-sm md:text-lg text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(3)">
-                User Setup
-            </div>
-            <div id="tab-4" class="nav-item text-sm md:text-lg text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(4)">
                 Subscription
             </div>
-            <div id="tab-5" class="nav-item text-sm md:text-lg text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(5)">
+            <div id="tab-4" class="nav-item text-sm md:text-lg text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(4)">
                 Final Review
             </div>
         </div>
@@ -209,6 +206,26 @@
                                    hx-swap="outerHTML"
                                    required>
                             <div id="business-email-validation" class="mt-1"></div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="input-label">Password</label>
+                                <input type="password" 
+                                       name="password" 
+                                       placeholder="••••••••" 
+                                       class="modern-input" 
+                                       required>
+                            </div>
+                            
+                            <div>
+                                <label class="input-label">Confirm Password</label>
+                                <input type="password" 
+                                       name="confirm_password" 
+                                       placeholder="••••••••" 
+                                       class="modern-input" 
+                                       required>
+                            </div>
                         </div>
                         
                         <button type="button" 
@@ -382,45 +399,6 @@
                 </section>
 
                 <section id="step-3" class="step-content hidden fade-in">
-                    <div class="mb-8 border-b border-gray-100 pb-4">
-                        <h1 class="text-2xl font-bold text-gray-900">Admin Setup</h1>
-                        <p class="text-gray-500 text-sm mt-1">Create the master account for administration.</p>
-                    </div>
-                    
-                    <div class="space-y-5 max-w-md mx-auto mb-8">
-                        <div>
-                            <label class="input-label">Username</label>
-                            <input type="text" name="username" placeholder="admin_user" class="modern-input" required>
-                        </div>
-                        
-                        <div>
-                            <label class="input-label">Password</label>
-                            <input type="password" name="password" placeholder="••••••••" class="modern-input" required>
-                        </div>
-                        
-                        <div>
-                            <label class="input-label">Confirm Password</label>
-                            <input type="password" name="confirm_password" placeholder="••••••••" class="modern-input" required>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-between pt-4">
-                        <button type="button" onclick="showStep(2)" class="px-6 py-2.5 text-gray-500 hover:text-black font-semibold transition-colors text-sm">
-                            ← Back
-                        </button>
-                        <button type="button" 
-                                class="px-8 py-3 bg-black text-white font-bold rounded-xl shadow-md hover:bg-gray-900 transition-all"
-                                hx-post="/business-partners/htmx/registration/validate-step/3/"
-                                hx-trigger="click"
-                                hx-target="#step-3-validation"
-                                hx-swap="outerHTML">
-                            Next Step
-                        </button>
-                    </div>
-                    <div id="step-3-validation"></div>
-                </section>
-
-                <section id="step-4" class="step-content hidden fade-in">
                     <div class="mb-8 text-center">
                         <h1 class="text-2xl font-bold text-gray-900">Select Plan</h1>
                         <p class="text-gray-500 text-sm mt-1">Choose the tier that fits your scale.</p>
@@ -486,22 +464,22 @@
                     </div>
                     
                     <div class="flex justify-between pt-4">
-                        <button type="button" onclick="showStep(3)" class="px-6 py-2.5 text-gray-500 hover:text-black font-semibold transition-colors text-sm">
+                        <button type="button" onclick="showStep(2)" class="px-6 py-2.5 text-gray-500 hover:text-black font-semibold transition-colors text-sm">
                             ← Back
                         </button>
                         <button type="button" 
                                 class="px-8 py-3 bg-black text-white font-bold rounded-xl shadow-md hover:bg-gray-900 transition-all"
-                                hx-post="/business-partners/htmx/registration/validate-step/4/"
+                                hx-post="/business-partners/htmx/registration/validate-step/3/"
                                 hx-trigger="click"
-                                hx-target="#step-4-validation"
+                                hx-target="#step-3-validation"
                                 hx-swap="outerHTML">
                             Next Step
                         </button>
                     </div>
-                    <div id="step-4-validation"></div>
+                    <div id="step-3-validation"></div>
                 </section>
 
-                <section id="step-5" class="step-content hidden fade-in">
+                <section id="step-4" class="step-content hidden fade-in">
                     <div class="mb-8 text-center">
                         <h1 class="text-2xl font-bold text-gray-900">Finalize Registration</h1>
                         <p class="text-gray-500 text-sm mt-1">Select your services and review terms.</p>
@@ -554,7 +532,7 @@
                     </div>
                     
                     <div class="flex justify-between items-center w-full pt-4">
-                        <button type="button" onclick="showStep(4)" class="px-6 py-2.5 text-gray-500 hover:text-black font-semibold transition-colors text-sm">
+                        <button type="button" onclick="showStep(3)" class="px-6 py-2.5 text-gray-500 hover:text-black font-semibold transition-colors text-sm">
                             ← Back
                         </button>
                         <button id="finish-btn" type="submit"

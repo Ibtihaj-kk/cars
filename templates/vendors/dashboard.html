@@ -1,5 +1,6 @@
 {% extends 'vendors/base.html' %}
 {% load static %}
+{% load vendor_currency %}
 
 {% block title %}Dashboard | Corporate Dock{% endblock %}
 
@@ -61,11 +62,11 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Monthly Sales</p>
-                    <h3 class="mt-2 text-3xl font-extrabold text-yellow-600">{{ stats.monthly_sales|default:"0" }}</h3>
+                    <h3 class="mt-2 text-3xl font-extrabold text-yellow-600">{% vendor_currency stats.monthly_sales_raw|default:stats.monthly_sales %}</h3>
                 </div>
-                <div class="p-2 bg-yellow-50 rounded-lg text-yellow-600"><i class="fas fa-rupee-sign"></i></div>
+                <div class="p-2 bg-yellow-50 rounded-lg text-yellow-600">{% vendor_currency_symbol %}</div>
             </div>
-            <div class="mt-4 flex items-center text-xs text-gray-400">PKR Currency</div>
+            <div class="mt-4 flex items-center text-xs text-gray-400">{% vendor_currency_code %} Currency</div>
         </div>
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-red-500">
             <div class="flex justify-between items-start">
@@ -81,9 +82,9 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Inventory Value</p>
-                    <h3 class="mt-2 text-3xl font-extrabold text-blue-600">{{ stats.total_value_display|default:"0" }}</h3>
+                    <h3 class="mt-2 text-3xl font-extrabold text-blue-600">{% vendor_currency stats.total_value_raw|default:stats.total_value_display %}</h3>
                 </div>
-                <div class="p-2 bg-blue-50 rounded-lg text-blue-600"><i class="fas fa-cubes"></i></div>
+                <div class="p-2 bg-blue-50 rounded-lg text-blue-600">{% vendor_currency_symbol %}</div>
             </div>
             <div class="mt-4 flex items-center text-xs text-gray-500">Across {{ stats.active_parts|default:"0" }} active SKUs</div>
         </div>

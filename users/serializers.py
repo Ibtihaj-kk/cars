@@ -13,7 +13,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = UserProfile
-        fields = ['company_name', 'bio', 'address', 'city', 'country', 'website', 'social_media_links']
+        fields = ['company_name', 'bio', 'address', 'city', 'country', 'preferred_currency', 'website', 'social_media_links']
 
 
 class UserSerializer(serializers.ModelSerializer):

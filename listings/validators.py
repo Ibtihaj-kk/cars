@@ -16,7 +16,7 @@ def _(message):
         return message
 
 try:
-    import magic
+    import puremagic
     HAS_MAGIC = True
 except ImportError:
     HAS_MAGIC = False
@@ -49,14 +49,14 @@ class FileSizeValidator:
 
 @deconstructible
 class FileTypeValidator:
-    """Validate file type using python-magic."""
+    """Validate file type using puremagic."""
     
     def __init__(self, allowed_types):
         self.allowed_types = allowed_types
     
     def __call__(self, value):
         if not HAS_MAGIC:
-            # Fallback to basic file extension validation if python-magic is not available
+            # Fallback to basic file extension validation if puremagic is not available
             import mimetypes
             file_type, _ = mimetypes.guess_type(value.name)
             if file_type and file_type not in self.allowed_types:
@@ -70,11 +70,14 @@ class FileTypeValidator:
             return
         
         try:
-            # Get file type using python-magic
-            file_type = magic.from_buffer(value.read(1024), mime=True)
+            # Get file type using puremagic
+            file_data = value.read(1024)
             value.seek(0)  # Reset file pointer
             
-            if file_type not in self.allowed_types:
+            matches = puremagic.from_string(file_data)
+            file_type = matches[0].mime_type if matches else None
+            
+            if file_type and file_type not in self.allowed_types:
                 raise ValidationError(
                     _('File type "%(file_type)s" is not allowed. Allowed types: %(allowed_types)s'),
                     params={
@@ -82,6 +85,8 @@ class FileTypeValidator:
                         'allowed_types': ', '.join(self.allowed_types)
                     }
                 )
+        except ValidationError:
+            raise
         except Exception as e:
             raise ValidationError(_('Could not validate file type: %(error)s'), params={'error': str(e)})
     

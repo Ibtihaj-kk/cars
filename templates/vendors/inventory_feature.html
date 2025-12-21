@@ -1,10 +1,11 @@
 {% extends "vendors/base.html" %}
 {% load static humanize %}
+{% load vendor_currency %}
 
 {% block content %}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
-            <h3 class="text-3xl font-extrabold text-gray-900">{{ stats.total_revenue|intword|default:"0" }}</h3>
+            <h3 class="text-3xl font-extrabold text-gray-900">{% vendor_currency stats.total_revenue %}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Total Revenue</p>
         </div>
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
@@ -12,11 +13,11 @@
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Units Sold</p>
         </div>
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
-            <h3 class="text-3xl font-extrabold text-gray-900">{{ stats.monthly_sales|intword|default:"0" }}</h3>
+            <h3 class="text-3xl font-extrabold text-gray-900">{% vendor_currency stats.monthly_sales %}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Monthly Sales</p>
         </div>
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
-            <h3 class="text-3xl font-extrabold text-gray-900">{{ stats.inventory_value|intword|default:"0" }}</h3>
+            <h3 class="text-3xl font-extrabold text-gray-900">{% vendor_currency stats.inventory_value %}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Inventory Value</p>
         </div>
     </div>

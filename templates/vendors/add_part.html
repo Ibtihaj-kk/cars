@@ -16,8 +16,36 @@
     
     /* Form Field Styles */
     .form-group label { display: block; font-size: 0.75rem; font-weight: 600; color: #4b5563; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.025em; }
-    .form-input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; transition: all 0.2s; }
-    .form-input:focus { outline: none; ring: 2px solid black; border-color: black; }
+    
+    .form-input,
+    #add-part-form input[type="text"],
+    #add-part-form input[type="number"],
+    #add-part-form input[type="email"],
+    #add-part-form input[type="url"],
+    #add-part-form input[type="date"],
+    #add-part-form select,
+    #add-part-form textarea { 
+        width: 100%; 
+        padding: 0.5rem 0.75rem; 
+        border: 1px solid #9ca3af; 
+        border-radius: 0.5rem; 
+        font-size: 0.875rem; 
+        transition: all 0.2s; 
+        background-color: white; 
+    }
+    
+    .form-input:focus,
+    #add-part-form input[type="text"]:focus,
+    #add-part-form input[type="number"]:focus,
+    #add-part-form input[type="email"]:focus,
+    #add-part-form input[type="url"]:focus,
+    #add-part-form input[type="date"]:focus,
+    #add-part-form select:focus,
+    #add-part-form textarea:focus { 
+        outline: none; 
+        border: 2px solid black; 
+        border-color: black; 
+    }
 </style>
 
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -26,18 +54,13 @@
             <p class="text-gray-500 text-sm mt-1">Fill in the details below. Fields marked with * are mandatory.</p>
         </div>
         <div class="flex gap-3">
-            <button type="submit" 
-                    form="add-part-form"
-                    name="status"
-                    value="draft"
+            <button type="button" 
+                    onclick="setStatusAndSubmit('draft')"
                     class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 shadow-sm transition">
                 Save as Draft
             </button>
-            <button type="submit" 
-                    form="add-part-form"
-                    name="status"
-                    value="published"
-                    onclick="if(!validateForm()) { event.preventDefault(); }"
+            <button type="button" 
+                    onclick="if(validateForm()) { setStatusAndSubmit('published'); }"
                     class="px-6 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 shadow-lg transition flex items-center">
                 <i class="fas fa-check mr-2"></i> Publish Product
             </button>
@@ -78,6 +101,32 @@
         // VALIDATION & ERROR HANDLING
         // ==========================================
         let validationErrors = new Set();
+        
+        function setStatusAndSubmit(status) {
+            // Find the status input
+            const statusInput = document.querySelector('input[name="status"]');
+            if (statusInput) {
+                statusInput.value = status;
+                console.log('Set status to:', status);
+            } else {
+                console.error('Status input not found');
+                // Fallback: create hidden input if it doesn't exist
+                const form = document.getElementById('add-part-form');
+                if (form) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'status';
+                    input.value = status;
+                    form.appendChild(input);
+                }
+            }
+            
+            // Trigger HTMX submission
+            const form = document.getElementById('add-part-form');
+            if (form) {
+                htmx.trigger(form, 'submit');
+            }
+        }
         
         function showErrorPopup(message, fieldId = null) {
             // Create error popup

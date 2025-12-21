@@ -1,0 +1,57 @@
+{% comment %}
+Currency Selector Component
+Allows users to switch between available currencies
+{% endcomment %}
+
+<div class="currency-selector relative inline-block" x-data="{ open: false }">
+    <button @click="open = !open" 
+            type="button"
+            class="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors duration-200">
+        {% if current_currency %}
+        <span class="font-semibold text-gray-700">{{ current_currency.symbol }}</span>
+        <span class="text-sm text-gray-600">{{ current_currency.code }}</span>
+        {% else %}
+        <span class="text-sm text-gray-600">Select Currency</span>
+        {% endif %}
+        <svg class="w-4 h-4 text-gray-500 transition-transform duration-200" 
+             :class="{'rotate-180': open}"
+             fill="none" 
+             stroke="currentColor" 
+             viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+    </button>
+    
+    <div x-show="open" 
+         @click.away="open = false"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 transform scale-95"
+         x-transition:enter-end="opacity-100 transform scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 transform scale-100"
+         x-transition:leave-end="opacity-0 transform scale-95"
+         class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-64 overflow-y-auto">
+        {% for currency in available_currencies %}
+        <a href="?currency={{ currency.code }}" 
+           class="block px-4 py-2 hover:bg-blue-50 transition-colors duration-150 {% if currency.code == current_currency.code %}bg-blue-50 border-l-4 border-blue-500{% endif %}">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="font-semibold text-gray-800">{{ currency.symbol }}</span>
+                    <span class="text-sm font-medium text-gray-700">{{ currency.code }}</span>
+                </div>
+                <span class="text-xs text-gray-500">{{ currency.name }}</span>
+            </div>
+        </a>
+        {% empty %}
+        <div class="px-4 py-3 text-sm text-gray-500">
+            No currencies available
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% comment %}
+Alpine.js is required for dropdown functionality.
+If not already included in your base template, add:
+<script src="//unpkg.com/alpinejs" defer></script>
+{% endcomment %}

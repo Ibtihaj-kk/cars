@@ -58,17 +58,21 @@ class StrongPasswordValidator:
         
         # Check for similarity to username/email
         if user:
-            if user.username.lower() in password.lower():
-                raise ValidationError(
-                    _("Password is too similar to the username."),
-                    code='password_too_similar',
-                )
+            # Check username if it exists and is not None
+            if getattr(user, 'username', None):
+                if user.username.lower() in password.lower():
+                    raise ValidationError(
+                        _("Password is too similar to the username."),
+                        code='password_too_similar',
+                    )
             
-            if user.email and user.email.split('@')[0].lower() in password.lower():
-                raise ValidationError(
-                    _("Password is too similar to the email address."),
-                    code='password_too_similar',
-                )
+            # Check email if it exists and is not None
+            if getattr(user, 'email', None):
+                if user.email.split('@')[0].lower() in password.lower():
+                    raise ValidationError(
+                        _("Password is too similar to the email address."),
+                        code='password_too_similar',
+                    )
         
         # Check against common password patterns
         common_patterns = [

@@ -1,0 +1,138 @@
+[
+    {
+        "model": "core.currency",
+        "fields": {
+            "code": "USD",
+            "name": "US Dollar",
+            "symbol": "$",
+            "symbol_position": "left",
+            "decimal_places": 2,
+            "thousands_separator": ",",
+            "decimal_separator": ".",
+            "is_base": true,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "core.currency",
+        "fields": {
+            "code": "SAR",
+            "name": "Saudi Riyal",
+            "symbol": "﷼",
+            "symbol_position": "right",
+            "decimal_places": 2,
+            "thousands_separator": ",",
+            "decimal_separator": ".",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "core.currency",
+        "fields": {
+            "code": "AED",
+            "name": "UAE Dirham",
+            "symbol": "د.إ",
+            "symbol_position": "right",
+            "decimal_places": 2,
+            "thousands_separator": ",",
+            "decimal_separator": ".",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "core.currency",
+        "fields": {
+            "code": "QAR",
+            "name": "Qatari Riyal",
+            "symbol": "ر.ق",
+            "symbol_position": "right",
+            "decimal_places": 2,
+            "thousands_separator": ",",
+            "decimal_separator": ".",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "core.currency",
+        "fields": {
+            "code": "KWD",
+            "name": "Kuwaiti Dinar",
+            "symbol": "د.ك",
+            "symbol_position": "right",
+            "decimal_places": 3,
+            "thousands_separator": ",",
+            "decimal_separator": ".",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "core.currency",
+        "fields": {
+            "code": "OMR",
+            "name": "Omani Rial",
+            "symbol": "ر.ع.",
+            "symbol_position": "right",
+            "decimal_places": 3,
+            "thousands_separator": ",",
+            "decimal_separator": ".",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "core.currency",
+        "fields": {
+            "code": "BHD",
+            "name": "Bahraini Dinar",
+            "symbol": ".د.ب",
+            "symbol_position": "right",
+            "decimal_places": 3,
+            "thousands_separator": ",",
+            "decimal_separator": ".",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "core.currency",
+        "fields": {
+            "code": "EGP",
+            "name": "Egyptian Pound",
+            "symbol": "ج.م",
+            "symbol_position": "right",
+            "decimal_places": 2,
+            "thousands_separator": ",",
+            "decimal_separator": ".",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "core.currency",
+        "fields": {
+            "code": "JOD",
+            "name": "Jordanian Dinar",
+            "symbol": "د.أ",
+            "symbol_position": "right",
+            "decimal_places": 3,
+            "thousands_separator": ",",
+            "decimal_separator": ".",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    }
+]

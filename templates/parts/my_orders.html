@@ -1,5 +1,6 @@
 {% extends 'home/parts.html' %}
 {% load static %}
+{% load vendor_currency %}
 
 {% block title %}My Orders - Corporate Dock{% endblock %}
 
@@ -39,7 +40,7 @@
                             <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-box mr-1"></i> {{ order.items.count }} item{{ order.items.count|pluralize }}
                                 <span class="mx-2">•</span>
-                                <i class="fas fa-money-bill mr-1"></i> {{ order.total_amount }} ر.س.
+                                <i class="fas fa-money-bill mr-1"></i> {% vendor_currency order.total_amount %}
                             </div>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-2">

@@ -20,6 +20,7 @@ from django.utils.decorators import method_decorator
 from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import timedelta, datetime
+from decimal import Decimal
 import json
 
 from parts.models import Order, OrderItem, OrderStatusHistory, OrderShipping, OrderDiscount, VendorOrderItemStatus
@@ -209,6 +210,23 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
             # Fallback for display if no vendor specific status exists
             status_display = vendor_status_obj.get_status_display() if vendor_status_obj else self.object.get_status_display()
 
+            # Calculate Tax for this item
+            tax_rate = Decimal('0.15') # Default
+            tax_rate_display = '15%'
+            if hasattr(item.part, 'tax_classification_material'):
+                if item.part.tax_classification_material == 'VAT_5':
+                    tax_rate = Decimal('0.05')
+                    tax_rate_display = '5%'
+                elif item.part.tax_classification_material == 'ZERO':
+                    tax_rate = Decimal('0.00')
+                    tax_rate_display = '0% (Zero Rated)'
+                elif item.part.tax_classification_material == 'EXEMPT':
+                    tax_rate = Decimal('0.00')
+                    tax_rate_display = 'Exempt'
+            
+            item_tax = item.quantity * item.price * tax_rate
+            item_total_with_tax = (item.quantity * item.price) + item_tax
+
             item_data = {
                 'item': item,
                 'vendor_status': vendor_status_obj,
@@ -216,6 +234,10 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
                 'status_display': status_display,
                 'tracking_number': vendor_status_obj.tracking_number if vendor_status_obj else None,
                 'status_updated_at': vendor_status_obj.updated_at if vendor_status_obj else None,
+                'tax_rate': tax_rate,
+                'tax_rate_display': tax_rate_display,
+                'tax_amount': item_tax,
+                'total_with_tax': item_total_with_tax
             }
             enhanced_vendor_items.append(item_data)
             vendor_statuses_list.append(current_status)
@@ -261,10 +283,17 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
         context['vendor_overall_status_display'] = vendor_overall_status_display
         context['vendor_next_action'] = vendor_next_action
         
-        # Calculate Total Price (Quantity * Price)
-        context['vendor_items_total'] = vendor_items.aggregate(
-            total=Sum(F('quantity') * F('price'))
-        )['total'] or 0
+        # Calculate Total Price (Quantity * Price) and Tax
+        vendor_items_total = Decimal('0.00')
+        vendor_tax_total = Decimal('0.00')
+        
+        for item_data in enhanced_vendor_items:
+            vendor_items_total += item_data['item'].quantity * item_data['item'].price
+            vendor_tax_total += item_data['tax_amount']
+            
+        context['vendor_items_total'] = vendor_items_total
+        context['vendor_tax_total'] = vendor_tax_total
+        context['vendor_grand_total'] = vendor_items_total + vendor_tax_total
         
         # Status History
         context['vendor_status_history'] = VendorOrderItemStatus.objects.filter(

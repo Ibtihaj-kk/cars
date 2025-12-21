@@ -52,6 +52,10 @@ class PartAdminForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': '0.00'
             }),
+            'original_currency': forms.Select(attrs={
+                'class': 'form-control',
+                'title': 'Currency used for pricing'
+            }),
             'quantity': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0'
@@ -71,6 +75,15 @@ class PartAdminForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Populate currency choices from database (if field exists)
+        if 'original_currency' in self.fields:
+            from core.models import Currency
+            currency_choices = [(curr.code, f"{curr.code} - {curr.name}") 
+                               for curr in Currency.objects.filter(is_active=True).order_by('code')]
+            self.fields['original_currency'].widget.choices = currency_choices
 
 
 class PartForm(forms.ModelForm):
@@ -104,7 +117,7 @@ class PartForm(forms.ModelForm):
             
             # Legacy fields for backward compatibility
             'name', 'description', 'sku', 'slug', 'category', 'brand', 
-            'price', 'quantity', 'image', 'image_url', 'weight', 
+            'price', 'original_currency', 'quantity', 'image', 'image_url', 'weight', 
             'dimensions', 'warranty_period', 'is_active', 'is_featured',
             
             # Status field for draft functionality
@@ -184,7 +197,13 @@ class PartForm(forms.ModelForm):
             'profit_center': forms.TextInput(attrs={
                 'class': 'form-input'
             }),
-            'tax_classification_material': forms.Select(attrs={
+            'tax_classification_material': forms.Select(choices=[
+                ('', 'None'),
+                ('VAT_15', 'VAT 15%'),
+                ('VAT_5', 'VAT 5%'),
+                ('ZERO', 'Zero Rated'),
+                ('EXEMPT', 'Exempt'),
+            ], attrs={
                 'class': 'form-input bg-white'
             }),
             'account_assignment_group': forms.TextInput(attrs={
@@ -304,6 +323,10 @@ class PartForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': '0.00'
             }),
+            'original_currency': forms.Select(attrs={
+                'class': 'form-control',
+                'title': 'Currency you are entering the price in'
+            }),
             'quantity': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0'
@@ -340,6 +363,13 @@ class PartForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['category'].queryset = Category.objects.all()
         self.fields['brand'].queryset = Brand.objects.filter(is_active=True)
+        
+        # Populate currency choices from database (if field exists)
+        if 'original_currency' in self.fields:
+            from core.models import Currency
+            currency_choices = [(curr.code, f"{curr.code} - {curr.name}") 
+                               for curr in Currency.objects.filter(is_active=True).order_by('code')]
+            self.fields['original_currency'].widget.choices = currency_choices
 
 
 class CategoryForm(forms.ModelForm):

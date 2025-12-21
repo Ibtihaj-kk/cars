@@ -1,13 +1,203 @@
 """
-Core models including AuditLog
+Core models including AuditLog, Currency, and ExchangeRate
 """
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.serializers.json import DjangoJSONEncoder
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
+from datetime import timedelta
 import json
+import uuid
 from .rbac_models import *  # Import RBAC models to ensure they are detected
 
 User = get_user_model()
+
+
+# ================================
+# MULTI-CURRENCY SYSTEM
+# ================================
+
+class Currency(models.Model):
+    """Supported currencies for the platform"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=3, unique=True, db_index=True, help_text="ISO 4217 code (e.g., USD, SAR)")
+    name = models.CharField(max_length=50, help_text="Currency name (e.g., US Dollar)")
+    symbol = models.CharField(max_length=10, help_text="Currency symbol (e.g., $, ﷼)")
+    symbol_position = models.CharField(
+        max_length=10,
+        choices=[('left', 'Left ($100)'), ('right', 'Right (100﷼)')],
+        default='left'
+    )
+    decimal_places = models.IntegerField(default=2, validators=[MinValueValidator(0), MaxValueValidator(4)])
+    thousands_separator = models.CharField(max_length=1, default=',')
+    decimal_separator = models.CharField(max_length=1, default='.')
+    is_active = models.BooleanField(default=True, db_index=True)
+    is_base = models.BooleanField(default=False, help_text="Base currency for exchange rates (USD)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'core_currency'
+        verbose_name_plural = 'Currencies'
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['code', 'is_active']),
+        ]
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+    def format_price(self, amount):
+        """
+        Format amount according to currency rules
+        
+        Args:
+            amount: Decimal or float amount to format
+            
+        Returns:
+            Formatted string (e.g., "$1,234.56" or "1,234.56﷼")
+        """
+        # Round to proper decimal places
+        rounded_amount = round(float(amount), self.decimal_places)
+        
+        # Format with thousands separator
+        if self.decimal_places > 0:
+            formatted_amount = f"{rounded_amount:,.{self.decimal_places}f}"
+        else:
+            formatted_amount = f"{int(rounded_amount):,}"
+        
+        # Replace separators if different from defaults
+        if self.thousands_separator != ',':
+            formatted_amount = formatted_amount.replace(',', '|TEMP|')
+            formatted_amount = formatted_amount.replace('.', self.decimal_separator)
+            formatted_amount = formatted_amount.replace('|TEMP|', self.thousands_separator)
+        elif self.decimal_separator != '.':
+            formatted_amount = formatted_amount.replace('.', self.decimal_separator)
+        
+        # Add symbol
+        if self.symbol_position == 'left':
+            return f"{self.symbol}{formatted_amount}"
+        return f"{formatted_amount} {self.symbol}"
+
+    @classmethod
+    def get_base_currency(cls):
+        """Get the base currency (USD)"""
+        return cls.objects.filter(is_base=True).first()
+
+
+class ExchangeRate(models.Model):
+    """Exchange rates for currency conversion"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    base_currency = models.ForeignKey(
+        Currency, 
+        on_delete=models.CASCADE, 
+        related_name='base_rates',
+        null=True,  # Allow null for migration
+        blank=True,
+        help_text="Base currency (usually USD)"
+    )
+    target_currency = models.ForeignKey(
+        Currency, 
+        on_delete=models.CASCADE, 
+        related_name='target_rates',
+        null=True,  # Allow null for migration
+        blank=True,
+        help_text="Target currency for conversion"
+    )
+    rate = models.DecimalField(
+        max_digits=12, 
+        decimal_places=6,
+        validators=[MinValueValidator(0.000001)],
+        help_text="1 base_currency = rate * target_currency"
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+    valid_from = models.DateTimeField(default=timezone.now)  # Changed from auto_now_add
+    valid_to = models.DateTimeField(null=True, blank=True)
+    source = models.CharField(
+        max_length=50,
+        choices=[
+            ('api', 'Exchange Rate API'),
+            ('manual', 'Manual Entry'),
+            ('bank', 'Central Bank')
+        ],
+        default='api'
+    )
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'core_exchange_rate'
+        unique_together = ('base_currency', 'target_currency', 'valid_from')
+        ordering = ['-valid_from']
+        indexes = [
+            models.Index(fields=['base_currency', 'target_currency', 'is_active']),
+            models.Index(fields=['valid_from', 'valid_to']),
+        ]
+
+    def __str__(self):
+        return f"1 {self.base_currency.code} = {self.rate} {self.target_currency.code} (from {self.valid_from.date()})"
+
+    @classmethod
+    def get_current_rate(cls, base_code, target_code):
+        """
+        Get current active exchange rate between two currencies
+        
+        Args:
+            base_code: Base currency code (e.g., 'USD')
+            target_code: Target currency code (e.g., 'SAR')
+            
+        Returns:
+            Decimal: Exchange rate or 1.0 if same currency
+            
+        Raises:
+            ValueError: If no exchange rate found
+        """
+        if base_code == target_code:
+            return 1.0
+        
+        try:
+            # Try direct rate
+            rate = cls.objects.filter(
+                base_currency__code=base_code,
+                target_currency__code=target_code,
+                is_active=True,
+                valid_to__isnull=True
+            ).latest('valid_from')
+            return rate.rate
+        except cls.DoesNotExist:
+            # Try reverse rate
+            try:
+                reverse_rate = cls.objects.filter(
+                    base_currency__code=target_code,
+                    target_currency__code=base_code,
+                    is_active=True,
+                    valid_to__isnull=True
+                ).latest('valid_from')
+                from decimal import Decimal
+                return Decimal('1.0') / reverse_rate.rate
+            except cls.DoesNotExist:
+                raise ValueError(f"No exchange rate found for {base_code} to {target_code}")
+
+    def save(self, *args, **kwargs):
+        """Override save to ensure only one active rate per currency pair"""
+        if self.is_active and not self.valid_to:
+            # Mark other active rates for this pair as inactive
+            ExchangeRate.objects.filter(
+                base_currency=self.base_currency,
+                target_currency=self.target_currency,
+                is_active=True,
+                valid_to__isnull=True
+            ).exclude(id=self.id).update(
+                valid_to=timezone.now(),
+                is_active=False
+            )
+        super().save(*args, **kwargs)
+
+
+# ================================
+# AUDIT AND MONITORING
+# ================================
+
 
 
 class AuditLog(models.Model):

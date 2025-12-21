@@ -1,5 +1,6 @@
 {% extends 'vendors/base.html' %}
 {% load static %}
+{% load vendor_currency %}
 
 {% block title %}Order #{{ order.order_number }} - Corporate Dock{% endblock %}
 
@@ -160,7 +161,14 @@
                         <div class="flex-1">
                             <div class="flex justify-between mb-1">
                                 <h4 class="font-bold text-gray-900">{{ item_data.item.part.name }}</h4>
-                                <span class="font-bold text-gray-900">PKR {{ item_data.item.price|floatformat:0 }}</span>
+                                <div class="text-right">
+                                    <span class="font-bold text-gray-900">{% vendor_currency item_data.item.price %}</span>
+                                    {% if item_data.tax_amount > 0 %}
+                                    <p class="text-xs text-gray-500">+ {% vendor_currency item_data.tax_amount %} Tax ({{ item_data.tax_rate_display }})</p>
+                                    {% else %}
+                                    <p class="text-xs text-gray-500">Tax: {{ item_data.tax_rate_display }}</p>
+                                    {% endif %}
+                                </div>
                             </div>
                             <p class="text-sm text-gray-500 mb-2">SKU: {{ item_data.item.part.parts_number }}</p>
                             <div class="flex items-center justify-between">
@@ -193,11 +201,15 @@
                 <div class="bg-gray-50 px-6 py-4 border-t border-gray-100">
                     <div class="flex justify-between text-sm mb-2">
                         <span class="text-gray-500">Subtotal</span>
-                        <span class="font-medium">PKR {{ vendor_items_total|floatformat:0 }}</span>
+                        <span class="font-medium">{% vendor_currency vendor_items_total %}</span>
+                    </div>
+                    <div class="flex justify-between text-sm mb-2">
+                        <span class="text-gray-500">Tax (VAT)</span>
+                        <span class="font-medium">{% vendor_currency vendor_tax_total %}</span>
                     </div>
                     <div class="flex justify-between text-lg font-bold border-t border-gray-200 pt-3 mt-2">
                         <span>Total (Your Items)</span>
-                        <span>PKR {{ vendor_items_total|floatformat:0 }}</span>
+                        <span>{% vendor_currency vendor_grand_total %}</span>
                     </div>
                 </div>
             </div>

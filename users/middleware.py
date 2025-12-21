@@ -13,8 +13,11 @@ class UserRestrictionMiddleware(MiddlewareMixin):
         """
         Check and clear expired restrictions for authenticated users.
         """
-        if hasattr(request, 'user') and request.user.is_authenticated:
-            # Check and clear expired restrictions
-            request.user.check_and_clear_expired_restrictions()
+        try:
+            if hasattr(request, 'user') and request.user.is_authenticated:
+                # Check and clear expired restrictions
+                request.user.check_and_clear_expired_restrictions()
+        except Exception:
+            pass
         
         return None

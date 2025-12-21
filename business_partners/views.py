@@ -16,6 +16,10 @@ from django.urls import reverse
 from django.conf import settings
 from django import forms
 from django.utils import timezone
+from django.db import transaction
+from django.contrib.auth import get_user_model
+from .models import BusinessPartner, BusinessPartnerRole, ContactInfo, VendorProfile
+from .document_models import DocumentCategory, VendorDocument
 import json
 
 from .models import VendorApplication
@@ -32,13 +36,22 @@ class VendorRegistrationMixin:
     def get_or_create_application(self, user):
         """Get existing application or create new one"""
         if user.is_authenticated:
-            application, created = VendorApplication.objects.get_or_create(
+            # FIX: get_or_create doesn't support status__in lookup
+            # Use filter().first() pattern instead
+            application = VendorApplication.objects.filter(
                 user=user,
                 status__in=['draft', 'business_details_completed', 
                            'contact_info_completed', 'bank_details_completed',
-                           'requires_changes'],
-                defaults={'status': 'draft', 'current_step': 1}
-            )
+                           'requires_changes']
+            ).first()
+            
+            if not application:
+                # Create new application if none exists
+                application = VendorApplication.objects.create(
+                    user=user,
+                    status='draft',
+                    current_step=1
+                )
         else:
             # For anonymous users, create a temporary session-based application
             session_key = self.request.session.session_key
@@ -723,6 +736,27 @@ class VendorSinglePageRegistrationView(VendorRegistrationMixin, View):
         """Handle complete single-page form submission"""
         application = self.get_or_create_application(request.user)
         
+        # Check for duplicate application by email if current one is empty
+        business_email = request.POST.get('business_email')
+        if business_email and (not application.pk or not application.business_email):
+            # Use transaction and select_for_update to prevent race conditions
+            with transaction.atomic():
+                existing_app = VendorApplication.objects.select_for_update().filter(
+                    business_email=business_email,
+                    user__isnull=True
+                ).order_by('-created_at').first()
+                
+                if existing_app:
+                    if application.pk and application.pk != existing_app.pk:
+                        # Delete the empty one we just created
+                        if not application.business_email:
+                            try:
+                                application.delete()
+                            except Exception:
+                                # Ignore delete errors if already deleted
+                                pass
+                    application = existing_app
+        
         # Create a combined form with all fields
         class SinglePageVendorApplicationForm(forms.ModelForm):
             """Combined form for single-page vendor registration"""
@@ -815,9 +849,17 @@ class VendorSinglePageRegistrationView(VendorRegistrationMixin, View):
                     'bank_name', 'account_holder_name', 'account_number', 'iban'
                 ]
                 
+                # Check password if it's a new user
+                password = self.data.get('password')
+                if not self.instance.user and not password:
+                    required_fields.append('password')
+                
                 missing_fields = []
                 for field in required_fields:
-                    if not cleaned_data.get(field):
+                    if field == 'password':
+                        if not password:
+                            missing_fields.append('Password')
+                    elif not cleaned_data.get(field):
                         missing_fields.append(field)
                 
                 if missing_fields:
@@ -833,23 +875,70 @@ class VendorSinglePageRegistrationView(VendorRegistrationMixin, View):
         
         if form.is_valid():
             try:
-                application = form.save(commit=False)
-                
-                # Set the status to submitted if all required fields are filled
-                if application.can_submit():
-                    application.status = 'submitted'
-                    application.submitted_at = timezone.now()
+                with transaction.atomic():
+                    application = form.save(commit=False)
                     
-                    # Generate application ID if not exists
-                    if not application.application_id:
-                        application.application_id = f"VENDOR-{timezone.now().strftime('%Y%m%d')}-{application.id:06d}"
-                
-                application.save()
+                    # Set the status to submitted if all required fields are filled
+                    if application.can_submit():
+                        application.status = 'submitted'
+                        application.submitted_at = timezone.now()
+                        
+                        # Generate application ID if not exists
+                        if not application.application_id:
+                            application.application_id = f"VENDOR-{timezone.now().strftime('%Y%m%d')}-{application.id:06d}"
+                    
+                    application.save()
+                    
+                    # Create User, BP, Profile if password provided
+                    password = request.POST.get('password')
+                    if password and not application.user and application.status == 'submitted':
+                         User = get_user_model()
+                         if not User.objects.filter(email=application.business_email).exists():
+                             # Create User
+                             user = User.objects.create_user(
+                                 email=application.business_email,
+                                 password=password,
+                                 first_name=application.company_name[:30] if application.company_name else '',
+                                 is_active=True
+                             )
+                             
+                             # Create Business Partner
+                             bp = BusinessPartner(
+                                 name=application.company_name,
+                                 slug=f'vendor-{application.business_email.split("@")[0]}',
+                                 type='company',
+                                 status='pending',
+                                 legal_identifier=application.legal_identifier,
+                                 user=user,
+                                 created_by=user
+                             )
+                             bp.save() # Generates BP Number
+                             
+                             # Create Vendor Profile
+                             from .utils import get_currency_for_country
+                             currency = get_currency_for_country(application.country) if application.country else 'USD'
+                             
+                             VendorProfile.objects.create(
+                                 business_partner=bp,
+                                 user=user,
+                                 tax_id=application.legal_identifier,
+                                 is_approved=False,
+                                 registration_date=timezone.now().date(),
+                                 preferred_currency=currency
+                             )
+                             
+                             # Link user to application
+                             application.user = user
+                             application.save()
+                             
+                             # Auto-login the user
+                             from django.contrib.auth import login
+                             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                 
                 messages.success(request, 'Your vendor application has been submitted successfully!')
                 
                 if application.status == 'submitted':
-                    return redirect('business_partners:vendor_registration_success')
+                    return redirect('business_partners:vendor_dashboard')
                 else:
                     return redirect('business_partners:registration')
                     

@@ -147,6 +147,14 @@ urlpatterns = [
          vendor_views.vendor_dashboard, 
          name='vendor_dashboard'),
     
+    path('vendor/earnings/',
+         vendor_views.vendor_earnings,
+         name='vendor_earnings'),
+    
+    path('vendor/invoices/',
+         vendor_views.vendor_invoices,
+         name='vendor_invoices'),
+    
     # Vendor Store Front (Public)
     path('vendors/<slug:vendor_slug>/', 
          vendor_views.vendor_store_front, 

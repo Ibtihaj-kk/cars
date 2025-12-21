@@ -14,6 +14,13 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
+# Apply Django patches (fixes template context bug)
+try:
+    from . import django_patches
+except ImportError:
+    # Fallback for when patches are in project root
+    import django_patches
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -25,10 +32,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-9%@!u$4)#77lu-vf^4a)uwm(59*el$j*-@&d7_dk7dp^o)!q1e')
+# No default fallback - SECRET_KEY MUST be set in environment
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError(
+        "SECRET_KEY environment variable is not set! "
+        "Run 'python update_env_security.py' to generate a secure key."
+    )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# Default to False for safety - explicitly set DEBUG=True for development
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',')
 
@@ -55,7 +69,7 @@ INSTALLED_APPS = [
     'django_filters',
     # 'django_ratelimit',  # Temporarily disabled
     'axes',
-    'csp',
+    # 'csp',  # Disabled - requires Python 3.9+
     'crispy_forms',
     
     # Local apps
@@ -84,6 +98,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.CurrencyMiddleware',  # Multi-currency support
     'business_partners.middleware.VendorAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'users.middleware.UserRestrictionMiddleware',
@@ -93,6 +108,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'csp.middleware.CSPMiddleware',
 ]
+
 
 ROOT_URLCONF = 'yallamotor_project.urls'
 
@@ -108,6 +124,8 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'business_partners.context_processors.vendor_access',
                 'parts.context_processors.cart_processor',
+                'core.context_processors.currency_processor',  # Multi-currency support
+               'core.context_processors.cache_clearing',  # Cache clearing flag
             ],
         },
     },
@@ -133,6 +151,9 @@ DATABASES = {
 # Cache Configuration
 # Try Redis first, fallback to dummy cache if Redis is not available
 import redis
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     # Test Redis connection
     redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'))
@@ -156,8 +177,11 @@ try:
             'TIMEOUT': 300,  # 5 minutes default timeout
         }
     }
-except (redis.ConnectionError, redis.TimeoutError, Exception):
+    logger.info("✅ Redis cache connected successfully")
+except (redis.ConnectionError, redis.TimeoutError, Exception) as e:
     # Redis is not available, use dummy cache for development
+    logger.warning(f"⚠️  Redis cache unavailable: {e}. Falling back to DummyCache. "
+                   "Performance will be degraded. Install and start Redis for production.")
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
@@ -216,6 +240,12 @@ STATIC_URL = os.environ.get('STATIC_URL', 'static/')
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+# Asset versioning for cache busting in production
+# This adds content hashes to static file names (e.g., style.a1b2c3.css)
+if not DEBUG:
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
 # Keep the original TEMPLATES configuration - templates are in BASE_DIR/templates
 # Media files
 # Absolute filesystem path to the media directory
@@ -412,9 +442,10 @@ REDOC_SETTINGS = {
 # Default from email
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@corporatedock.com')
 
-# Email settings
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+# Email settings - Default to SMTP for production readiness
+# For development testing, use: EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
@@ -431,13 +462,13 @@ VENDOR_ADMIN_EMAILS = os.environ.get('VENDOR_ADMIN_EMAILS', '').split(',') if os
 CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False') == 'True'
 SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False') == 'True'
 
-# Rate Limiting Configuration (disabled for development)
-RATELIMIT_ENABLE = False
+# Rate Limiting Configuration
+RATELIMIT_ENABLE = os.environ.get('RATELIMIT_ENABLE', 'True') == 'True'
 RATELIMIT_USE_CACHE = 'default'
 RATELIMIT_VIEW = 'listings.security.ratelimited'
 
-# Django Axes Configuration (Brute Force Protection) - Temporarily disabled to fix session_hash issue
-AXES_ENABLED = False
+# Django Axes Configuration (Brute Force Protection)
+AXES_ENABLED = True  # Re-enabled with proper configuration
 AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = 1  # 1 hour
 AXES_RESET_ON_SUCCESS = True

@@ -7,7 +7,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q, Count, Sum, Avg, F
+from django.db.models import Q, Count, Sum, Avg, F, Case, When
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
@@ -24,6 +24,7 @@ import csv
 from io import StringIO
 
 from .models import BusinessPartner, VendorProfile, ReorderNotification
+from admin_panel.payment_models import VendorBalance, VendorPayment, PaymentStatus
 from .forms import (
     VendorPartForm, 
     VendorPartSearchForm, 
@@ -233,6 +234,7 @@ def vendor_dashboard(request):
             'below_safety_stock': below_safety_stock,
             'needs_reorder': needs_reorder,
             'total_value': total_value,
+            'total_value_raw': total_value,
             'total_value_display': total_value_display,
             'avg_price': avg_price,
             'inventory_health': inventory_health,
@@ -243,6 +245,7 @@ def vendor_dashboard(request):
             'overdue_notifications': overdue_notifications,
             'total_orders': total_orders,
             'monthly_sales': monthly_sales_display,
+            'monthly_sales_raw': monthly_sales,
             'pending_actions': pending_actions,
             'revenue_labels': json.dumps(revenue_labels),
             'revenue_data': json.dumps(revenue_data),
@@ -258,6 +261,196 @@ def vendor_dashboard(request):
     }
     
     return render(request, 'vendors/dashboard.html', context)
+
+
+@vendor_required
+@login_required
+def vendor_earnings(request):
+    """
+    Vendor earnings and wallet page.
+    """
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_registration_single')
+    
+    business_partner = vendor_profile.business_partner
+    
+    # Get or create vendor balance
+    vendor_balance, created = VendorBalance.objects.get_or_create(
+        vendor=business_partner,
+        defaults={
+            'current_balance': Decimal('0.00'),
+            'pending_balance': Decimal('0.00'),
+            'total_earned': Decimal('0.00'),
+            'total_paid': Decimal('0.00')
+        }
+    )
+    
+    # Calculate Total Earned (Lifetime Sales from Delivered Orders)
+    from parts.models import OrderItem
+    total_earned = OrderItem.objects.filter(
+        part__vendor=business_partner,
+        order__status='delivered'
+    ).aggregate(
+        total=Sum(F('price') * F('quantity'))
+    )['total'] or Decimal('0.00')
+
+    # Update Vendor Balance
+    vendor_balance.total_earned = total_earned
+    vendor_balance.update_balance() # Saves and updates current_balance including total_paid
+    
+    # Calculate Pending Clearance (Orders confirmed/processing/shipped but not yet delivered)
+    # These are potential earnings that are "in flight"
+    pending_clearance_amount = OrderItem.objects.filter(
+        part__vendor=business_partner,
+        order__status__in=['confirmed', 'processing', 'shipped']
+    ).aggregate(
+        total=Sum(F('price') * F('quantity'))
+    )['total'] or Decimal('0.00')
+    
+    # Get recent transactions (payments)
+    recent_transactions = VendorPayment.objects.filter(
+        vendor=business_partner
+    ).order_by('-created_at')[:10]
+    
+    # Chart Data: Last 6 months revenue
+    revenue_labels = []
+    revenue_data = []
+    today = timezone.now()
+    
+    for i in range(6):
+        month_target = today.month - i
+        year_target = today.year
+        if month_target <= 0:
+            month_target += 12
+            year_target -= 1
+            
+        # Get data for this month (Earnings/Payments)
+        monthly_earnings = VendorPayment.objects.filter(
+            vendor=business_partner,
+            status=PaymentStatus.COMPLETED,
+            created_at__year=year_target,
+            created_at__month=month_target
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Or alternatively, use Order revenue for the chart if preferred:
+        # monthly_earnings = OrderItem.objects.filter(...)
+        
+        import datetime as dt
+        month_name = dt.date(year_target, month_target, 1).strftime('%b')
+        revenue_labels.insert(0, month_name)
+        revenue_data.insert(0, float(monthly_earnings))
+
+    context = {
+        'vendor_profile': vendor_profile,
+        'business_partner': business_partner,
+        'vendor_balance': vendor_balance,
+        'pending_clearance': pending_clearance_amount,
+        'recent_transactions': recent_transactions,
+        'revenue_labels': json.dumps(revenue_labels),
+        'revenue_data': json.dumps(revenue_data),
+        'is_approved': vendor_profile.is_approved,
+    }
+    
+    return render(request, 'vendors/earnings.html', context)
+
+
+@vendor_required
+@login_required
+def vendor_invoices(request):
+    """
+    Vendor invoices management page.
+    """
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_registration_single')
+    
+    business_partner = vendor_profile.business_partner
+    
+    # Import Order here to avoid circular imports if any
+    from parts.models import Order
+    
+    # Get all orders containing items from this vendor
+    # We treat these Orders as "Invoices" for the purpose of this view
+    orders = Order.objects.filter(
+        items__part__vendor=business_partner
+    ).distinct().order_by('-created_at')
+    
+    # --- Statistics ---
+    
+    # Total Due: Orders that are not paid yet (payment_status != completed)
+    # This might be simplistic, but it's a starting point.
+    total_due = orders.exclude(
+        payment_status='completed'
+    ).aggregate(total=Sum('total_price'))['total'] or 0
+    
+    # Paid (This Month): Orders paid in the current month
+    today = timezone.now()
+    paid_this_month = orders.filter(
+        payment_status='completed',
+        updated_at__year=today.year,
+        updated_at__month=today.month
+    ).aggregate(total=Sum('total_price'))['total'] or 0
+    
+    # Overdue: For now, let's assume 'failed' payments or pending for > 30 days are "overdue"
+    # Or just use a placeholder if business logic is not defined
+    overdue_date = today - timedelta(days=30)
+    overdue_amount = orders.filter(
+        payment_status='pending',
+        created_at__lt=overdue_date
+    ).aggregate(total=Sum('total_price'))['total'] or 0
+    
+    # --- Filtering ---
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    date_filter = request.GET.get('date', '')
+    
+    if search_query:
+        orders = orders.filter(
+            Q(order_number__icontains=search_query) |
+            Q(customer__first_name__icontains=search_query) |
+            Q(customer__last_name__icontains=search_query) |
+            Q(customer__email__icontains=search_query) |
+            Q(guest_name__icontains=search_query) |
+            Q(guest_email__icontains=search_query)
+        )
+    
+    if status_filter:
+        if status_filter == 'Paid':
+            orders = orders.filter(payment_status='completed')
+        elif status_filter == 'Pending':
+            orders = orders.filter(payment_status='pending')
+        elif status_filter == 'Overdue':
+            orders = orders.filter(payment_status='pending', created_at__lt=overdue_date)
+            
+    if date_filter:
+        try:
+            date_obj = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            orders = orders.filter(created_at__date=date_obj)
+        except (ValueError, NameError):
+            pass
+
+    # --- Pagination ---
+    paginator = Paginator(orders, 10) # 10 invoices per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'vendor_profile': vendor_profile,
+        'invoices': page_obj,
+        'stats': {
+            'total_due': total_due,
+            'paid_this_month': paid_this_month,
+            'overdue': overdue_amount,
+        },
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'date_filter': date_filter,
+    }
+    
+    return render(request, 'vendors/invoices.html', context)
 
 
 @vendor_required
@@ -359,13 +552,46 @@ def vendor_parts_list(request):
     page_number = request.GET.get('page')
     parts = paginator.get_page(page_number)
     
+    # Calculate inventory statistics
+    total_value = parts_queryset.aggregate(
+        total=Sum(F('price') * F('quantity'))
+    )['total'] or 0
+    
+    # Stock status breakdown
+    stock_stats = parts_queryset.aggregate(
+        in_stock=Count(Case(When(quantity__gt=10, then=1))),
+        low_stock=Count(Case(When(quantity__gt=0, quantity__lte=10, then=1))),
+        out_of_stock=Count(Case(When(quantity=0, then=1))),
+        below_safety=Count(Case(
+            When(safety_stock__isnull=False, quantity__lt=F('safety_stock'), then=1)
+        ))
+    )
+    
+    # Calculate dead stock (parts not sold for 30+ days)
+    # This is a bit expensive, so we might want to optimize or cache it
+    # For now, simply count parts with no recent transactions if needed, 
+    # or just use the filtered queryset count if 'dead_stock' filter is active
+    
+    # Get categories for filters
+    categories = parts_queryset.values('category__id', 'category__name').distinct().order_by('category__name')
+
     context = {
         'parts': parts,
         'search_form': search_form,
         'vendor_profile': vendor_profile,
         'total_parts': parts_queryset.count(),
+        'total_value': total_value,
+        'stock_stats': stock_stats,
+        'categories': categories,
+        'search_query': search_form.cleaned_data.get('search') if search_form.is_valid() else '',
+        'category_filter': search_form.cleaned_data.get('category').id if search_form.is_valid() and search_form.cleaned_data.get('category') else '',
+        'stock_status': search_form.cleaned_data.get('stock_status') if search_form.is_valid() else '',
     }
     
+    # Check if this is an HTMX request
+    if request.headers.get('HX-Request'):
+        return render(request, 'vendors/inventory_table.html', context)
+        
     return render(request, 'business_partners/vendor_parts_list_standardized.html', context)
 
 
@@ -428,9 +654,11 @@ def vendor_part_edit(request, part_id):
         'part': part,
         'vendor_profile': vendor_profile,
         'action': 'Edit',
+        'is_edit': True,
+        'action_url': request.path,
     }
     
-    return render(request, 'business_partners/vendor_part_form_standardized.html', context)
+    return render(request, 'vendors/edit_part.html', context)
 
 
 @vendor_part_owner_required
@@ -823,7 +1051,8 @@ def vendor_store_front(request, vendor_slug):
     # Get vendor's parts with same filtering as main catalog
     queryset = Part.objects.filter(
         vendor=vendor,
-        is_active=True
+        is_active=True,
+        status='published'
     ).select_related(
         'category', 'brand', 'dealer', 'inventory'
     ).prefetch_related(

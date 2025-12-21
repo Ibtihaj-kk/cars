@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django import forms
 from django.utils.html import format_html, mark_safe
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
@@ -247,9 +248,31 @@ class CustomerProfileAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('business_partner')
 
 
+class VendorApplicationAdminForm(forms.ModelForm):
+    """
+    Custom admin form for VendorApplication to ensure proper form field initialization
+    and prevent AttributeError: 'super' object has no attribute 'dicts'
+    """
+    
+    class Meta:
+        model = VendorApplication
+        fields = '__all__'
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ensure all form fields are properly initialized
+        for field_name, field in self.fields.items():
+            if hasattr(field, 'widget') and hasattr(field.widget, 'attrs'):
+                # Ensure widget attrs is a dictionary
+                if not isinstance(field.widget.attrs, dict):
+                    field.widget.attrs = {}
+
+
 @admin.register(VendorApplication)
 class VendorApplicationAdmin(admin.ModelAdmin):
     """Admin interface for Vendor Applications with approval workflow"""
+    
+    form = VendorApplicationAdminForm  # Use custom form to prevent AttributeError
     
     list_display = (
         'application_id', 'company_name', 'user', 'status', 
@@ -272,15 +295,19 @@ class VendorApplicationAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Application Overview', {
-            'fields': ('application_id', 'user', 'status', 'current_step', 'completion_percentage')
+            'fields': (
+                ('application_id', 'status', 'completion_percentage'),
+                ('user', 'current_step')
+            )
         }),
         ('Step 1: Business Details', {
             'fields': (
-                'company_name', 'business_type', 'establishment_date',
-                'commercial_registration_number', 'legal_identifier',
-                'cr_document', 'business_license', 'business_description'
+                ('company_name', 'business_type'),
+                ('establishment_date', 'business_description'),
+                ('commercial_registration_number', 'legal_identifier'),
+                ('cr_document', 'business_license')
             ),
-            'classes': ('collapse',)
+            'classes': ('wide',)
         }),
         ('Step 2: Contact Information', {
             'fields': (
@@ -288,34 +315,43 @@ class VendorApplicationAdmin(admin.ModelAdmin):
                 ('business_phone', 'business_email'),
                 'website',
                 'street_address',
-                ('city', 'state_province'),
-                ('postal_code', 'country')
+                ('city', 'state_province', 'postal_code'),
+                'country'
             ),
-            'classes': ('collapse',)
+            'classes': ('wide',)
         }),
         ('Step 3: Bank Details', {
             'fields': (
                 ('bank_name', 'bank_branch'),
-                'account_holder_name', 'account_number',
+                ('account_holder_name', 'account_number'),
                 ('iban', 'swift_code'),
                 'bank_statement'
             ),
-            'classes': ('collapse',)
+            'classes': ('wide',)
         }),
         ('Step 4: Additional Information', {
             'fields': (
-                'expected_monthly_volume', 'years_in_business',
-                'product_categories', 'references'
+                ('expected_monthly_volume', 'years_in_business'),
+                'product_categories', 
+                'references'
             ),
-            'classes': ('collapse',)
+            'classes': ('collapse', 'wide')
         }),
         ('Review Information', {
-            'fields': ('reviewed_by', 'reviewed_at', 'rejection_reason', 'review_notes', 'get_review_info'),
-            'classes': ('collapse',)
+            'fields': (
+                ('reviewed_by', 'reviewed_at'),
+                'get_review_info',
+                'rejection_reason', 
+                'review_notes'
+            ),
+            'classes': ('collapse', 'wide')
         }),
         ('Timestamps', {
-            'fields': ('created_at', 'updated_at', 'submitted_at', 'approved_at'),
-            'classes': ('collapse',)
+            'fields': (
+                ('created_at', 'updated_at'),
+                ('submitted_at', 'approved_at')
+            ),
+            'classes': ('collapse', 'wide')
         })
     )
     

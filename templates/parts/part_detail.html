@@ -1,4 +1,5 @@
 {% load static %}
+{% load vendor_currency %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -454,7 +455,7 @@
                 <div class="buy-box">
                     <div class="price-row">
                         <!-- <span class="discount">-20%</span> -->
-                        <span class="final-price">{{ part.price }} ر.س.</span>
+                        <span class="final-price">{% vendor_currency part.price %}</span>
                         {% if part.standard_price and part.standard_price > part.price %}
                         <span class="list-price">List Price: <span style="text-decoration:line-through">{{ part.standard_price }} ر.س.</span> <i class="fas fa-info-circle"></i></span>
                         {% endif %}
@@ -560,7 +561,7 @@
                             {% endif %}
                             <div class="comp-title">{{ related_part.name }}</div>
                             <div style="font-size:12px; color:#666;">Part #{{ related_part.parts_number|default:"-" }}</div>
-                            <div class="comp-price">{{ related_part.price }} ر.س.</div>
+                            <div class="comp-price">{% vendor_currency related_part.price %}</div>
                         </a>
                     </div>
                     {% empty %}

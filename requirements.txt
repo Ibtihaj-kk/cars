@@ -15,6 +15,9 @@ openpyxl
 # API Documentation
 drf-yasg
 
+# File Type Detection
+puremagic
+
 # Authentication & Security
 django-allauth
 djoser

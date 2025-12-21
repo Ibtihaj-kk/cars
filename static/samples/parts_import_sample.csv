@@ -1,0 +1,6 @@
+name,sku,category,brand,price,original_currency,quantity,description,image_url
+Front Brake Pads,BRK-001,Brakes,Brembo,100.00,GBP,50,High performance ceramic brake pads,https://example.com/brake-pads.jpg
+Oil Filter,FLT-002,Filters,Mann,25.00,USD,100,Premium oil filter for all models,https://example.com/oil-filter.jpg
+Air Filter,FLT-003,Filters,K&N,45.00,SAR,75,High-flow air filter,https://example.com/air-filter.jpg
+Spark Plugs Set,IGN-004,Ignition,NGK,60.00,AED,30,Iridium spark plugs - set of 4,https://example.com/spark-plugs.jpg
+Windshield Wipers,ACC-005,Accessories,Bosch,35.00,EUR,40,All-weather wiper blades,https://example.com/wipers.jpg

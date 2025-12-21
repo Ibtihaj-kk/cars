@@ -348,6 +348,15 @@ class VendorProfile(models.Model):
         ('prepaid', 'Prepaid'),
     ]
     
+    BUSINESS_TYPES = [
+        ('sole_proprietorship', 'Sole Proprietorship'),
+        ('partnership', 'Partnership'),
+        ('llc', 'Limited Liability Company (LLC)'),
+        ('corporation', 'Corporation'),
+        ('cooperative', 'Cooperative'),
+        ('other', 'Other'),
+    ]
+    
     business_partner = models.OneToOneField(
         BusinessPartner, 
         on_delete=models.CASCADE, 
@@ -363,6 +372,35 @@ class VendorProfile(models.Model):
         related_name='vendor_profiles',
         help_text="User account associated with this vendor profile"
     )
+    
+    # Business Details
+    business_structure = models.CharField(
+        max_length=30,
+        choices=BUSINESS_TYPES,
+        blank=True,
+        null=True
+    )
+    establishment_date = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date of business establishment"
+    )
+    
+    # Contact Person
+    contact_person_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Primary contact person name"
+    )
+    contact_person_title = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Contact person job title"
+    )
+    
+    # Financial Details
     payment_terms = models.CharField(
         max_length=20, 
         choices=PAYMENT_TERMS, 
@@ -373,6 +411,12 @@ class VendorProfile(models.Model):
         null=True,
         help_text="Bank account information for payments"
     )
+    swift_code = models.CharField(
+        max_length=11,
+        blank=True,
+        null=True,
+        help_text="SWIFT/BIC code"
+    )
     vendor_rating = models.DecimalField(
         max_digits=3, 
         decimal_places=2, 
@@ -382,6 +426,51 @@ class VendorProfile(models.Model):
     )
     tax_id = models.CharField(max_length=50, blank=True, null=True)
     preferred_currency = models.CharField(max_length=3, default='USD')
+    
+    # Documents
+    cr_document = models.FileField(
+        upload_to='vendor_documents/cr_documents/',
+        blank=True,
+        null=True,
+        help_text="Commercial Registration document"
+    )
+    business_license = models.FileField(
+        upload_to='vendor_documents/business_licenses/',
+        blank=True,
+        null=True,
+        help_text="Business license document"
+    )
+    bank_statement = models.FileField(
+        upload_to='vendor_documents/bank_statements/',
+        blank=True,
+        null=True,
+        help_text="Recent bank statement"
+    )
+    
+    # Additional Info
+    expected_monthly_volume = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Expected monthly sales volume"
+    )
+    product_categories = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Types of automotive parts you sell"
+    )
+    years_in_business = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="Number of years in automotive parts business"
+    )
+    references = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Business references or previous partnerships"
+    )
+    
     is_approved = models.BooleanField(
         default=False,
         help_text="Whether the vendor profile is approved for platform access"
@@ -970,12 +1059,17 @@ IBAN: {self.iban}
 SWIFT: {self.swift_code}
         """.strip()
         
+        from .utils import get_currency_for_country
+        currency = get_currency_for_country(self.country)
+
         VendorProfile.objects.update_or_create(
             business_partner=business_partner,
             defaults={
+                'user': self.user,
                 'bank_account_details': bank_details,
                 'tax_id': self.legal_identifier,
-                'is_approved': False # Not approved yet
+                'is_approved': False, # Not approved yet
+                'preferred_currency': currency
             }
         )
         

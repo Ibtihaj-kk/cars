@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model, login, logout
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Sum
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -408,7 +410,6 @@ def register_page(request):
     if request.method == 'POST':
         email = request.POST.get('email')
         password = request.POST.get('password')
-        full_name = request.POST.get('full_name')
         address = request.POST.get('address')
         city_id = request.POST.get('city_id')
         city_area_id = request.POST.get('city_area_id')
@@ -440,13 +441,17 @@ def register_page(request):
         role_value = request.POST.get('role', 'client')
         services_json = request.POST.get('services', '[]')
         
+        # Name fields
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        
         try:
             services = json.loads(services_json)
         except:
             services = []
         
         # Basic validation
-        if not email or not password or not full_name:
+        if not email or not password or not first_name or not last_name:
             messages.error(request, 'Please fill in all required fields.')
             return render(request, 'user/registration.html', {'cities': cities})
 
@@ -457,11 +462,6 @@ def register_page(request):
         try:
             user = None
             with transaction.atomic():
-                # Split full name
-                names = full_name.strip().split(' ', 1)
-                first_name = names[0]
-                last_name = names[1] if len(names) > 1 else ''
-                
                 # Determine role
                 role = UserRole.SELLER if role_value == 'seller' else UserRole.CLIENT
 
@@ -475,6 +475,10 @@ def register_page(request):
                     role=role
                 )
                 
+                # Get currency based on country
+                from business_partners.utils import get_currency_for_country
+                currency = get_currency_for_country(country)
+
                 # Create Profile (if not exists)
                 if not hasattr(user, 'profile'):
                     UserProfile.objects.create(
@@ -486,6 +490,7 @@ def register_page(request):
                         postal_code=postal_code,
                         national_id=national_id,
                         tax_id=tax_id,
+                        preferred_currency=currency,
                         selected_services=services
                     )
                 else:
@@ -497,8 +502,95 @@ def register_page(request):
                     user.profile.postal_code = postal_code
                     user.profile.national_id = national_id
                     user.profile.tax_id = tax_id
+                    user.profile.preferred_currency = currency
                     user.profile.selected_services = services
                     user.profile.save()
+
+                # Handle Vendor/Seller specific logic
+                if role == UserRole.SELLER:
+                    from business_partners.models import BusinessPartner, VendorProfile, VendorApplication, BusinessPartnerRole
+                    
+                    # 1. Handle Vendor Application
+                    # Check for existing anonymous application in session
+                    # Ensure session exists to get key
+                    if not request.session.session_key:
+                        request.session.create()
+                    session_key = request.session.session_key
+                    
+                    vendor_app = None
+                    if session_key:
+                        # Find the most recent anonymous application for this session
+                        # We prefer one that has some data (e.g. company_name) over an empty draft
+                        candidates = VendorApplication.objects.filter(session_key=session_key, user__isnull=True).order_by('-updated_at')
+                        
+                        # Try to find one with company name first
+                        for app in candidates:
+                            if app.company_name:
+                                vendor_app = app
+                                break
+                        
+                        # If no app with data, take the most recent one (even if draft)
+                        if not vendor_app and candidates.exists():
+                            vendor_app = candidates.first()
+                    
+                    if vendor_app:
+                        # Link anonymous application to new user
+                        vendor_app.user = user
+                        # Only update status if it's still in draft or early stages
+                        if vendor_app.status in ['draft', 'business_details_completed']:
+                            vendor_app.status = 'business_details_completed'
+                        vendor_app.save()
+                    else:
+                        # Check if an application was just created for this email (to avoid duplicates)
+                        # searching by email is a fallback
+                        existing_app = VendorApplication.objects.filter(business_email=email, user__isnull=True).order_by('-created_at').first()
+                        if existing_app:
+                             existing_app.user = user
+                             if existing_app.status in ['draft', 'business_details_completed']:
+                                existing_app.status = 'business_details_completed'
+                             existing_app.save()
+                             vendor_app = existing_app
+                        else:
+                            # Create new application if none exists
+                            vendor_app = VendorApplication.objects.create(
+                                user=user,
+                                status='business_details_completed',
+                                company_name=user.profile.company_name or f"{first_name} {last_name}",
+                                business_email=email,
+                                contact_person_name=f"{first_name} {last_name}",
+                                business_phone=phone,
+                                street_address=address,
+                                city=city_name,
+                                country=country,
+                                postal_code=postal_code
+                            )
+                    
+                    # 2. Create Business Partner (which generates BP number)
+                    # Check if BP already exists
+                    if not BusinessPartner.objects.filter(user=user).exists():
+                        # Create BP - BP Number is auto-generated in save()
+                        bp = BusinessPartner(
+                            user=user,
+                            name=vendor_app.company_name or f"{first_name} {last_name}",
+                            type='company',
+                            status='active',
+                            created_by=user
+                        )
+                        bp.save()
+                        
+                        # Add Vendor Role
+                        BusinessPartnerRole.objects.create(business_partner=bp, role_type='vendor')
+                        
+                        # Create Vendor Profile
+                        if not hasattr(bp, 'vendor_profile'):
+                            VendorProfile.objects.create(
+                                business_partner=bp,
+                                user=user,
+                                preferred_currency=currency,
+                                registration_date=timezone.now().date(),
+                                contact_person_name=f"{first_name} {last_name}",
+                                is_approved=False # Explicitly set approval status
+                            )
                 
             # Login
             if user:
@@ -553,6 +645,42 @@ def user_dashboard(request):
         })
     else:
         # Client/User context
+        # Ensure currency profile exists
+        from business_partners.models import BusinessPartner, BusinessPartnerRole, CustomerProfile
+        from business_partners.utils import get_currency_for_country
+        
+        # Check if user has country in their profile
+        profile = getattr(user, 'profile', None)
+        if profile and profile.country:
+            # Check if BusinessPartner exists
+            if not BusinessPartner.objects.filter(user=user).exists():
+                currency = get_currency_for_country(profile.country)
+                bp = BusinessPartner.objects.create(
+                    user=user,
+                    name=user.get_full_name() or user.email,
+                    type='individual',
+                    status='active',
+                    created_by=user
+                )
+                BusinessPartnerRole.objects.create(business_partner=bp, role_type='customer')
+                CustomerProfile.objects.create(
+                    business_partner=bp,
+                    preferred_currency=currency
+                )
+            # If BP exists but no CustomerProfile or incorrect currency
+            else:
+                bp = BusinessPartner.objects.filter(user=user).first()
+                if bp:
+                    currency = get_currency_for_country(profile.country)
+                    if not hasattr(bp, 'customer_profile'):
+                        CustomerProfile.objects.create(
+                            business_partner=bp,
+                            preferred_currency=currency
+                        )
+                    elif bp.customer_profile.preferred_currency != currency:
+                        bp.customer_profile.preferred_currency = currency
+                        bp.customer_profile.save()
+
         orders = Order.objects.filter(customer=user)
         saved_listings = SavedListing.objects.filter(user=user)
         
@@ -579,6 +707,41 @@ def user_profile(request):
         UserProfile.objects.create(user=user)
     
     profile = user.profile
+    
+    # Check if we need to set preferred currency for new profile
+    if hasattr(profile, 'country') and profile.country and not hasattr(profile, 'preferred_currency'):
+        # This assumes UserProfile model has been updated to have preferred_currency
+        # If not, we might need to rely on CustomerProfile
+        pass
+        
+    # Ensure CustomerProfile exists for currency preference
+    from business_partners.models import BusinessPartner, BusinessPartnerRole, CustomerProfile
+    from business_partners.utils import get_currency_for_country
+    
+    # Try to find existing business partner for this user
+    bp = BusinessPartner.objects.filter(user=user, roles__role_type='customer').first()
+    
+    if not bp:
+        # Check if user has country in their profile
+        country = getattr(profile, 'country', None)
+        currency = get_currency_for_country(country) if country else 'USD'
+        
+        # Create BusinessPartner for customer if it doesn't exist
+        # This is needed because currency preference is stored in CustomerProfile
+        if not BusinessPartner.objects.filter(user=user).exists():
+            bp = BusinessPartner.objects.create(
+                user=user,
+                name=user.get_full_name() or user.email,
+                type='individual',
+                status='active',
+                created_by=user
+            )
+            BusinessPartnerRole.objects.create(business_partner=bp, role_type='customer')
+            
+            CustomerProfile.objects.create(
+                business_partner=bp,
+                preferred_currency=currency
+            )
     
     # Get cities for dropdown
     from parts.models import SaudiCity, CityArea
@@ -644,7 +807,30 @@ def user_profile(request):
                 if city_area_name:
                     profile.city_area = city_area_name
             
-            profile.country = request.POST.get('country', profile.country)
+            # Handle country update
+            new_country = request.POST.get('country')
+            if new_country and new_country != profile.country:
+                profile.country = new_country
+                
+                # Update currency if country changed
+                from business_partners.models import BusinessPartner, CustomerProfile
+                from business_partners.utils import get_currency_for_country
+                
+                currency = get_currency_for_country(new_country)
+                
+                # Find or create customer profile to update currency
+                bp = BusinessPartner.objects.filter(user=user, roles__role_type='customer').first()
+                if bp:
+                    if hasattr(bp, 'customer_profile'):
+                        bp.customer_profile.preferred_currency = currency
+                        bp.customer_profile.save()
+                    else:
+                        CustomerProfile.objects.create(
+                            business_partner=bp,
+                            preferred_currency=currency
+                        )
+            elif new_country is not None:
+                profile.country = new_country
             profile.postal_code = request.POST.get('postal_code', profile.postal_code)
             profile.national_id = request.POST.get('national_id', profile.national_id)
             profile.tax_id = request.POST.get('tax_id', profile.tax_id)
@@ -691,3 +877,19 @@ def logout_view(request):
     logout(request)
     messages.success(request, 'You have been logged out.')
     return redirect('home')
+
+@require_GET
+def check_email_availability(request):
+    """Check if email is available for registration."""
+    email = request.GET.get('email', '').strip()
+    
+    if not email:
+        return JsonResponse({'available': False, 'error': 'Email is required'}, status=400)
+    
+    # Check if user exists
+    exists = User.objects.filter(email__iexact=email).exists()
+    
+    return JsonResponse({
+        'available': not exists,
+        'message': 'Email is available' if not exists else 'Email is already registered'
+    })

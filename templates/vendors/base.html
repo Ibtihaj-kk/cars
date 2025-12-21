@@ -61,7 +61,7 @@
                 
                 <a href="{% url 'business_partners:vendor_inventory_overview' %}" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
                     <i class="fas fa-box w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                    <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Inventory</span>
+                    <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Stock & Source</span>
                 </a>
                 
                 <a href="{% url 'business_partners:vendor_orders_list' %}" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
@@ -79,12 +79,12 @@
 
                 <p class="section-label px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-6 whitespace-nowrap transition-opacity duration-200">Finance</p>
                 
-                <a href="{% url 'business_partners:vendor_order_analytics' %}" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
+                <a href="{% url 'business_partners:vendor_earnings' %}" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
                     <i class="fas fa-wallet w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
                     <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Earnings</span>
                 </a>
                 
-                <a href="#" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
+                <a href="{% url 'business_partners:vendor_invoices' %}" class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
                     <i class="fas fa-file-invoice-dollar w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
                     <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Invoices</span>
                 </a>

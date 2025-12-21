@@ -121,32 +121,29 @@ class VendorAccessMiddleware:
             print(f"Middleware: Redirecting to login")
             return redirect('login')
         
-        # Check if user has vendor profile and is approved
+        # Check if user has vendor profile
         vendor_profile = get_vendor_profile(request.user)
         if not vendor_profile:
             return HttpResponseForbidden("Access denied: Vendor profile required.")
         
-        # Allow unapproved vendors to access their dashboard and status pages
-        # Only restrict access to certain sensitive operations, not basic dashboard access
-        if not vendor_profile.is_approved:
-            # Allow access to dashboard and status pages for unapproved vendors
-            allowed_paths = [
-                '/vendor/dashboard/',  # Main vendor dashboard
-                '/vendor/profile/',    # Vendor profile page
-                '/business_partners/vendor/dashboard/',  # Legacy dashboard path
-                '/business-partners/vendor/dashboard/',  # Dashboard path with dash
-                '/business_partners/vendor/profile/',     # Legacy profile path
-                '/business-partners/vendor/profile/',     # Profile path with dash
-                '/business_partners/vendor/registration/status/',  # Registration status
-                '/business-partners/vendor/register/status/',  # Registration status with dash
-                '/business_partners/vendor/settings/',    # Settings page
-                '/business-partners/vendor/settings/',    # Settings page with dash
-            ]
-            if not any(request.path.startswith(path) for path in allowed_paths):
-                return redirect('business_partners:vendor_registration_status')
+        # Define pages that DON'T require approval (accessible to unapproved vendors)
+        no_approval_required_paths = [
+            '/business-partners/vendor/profile/',     # Profile page
+            '/business-partners/vendor/settings/',    # Settings page
+            '/business-partners/vendor/dashboard/',   # Dashboard (to see pending status)
+            '/business-partners/vendor/registration/status/',  # Registration status
+            '/business-partners/vendor/register/status/',      # Alt registration status
+        ]
         
-        # Check if vendor account is active
-        if vendor_profile.business_partner.status != 'active':
+        # Check if current path is one that doesn't require approval
+        is_no_approval_page = any(request.path.startswith(path) for path in no_approval_required_paths)
+        
+        # For unapproved vendors, only allow specific pages
+        if not vendor_profile.is_approved and not is_no_approval_page:
+            return redirect('business_partners:vendor_registration_status')
+        
+        # Check if vendor account is active (for approved vendors)
+        if vendor_profile.is_approved and vendor_profile.business_partner.status != 'active':
             return HttpResponseForbidden("Access denied: Vendor account suspended.")
         
         return self.get_response(request)
