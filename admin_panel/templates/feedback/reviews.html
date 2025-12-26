@@ -1,0 +1,159 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Reviews{% endblock %}
+
+{% block content %}
+<!-- Statistics -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Total Reviews</p>
+                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ total_reviews|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-blue-50 text-blue-600 rounded-lg"><i class="fas fa-star"></i></div>
+        </div>
+    </div>
+    <div class="bg-yellow-50 p-5 rounded-2xl border border-yellow-200">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-yellow-600 uppercase">Pending</p>
+                <h3 class="text-2xl font-extrabold text-yellow-700 mt-1">{{ pending_reviews|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-yellow-100 text-yellow-600 rounded-lg"><i class="fas fa-clock"></i></div>
+        </div>
+    </div>
+    <div class="bg-green-50 p-5 rounded-2xl border border-green-200">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-green-600 uppercase">Approved</p>
+                <h3 class="text-2xl font-extrabold text-green-700 mt-1">{{ total_reviews|add:"-"|add:pending_reviews|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-green-100 text-green-600 rounded-lg"><i class="fas fa-check"></i></div>
+        </div>
+    </div>
+    <div class="bg-purple-50 p-5 rounded-2xl border border-purple-200">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-purple-600 uppercase">Avg Rating</p>
+                <h3 class="text-2xl font-extrabold text-purple-700 mt-1">{{ avg_rating|floatformat:1|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-purple-100 text-purple-600 rounded-lg"><i class="fas fa-chart-line"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border shadow-sm p-6">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <h3 class="font-bold text-lg">Customer Feedback</h3>
+        <form method="GET" class="flex gap-3">
+            <select name="status" onchange="this.form.submit()"
+                class="bg-white border rounded-xl px-4 py-2 text-sm font-medium">
+                <option value="">All Status</option>
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+            </select>
+            <select name="rating" onchange="this.form.submit()"
+                class="bg-white border rounded-xl px-4 py-2 text-sm font-medium">
+                <option value="">All Ratings</option>
+                <option value="5" {% if rating_filter == '5' %}selected{% endif %}>5 Stars</option>
+                <option value="4" {% if rating_filter == '4' %}selected{% endif %}>4 Stars</option>
+                <option value="3" {% if rating_filter == '3' %}selected{% endif %}>3 Stars</option>
+                <option value="2" {% if rating_filter == '2' %}selected{% endif %}>2 Stars</option>
+                <option value="1" {% if rating_filter == '1' %}selected{% endif %}>1 Star</option>
+            </select>
+        </form>
+    </div>
+
+    <div class="space-y-4">
+        {% for review in reviews %}
+        <div
+            class="border rounded-xl p-4 {% if not review.is_approved %}bg-yellow-50 border-yellow-200{% else %}hover:bg-gray-50{% endif %}">
+            <div class="flex justify-between items-start">
+                <div class="flex-grow">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="flex text-yellow-400 text-sm">
+                            {% for i in "12345" %}
+                            <i
+                                class="fas fa-star{% if forloop.counter > review.rating %}-o text-gray-300{% endif %}"></i>
+                            {% endfor %}
+                        </div>
+                        <span class="text-xs font-bold">{{ review.rating }}/5</span>
+                        {% if review.is_verified_purchase %}
+                        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">Verified
+                            Purchase</span>
+                        {% endif %}
+                        {% if not review.is_approved %}
+                        <span
+                            class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-bold">Pending</span>
+                        {% endif %}
+                    </div>
+
+                    <p class="text-sm text-gray-800 mb-2">{{ review.comment|default:"No comment" }}</p>
+
+                    <div class="flex items-center gap-4 text-xs text-gray-500">
+                        <span>
+                            <i class="fas fa-user mr-1"></i>
+                            {{ review.user.email }}
+                        </span>
+                        <span>
+                            <i class="fas fa-box mr-1"></i>
+                            {{ review.part.name|truncatechars:20 }}
+                        </span>
+                        <span>
+                            <i class="fas fa-calendar mr-1"></i>
+                            {{ review.created_at|date:"M d, Y" }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 ml-4">
+                    {% if not review.is_approved %}
+                    <form method="POST" action="{% url 'admin_panel:approve_review' review.id %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit"
+                            class="px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-bold hover:bg-green-600"
+                            title="Approve">
+                            <i class="fas fa-check mr-1"></i> Approve
+                        </button>
+                    </form>
+                    {% else %}
+                    <form method="POST" action="{% url 'admin_panel:reject_review' review.id %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit"
+                            class="px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600"
+                            title="Reject">
+                            <i class="fas fa-times mr-1"></i> Reject
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-12 text-gray-500">
+            <i class="fas fa-star text-4xl mb-4 text-gray-300"></i>
+            <p>No reviews found</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pt-6 border-t border-gray-200 flex justify-between items-center mt-6">
+        <span class="text-sm text-gray-500">
+            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} reviews
+        </span>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}"
+                class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}"
+                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

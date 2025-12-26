@@ -67,6 +67,7 @@ urlpatterns = [
     path('business-partners/', include('business_partners.urls')),  # Vendor registration system
     path('business-partners/htmx/', include('business_partners.urls_htmx')),  # HTMX endpoints for vendors
     path('parts/', include('parts.urls')),
+    path('admin_panel/', include('admin_panel.urls')),  # Custom admin panel
     
     # API Documentation
     path('api/docs/', schema_view.with_ui('swagger', cache_timeout=0), name='swagger-docs'),

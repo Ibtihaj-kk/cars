@@ -83,6 +83,53 @@ class BreachDetectionEngine:
             if re.search(pattern, text_lower, re.IGNORECASE):
                 return True
         return False
+
+    def detect_sql_injection(self, text):
+        if not text:
+            return None
+        patterns = [
+            r"\b(or|and)\b\s*['\"]?\d+['\"]?\s*=\s*['\"]?\d+['\"]?",
+            r"union\s+select",
+            r"drop\s+table",
+            r"select\s+.*\s+from\s+",
+            r"';\s*--",
+            r"--\s*$",
+            r"'\s*--",
+        ]
+        for pattern in patterns:
+            if re.search(pattern, text, re.IGNORECASE):
+                return {'type': 'sql_injection', 'payload': text}
+        return None
+
+    def detect_xss(self, text):
+        if not text:
+            return None
+        patterns = [
+            r"<\s*script\b",
+            r"javascript\s*:",
+            r"onerror\s*=",
+            r"onload\s*=",
+            r"<\s*iframe\b[^>]*\bsrc\s*=\s*['\"]?\s*javascript\s*:",
+        ]
+        for pattern in patterns:
+            if re.search(pattern, text, re.IGNORECASE):
+                return {'type': 'xss', 'payload': text}
+        return None
+
+    def detect_directory_traversal(self, text):
+        if not text:
+            return None
+        patterns = [
+            r"\.\./",
+            r"\.\.\\",
+            r"/etc/passwd",
+            r"windows\\system32",
+            r"file:///",
+        ]
+        for pattern in patterns:
+            if re.search(pattern, text, re.IGNORECASE):
+                return {'type': 'directory_traversal', 'payload': text}
+        return None
     
     def detect_brute_force_login(self, username, ip_address, failed_attempts_threshold=5, time_window_minutes=15):
         """
@@ -94,6 +141,7 @@ class BreachDetectionEngine:
         failed_attempts = VendorAuditLog.objects.filter(
             action_type='login_failed',
             ip_address=ip_address,
+            details__username=username,
             created_at__gte=time_threshold
         ).count()
         
@@ -108,67 +156,32 @@ class BreachDetectionEngine:
             }
         
         return None
-    
-    def detect_account_takeover(self, user, current_ip, user_agent):
-        """
-        Detect potential account takeover based on unusual access patterns.
-        """
-        # Get recent successful logins
-        recent_logins = VendorAuditLog.objects.filter(
-            user=user,
-            action_type='login_success',
-            created_at__gte=timezone.now() - timedelta(days=30)
-        ).order_by('-created_at')[:10]
-        
-        if not recent_logins:
-            return None
-        
-        # Check for unusual IP address
-        previous_ips = set(login.ip_address for login in recent_logins if login.ip_address)
-        if current_ip not in previous_ips and len(previous_ips) > 0:
-            logger.warning(f"Unusual IP address detected for user {user.email}: {current_ip}")
+
+    def detect_account_takeover(self, user_id, current_ip, current_user_agent, usual_ip, usual_user_agent):
+        if current_ip != usual_ip or current_user_agent != usual_user_agent:
             return {
-                'type': 'unusual_ip_address',
-                'current_ip': current_ip,
-                'previous_ips': list(previous_ips),
-                'user': user.email
+                'type': 'account_takeover',
+                'user_id': user_id,
+                'details': 'unusual login context detected'
             }
-        
-        # Check for unusual user agent
-        previous_agents = set(login.user_agent for login in recent_logins if login.user_agent)
-        if user_agent not in previous_agents and len(previous_agents) > 0:
-            logger.warning(f"Unusual user agent detected for user {user.email}: {user_agent}")
-            return {
-                'type': 'unusual_user_agent',
-                'current_agent': user_agent,
-                'previous_agents': list(previous_agents),
-                'user': user.email
-            }
-        
         return None
-    
-    def detect_data_exfiltration(self, user, request_size_threshold=1000000):
-        """
-        Detect potential data exfiltration attempts.
-        """
-        # Check for large data requests from unusual sources
-        # This is a simplified implementation
-        
-        recent_access = VendorAuditLog.objects.filter(
-            user=user,
-            created_at__gte=timezone.now() - timedelta(hours=1)
+
+    def detect_data_exfiltration(self, user_id, ip_address, access_threshold=10, time_window_minutes=5):
+        time_threshold = timezone.now() - timedelta(minutes=time_window_minutes)
+        access_count = VendorAuditLog.objects.filter(
+            action_type='data_access',
+            user_id=user_id,
+            ip_address=ip_address,
+            created_at__gte=time_threshold,
         ).count()
-        
-        # If user is making unusually high number of requests
-        if recent_access > 100:  # Threshold for suspicious activity
-            logger.warning(f"High frequency access detected for user {user.email}: {recent_access} requests in 1 hour")
+        if access_count >= access_threshold:
             return {
-                'type': 'high_frequency_access',
-                'request_count': recent_access,
-                'user': user.email,
-                'time_window': '1 hour'
+                'type': 'data_exfiltration',
+                'user_id': user_id,
+                'ip_address': ip_address,
+                'access_count': access_count,
+                'time_window_minutes': time_window_minutes,
             }
-        
         return None
     
     def log_security_incident(self, incident_details, severity='medium'):
@@ -183,12 +196,7 @@ class BreachDetectionEngine:
                 user = User.objects.get(email=incident_details['user'])
                 vendor = BusinessPartner.objects.filter(user=user, type='vendor').first()
                 if vendor:
-                    VendorAuditLogger.log_security_event(
-                        vendor=vendor,
-                        action='security_suspicious_activity',
-                        details=incident_details,
-                        severity=severity
-                    )
+                    VendorAuditLogger.log_security_event(user=user, vendor=vendor, event_type='suspicious_activity', severity=severity, details=incident_details)
             except User.DoesNotExist:
                 pass
         

@@ -8,40 +8,48 @@
 {% block content %}
 <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
-    
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         <div class="lg:col-span-1 space-y-6">
-            
+
             <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm text-center">
                 <h3 class="text-lg font-bold text-gray-900 mb-4">Business Logo</h3>
-                
-                <div class="relative w-32 h-32 mx-auto mb-4 bg-gray-50 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group cursor-pointer hover:border-black transition">
+
+                <div
+                    class="relative w-32 h-32 mx-auto mb-4 bg-gray-50 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group cursor-pointer hover:border-black transition">
                     {% if vendor.logo %}
-                        <img src="{{ vendor.logo.url }}" alt="Logo" class="w-full h-full object-cover">
+                    <img src="{{ vendor.logo.url }}" alt="Logo" class="w-full h-full object-cover">
                     {% else %}
-                        <img src="{% static 'images/logo.png' %}" alt="Default Logo" class="w-full h-full object-contain p-4 opacity-50">
-                        <div class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-50 opacity-0 group-hover:opacity-100 transition duration-200">
-                            <i class="fas fa-camera text-gray-800 text-2xl mb-1"></i>
-                            <span class="block text-xs text-gray-800 font-bold">Upload Logo</span>
-                        </div>
+                    <img src="{% static 'images/logo.png' %}" alt="Default Logo"
+                        class="w-full h-full object-contain p-4 opacity-50">
+                    <div
+                        class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-50 opacity-0 group-hover:opacity-100 transition duration-200">
+                        <i class="fas fa-camera text-gray-800 text-2xl mb-1"></i>
+                        <span class="block text-xs text-gray-800 font-bold">Upload Logo</span>
+                    </div>
                     {% endif %}
-                    <input type="file" name="logo" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title="Upload Vendor Logo">
+                    <input type="file" name="logo" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        title="Upload Vendor Logo">
                 </div>
-                
+
                 <p class="text-xs text-gray-500 mb-4">Recommended: 500x500px, PNG or JPG.</p>
                 {% if vendor.logo %}
-                    <button type="submit" name="action" value="remove_logo" class="w-full py-2 px-4 border border-gray-200 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50 transition">
-                        Remove Logo
-                    </button>
+                <button type="submit" name="action" value="remove_logo"
+                    class="w-full py-2 px-4 border border-gray-200 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50 transition">
+                    Remove Logo
+                </button>
                 {% endif %}
             </div>
 
             <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Public Profile</h3>
                 <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200 mb-3">
-                    <span class="text-xs text-gray-600 truncate mr-2" id="profileUrl">corporatedock.com/v/{{ vendor.slug }}</span>
-                    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('profileUrl').innerText)" class="text-black hover:text-gray-600">
+                    <span class="text-xs text-gray-600 truncate mr-2" id="profileUrl">corporatedock.com/v/{{ vendor.slug
+                        }}</span>
+                    <button type="button"
+                        onclick="navigator.clipboard.writeText(document.getElementById('profileUrl').innerText)"
+                        class="text-black hover:text-gray-600">
                         <i class="fas fa-copy"></i>
                     </button>
                 </div>
@@ -53,9 +61,10 @@
         </div>
 
         <div class="lg:col-span-2 space-y-4">
-            
+
             <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" open>
-                <summary class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+                <summary
+                    class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
                     <div class="flex items-center gap-4">
                         <i class="fas fa-building text-gray-400 text-lg"></i>
                         <h3 class="text-lg font-bold text-gray-900">General Information</h3>
@@ -66,44 +75,34 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Business Name</label>
-                            {{ form.business_name }} 
+                            {{ form.business_name }}
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Registration Number</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Registration
+                                Number</label>
                             {{ form.registration_number }}
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Business Structure</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Business
+                                Structure</label>
                             {{ form.business_structure }}
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Establishment Date</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Establishment
+                                Date</label>
                             {{ form.establishment_date }}
                         </div>
                         <div class="md:col-span-2">
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-2">About Business</label>
                             {{ form.description }}
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">CR Document</label>
-                            {{ form.cr_document }}
-                            {% if vendor.vendor_profile.cr_document %}
-                                <a href="{{ vendor.vendor_profile.cr_document.url }}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 block">View Current Document</a>
-                            {% endif %}
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Business License</label>
-                            {{ form.business_license }}
-                            {% if vendor.vendor_profile.business_license %}
-                                <a href="{{ vendor.vendor_profile.business_license.url }}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 block">View Current Document</a>
-                            {% endif %}
-                        </div>
                     </div>
                 </div>
             </details>
 
-            <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" open>
-                <summary class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+            <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <summary
+                    class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
                     <div class="flex items-center gap-4">
                         <i class="fas fa-map-marked-alt text-gray-400 text-lg"></i>
                         <h3 class="text-lg font-bold text-gray-900">Contact Details</h3>
@@ -113,7 +112,8 @@
                 <div class="px-6 pb-6 border-t border-gray-100">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Contact Person Name</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Contact Person
+                                Name</label>
                             {{ form.contact_person_name }}
                         </div>
                         <div>
@@ -140,8 +140,9 @@
                 </div>
             </details>
 
-            <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" open>
-                <summary class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+            <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <summary
+                    class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
                     <div class="flex items-center gap-4">
                         <i class="fas fa-university text-gray-400 text-lg"></i>
                         <h3 class="text-lg font-bold text-gray-900">Bank Details</h3>
@@ -159,7 +160,8 @@
                             {{ form.bank_branch }}
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Account Holder Name</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Account Holder
+                                Name</label>
                             {{ form.account_holder_name }}
                         </div>
                         <div>
@@ -174,19 +176,13 @@
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-2">SWIFT/BIC Code</label>
                             {{ form.swift_code }}
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Bank Statement</label>
-                            {{ form.bank_statement }}
-                            {% if vendor.vendor_profile.bank_statement %}
-                                <a href="{{ vendor.vendor_profile.bank_statement.url }}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 block">View Current Statement</a>
-                            {% endif %}
-                        </div>
                     </div>
                 </div>
             </details>
 
-            <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" open>
-                <summary class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+            <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <summary
+                    class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
                     <div class="flex items-center gap-4">
                         <i class="fas fa-briefcase text-gray-400 text-lg"></i>
                         <h3 class="text-lg font-bold text-gray-900">Business Details</h3>
@@ -200,7 +196,8 @@
                             {{ form.tax_id }}
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Preferred Currency</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Preferred
+                                Currency</label>
                             {{ form.preferred_currency }}
                         </div>
                         <div class="md:col-span-2">
@@ -208,15 +205,18 @@
                             {{ form.payment_terms }}
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Expected Monthly Volume</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Expected Monthly
+                                Volume</label>
                             {{ form.expected_monthly_volume }}
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Years in Business</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Years in
+                                Business</label>
                             {{ form.years_in_business }}
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Product Categories</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Product
+                                Categories</label>
                             {{ form.product_categories }}
                         </div>
                         <div class="md:col-span-2">
@@ -227,11 +227,298 @@
                 </div>
             </details>
 
+            <details class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <summary
+                    class="flex justify-between items-center p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center gap-4">
+                        <i class="fas fa-file-alt text-gray-400 text-lg"></i>
+                        <h3 class="text-lg font-bold text-gray-900">Required Documents</h3>
+                        <span class="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">Required
+                            for Profile Completion</span>
+                    </div>
+                    <i class="fas fa-chevron-down text-gray-400 transition-transform group-open:rotate-180"></i>
+                </summary>
+                <div class="px-6 pb-6 border-t border-gray-100">
+                    <p class="text-sm text-gray-600 mb-6">Please upload all required documents to complete your vendor
+                        profile. Documents should be in PDF, JPG, or PNG format and not exceed 10MB each.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                        <!-- Commercial Registration -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                Commercial Registration <span class="text-red-500">*</span>
+                            </label>
+                            {{ form.cr_document }}
+                            {% if vendor.vendor_profile.cr_document %}
+                            <div
+                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
+                                </div>
+                                <a href="{{ vendor.vendor_profile.cr_document.url }}" target="_blank"
+                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
+                                    View Document
+                                </a>
+                            </div>
+                            {% else %}
+                            <p class="text-xs text-gray-500">Upload your valid commercial registration certificate</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Business License -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                Business License <span class="text-red-500">*</span>
+                            </label>
+                            {{ form.business_license }}
+                            {% if vendor.vendor_profile.business_license %}
+                            <div
+                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
+                                </div>
+                                <a href="{{ vendor.vendor_profile.business_license.url }}" target="_blank"
+                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
+                                    View Document
+                                </a>
+                            </div>
+                            {% else %}
+                            <p class="text-xs text-gray-500">Upload your current business license</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Bank Statement -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                Bank Statement <span class="text-red-500">*</span>
+                            </label>
+                            {{ form.bank_statement }}
+                            {% if vendor.vendor_profile.bank_statement %}
+                            <div
+                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
+                                </div>
+                                <a href="{{ vendor.vendor_profile.bank_statement.url }}" target="_blank"
+                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
+                                    View Document
+                                </a>
+                            </div>
+                            {% else %}
+                            <p class="text-xs text-gray-500">Upload recent bank statement (last 3 months)</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Tax Certificate from Registration -->
+                        {% if registration_documents.tax_certificate %}
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                Tax Registration Certificate <span class="text-green-600">✓</span>
+                            </label>
+                            <div
+                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm font-medium text-green-700">Document Uploaded
+                                        (Registration)</span>
+                                </div>
+                                <a href="{{ registration_documents.tax_certificate.file.url }}" target="_blank"
+                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
+                                    View Document
+                                </a>
+                            </div>
+                            <p class="text-xs text-gray-500">Tax certificate submitted during registration</p>
+                        </div>
+                        {% endif %}
+
+                        <!-- VAT Certificate -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                VAT Registration Certificate <span class="text-red-500">*</span>
+                            </label>
+                            {{ form.vat_certificate }}
+                            {% if vendor.vendor_profile.vat_certificate %}
+                            <div
+                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
+                                </div>
+                                <a href="{{ vendor.vendor_profile.vat_certificate.url }}" target="_blank"
+                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
+                                    View Document
+                                </a>
+                            </div>
+                            {% else %}
+                            <p class="text-xs text-gray-500">Upload your VAT registration certificate</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Company Profile -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                Company Profile/Brochure <span class="text-red-500">*</span>
+                            </label>
+                            {{ form.company_profile }}
+                            {% if vendor.vendor_profile.company_profile %}
+                            <div
+                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
+                                </div>
+                                <a href="{{ vendor.vendor_profile.company_profile.url }}" target="_blank"
+                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
+                                    View Document
+                                </a>
+                            </div>
+                            {% else %}
+                            <p class="text-xs text-gray-500">Upload your company profile or brochure</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Quality Certificate -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                Quality Management Certificate
+                            </label>
+                            {{ form.quality_certificate }}
+                            {% if vendor.vendor_profile.quality_certificate %}
+                            <div
+                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
+                                </div>
+                                <a href="{{ vendor.vendor_profile.quality_certificate.url }}" target="_blank"
+                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
+                                    View Document
+                                </a>
+                            </div>
+                            {% else %}
+                            <p class="text-xs text-gray-500">Upload ISO or quality management certificate (optional)</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Insurance Certificate -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                Business Insurance Certificate
+                            </label>
+                            {{ form.insurance_certificate }}
+                            {% if vendor.vendor_profile.insurance_certificate %}
+                            <div
+                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
+                                </div>
+                                <a href="{{ vendor.vendor_profile.insurance_certificate.url }}" target="_blank"
+                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
+                                    View Document
+                                </a>
+                            </div>
+                            {% else %}
+                            <p class="text-xs text-gray-500">Upload business insurance certificate (optional)</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Import/Export License -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                Import/Export License
+                            </label>
+                            {{ form.import_export_license }}
+                            {% if vendor.vendor_profile.import_export_license %}
+                            <div
+                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
+                                </div>
+                                <a href="{{ vendor.vendor_profile.import_export_license.url }}" target="_blank"
+                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
+                                    View Document
+                                </a>
+                            </div>
+                            {% else %}
+                            <p class="text-xs text-gray-500">Upload import/export license (if applicable)</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Supplier Certification -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                Supplier/Manufacturer Authorization
+                            </label>
+                            {{ form.supplier_certification }}
+                            {% if vendor.vendor_profile.supplier_certification %}
+                            <div
+                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
+                                </div>
+                                <a href="{{ vendor.vendor_profile.supplier_certification.url }}" target="_blank"
+                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
+                                    View Document
+                                </a>
+                            </div>
+                            {% else %}
+                            <p class="text-xs text-gray-500">Upload manufacturer authorization or supplier certification
+                                (optional)</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Commercial Invoice Sample -->
+                        <div class="space-y-2 ">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                Sample Commercial Invoice <span class="text-red-500">*</span>
+                            </label>
+                            {{ form.commercial_invoice_sample }}
+                            {% if vendor.vendor_profile.commercial_invoice_sample %}
+                            <div
+                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
+                                </div>
+                                <a href="{{ vendor.vendor_profile.commercial_invoice_sample.url }}" target="_blank"
+                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
+                                    View Document
+                                </a>
+                            </div>
+                            {% else %}
+                            <p class="text-xs text-gray-500">Upload a sample of your commercial invoice format</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Document Upload Guidelines -->
+                    <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 class="text-sm font-bold text-blue-900 mb-2">Document Upload Guidelines:</h4>
+                        <ul class="text-xs text-blue-800 space-y-1">
+                            <li>• Accepted formats: PDF, JPG, PNG</li>
+                            <li>• Maximum file size: 10MB per document</li>
+                            <li>• Ensure documents are clear and legible</li>
+                            <li>• All documents must be valid and not expired</li>
+                            <li>• Documents marked with <span class="text-red-500">*</span> are required for profile
+                                completion</li>
+                        </ul>
+                    </div>
+                </div>
+            </details>
+
             <div class="flex justify-end gap-4 pt-2">
-                <button type="reset" class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition">
+                <button type="reset"
+                    class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition">
                     Cancel
                 </button>
-                <button type="submit" class="px-8 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 shadow-md transition-transform transform hover:-translate-y-0.5">
+                <button type="submit"
+                    class="px-8 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 shadow-md transition-transform transform hover:-translate-y-0.5">
                     Save Changes
                 </button>
             </div>
@@ -242,7 +529,11 @@
 
 <style>
     /* Auto-style inputs to match theme */
-    input[type="text"], input[type="email"], input[type="tel"], textarea, select {
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    textarea,
+    select {
         width: 100%;
         padding: 0.5rem 1rem;
         background-color: #f9fafb;
@@ -252,51 +543,225 @@
         outline: none;
         transition: all 0.2s;
     }
-    input:focus, textarea:focus, select:focus {
+
+    input:focus,
+    textarea:focus,
+    select:focus {
         background-color: white;
         border-color: black;
         box-shadow: 0 0 0 1px black;
     }
-    
+
+    /* File input styling for documents */
+    input[type="file"] {
+        width: 100%;
+        padding: 0.75rem;
+        background-color: #f9fafb;
+        border: 2px dashed #d1d5db;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    input[type="file"]:hover {
+        border-color: #9ca3af;
+        background-color: #f3f4f6;
+    }
+
+    input[type="file"]:focus {
+        border-color: black;
+        background-color: white;
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Document upload section styling */
+    .document-upload-item {
+        transition: all 0.3s ease;
+    }
+
+    .document-upload-item:hover {
+        transform: translateY(-1px);
+    }
+
+    /* Status indicator styling */
+    .document-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .document-status.uploaded {
+        background-color: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .document-status.missing {
+        background-color: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+
     /* Collapsible section styles */
     details {
         transition: all 0.3s ease;
     }
-    
+
     details summary {
         list-style: none;
         position: relative;
     }
-    
+
     details summary::-webkit-details-marker {
         display: none;
     }
-    
+
     details summary .fa-chevron-down {
         transition: transform 0.3s ease;
     }
-    
+
     details[open] summary .fa-chevron-down {
         transform: rotate(180deg);
     }
-    
-    details > div {
+
+    details>div {
         animation: slideDown 0.3s ease-out;
     }
-    
+
     @keyframes slideDown {
         from {
             opacity: 0;
             transform: translateY(-10px);
         }
+
         to {
             opacity: 1;
             transform: translateY(0);
         }
     }
-    
+
     details summary:hover {
         background-color: #f9fafb;
     }
 </style>
+
+<script>
+    // Document upload validation and enhancement
+    document.addEventListener('DOMContentLoaded', function () {
+        const fileInputs = document.querySelectorAll('input[type="file"]');
+
+        fileInputs.forEach(input => {
+            input.addEventListener('change', function (e) {
+                const file = e.target.files[0];
+                if (file) {
+                    // Validate file size (10MB limit)
+                    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+                    if (file.size > maxSize) {
+                        alert('File size must not exceed 10MB. Please select a smaller file.');
+                        e.target.value = '';
+                        return;
+                    }
+
+                    // Validate file type
+                    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+                    if (!allowedTypes.includes(file.type)) {
+                        alert('Invalid file type. Please select PDF, JPG, or PNG files only.');
+                        e.target.value = '';
+                        return;
+                    }
+
+                    // Show file name and size
+                    const fileName = file.name;
+                    const fileSize = (file.size / (1024 * 1024)).toFixed(2); // Size in MB
+
+                    // Create or update file info display
+                    let fileInfo = e.target.parentElement.querySelector('.file-info');
+                    if (!fileInfo) {
+                        fileInfo = document.createElement('div');
+                        fileInfo.className = 'file-info mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs';
+                        e.target.parentElement.appendChild(fileInfo);
+                    }
+
+                    fileInfo.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-blue-800 font-medium">${fileName}</span>
+                        <span class="text-blue-600">${fileSize} MB</span>
+                    </div>
+                `;
+
+                    // Add upload success styling
+                    e.target.classList.add('border-green-300', 'bg-green-50');
+                    e.target.classList.remove('border-gray-300');
+                }
+            });
+
+            // Add drag and drop functionality
+            input.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                this.classList.add('border-blue-400', 'bg-blue-50');
+            });
+
+            input.addEventListener('dragleave', function (e) {
+                e.preventDefault();
+                this.classList.remove('border-blue-400', 'bg-blue-50');
+            });
+
+            input.addEventListener('drop', function (e) {
+                e.preventDefault();
+                this.classList.remove('border-blue-400', 'bg-blue-50');
+
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.files = files;
+                    this.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+
+        // Add document completion progress indicator
+        function updateDocumentProgress() {
+            const requiredDocs = [
+                'cr_document', 'business_license', 'bank_statement',
+                'vat_certificate', 'commercial_invoice_sample', 'company_profile'
+            ];
+
+            let uploadedCount = 0;
+            requiredDocs.forEach(docField => {
+                const docElement = document.querySelector(`[data-doc-field="${docField}"]`);
+                if (docElement && docElement.classList.contains('uploaded')) {
+                    uploadedCount++;
+                }
+            });
+
+            const progressPercentage = (uploadedCount / requiredDocs.length) * 100;
+
+            // Update progress bar if it exists
+            const progressBar = document.querySelector('.document-progress-bar');
+            if (progressBar) {
+                progressBar.style.width = `${progressPercentage}%`;
+            }
+
+            // Update progress text
+            const progressText = document.querySelector('.document-progress-text');
+            if (progressText) {
+                progressText.textContent = `${uploadedCount} of ${requiredDocs.length} required documents uploaded`;
+            }
+        }
+
+        // Initial progress update
+        updateDocumentProgress();
+
+        // Add event listeners for document status changes
+        document.addEventListener('change', function (e) {
+            if (e.target.type === 'file') {
+                updateDocumentProgress();
+            }
+        });
+    });
+</script>
 {% endblock %}

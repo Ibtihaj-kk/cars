@@ -17,11 +17,12 @@ from datetime import datetime, timedelta
 import csv
 import io
 
-from parts.models import Part, Inventory, InventoryTransaction, OrderItem
+from parts.models import Part, Inventory, InventoryTransaction, OrderItem, Brand
 from business_partners.models import VendorProfile, BusinessPartner
 from business_partners.permissions import get_vendor_profile, vendor_required
 from parts.forms import InventoryForm, PartForm
 from .forms import VendorPartForm
+from .catalog_models import CatalogItem
 
 
 @login_required
@@ -764,9 +765,27 @@ def add_part(request):
         return redirect('home')
     
     business_partner = vendor_profile.business_partner
+    vendor_catalog_items = list(
+        CatalogItem.objects.filter(vendor=business_partner)
+        .order_by('part_number')
+        .values('part_number', 'description', 'make', 'model', 'year', 'trim', 'engine')
+    )
     
     if request.method == 'POST':
-        form = VendorPartForm(request.POST, request.FILES, vendor=business_partner)
+        post_data = request.POST.copy()
+        brand_text = (post_data.get('brand_text') or '').strip()
+        if brand_text and not post_data.get('brand'):
+            brand_obj, _ = Brand.objects.get_or_create(name=brand_text)
+            post_data['brand'] = str(brand_obj.pk)
+
+        material_description = (post_data.get('material_description') or '').strip()
+        parts_number = (post_data.get('parts_number') or '').strip()
+        if not material_description and parts_number:
+            catalog_item = CatalogItem.objects.filter(vendor=business_partner, part_number=parts_number).first()
+            if catalog_item and catalog_item.description:
+                post_data['material_description'] = catalog_item.description
+
+        form = VendorPartForm(post_data, request.FILES, vendor=business_partner)
         if form.is_valid():
             part = form.save(commit=False)
             part.vendor = business_partner
@@ -796,7 +815,8 @@ def add_part(request):
     
     return render(request, 'vendors/add_part.html', {
         'form': form,
-        'vendor_profile': vendor_profile
+        'vendor_profile': vendor_profile,
+        'vendor_catalog_items': vendor_catalog_items,
     })
 
 
@@ -812,9 +832,27 @@ def add_part_htmx(request):
         return HttpResponse("You do not have vendor access.", status=403)
     
     business_partner = vendor_profile.business_partner
+    vendor_catalog_items = list(
+        CatalogItem.objects.filter(vendor=business_partner)
+        .order_by('part_number')
+        .values('part_number', 'description', 'make', 'model', 'year', 'trim', 'engine')
+    )
     
     if request.method == 'POST':
-        form = VendorPartForm(request.POST, request.FILES, vendor=business_partner)
+        post_data = request.POST.copy()
+        brand_text = (post_data.get('brand_text') or '').strip()
+        if brand_text and not post_data.get('brand'):
+            brand_obj, _ = Brand.objects.get_or_create(name=brand_text)
+            post_data['brand'] = str(brand_obj.pk)
+
+        material_description = (post_data.get('material_description') or '').strip()
+        parts_number = (post_data.get('parts_number') or '').strip()
+        if not material_description and parts_number:
+            catalog_item = CatalogItem.objects.filter(vendor=business_partner, part_number=parts_number).first()
+            if catalog_item and catalog_item.description:
+                post_data['material_description'] = catalog_item.description
+
+        form = VendorPartForm(post_data, request.FILES, vendor=business_partner)
         if form.is_valid():
             part = form.save(commit=False)
             part.vendor = business_partner
@@ -841,10 +879,66 @@ def add_part_htmx(request):
         else:
             # Return form with errors rendered as HTML partial
             return render(request, 'vendors/partials/part_form.html', {
-                'form': form
+                'form': form,
+                'vendor_profile': vendor_profile,
+                'vendor_catalog_items': vendor_catalog_items,
             })
     
     return HttpResponse("Invalid request method.", status=405)
+
+
+@login_required
+@vendor_required
+@require_http_methods(["POST"])
+def vendor_part_status_update(request, part_id):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'You do not have vendor access.')
+        return redirect('home')
+    
+    business_partner = vendor_profile.business_partner
+    new_status = request.POST.get('status')
+    
+    if new_status not in ['draft', 'published', 'archived']:
+        messages.error(request, 'Invalid status.')
+        return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('business_partners:vendor_inventory_list'))
+    
+    part = get_object_or_404(Part, id=part_id, vendor=business_partner)
+    
+    if part.status != new_status:
+        part.status = new_status
+        part.save(update_fields=['status', 'updated_at'])
+    
+    messages.success(request, f'Part "{part.material_description}" status updated to {new_status}.')
+    return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('business_partners:vendor_inventory_list'))
+
+
+@login_required
+@vendor_required
+@require_http_methods(["POST"])
+def vendor_parts_bulk_status_update(request):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'You do not have vendor access.')
+        return redirect('home')
+    
+    business_partner = vendor_profile.business_partner
+    new_status = request.POST.get('status')
+    part_ids = request.POST.getlist('part_ids')
+    
+    if new_status not in ['draft', 'published', 'archived']:
+        messages.error(request, 'Invalid status.')
+        return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('business_partners:vendor_inventory_list'))
+    
+    if not part_ids:
+        messages.error(request, 'No parts selected.')
+        return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('business_partners:vendor_inventory_list'))
+    
+    parts = Part.objects.filter(id__in=part_ids, vendor=business_partner)
+    updated_count = parts.update(status=new_status)
+    
+    messages.success(request, f'Updated status to {new_status} for {updated_count} parts.')
+    return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('business_partners:vendor_inventory_list'))
 
 
 @login_required
@@ -884,128 +978,70 @@ def vendor_catalog_management(request):
     
     business_partner = vendor_profile.business_partner
     
-    # Get all vendor parts with inventory data
-    parts_queryset = Part.objects.filter(vendor=business_partner).select_related('inventory', 'category', 'brand')
+    catalog_queryset = CatalogItem.objects.filter(vendor=business_partner).prefetch_related('images')
     
     # Apply filters
     search_query = request.GET.get('search', '')
     if search_query:
-        parts_queryset = parts_queryset.filter(
-            Q(parts_number__icontains=search_query) |
-            Q(material_description__icontains=search_query) |
-            Q(manufacturer_part_number__icontains=search_query) |
-            Q(manufacturer_oem_number__icontains=search_query)
+        catalog_queryset = catalog_queryset.filter(
+            Q(part_number__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(make__icontains=search_query) |
+            Q(model__icontains=search_query) |
+            Q(trim__icontains=search_query) |
+            Q(engine__icontains=search_query)
         )
-    
-    # Stock status filter
-    stock_status = request.GET.get('stock_status', '')
-    if stock_status:
-        if stock_status == 'in_stock':
-            parts_queryset = parts_queryset.filter(quantity__gt=10)
-        elif stock_status == 'low_stock':
-            parts_queryset = parts_queryset.filter(quantity__gt=0, quantity__lte=10)
-        elif stock_status == 'out_of_stock':
-            parts_queryset = parts_queryset.filter(quantity=0)
-        elif stock_status == 'below_safety':
-            parts_queryset = parts_queryset.filter(
-                safety_stock__isnull=False,
-                quantity__lt=F('safety_stock')
-            )
-        elif stock_status == 'dead_stock':
-            # Filter for dead stock - items not sold for over a month
-            one_month_ago = timezone.now() - timedelta(days=30)
-            dead_stock_part_ids = []
-            
-            for part in parts_queryset:
-                recent_sales = InventoryTransaction.objects.filter(
-                    inventory__part=part,
-                    transaction_type='sale',
-                    timestamp__gte=one_month_ago
-                ).exists()
-                
-                if not recent_sales and part.quantity > 0:
-                    dead_stock_part_ids.append(part.id)
-            
-            if dead_stock_part_ids:
-                parts_queryset = parts_queryset.filter(id__in=dead_stock_part_ids)
-            else:
-                parts_queryset = parts_queryset.none()
-    
-    # Category filter
-    category_filter = request.GET.get('category', '')
-    if category_filter:
-        parts_queryset = parts_queryset.filter(category_id=category_filter)
-    
-    # Brand filter
-    brand_filter = request.GET.get('brand', '')
-    if brand_filter:
-        parts_queryset = parts_queryset.filter(brand_id=brand_filter)
-    
-    # Sorting
-    sort_by = request.GET.get('sort', '-created_at')
-    valid_sort_fields = [
-        'parts_number', '-parts_number',
-        'material_description', '-material_description',
-        'price', '-price',
-        'quantity', '-quantity',
-        'created_at', '-created_at'
-    ]
-    if sort_by in valid_sort_fields:
-        parts_queryset = parts_queryset.order_by(sort_by)
+
+    make_filter = request.GET.get('make', '').strip()
+    if make_filter:
+        catalog_queryset = catalog_queryset.filter(make__iexact=make_filter)
+
+    model_filter = request.GET.get('model', '').strip()
+    if model_filter:
+        catalog_queryset = catalog_queryset.filter(model__iexact=model_filter)
+
+    year_filter = request.GET.get('year', '').strip()
+    if year_filter:
+        try:
+            catalog_queryset = catalog_queryset.filter(year=int(year_filter))
+        except ValueError:
+            pass
+
+    catalog_queryset = catalog_queryset.order_by('-created_at')
     
     # Pagination
-    paginator = Paginator(parts_queryset, 25)
+    paginator = Paginator(catalog_queryset, 25)
     page_number = request.GET.get('page')
-    parts = paginator.get_page(page_number)
-    
-    # Calculate inventory statistics
-    total_parts = parts_queryset.count()
-    total_value = parts_queryset.aggregate(
-        total=Sum(F('price') * F('quantity'))
-    )['total'] or 0
-    
-    # Stock status breakdown
-    stock_stats = parts_queryset.aggregate(
-        in_stock=Count(Case(When(quantity__gt=10, then=1))),
-        low_stock=Count(Case(When(quantity__gt=0, quantity__lte=10, then=1))),
-        out_of_stock=Count(Case(When(quantity=0, then=1))),
-        below_safety=Count(Case(
-            When(safety_stock__isnull=False, quantity__lt=F('safety_stock'), then=1)
-        ))
-    )
-    
-    # Calculate dead stock
-    one_month_ago = timezone.now() - timedelta(days=30)
-    dead_stock_parts = []
-    for part in parts_queryset:
-        recent_sales = InventoryTransaction.objects.filter(
-            inventory__part=part,
-            transaction_type='sale',
-            timestamp__gte=one_month_ago
-        ).exists()
-        if not recent_sales and part.quantity > 0:
-            dead_stock_parts.append(part.id)
-    
-    stock_stats['dead_stock'] = len(dead_stock_parts)
-    
-    # Get categories and brands for filters
-    categories = parts_queryset.values('category__id', 'category__name').distinct().order_by('category__name')
+    catalog_items = paginator.get_page(page_number)
+
+    base_queryset = CatalogItem.objects.filter(vendor=business_partner)
+    makes = base_queryset.values_list('make', flat=True).distinct().order_by('make')
+    models = base_queryset.filter(make__iexact=make_filter).values_list('model', flat=True).distinct().order_by('model') if make_filter else base_queryset.values_list('model', flat=True).distinct().order_by('model')
+    years = base_queryset.filter(make__iexact=make_filter, model__iexact=model_filter).values_list('year', flat=True).distinct().order_by('-year') if make_filter and model_filter else base_queryset.values_list('year', flat=True).distinct().order_by('-year')
+
+    total_items = catalog_queryset.count()
+    make_count = base_queryset.values('make').distinct().count()
+    model_count = base_queryset.values('model').distinct().count()
+    year_count = base_queryset.values('year').distinct().count()
     
     context = {
         'vendor_profile': vendor_profile,
         'business_partner': business_partner,
-        'parts': parts,
-        'total_parts': total_parts,
-        'total_value': total_value,
-        'stock_stats': stock_stats,
-        'categories': categories,
+        'catalog_items': catalog_items,
+        'parts': catalog_items,
+        'total_items': total_items,
+        'total_parts': total_items,
+        'total_skus': total_items,
+        'make_count': make_count,
+        'model_count': model_count,
+        'year_count': year_count,
+        'makes': makes,
+        'models': models,
+        'years': years,
         'search_query': search_query,
-        'stock_status': stock_status,
-        'category_filter': category_filter,
+        'make_filter': make_filter,
+        'model_filter': model_filter,
+        'year_filter': year_filter,
     }
     
-    # Check if this is an HTMX request
-    if request.headers.get('HX-Request'):
-        return render(request, 'vendors/inventory_table.html', context)
-    
-    return render(request, 'vendors/inventory.html', context)
+    return render(request, 'vendors/catalog_management.html', context)

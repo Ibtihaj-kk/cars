@@ -417,6 +417,11 @@ class VendorProfile(models.Model):
         null=True,
         help_text="SWIFT/BIC code"
     )
+    vendor_code = models.CharField(max_length=50, blank=True, null=True)
+    tax_number = models.CharField(max_length=50, blank=True, null=True)
+    bank_account_number = models.CharField(max_length=50, blank=True, null=True)
+    bank_routing_number = models.CharField(max_length=50, blank=True, null=True)
+    bank_name = models.CharField(max_length=200, blank=True, null=True)
     vendor_rating = models.DecimalField(
         max_digits=3, 
         decimal_places=2, 
@@ -445,6 +450,50 @@ class VendorProfile(models.Model):
         blank=True,
         null=True,
         help_text="Recent bank statement"
+    )
+    
+    # Additional Required Documents
+    vat_certificate = models.FileField(
+        upload_to='vendor_documents/vat_certificates/',
+        blank=True,
+        null=True,
+        help_text="VAT registration certificate"
+    )
+    commercial_invoice_sample = models.FileField(
+        upload_to='vendor_documents/commercial_invoices/',
+        blank=True,
+        null=True,
+        help_text="Sample commercial invoice"
+    )
+    company_profile = models.FileField(
+        upload_to='vendor_documents/company_profiles/',
+        blank=True,
+        null=True,
+        help_text="Company profile or brochure"
+    )
+    quality_certificate = models.FileField(
+        upload_to='vendor_documents/quality_certificates/',
+        blank=True,
+        null=True,
+        help_text="ISO or quality management certificate"
+    )
+    insurance_certificate = models.FileField(
+        upload_to='vendor_documents/insurance_certificates/',
+        blank=True,
+        null=True,
+        help_text="Business insurance certificate"
+    )
+    import_export_license = models.FileField(
+        upload_to='vendor_documents/import_export_licenses/',
+        blank=True,
+        null=True,
+        help_text="Import/export license (if applicable)"
+    )
+    supplier_certification = models.FileField(
+        upload_to='vendor_documents/supplier_certifications/',
+        blank=True,
+        null=True,
+        help_text="Manufacturer authorization or supplier certification"
     )
     
     # Additional Info
@@ -490,6 +539,7 @@ class VendorProfile(models.Model):
         null=True,
         help_text="Secret key for TOTP two-factor authentication"
     )
+    backup_codes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -505,51 +555,115 @@ class VendorProfile(models.Model):
         if not self.business_partner.has_role('vendor'):
             raise ValidationError("Business partner must have vendor role to create vendor profile.")
     
-    def generate_backup_codes(self, count=8):
-        """Generate backup codes for 2FA"""
+    def generate_backup_codes(self, count=10):
+        import json
         import secrets
         import string
-        from .audit_logger import VendorAuditLogger
-        
-        # Generate cryptographically secure backup codes
+
         codes = []
         for _ in range(count):
-            # Generate 8-character alphanumeric codes
             code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
             codes.append(code)
-        
-        # Store hashed versions of the codes
-        from django.contrib.auth.hashers import make_password
-        hashed_codes = [make_password(code) for code in codes]
-        
-        # Store in session for temporary access (user should save these)
-        # In a real implementation, you'd want to store these more permanently
-        # or provide them to the user immediately
-        
-        # Log the generation of backup codes
-        VendorAuditLogger.log_security_event(
-            vendor=self.business_partner,
-            action='2fa_backup_codes_generated',
-            details={'count': count}
-        )
-        
+
+        self.backup_codes = json.dumps(codes)
+        self.save(update_fields=['backup_codes'])
+
         return codes
     
     def use_backup_code(self, code):
-        """Validate and consume a backup code"""
-        from django.contrib.auth.hashers import check_password
-        from .audit_logger import VendorAuditLogger
-        
-        # In a real implementation, you'd retrieve stored hashed codes
-        # For now, we'll log the attempt and return success for demonstration
-        
-        VendorAuditLogger.log_security_event(
-            vendor=self.business_partner,
-            action='2fa_backup_code_used',
-            details={'success': True}
-        )
-        
+        import json
+
+        if not self.backup_codes:
+            return False
+
+        try:
+            codes = json.loads(self.backup_codes)
+        except Exception:
+            codes = []
+
+        if code not in codes:
+            return False
+
+        codes = [c for c in codes if c != code]
+        self.backup_codes = json.dumps(codes)
+        self.save(update_fields=['backup_codes'])
+
         return True
+    
+    def get_profile_completion_percentage(self):
+        """Calculate profile completion percentage based on required fields"""
+        # Define required fields for profile completion
+        required_fields = [
+            'business_structure',
+            'establishment_date',
+            'contact_person_name',
+            'contact_person_title',
+            'payment_terms',
+            'bank_account_details',
+            'swift_code',
+            'tax_id',
+            'preferred_currency',
+            'expected_monthly_volume',
+            'product_categories',
+            'years_in_business',
+        ]
+        
+        # Define required documents for profile completion
+        required_documents = [
+            'cr_document',
+            'business_license',
+            'bank_statement',
+            'vat_certificate',
+            'commercial_invoice_sample',
+            'company_profile',
+            'quality_certificate',
+            'insurance_certificate',
+        ]
+        
+        # Count completed fields
+        completed_fields = 0
+        for field in required_fields:
+            field_value = getattr(self, field, None)
+            if field_value is not None and field_value != '':
+                completed_fields += 1
+        
+        # Count completed documents
+        completed_documents = 0
+        for doc_field in required_documents:
+            doc_value = getattr(self, doc_field, None)
+            if doc_value:  # Check if file exists
+                completed_documents += 1
+        
+        # Check for documents in VendorDocument model (from registration)
+        try:
+            from business_partners.document_models import VendorDocument
+            vendor_docs = VendorDocument.objects.filter(
+                business_partner=self.business_partner,
+                status='verified'
+            ).values_list('category__name', flat=True)
+            
+            # Map VendorDocument categories to our required documents
+            doc_mapping = {
+                'Commercial Register': 'cr_document',
+                'Tax Certificate': 'cr_document',  # Tax certificate counts as CR document
+            }
+            
+            for category_name in vendor_docs:
+                if category_name in doc_mapping:
+                    mapped_field = doc_mapping[category_name]
+                    if mapped_field in required_documents:
+                        # Check if we don't already have this document in VendorProfile
+                        if not getattr(self, mapped_field, None):
+                            completed_documents += 1
+        except ImportError:
+            pass
+        
+        # Calculate total completion (70% for fields, 30% for documents)
+        field_completion = (completed_fields / len(required_fields)) * 70
+        document_completion = (completed_documents / len(required_documents)) * 30
+        total_completion = field_completion + document_completion
+        
+        return round(total_completion, 1)
 
 
 class CustomerProfile(models.Model):
@@ -1537,6 +1651,7 @@ class SecureVendorApplication(SecureSessionMixin, models.Model):
     """
     
     APPLICATION_STATUS = [
+        ('pending', 'Pending'),
         ('draft', 'Draft'),
         ('business_details_completed', 'Business Details Completed'),
         ('contact_info_completed', 'Contact Information Completed'),
@@ -1578,6 +1693,17 @@ class SecureVendorApplication(SecureSessionMixin, models.Model):
         null=True,
         help_text="SHA256 hash of session key"
     )
+    vendor_profile = models.ForeignKey(
+        VendorProfile,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='secure_vendor_applications',
+    )
+    application_reference = models.CharField(max_length=50, blank=True, null=True)
+    encrypted_data = models.JSONField(blank=True, null=True, default=dict)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    user_agent = models.TextField(blank=True, null=True)
     status = models.CharField(
         max_length=30,
         choices=APPLICATION_STATUS,
@@ -1904,6 +2030,19 @@ class SecureVendorApplication(SecureSessionMixin, models.Model):
             self.bank_statement_hash = self.bank_statement.content_hash
         
         super().save(*args, **kwargs)
+
+    def validate_ip_address(self, ip_address):
+        if not self.ip_address or not ip_address:
+            return False
+        return self.ip_address == ip_address
+
+    def validate_user_agent(self, user_agent):
+        if not self.user_agent or not user_agent:
+            return False
+        return self.user_agent == user_agent
+
+    def check_session_integrity(self, ip_address, user_agent):
+        return self.validate_ip_address(ip_address) and self.validate_user_agent(user_agent)
     
     def set_session(self, session_key):
         """Store hashed session key with additional security checks"""

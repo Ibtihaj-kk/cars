@@ -7,8 +7,8 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q, Count, Sum, Avg, F, Case, When
-from django.http import JsonResponse, HttpResponse
+from django.db.models import Q, Count, Sum, Avg, F, Case, When, Min, Max
+from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -24,7 +24,7 @@ import csv
 from io import StringIO
 
 from .models import BusinessPartner, VendorProfile, ReorderNotification
-from admin_panel.payment_models import VendorBalance, VendorPayment, PaymentStatus
+from admin_panel.payment_models import VendorBalance, VendorPayment, PaymentStatus, PaymentBatch, CommissionRule
 from .forms import (
     VendorPartForm, 
     VendorPartSearchForm, 
@@ -222,6 +222,9 @@ def vendor_dashboard(request):
     pending_processing_count = vendor_order_items.filter(order__status__in=['confirmed', 'processing']).values('order').distinct().count()
     total_fulfillment = delivered_count + pending_processing_count
 
+    # Profile completion percentage
+    profile_completion_percentage = vendor_profile.get_profile_completion_percentage()
+
     context = {
         'vendor_profile': vendor_profile,
         'business_partner': business_partner,
@@ -258,9 +261,799 @@ def vendor_dashboard(request):
         'top_categories': top_categories,
         'vendor_profile': vendor_profile,
         'is_approved': vendor_profile.is_approved if vendor_profile else False,
+        'profile_completion_percentage': profile_completion_percentage,
     }
     
     return render(request, 'vendors/dashboard.html', context)
+
+
+@vendor_required
+@login_required
+def vendor_finance_dashboard(request):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_registration_single')
+
+    business_partner = vendor_profile.business_partner
+
+    from parts.models import Order, VendorOrderItemStatus
+
+    now = timezone.now()
+    last_30_days = now - timedelta(days=30)
+
+    cash_received = VendorPayment.objects.filter(
+        vendor=business_partner,
+        status=PaymentStatus.COMPLETED,
+        created_at__gte=last_30_days,
+    ).aggregate(total=Sum('net_amount'))['total'] or Decimal('0.00')
+
+    marketplace_commission = VendorPayment.objects.filter(
+        vendor=business_partner,
+        status=PaymentStatus.COMPLETED,
+        created_at__gte=last_30_days,
+    ).aggregate(total=Sum('commission_amount'))['total'] or Decimal('0.00')
+
+    base_orders = Order.objects.filter(items__part__vendor=business_partner).distinct()
+
+    open_invoices = base_orders.exclude(
+        payment_status='completed'
+    ).exclude(
+        status__in=['cancelled', 'refunded']
+    ).count()
+
+    refundable_statuses = VendorOrderItemStatus.objects.filter(
+        vendor=business_partner,
+        status='refunded',
+        updated_at__gte=last_30_days,
+    )
+    refund_amount = refundable_statuses.aggregate(
+        total=Sum(F('order_item__quantity') * F('order_item__price'))
+    )['total'] or Decimal('0.00')
+
+    orders_last_30_days = base_orders.filter(
+        created_at__gte=last_30_days,
+        status__in=['confirmed', 'processing', 'shipped', 'delivered']
+    )
+
+    tax_payable = Decimal('0.00')
+    shipping_cost = Decimal('0.00')
+
+    per_order_totals = orders_last_30_days.values(
+        'id',
+        'total_price',
+        'shipping_cost',
+        'tax_amount',
+    ).annotate(
+        vendor_items_total=Sum(
+            F('items__quantity') * F('items__price'),
+            filter=Q(items__part__vendor=business_partner)
+        )
+    )
+
+    for row in per_order_totals:
+        order_total = row.get('total_price') or Decimal('0.00')
+        vendor_total = row.get('vendor_items_total') or Decimal('0.00')
+        if order_total <= 0 or vendor_total <= 0:
+            continue
+        ratio = vendor_total / order_total
+        tax_payable += (row.get('tax_amount') or Decimal('0.00')) * ratio
+        shipping_cost += (row.get('shipping_cost') or Decimal('0.00')) * ratio
+
+    recent_transactions = VendorPayment.objects.filter(
+        vendor=business_partner
+    ).order_by('-created_at')[:10]
+
+    pending_processing_count = base_orders.filter(
+        status__in=['confirmed', 'processing']
+    ).count()
+
+    context = {
+        'vendor_profile': vendor_profile,
+        'business_partner': business_partner,
+        'is_approved': vendor_profile.is_approved,
+        'cash_received': cash_received,
+        'open_invoices': open_invoices,
+        'tax_payable': tax_payable,
+        'shipping_cost': shipping_cost,
+        'marketplace_commission': marketplace_commission,
+        'refund_amount': refund_amount,
+        'recent_transactions': recent_transactions,
+        'stats': {
+            'pending_processing_count': pending_processing_count,
+            'critical_notifications': 0,
+        },
+    }
+
+    return render(request, 'vendors/finance/dashboard.html', context)
+
+
+@vendor_required
+@login_required
+def vendor_settlement_statements(request):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_registration_single')
+
+    business_partner = vendor_profile.business_partner
+
+    selected_year = request.GET.get('year')
+    selected_month = request.GET.get('month')
+
+    batches_qs = PaymentBatch.objects.filter(
+        payments__vendor=business_partner
+    ).distinct()
+
+    years = list(batches_qs.dates('created_at', 'year', order='DESC'))
+
+    if selected_year and selected_year.isdigit():
+        batches_qs = batches_qs.filter(created_at__year=int(selected_year))
+
+    months_qs = batches_qs
+    if selected_month and selected_month.isdigit():
+        month_int = int(selected_month)
+        if 1 <= month_int <= 12:
+            batches_qs = batches_qs.filter(created_at__month=month_int)
+            months_qs = months_qs.filter(created_at__month=month_int)
+
+    available_month_dates = list(months_qs.dates('created_at', 'month', order='DESC'))
+    available_months = [{'value': d.month, 'label': d.strftime('%B')} for d in available_month_dates]
+
+    annotated_batches = batches_qs.annotate(
+        vendor_total_sales=Sum(
+            'payments__amount',
+            filter=Q(payments__vendor=business_partner)
+        ),
+        vendor_net_payout=Sum(
+            'payments__net_amount',
+            filter=Q(payments__vendor=business_partner)
+        ),
+        vendor_period_start_payment=Min(
+            'payments__payment_date',
+            filter=Q(payments__vendor=business_partner)
+        ),
+        vendor_period_end_payment=Max(
+            'payments__payment_date',
+            filter=Q(payments__vendor=business_partner)
+        ),
+        vendor_period_start_created=Min(
+            'payments__created_at',
+            filter=Q(payments__vendor=business_partner)
+        ),
+        vendor_period_end_created=Max(
+            'payments__created_at',
+            filter=Q(payments__vendor=business_partner)
+        ),
+    ).order_by('-created_at')
+
+    statements = []
+    for batch in annotated_batches:
+        start_date = (
+            batch.vendor_period_start_payment
+            or batch.vendor_period_start_created
+            or batch.created_at
+        )
+        end_date = (
+            batch.vendor_period_end_payment
+            or batch.vendor_period_end_created
+            or batch.processing_completed_at
+            or batch.updated_at
+            or batch.created_at
+        )
+        statements.append({
+            'id': batch.id,
+            'reference': batch.batch_reference,
+            'start_date': start_date,
+            'end_date': end_date,
+            'total_sales': batch.vendor_total_sales or Decimal('0.00'),
+            'net_payout': batch.vendor_net_payout or Decimal('0.00'),
+            'status': batch.status,
+            'status_display': batch.get_status_display(),
+        })
+
+    pending_processing_count = 0
+    try:
+        from parts.models import Order
+        pending_processing_count = Order.objects.filter(
+            items__part__vendor=business_partner,
+            status__in=['confirmed', 'processing']
+        ).distinct().count()
+    except Exception:
+        pending_processing_count = 0
+
+    context = {
+        'vendor_profile': vendor_profile,
+        'business_partner': business_partner,
+        'is_approved': vendor_profile.is_approved,
+        'years': years,
+        'months': available_months,
+        'selected_year': selected_year,
+        'selected_month': selected_month,
+        'statements': statements,
+        'stats': {
+            'pending_processing_count': pending_processing_count,
+            'critical_notifications': 0,
+        },
+    }
+
+    return render(request, 'vendors/finance/settlement.html', context)
+
+
+@vendor_required
+@login_required
+def vendor_settlement_download_csv(request, batch_id):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_registration_single')
+
+    business_partner = vendor_profile.business_partner
+    batch = get_object_or_404(
+        PaymentBatch.objects.filter(payments__vendor=business_partner).distinct(),
+        id=batch_id
+    )
+
+    payments = batch.payments.filter(vendor=business_partner).order_by('-created_at')
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{batch.batch_reference}-statement.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'Payment Reference',
+        'Created At',
+        'Payment Date',
+        'Amount',
+        'Commission',
+        'Net Amount',
+        'Status',
+    ])
+
+    for p in payments:
+        writer.writerow([
+            p.payment_reference,
+            p.created_at.isoformat() if p.created_at else '',
+            p.payment_date.isoformat() if p.payment_date else '',
+            str(p.amount),
+            str(p.commission_amount),
+            str(p.net_amount),
+            p.get_status_display(),
+        ])
+
+    return response
+
+
+@vendor_required
+@login_required
+def vendor_payout_tracking(request):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_registration_single')
+
+    business_partner = vendor_profile.business_partner
+
+    payment_terms_days = {
+        'net_15': 15,
+        'net_30': 30,
+        'net_45': 45,
+        'net_60': 60,
+        'cod': 0,
+        'prepaid': 0,
+    }.get(vendor_profile.payment_terms, 30)
+
+    bank_details = (vendor_profile.bank_account_details or '').splitlines()
+    bank_name = ''
+    account_number = ''
+    iban = ''
+    for raw_line in bank_details:
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.lower().startswith('bank:'):
+            bank_name = line.split(':', 1)[1].strip()
+        elif line.lower().startswith('account number:'):
+            account_number = line.split(':', 1)[1].strip()
+        elif line.lower().startswith('iban:'):
+            iban = line.split(':', 1)[1].strip()
+
+    account_source = account_number or iban
+    bank_account_display = '—'
+    if account_source:
+        last4 = ''.join(ch for ch in account_source if ch.isalnum())[-4:]
+        if last4:
+            prefix = bank_name or 'Bank'
+            bank_account_display = f'{prefix} **** {last4}'
+
+    payouts_qs = VendorPayment.objects.filter(vendor=business_partner).order_by('-created_at')
+
+    last_payout = payouts_qs.filter(status=PaymentStatus.COMPLETED).order_by(
+        '-payment_date',
+        '-processed_at',
+        '-created_at',
+    ).first()
+    last_payout_amount = last_payout.net_amount if last_payout else Decimal('0.00')
+    last_payout_date = None
+    if last_payout:
+        last_payout_date = last_payout.payment_date or last_payout.processed_at or last_payout.created_at
+
+    pending_statuses = [PaymentStatus.PENDING, PaymentStatus.PROCESSING]
+    pending_payments = list(
+        payouts_qs.filter(status__in=pending_statuses).order_by('due_date', 'created_at')[:250]
+    )
+
+    today = timezone.now().date()
+    computed_due_dates = []
+    for p in pending_payments:
+        if p.due_date:
+            computed_due_dates.append((p.id, p.due_date))
+        elif p.created_at:
+            computed_due_dates.append((p.id, (p.created_at.date() + timedelta(days=payment_terms_days))))
+
+    next_payout_date = None
+    if computed_due_dates:
+        next_payout_date = min(d for _, d in computed_due_dates)
+
+    next_payout_estimated_amount = Decimal('0.00')
+    if next_payout_date:
+        next_due_payment_ids = {
+            pid for pid, d in computed_due_dates if d == next_payout_date
+        }
+        for p in pending_payments:
+            if p.id in next_due_payment_ids:
+                next_payout_estimated_amount += (p.net_amount or Decimal('0.00'))
+
+    pending_balance = sum((p.net_amount or Decimal('0.00')) for p in pending_payments) if pending_payments else Decimal('0.00')
+    clearing_in_days = None
+    if next_payout_date:
+        clearing_in_days = (next_payout_date - today).days
+
+    payouts_page_size = 20
+    paginator = Paginator(payouts_qs, payouts_page_size)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    pending_processing_count = 0
+    try:
+        from parts.models import Order
+        pending_processing_count = Order.objects.filter(
+            items__part__vendor=business_partner,
+            status__in=['confirmed', 'processing']
+        ).distinct().count()
+    except Exception:
+        pending_processing_count = 0
+
+    context = {
+        'vendor_profile': vendor_profile,
+        'business_partner': business_partner,
+        'is_approved': vendor_profile.is_approved,
+        'next_payout_date': next_payout_date,
+        'next_payout_estimated_amount': next_payout_estimated_amount,
+        'last_payout_amount': last_payout_amount,
+        'last_payout_date': last_payout_date,
+        'pending_balance': pending_balance,
+        'clearing_in_days': clearing_in_days,
+        'bank_account_display': bank_account_display,
+        'payouts': page_obj,
+        'stats': {
+            'pending_processing_count': pending_processing_count,
+            'critical_notifications': 0,
+        },
+    }
+
+    return render(request, 'vendors/finance/payouts.html', context)
+
+
+@vendor_required
+@login_required
+def vendor_commission_breakdown(request):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_registration_single')
+
+    business_partner = vendor_profile.business_partner
+
+    today = timezone.now().date()
+    rules_qs = CommissionRule.objects.filter(
+        is_active=True,
+        effective_from__lte=today,
+    ).filter(
+        Q(effective_to__isnull=True) | Q(effective_to__gte=today)
+    ).filter(
+        Q(applies_to_all_vendors=True) | Q(specific_vendors=business_partner)
+    ).distinct().order_by('-created_at')
+
+    current_plan_name = 'Standard'
+    current_plan_summary = 'No active commission rule configured.'
+    current_plan_rule = rules_qs.first()
+    if current_plan_rule:
+        current_plan_name = current_plan_rule.name or 'Standard'
+        if current_plan_rule.commission_type == 'percentage':
+            current_plan_summary = f'{current_plan_rule.commission_rate}% commission'
+        elif current_plan_rule.commission_type == 'fixed_amount':
+            current_plan_summary = f'Fixed commission: {current_plan_rule.fixed_amount}'
+        else:
+            current_plan_summary = 'Tiered commission'
+
+    payments_qs = VendorPayment.objects.filter(vendor=business_partner).order_by('-created_at')
+
+    lookback_days = 90
+    since = timezone.now() - timedelta(days=lookback_days)
+    payments_recent = payments_qs.filter(created_at__gte=since)
+
+    totals = payments_recent.aggregate(
+        total_sales=Sum('amount'),
+        total_commission=Sum('commission_amount'),
+    )
+    total_sales = totals.get('total_sales') or Decimal('0.00')
+    total_commission = totals.get('total_commission') or Decimal('0.00')
+    effective_rate = Decimal('0.00')
+    if total_sales > 0:
+        effective_rate = (total_commission / total_sales) * Decimal('100')
+
+    paginator = Paginator(payments_recent, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    pending_processing_count = 0
+    try:
+        from parts.models import Order
+        pending_processing_count = Order.objects.filter(
+            items__part__vendor=business_partner,
+            status__in=['confirmed', 'processing']
+        ).distinct().count()
+    except Exception:
+        pending_processing_count = 0
+
+    context = {
+        'vendor_profile': vendor_profile,
+        'business_partner': business_partner,
+        'is_approved': vendor_profile.is_approved,
+        'current_plan_name': current_plan_name,
+        'current_plan_summary': current_plan_summary,
+        'commission_rules': rules_qs[:10],
+        'payments': page_obj,
+        'lookback_days': lookback_days,
+        'total_sales': total_sales,
+        'total_commission': total_commission,
+        'effective_rate': effective_rate,
+        'stats': {
+            'pending_processing_count': pending_processing_count,
+            'critical_notifications': 0,
+        },
+    }
+
+    return render(request, 'vendors/finance/comissions.html', context)
+
+
+@vendor_required
+@login_required
+def vendor_tax_summary(request):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_registration_single')
+
+    business_partner = vendor_profile.business_partner
+
+    if request.method == 'POST':
+        tax_id = (request.POST.get('tax_id') or '').strip()
+        vendor_profile.tax_id = tax_id or None
+        vendor_profile.save(update_fields=['tax_id'])
+        messages.success(request, 'Tax settings updated.')
+        return redirect('business_partners:vendor_tax_summary')
+
+    from parts.models import Order
+
+    now = timezone.now()
+    period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    base_orders = Order.objects.filter(items__part__vendor=business_partner).distinct()
+    orders_in_period = base_orders.filter(
+        created_at__gte=period_start,
+        status__in=['confirmed', 'processing', 'shipped', 'delivered'],
+    )
+
+    sales_tax_payable = Decimal('0.00')
+    per_order_totals = orders_in_period.values(
+        'id',
+        'total_price',
+        'tax_amount',
+    ).annotate(
+        vendor_items_total=Sum(
+            F('items__quantity') * F('items__price'),
+            filter=Q(items__part__vendor=business_partner)
+        )
+    )
+
+    for row in per_order_totals:
+        order_total = row.get('total_price') or Decimal('0.00')
+        vendor_total = row.get('vendor_items_total') or Decimal('0.00')
+        if order_total <= 0 or vendor_total <= 0:
+            continue
+        ratio = vendor_total / order_total
+        sales_tax_payable += (row.get('tax_amount') or Decimal('0.00')) * ratio
+
+    withholding_tax_payable = Decimal('0.00')
+    total_payable = sales_tax_payable + withholding_tax_payable
+
+    tax_certificate = (
+        getattr(vendor_profile, 'tax_certificate', None)
+        or getattr(vendor_profile, 'vat_certificate', None)
+    )
+
+    pending_processing_count = 0
+    try:
+        pending_processing_count = Order.objects.filter(
+            items__part__vendor=business_partner,
+            status__in=['confirmed', 'processing']
+        ).distinct().count()
+    except Exception:
+        pending_processing_count = 0
+
+    context = {
+        'vendor_profile': vendor_profile,
+        'business_partner': business_partner,
+        'is_approved': vendor_profile.is_approved,
+        'tax_period_label': now.strftime('%B %Y'),
+        'sales_tax_payable': sales_tax_payable,
+        'withholding_tax_payable': withholding_tax_payable,
+        'total_tax_payable': total_payable,
+        'has_tax_certificate': bool(tax_certificate),
+        'stats': {
+            'pending_processing_count': pending_processing_count,
+            'critical_notifications': 0,
+        },
+    }
+
+    return render(request, 'vendors/finance/taxes.html', context)
+
+
+@vendor_required
+@login_required
+def vendor_tax_certificate_download(request):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_registration_single')
+
+    certificate = (
+        getattr(vendor_profile, 'tax_certificate', None)
+        or getattr(vendor_profile, 'vat_certificate', None)
+    )
+    if not certificate:
+        messages.error(request, 'No tax certificate uploaded.')
+        return redirect('business_partners:vendor_tax_summary')
+
+    filename = (certificate.name or '').rsplit('/', 1)[-1] or 'tax-certificate'
+    return FileResponse(certificate.open('rb'), as_attachment=True, filename=filename)
+
+
+@vendor_required
+@login_required
+def vendor_finance_ledger(request):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_registration_single')
+
+    business_partner = vendor_profile.business_partner
+
+    payments = VendorPayment.objects.filter(vendor=business_partner).order_by('created_at')
+
+    ledger_rows = []
+    for p in payments:
+        created_at = p.created_at or timezone.now()
+        if (p.amount or Decimal('0.00')) > 0:
+            ledger_rows.append({
+                'sort_dt': created_at,
+                'seq': 0,
+                'date': created_at,
+                'type': 'sale',
+                'label': 'Sale',
+                'description': f'{p.payment_reference} revenue',
+                'debit': None,
+                'credit': p.amount,
+            })
+
+        if (p.commission_amount or Decimal('0.00')) > 0:
+            ledger_rows.append({
+                'sort_dt': created_at,
+                'seq': 1,
+                'date': created_at,
+                'type': 'fee',
+                'label': 'Fee',
+                'description': f'Commission ({p.payment_reference})',
+                'debit': p.commission_amount,
+                'credit': None,
+            })
+
+        if p.status == PaymentStatus.COMPLETED and (p.net_amount or Decimal('0.00')) > 0:
+            payout_dt = p.payment_date or p.processed_at or p.created_at or timezone.now()
+            ledger_rows.append({
+                'sort_dt': payout_dt,
+                'seq': 2,
+                'date': payout_dt,
+                'type': 'payout',
+                'label': 'Payout',
+                'description': f'Payout ({p.payment_reference})',
+                'debit': p.net_amount,
+                'credit': None,
+            })
+
+    ledger_rows.sort(key=lambda r: (r['sort_dt'], r['seq']))
+
+    running_balance = Decimal('0.00')
+    for row in ledger_rows:
+        credit = row['credit'] or Decimal('0.00')
+        debit = row['debit'] or Decimal('0.00')
+        running_balance += credit
+        running_balance -= debit
+        row['balance'] = running_balance
+
+    ledger_rows.reverse()
+
+    paginator = Paginator(ledger_rows, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    pending_processing_count = 0
+    try:
+        from parts.models import Order
+        pending_processing_count = Order.objects.filter(
+            items__part__vendor=business_partner,
+            status__in=['confirmed', 'processing']
+        ).distinct().count()
+    except Exception:
+        pending_processing_count = 0
+
+    context = {
+        'vendor_profile': vendor_profile,
+        'business_partner': business_partner,
+        'is_approved': vendor_profile.is_approved,
+        'ledger_rows': page_obj,
+        'stats': {
+            'pending_processing_count': pending_processing_count,
+            'critical_notifications': 0,
+        },
+    }
+
+    return render(request, 'vendors/finance/ledger.html', context)
+
+
+@vendor_required
+@login_required
+def vendor_finance_ledger_export_csv(request):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_registration_single')
+
+    business_partner = vendor_profile.business_partner
+
+    payments = VendorPayment.objects.filter(vendor=business_partner).order_by('created_at')
+
+    ledger_rows = []
+    for p in payments:
+        created_at = p.created_at or timezone.now()
+        if (p.amount or Decimal('0.00')) > 0:
+            ledger_rows.append((created_at, 0, created_at, 'Sale', f'{p.payment_reference} revenue', None, p.amount))
+
+        if (p.commission_amount or Decimal('0.00')) > 0:
+            ledger_rows.append((created_at, 1, created_at, 'Fee', f'Commission ({p.payment_reference})', p.commission_amount, None))
+
+        if p.status == PaymentStatus.COMPLETED and (p.net_amount or Decimal('0.00')) > 0:
+            payout_dt = p.payment_date or p.processed_at or p.created_at or timezone.now()
+            ledger_rows.append((payout_dt, 2, payout_dt, 'Payout', f'Payout ({p.payment_reference})', p.net_amount, None))
+
+    ledger_rows.sort(key=lambda r: (r[0], r[1]))
+
+    running_balance = Decimal('0.00')
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="vendor-ledger-{business_partner.id}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Date', 'Type', 'Description', 'Debit', 'Credit', 'Balance'])
+
+    for _, __, dt, label, desc, debit, credit in ledger_rows:
+        running_balance += (credit or Decimal('0.00'))
+        running_balance -= (debit or Decimal('0.00'))
+        writer.writerow([
+            dt.isoformat() if dt else '',
+            label,
+            desc,
+            str(debit or ''),
+            str(credit or ''),
+            str(running_balance),
+        ])
+
+    return response
+
+
+@vendor_required
+@login_required
+def vendor_bank_setup(request):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'Vendor profile not found.')
+        return redirect('business_partners:vendor_registration_single')
+
+    def parse_bank_details(raw_text):
+        parsed = {
+            'account_holder': '',
+            'bank_name': '',
+            'branch_code': '',
+            'iban': '',
+        }
+        for raw_line in (raw_text or '').splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            lower = line.lower()
+            if lower.startswith('account holder:'):
+                parsed['account_holder'] = line.split(':', 1)[1].strip()
+            elif lower.startswith('bank:'):
+                parsed['bank_name'] = line.split(':', 1)[1].strip()
+            elif lower.startswith('branch code:'):
+                parsed['branch_code'] = line.split(':', 1)[1].strip()
+            elif lower.startswith('iban:'):
+                parsed['iban'] = line.split(':', 1)[1].strip()
+        return parsed
+
+    existing = parse_bank_details(vendor_profile.bank_account_details)
+
+    if request.method == 'POST':
+        account_holder = (request.POST.get('account_holder') or '').strip()
+        bank_name = (request.POST.get('bank_name') or '').strip()
+        branch_code = (request.POST.get('branch_code') or '').strip()
+        iban = (request.POST.get('iban') or '').strip()
+
+        lines = []
+        if account_holder:
+            lines.append(f'Account Holder: {account_holder}')
+        if bank_name:
+            lines.append(f'Bank: {bank_name}')
+        if branch_code:
+            lines.append(f'Branch Code: {branch_code}')
+        if iban:
+            lines.append(f'IBAN: {iban}')
+
+        vendor_profile.bank_account_details = '\n'.join(lines) if lines else None
+        vendor_profile.save(update_fields=['bank_account_details'])
+        messages.success(request, 'Bank details saved.')
+        return redirect('business_partners:vendor_bank_setup')
+
+    pending_processing_count = 0
+    try:
+        from parts.models import Order
+        pending_processing_count = Order.objects.filter(
+            items__part__vendor=vendor_profile.business_partner,
+            status__in=['confirmed', 'processing']
+        ).distinct().count()
+    except Exception:
+        pending_processing_count = 0
+
+    context = {
+        'vendor_profile': vendor_profile,
+        'business_partner': vendor_profile.business_partner,
+        'is_approved': vendor_profile.is_approved,
+        'bank_form': existing,
+        'bank_options': [
+            'Habib Bank Limited (HBL)',
+            'United Bank Limited (UBL)',
+            'Meezan Bank',
+            'Bank Alfalah',
+        ],
+        'stats': {
+            'pending_processing_count': pending_processing_count,
+            'critical_notifications': 0,
+        },
+    }
+
+    return render(request, 'vendors/finance/bank_setup.html', context)
 
 
 @vendor_required
@@ -968,7 +1761,22 @@ def vendor_parts_bulk_action(request):
                 parts.update(is_active=False)
                 updated_count = parts.count()
                 message = f'Deactivated {updated_count} parts'
-                
+
+            elif action == 'publish':
+                parts.update(status='published')
+                updated_count = parts.count()
+                message = f'Published {updated_count} parts'
+
+            elif action == 'draft':
+                parts.update(status='draft')
+                updated_count = parts.count()
+                message = f'Set {updated_count} parts to draft'
+
+            elif action == 'archive':
+                parts.update(status='archived')
+                updated_count = parts.count()
+                message = f'Archived {updated_count} parts'
+
             elif action == 'feature':
                 parts.update(is_featured=True)
                 updated_count = parts.count()
@@ -1428,6 +2236,7 @@ def vendor_parts_import(request):
         form = VendorPartBulkImportForm(request.POST, request.FILES)
         if form.is_valid():
             import_file = form.cleaned_data['file']
+            import_status = form.cleaned_data.get('import_status') or 'published'
             update_existing = form.cleaned_data['update_existing']
             validate_only = form.cleaned_data['validate_only']
             
@@ -1438,6 +2247,7 @@ def vendor_parts_import(request):
                     results = process_import_file(
                         import_file, 
                         business_partner, 
+                        import_status,
                         update_existing, 
                         validate_only
                     )
@@ -1550,7 +2360,7 @@ def vendor_parts_export(request):
     return render(request, 'business_partners/vendor_parts_export.html', context)
 
 
-def process_import_file(import_file, business_partner, update_existing, validate_only):
+def process_import_file(import_file, business_partner, import_status, update_existing, validate_only):
     """
     Process CSV or Excel import file and create/update parts with comprehensive validation.
     """
@@ -1963,6 +2773,8 @@ def process_import_file(import_file, business_partner, update_existing, validate
                         results['updated_count'] += 1
                     else:
                         # Create new part
+                        if import_status in ['draft', 'published', 'archived']:
+                            validated_data['status'] = import_status
                         new_part = Part.objects.create(**validated_data)
                         
                         # Set vehicle compatibility

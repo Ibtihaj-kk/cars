@@ -1,0 +1,165 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Bulk Upload{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Upload Form -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl border shadow-sm p-6">
+            <h3 class="font-bold text-lg mb-6">Upload Files</h3>
+
+            <form method="POST" action="{% url 'admin_panel:process_bulk_upload' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-black transition cursor-pointer"
+                    id="dropzone">
+                    <i class="fas fa-cloud-upload-alt text-5xl text-gray-300 mb-4"></i>
+                    <p class="text-lg font-bold text-gray-700 mb-2">Drop your file here</p>
+                    <p class="text-sm text-gray-500 mb-4">or click to browse</p>
+                    <input type="file" name="file" id="fileInput" class="hidden" accept=".csv,.xlsx,.xls">
+                    <p class="text-xs text-gray-400">Supports: CSV, Excel (.xlsx, .xls)</p>
+                </div>
+
+                <div id="fileInfo" class="hidden mt-4 p-4 bg-gray-50 rounded-xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-file-excel text-green-500 text-2xl"></i>
+                            <div>
+                                <p class="font-bold" id="fileName">filename.csv</p>
+                                <p class="text-xs text-gray-500" id="fileSize">0 KB</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="clearFile()" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button type="submit"
+                        class="flex-1 bg-black text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-gray-800 disabled:opacity-50"
+                        id="uploadBtn" disabled>
+                        <i class="fas fa-upload mr-2"></i> Upload & Process
+                    </button>
+                    <a href="#" class="px-6 py-3 border rounded-xl text-sm font-medium hover:bg-gray-50">
+                        <i class="fas fa-download mr-2"></i> Download Template
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Column Mapping Info -->
+        <div class="bg-white rounded-2xl border shadow-sm p-6 mt-6">
+            <h3 class="font-bold text-lg mb-4">Required Columns</h3>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div class="p-3 bg-gray-50 rounded-lg">
+                    <p class="text-xs text-gray-500">Column 1</p>
+                    <p class="font-bold text-sm">Part Number</p>
+                </div>
+                <div class="p-3 bg-gray-50 rounded-lg">
+                    <p class="text-xs text-gray-500">Column 2</p>
+                    <p class="font-bold text-sm">Name / Description</p>
+                </div>
+                <div class="p-3 bg-gray-50 rounded-lg">
+                    <p class="text-xs text-gray-500">Column 3</p>
+                    <p class="font-bold text-sm">Category</p>
+                </div>
+                <div class="p-3 bg-gray-50 rounded-lg">
+                    <p class="text-xs text-gray-500">Column 4</p>
+                    <p class="font-bold text-sm">Price</p>
+                </div>
+                <div class="p-3 bg-gray-50 rounded-lg">
+                    <p class="text-xs text-gray-500">Column 5</p>
+                    <p class="font-bold text-sm">Quantity</p>
+                </div>
+                <div class="p-3 bg-gray-50 rounded-lg">
+                    <p class="text-xs text-gray-500">Column 6</p>
+                    <p class="font-bold text-sm">Brand / Make</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Uploads -->
+    <div>
+        <div class="bg-white rounded-2xl border shadow-sm p-6">
+            <h3 class="font-bold text-lg mb-4">Recent Uploads</h3>
+            <div class="space-y-3">
+                {% for upload in recent_uploads %}
+                <div class="p-3 border rounded-xl hover:bg-gray-50">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-file-csv text-green-500"></i>
+                            <span class="text-sm font-bold truncate max-w-32">{{ upload.file_name }}</span>
+                        </div>
+                        <span class="text-xs px-2 py-0.5 rounded-full font-bold
+                            {% if upload.status == 'completed' %}bg-green-100 text-green-700
+                            {% elif upload.status == 'processing' %}bg-blue-100 text-blue-700
+                            {% elif upload.status == 'failed' %}bg-red-100 text-red-700
+                            {% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ upload.status|title }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>{{ upload.uploaded_at|date:"M d, Y H:i" }}</span>
+                        <span>{{ upload.records_processed|default:0 }} records</span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-history text-3xl mb-2 text-gray-300"></i>
+                    <p class="text-sm">No recent uploads</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white mt-6">
+            <h3 class="font-bold mb-2">Tips</h3>
+            <ul class="text-sm text-blue-100 space-y-2">
+                <li><i class="fas fa-check mr-2"></i> Use UTF-8 encoding</li>
+                <li><i class="fas fa-check mr-2"></i> Remove empty rows</li>
+                <li><i class="fas fa-check mr-2"></i> Max 10,000 rows per file</li>
+                <li><i class="fas fa-check mr-2"></i> Match column headers exactly</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-black'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-black'));
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('border-black');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            updateFileInfo();
+        }
+    });
+    fileInput.addEventListener('change', updateFileInfo);
+
+    function updateFileInfo() {
+        if (fileInput.files.length) {
+            const file = fileInput.files[0];
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+            fileInfo.classList.remove('hidden');
+            dropzone.classList.add('hidden');
+            uploadBtn.disabled = false;
+        }
+    }
+
+    function clearFile() {
+        fileInput.value = '';
+        fileInfo.classList.add('hidden');
+        dropzone.classList.remove('hidden');
+        uploadBtn.disabled = true;
+    }
+</script>
+{% endblock %}

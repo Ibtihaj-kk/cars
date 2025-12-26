@@ -14,6 +14,7 @@ from . import order_processing_views
 from . import api_views
 from . import htmx_views
 from .stock_monitoring_api import stock_monitoring_api
+from . import catalog_views
 
 app_name = 'business_partners'
 
@@ -154,6 +155,67 @@ urlpatterns = [
     path('vendor/invoices/',
          vendor_views.vendor_invoices,
          name='vendor_invoices'),
+
+    path('vendor/finance/',
+         vendor_views.vendor_finance_dashboard,
+         name='vendor_finance_dashboard'),
+
+    path('vendor/finance/settlements/',
+         vendor_views.vendor_settlement_statements,
+         name='vendor_settlement_statements'),
+
+    path('vendor/finance/settlements/<int:batch_id>/download.csv',
+         vendor_views.vendor_settlement_download_csv,
+         name='vendor_settlement_download_csv'),
+
+    path('vendor/finance/payouts/',
+         vendor_views.vendor_payout_tracking,
+         name='vendor_payout_tracking'),
+
+    path('vendor/finance/commissions/',
+         vendor_views.vendor_commission_breakdown,
+         name='vendor_commission_breakdown'),
+
+    path('vendor/finance/taxes/',
+         vendor_views.vendor_tax_summary,
+         name='vendor_tax_summary'),
+
+    path('vendor/finance/taxes/certificate/',
+         vendor_views.vendor_tax_certificate_download,
+         name='vendor_tax_certificate_download'),
+
+    path('vendor/finance/ledger/',
+         vendor_views.vendor_finance_ledger,
+         name='vendor_finance_ledger'),
+
+    path('vendor/finance/ledger/export.csv',
+         vendor_views.vendor_finance_ledger_export_csv,
+         name='vendor_finance_ledger_export_csv'),
+
+    path('vendor/finance/bank/',
+         vendor_views.vendor_bank_setup,
+         name='vendor_bank_setup'),
+    
+    # Vendor Catalog
+    path('vendor/catalog/',
+         catalog_views.vendor_catalog_list,
+         name='vendor_catalog_list'),
+    
+    path('vendor/catalog/add/',
+         catalog_views.vendor_catalog_add,
+         name='vendor_catalog_add'),
+
+    path('vendor/catalog/<int:pk>/',
+         catalog_views.vendor_catalog_detail,
+         name='vendor_catalog_detail'),
+
+    path('vendor/catalog/<int:pk>/edit/',
+         catalog_views.vendor_catalog_edit,
+         name='vendor_catalog_edit'),
+    
+    path('vendor/catalog/<int:pk>/delete/',
+         catalog_views.vendor_catalog_delete,
+         name='vendor_catalog_delete'),
     
     # Vendor Store Front (Public)
     path('vendors/<slug:vendor_slug>/', 
@@ -183,7 +245,15 @@ urlpatterns = [
     path('vendor/parts/<int:part_id>/delete/', 
          vendor_views.vendor_part_delete, 
          name='vendor_part_delete'),
-    
+
+    path('vendor/parts/<int:part_id>/status/',
+         vendor_inventory_views.vendor_part_status_update,
+         name='vendor_part_status_update'),
+
+    path('vendor/parts/status/bulk/',
+         vendor_inventory_views.vendor_parts_bulk_status_update,
+         name='vendor_parts_bulk_status_update'),
+
     path('vendor/parts/bulk-update/', 
          vendor_views.vendor_parts_bulk_update, 
          name='vendor_parts_bulk_update'),

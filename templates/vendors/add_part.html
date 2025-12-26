@@ -4,19 +4,57 @@
 {% block content %}
 <style>
     /* Custom scrollbar */
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: #f1f1f1; }
-    ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #555; }
-    
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
     /* Tab Transitions */
-    .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
-    .tab-content.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-    
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
     /* Form Field Styles */
-    .form-group label { display: block; font-size: 0.75rem; font-weight: 600; color: #4b5563; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.025em; }
-    
+    .form-group label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #4b5563;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
     .form-input,
     #add-part-form input[type="text"],
     #add-part-form input[type="number"],
@@ -24,16 +62,16 @@
     #add-part-form input[type="url"],
     #add-part-form input[type="date"],
     #add-part-form select,
-    #add-part-form textarea { 
-        width: 100%; 
-        padding: 0.5rem 0.75rem; 
-        border: 1px solid #9ca3af; 
-        border-radius: 0.5rem; 
-        font-size: 0.875rem; 
-        transition: all 0.2s; 
-        background-color: white; 
+    #add-part-form textarea {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #9ca3af;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+        background-color: white;
     }
-    
+
     .form-input:focus,
     #add-part-form input[type="text"]:focus,
     #add-part-form input[type="number"]:focus,
@@ -41,98 +79,97 @@
     #add-part-form input[type="url"]:focus,
     #add-part-form input[type="date"]:focus,
     #add-part-form select:focus,
-    #add-part-form textarea:focus { 
-        outline: none; 
-        border: 2px solid black; 
-        border-color: black; 
+    #add-part-form textarea:focus {
+        outline: none;
+        border: 2px solid black;
+        border-color: black;
     }
 </style>
 
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Create Product Listing</h1>
-            <p class="text-gray-500 text-sm mt-1">Fill in the details below. Fields marked with * are mandatory.</p>
-        </div>
-        <div class="flex gap-3">
-            <button type="button" 
-                    onclick="setStatusAndSubmit('draft')"
-                    class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 shadow-sm transition">
-                Save as Draft
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Create Product Listing</h1>
+        <p class="text-gray-500 text-sm mt-1">Fill in the details below. Fields marked with * are mandatory.</p>
+    </div>
+    <div class="flex gap-3">
+        <button type="button" onclick="setStatusAndSubmit('draft')"
+            class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 shadow-sm transition">
+            Save as Draft
+        </button>
+        <button type="button" onclick="if(validateForm()) { setStatusAndSubmit('published'); }"
+            class="px-6 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 shadow-lg transition flex items-center">
+            <i class="fas fa-check mr-2"></i> Publish Product
+        </button>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[600px] flex flex-col">
+
+    <div class="border-b border-gray-200 bg-gray-50 px-6">
+        <nav class="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
+            <button onclick="switchTab('general')" id="tab-btn-general"
+                class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-black text-black">
+                General Info
             </button>
-            <button type="button" 
-                    onclick="if(validateForm()) { setStatusAndSubmit('published'); }"
-                    class="px-6 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 shadow-lg transition flex items-center">
-                <i class="fas fa-check mr-2"></i> Publish Product
+            <button onclick="switchTab('pricing')" id="tab-btn-pricing"
+                class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                Pricing & Sales
             </button>
-        </div>
+            <button onclick="switchTab('logistics')" id="tab-btn-logistics"
+                class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                Inventory & Logistics
+            </button>
+            <button onclick="switchTab('planning')" id="tab-btn-planning"
+                class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                Planning (MRP)
+            </button>
+            <button onclick="switchTab('fitment')" id="tab-btn-fitment"
+                class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-blue-600 hover:text-blue-800">
+                <i class="fas fa-car mr-1"></i> Fitment & Media
+            </button>
+        </nav>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[600px] flex flex-col">
-        
-        <div class="border-b border-gray-200 bg-gray-50 px-6">
-            <nav class="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
-                <button onclick="switchTab('general')" id="tab-btn-general" class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-black text-black">
-                    General Info
-                </button>
-                <button onclick="switchTab('pricing')" id="tab-btn-pricing" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                    Pricing & Sales
-                </button>
-                <button onclick="switchTab('logistics')" id="tab-btn-logistics" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                    Inventory & Logistics
-                </button>
-                <button onclick="switchTab('planning')" id="tab-btn-planning" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                    Planning (MRP)
-                </button>
-                <button onclick="switchTab('fitment')" id="tab-btn-fitment" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-blue-600 hover:text-blue-800">
-                    <i class="fas fa-car mr-1"></i> Fitment & Media
-                </button>
-            </nav>
-        </div>
-
-        <div id="form-container" class="p-6 md:p-8 flex-1">
-            {% include 'vendors/partials/part_form.html' %}
-        </div>
+    <div id="form-container" class="p-6 md:p-8 flex-1">
+        {% include 'vendors/partials/part_form.html' %}
     </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-        // ==========================================
-        // VALIDATION & ERROR HANDLING
-        // ==========================================
-        let validationErrors = new Set();
-        
-        function setStatusAndSubmit(status) {
-            // Find the status input
-            const statusInput = document.querySelector('input[name="status"]');
-            if (statusInput) {
-                statusInput.value = status;
-                console.log('Set status to:', status);
-            } else {
-                console.error('Status input not found');
-                // Fallback: create hidden input if it doesn't exist
-                const form = document.getElementById('add-part-form');
-                if (form) {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'status';
-                    input.value = status;
-                    form.appendChild(input);
-                }
-            }
-            
-            // Trigger HTMX submission
+<script>
+    // ==========================================
+    // VALIDATION & ERROR HANDLING
+    // ==========================================
+    let validationErrors = new Set();
+
+    function setStatusAndSubmit(status) {
+        const statusInput = document.querySelector('input[name="status"]');
+        if (statusInput) {
+            statusInput.value = status;
+        } else {
             const form = document.getElementById('add-part-form');
             if (form) {
-                htmx.trigger(form, 'submit');
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'status';
+                input.value = status;
+                form.appendChild(input);
             }
         }
-        
-        function showErrorPopup(message, fieldId = null) {
-            // Create error popup
-            const popup = document.createElement('div');
-            popup.className = 'fixed top-4 right-4 z-50 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg shadow-lg max-w-sm transform transition-all duration-300 opacity-0 translate-x-full';
-            popup.innerHTML = `
+
+        const form = document.getElementById('add-part-form');
+        if (form) {
+            prepareFormForSubmit();
+            form.requestSubmit();
+        }
+    }
+
+    function showErrorPopup(message, fieldId = null) {
+        // Create error popup
+        const popup = document.createElement('div');
+        popup.className = 'fixed top-4 right-4 z-50 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg shadow-lg max-w-sm transform transition-all duration-300 opacity-0 translate-x-full';
+        popup.innerHTML = `
                 <div class="flex items-start">
                     <div class="flex-shrink-0">
                         <i class="fas fa-exclamation-circle text-red-500"></i>
@@ -145,40 +182,40 @@
                     </button>
                 </div>
             `;
-            
-            document.body.appendChild(popup);
-            
-            // Animate in
-            setTimeout(() => {
-                popup.classList.remove('opacity-0', 'translate-x-full');
-                popup.classList.add('opacity-100', 'translate-x-0');
-            }, 10);
-            
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                if (popup.parentElement) {
-                    popup.remove();
-                }
-            }, 5000);
-            
-            // Scroll to field if provided
-            if (fieldId) {
-                const field = document.getElementById(fieldId);
-                if (field) {
-                    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    field.focus();
-                    field.classList.add('border-red-500', 'ring-2', 'ring-red-200');
-                    setTimeout(() => {
-                        field.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
-                    }, 3000);
-                }
+
+        document.body.appendChild(popup);
+
+        // Animate in
+        setTimeout(() => {
+            popup.classList.remove('opacity-0', 'translate-x-full');
+            popup.classList.add('opacity-100', 'translate-x-0');
+        }, 10);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (popup.parentElement) {
+                popup.remove();
+            }
+        }, 5000);
+
+        // Scroll to field if provided
+        if (fieldId) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                field.focus();
+                field.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+                setTimeout(() => {
+                    field.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+                }, 3000);
             }
         }
-        
-        function showSuccessPopup(message) {
-            const popup = document.createElement('div');
-            popup.className = 'fixed top-4 right-4 z-50 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg shadow-lg max-w-sm transform transition-all duration-300 opacity-0 translate-x-full';
-            popup.innerHTML = `
+    }
+
+    function showSuccessPopup(message) {
+        const popup = document.createElement('div');
+        popup.className = 'fixed top-4 right-4 z-50 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg shadow-lg max-w-sm transform transition-all duration-300 opacity-0 translate-x-full';
+        popup.innerHTML = `
                 <div class="flex items-start">
                     <div class="flex-shrink-0">
                         <i class="fas fa-check-circle text-green-500"></i>
@@ -191,208 +228,347 @@
                     </button>
                 </div>
             `;
-            
-            document.body.appendChild(popup);
-            
-            setTimeout(() => {
-                popup.classList.remove('opacity-0', 'translate-x-full');
-                popup.classList.add('opacity-100', 'translate-x-0');
-            }, 10);
-            
-            setTimeout(() => {
-                if (popup.parentElement) {
-                    popup.remove();
-                }
-            }, 5000);
+
+        document.body.appendChild(popup);
+
+        setTimeout(() => {
+            popup.classList.remove('opacity-0', 'translate-x-full');
+            popup.classList.add('opacity-100', 'translate-x-0');
+        }, 10);
+
+        setTimeout(() => {
+            if (popup.parentElement) {
+                popup.remove();
+            }
+        }, 5000);
+    }
+
+    function getVendorCatalogItems() {
+        const el = document.getElementById('vendor-catalog-items');
+        if (!el) return [];
+        try {
+            return JSON.parse(el.textContent || '[]');
+        } catch (e) {
+            return [];
         }
-        
-        function validateForm() {
-            validationErrors.clear();
-            let isValid = true;
-            
-            // Required field validation - use name attributes instead of IDs
-            const materialDescription = document.querySelector('[name="material_description"]');
-            if (materialDescription && !materialDescription.value.trim()) {
-                validationErrors.add('Material Description (English) is required');
-                isValid = false;
-                showErrorPopup('Material Description (English) is required', materialDescription.id);
+    }
+
+    function setSelectByText(selectEl, textValue) {
+        if (!selectEl || !textValue) return false;
+        const normalizedTarget = String(textValue).trim().toLowerCase();
+        const options = Array.from(selectEl.options || []);
+        const match = options.find(opt => (opt.textContent || '').trim().toLowerCase() === normalizedTarget);
+        if (!match) return false;
+        selectEl.value = match.value;
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+    }
+
+    function prepareFormForSubmit() {
+        const partsNumberEl = document.querySelector('[name="parts_number"]');
+        const selectedPartNo = partsNumberEl ? String(partsNumberEl.value || '').trim() : '';
+        const selectedItem = selectedPartNo ? getVendorCatalogItems().find(i => i.part_number === selectedPartNo) : null;
+
+        const materialDescriptionEl = document.querySelector('[name="material_description"]');
+        if (selectedItem && materialDescriptionEl && !String(materialDescriptionEl.value || '').trim()) {
+            materialDescriptionEl.value = selectedItem.description || '';
+            materialDescriptionEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        const brandEl = document.querySelector('[name="brand"]');
+        const brandTextEl = document.getElementById('id_brand_text');
+        const brandTextValue = brandTextEl ? String(brandTextEl.value || '').trim() : '';
+        if (brandEl && brandTextValue && !String(brandEl.value || '').trim()) {
+            setSelectByText(brandEl, brandTextValue);
+        }
+    }
+
+    function setupVendorCatalogAutofill() {
+        const partsNumberEl = document.querySelector('[name="parts_number"]');
+        if (!partsNumberEl || partsNumberEl.dataset.catalogAutofillBound === '1') return;
+        partsNumberEl.dataset.catalogAutofillBound = '1';
+
+        const items = getVendorCatalogItems();
+        const lookup = new Map(items.map(i => [i.part_number, i]));
+
+        const brandEl = document.querySelector('[name="brand"]');
+        const brandTextEl = document.getElementById('id_brand_text');
+
+        const syncBrandTextFromSelect = () => {
+            if (!brandEl || !brandTextEl) return;
+            const selectedOption = brandEl.options && brandEl.selectedIndex >= 0 ? brandEl.options[brandEl.selectedIndex] : null;
+            const txt = selectedOption ? (selectedOption.textContent || '').trim() : '';
+            if (!brandTextEl.value) {
+                brandTextEl.value = txt;
             }
-            
-            const partsNumber = document.querySelector('[name="parts_number"]');
-            if (partsNumber && !partsNumber.value.trim()) {
-                validationErrors.add('Parts Number is required');
-                isValid = false;
-                showErrorPopup('Parts Number is required', partsNumber.id);
-            }
-            
-            const standardPrice = document.querySelector('[name="standard_price"]');
-            if (standardPrice && standardPrice.value) {
-                const price = parseFloat(standardPrice.value);
-                if (isNaN(price) || price < 0) {
-                    validationErrors.add('Standard Price must be a valid positive number');
-                    isValid = false;
-                    showErrorPopup('Standard Price must be a valid positive number', standardPrice.id);
-                }
-            }
-            
-            // Additional required field validation
-            const baseUnitOfMeasure = document.querySelector('[name="base_unit_of_measure"]');
-            if (baseUnitOfMeasure && !baseUnitOfMeasure.value.trim()) {
-                validationErrors.add('Base Unit of Measure is required');
-                isValid = false;
-                showErrorPopup('Base Unit of Measure is required', baseUnitOfMeasure.id);
-            }
-            
-            const priceField = document.querySelector('[name="price"]');
-            if (priceField && !priceField.value.trim()) {
-                validationErrors.add('Price is required');
-                isValid = false;
-                showErrorPopup('Price is required', priceField.id);
-            }
-            
-            const quantityField = document.querySelector('[name="quantity"]');
-            if (quantityField && !quantityField.value.trim()) {
-                validationErrors.add('Quantity is required');
-                isValid = false;
-                showErrorPopup('Quantity is required', quantityField.id);
-            }
-            
-            const categoryField = document.querySelector('[name="category"]');
-            if (categoryField && !categoryField.value) {
-                validationErrors.add('Category is required');
-                isValid = false;
-                showErrorPopup('Category is required', categoryField.id);
-            }
-            
-            const brandField = document.querySelector('[name="brand"]');
-            if (brandField && !brandField.value) {
-                validationErrors.add('Brand is required');
-                isValid = false;
-                showErrorPopup('Brand is required', brandField.id);
-            }
-            
-            // Numeric field validation
-            const numericFields = document.querySelectorAll('input[type="number"]');
-            numericFields.forEach(field => {
-                if (field.value && !/^\d+(\.\d+)?$/.test(field.value)) {
-                    const fieldName = field.previousElementSibling?.textContent || 'Field';
-                    validationErrors.add(`${fieldName} must be a valid number`);
-                    isValid = false;
-                    showErrorPopup(`${fieldName} must be a valid number`, field.id);
-                }
+        };
+
+        if (brandTextEl && brandTextEl.dataset.catalogAutofillBound !== '1') {
+            brandTextEl.dataset.catalogAutofillBound = '1';
+            brandTextEl.addEventListener('input', function () {
+                if (!brandEl) return;
+                setSelectByText(brandEl, this.value);
             });
-            
-            return isValid;
         }
-        
-        function handleFormSubmit(event) {
-            event.preventDefault();
-            
-            if (!validateForm()) {
-                // Show all validation errors
-                validationErrors.forEach(error => {
-                    showErrorPopup(error);
-                });
-                return false;
-            }
-            
-            // Form is valid, proceed with submission
-            showSuccessPopup('Product submitted successfully!');
-            
-            // Here you would typically submit the form via AJAX or allow normal submission
-            // For now, we'll just show success message
-            return true;
+
+        if (brandEl && brandEl.dataset.catalogAutofillBound !== '1') {
+            brandEl.dataset.catalogAutofillBound = '1';
+            brandEl.addEventListener('change', function () {
+                if (!brandTextEl) return;
+                const selectedOption = this.options && this.selectedIndex >= 0 ? this.options[this.selectedIndex] : null;
+                brandTextEl.value = selectedOption ? (selectedOption.textContent || '').trim() : '';
+            });
         }
-        
-        // Add event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.querySelector('form');
-            if (form) {
-                // form.addEventListener('submit', handleFormSubmit);
+
+        syncBrandTextFromSelect();
+
+        const descriptionEl = document.querySelector('[name="description"]');
+        if (descriptionEl && descriptionEl.dataset.catalogUserListenerBound !== '1') {
+            descriptionEl.dataset.catalogUserListenerBound = '1';
+            descriptionEl.addEventListener('input', function () {
+                this.dataset.userEdited = '1';
+            });
+        }
+
+        partsNumberEl.addEventListener('change', function () {
+            const selected = (this.value || '').trim();
+            const item = lookup.get(selected);
+            if (!item) return;
+
+            const materialDescriptionEl = document.querySelector('[name="material_description"]');
+            if (materialDescriptionEl) {
+                materialDescriptionEl.value = item.description || '';
+                materialDescriptionEl.dispatchEvent(new Event('input', { bubbles: true }));
             }
-            
-            // Add input validation on blur
-            const inputs = document.querySelectorAll('input, select, textarea');
-            inputs.forEach(input => {
-                input.addEventListener('blur', function() {
-                    validateField(this);
-                });
+
+            const manufacturerPartNumberEl = document.querySelector('[name="manufacturer_part_number"]');
+            if (manufacturerPartNumberEl && !manufacturerPartNumberEl.value) {
+                manufacturerPartNumberEl.value = item.part_number || '';
+                manufacturerPartNumberEl.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            if (brandEl) {
+                setSelectByText(brandEl, item.make);
+            }
+            if (brandTextEl) {
+                brandTextEl.value = item.make || '';
+            }
+
+            if (descriptionEl && descriptionEl.dataset.userEdited !== '1') {
+                const fitment = [
+                    item.make ? `Make: ${item.make}` : null,
+                    item.model ? `Model: ${item.model}` : null,
+                    item.year ? `Year: ${item.year}` : null,
+                    item.trim ? `Trim: ${item.trim}` : null,
+                    item.engine ? `Engine: ${item.engine}` : null,
+                ].filter(Boolean).join('\n');
+
+                descriptionEl.value = fitment;
+                descriptionEl.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+    }
+
+    function validateForm() {
+        validationErrors.clear();
+        let isValid = true;
+
+        prepareFormForSubmit();
+
+        // Required field validation - use name attributes instead of IDs
+        const materialDescription = document.querySelector('[name="material_description"]');
+        if (materialDescription && !materialDescription.value.trim()) {
+            validationErrors.add('Material Description (English) is required');
+            isValid = false;
+            showErrorPopup('Material Description (English) is required', materialDescription.id);
+        }
+
+        const partsNumber = document.querySelector('[name="parts_number"]');
+        if (partsNumber && !partsNumber.value.trim()) {
+            validationErrors.add('Parts Number is required');
+            isValid = false;
+            showErrorPopup('Parts Number is required', partsNumber.id);
+        }
+
+        const standardPrice = document.querySelector('[name="standard_price"]');
+        if (standardPrice && standardPrice.value) {
+            const price = parseFloat(standardPrice.value);
+            if (isNaN(price) || price < 0) {
+                validationErrors.add('Standard Price must be a valid positive number');
+                isValid = false;
+                showErrorPopup('Standard Price must be a valid positive number', standardPrice.id);
+            }
+        }
+
+        // Additional required field validation
+        const baseUnitOfMeasure = document.querySelector('[name="base_unit_of_measure"]');
+        if (baseUnitOfMeasure && !baseUnitOfMeasure.value.trim()) {
+            validationErrors.add('Base Unit of Measure is required');
+            isValid = false;
+            showErrorPopup('Base Unit of Measure is required', baseUnitOfMeasure.id);
+        }
+
+        const priceField = document.querySelector('[name="price"]');
+        if (priceField && !priceField.value.trim()) {
+            validationErrors.add('Wholesale price is required');
+            isValid = false;
+            showErrorPopup('Wholesale price is required', priceField.id);
+        }
+
+        const quantityField = document.querySelector('[name="quantity"]');
+        if (quantityField && !quantityField.value.trim()) {
+            validationErrors.add('Quantity is required');
+            isValid = false;
+            showErrorPopup('Quantity is required', quantityField.id);
+        }
+
+        const categoryField = document.querySelector('[name="category"]');
+        if (categoryField && !categoryField.value) {
+            validationErrors.add('Category is required');
+            isValid = false;
+            showErrorPopup('Category is required', categoryField.id);
+        }
+
+        const brandField = document.querySelector('[name="brand"]');
+        const brandTextField = document.getElementById('id_brand_text');
+        const brandValue = brandField ? String(brandField.value || '').trim() : '';
+        const brandTextValue = brandTextField ? String(brandTextField.value || '').trim() : '';
+
+        if (!brandValue && brandTextValue && brandField) {
+            setSelectByText(brandField, brandTextValue);
+        }
+
+        if (!brandValue && !brandTextValue) {
+            validationErrors.add('Make is required');
+            isValid = false;
+            showErrorPopup('Make is required', (brandTextField && brandTextField.id) ? brandTextField.id : (brandField ? brandField.id : null));
+        }
+
+        // Numeric field validation
+        const numericFields = document.querySelectorAll('input[type="number"]');
+        numericFields.forEach(field => {
+            if (field.value && !/^\d+(\.\d+)?$/.test(field.value)) {
+                const fieldName = field.previousElementSibling?.textContent || 'Field';
+                validationErrors.add(`${fieldName} must be a valid number`);
+                isValid = false;
+                showErrorPopup(`${fieldName} must be a valid number`, field.id);
+            }
+        });
+
+        return isValid;
+    }
+
+    function handleFormSubmit(event) {
+        event.preventDefault();
+
+        if (!validateForm()) {
+            // Show all validation errors
+            validationErrors.forEach(error => {
+                showErrorPopup(error);
+            });
+            return false;
+        }
+
+        // Form is valid, proceed with submission
+        showSuccessPopup('Product submitted successfully!');
+
+        // Here you would typically submit the form via AJAX or allow normal submission
+        // For now, we'll just show success message
+        return true;
+    }
+
+    // Add event listeners
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('form');
+        if (form) {
+            // form.addEventListener('submit', handleFormSubmit);
+        }
+
+        // Add input validation on blur
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('blur', function () {
+                validateField(this);
             });
         });
-        
-        function validateField(field) {
-            // Basic field validation
-            if (field.hasAttribute('required') && !field.value.trim()) {
-                field.classList.add('border-red-500', 'ring-2', 'ring-red-200');
-                return false;
-            }
-            
-            if (field.type === 'number' && field.value && !/^\d+(\.\d+)?$/.test(field.value)) {
-                field.classList.add('border-red-500', 'ring-2', 'ring-red-200');
-                return false;
-            }
-            
-            field.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
-            return true;
+
+        setupVendorCatalogAutofill();
+    });
+
+    function validateField(field) {
+        // Basic field validation
+        if (field.hasAttribute('required') && !field.value.trim()) {
+            field.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+            return false;
         }
 
-        // ==========================================
-        // TAB SWITCHING LOGIC
-        // ==========================================
-        function switchTab(tabName) {
-            // 1. Hide all tab contents
-            const contents = document.querySelectorAll('.tab-content');
-            contents.forEach(content => {
-                content.classList.remove('active');
-            });
-
-            // 2. Deactivate all buttons
-            const buttons = document.querySelectorAll('.tab-btn');
-            buttons.forEach(btn => {
-                btn.classList.remove('border-black', 'text-black', 'active');
-                btn.classList.add('border-transparent', 'text-gray-500');
-            });
-
-            // 3. Show target tab content
-            const targetTab = document.getElementById('tab-' + tabName);
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-
-            // 4. Activate target button
-            const activeBtn = document.getElementById('tab-btn-' + tabName);
-            if (activeBtn) {
-                activeBtn.classList.remove('border-transparent', 'text-gray-500');
-                activeBtn.classList.add('border-black', 'text-black', 'active');
-            }
+        if (field.type === 'number' && field.value && !/^\d+(\.\d+)?$/.test(field.value)) {
+            field.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+            return false;
         }
 
+        field.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+        return true;
+    }
+
+    // ==========================================
+    // TAB SWITCHING LOGIC
+    // ==========================================
+    function switchTab(tabName) {
+        // 1. Hide all tab contents
+        const contents = document.querySelectorAll('.tab-content');
+        contents.forEach(content => {
+            content.classList.remove('active');
+        });
+
+        // 2. Deactivate all buttons
+        const buttons = document.querySelectorAll('.tab-btn');
+        buttons.forEach(btn => {
+            btn.classList.remove('border-black', 'text-black', 'active');
+            btn.classList.add('border-transparent', 'text-gray-500');
+        });
+
+        // 3. Show target tab content
+        const targetTab = document.getElementById('tab-' + tabName);
+        if (targetTab) {
+            targetTab.classList.add('active');
+        }
+
+        // 4. Activate target button
+        const activeBtn = document.getElementById('tab-btn-' + tabName);
+        if (activeBtn) {
+            activeBtn.classList.remove('border-transparent', 'text-gray-500');
+            activeBtn.classList.add('border-black', 'text-black', 'active');
+        }
+    }
 
 
-            // ==========================================
-            // HTMX RESPONSE HANDLING
-            // ==========================================
-            document.addEventListener('DOMContentLoaded', function() {
-                // Handle HTMX responses
-                document.body.addEventListener('htmx:afterSwap', function(event) {
-                    if (event.detail.target.id === 'form-container') {
-                        // Re-initialize tabs if needed, but the script in part_form.html does this.
-                    }
-                    
-                    // Check for success response (assuming backend sends JSON or HTML with specific markers)
-                    // Note: HTMX usually swaps HTML. If you want JSON response handling, you need hx-ext="json-enc" or similar,
-                    // OR check for HX-Trigger header.
-                    // The previous code assumed JSON response: const response = JSON.parse(event.detail.xhr.responseText);
-                    // But hx-swap="innerHTML" implies HTML response.
-                    // I will leave the existing logic but it might be broken if the response is HTML.
-                    
-                    // Ideally, we should use HX-Trigger headers for success messages/redirects.
-                });
 
-                // Handle HTMX errors
-                document.body.addEventListener('htmx:responseError', function(event) {
-                    showErrorPopup('An error occurred while saving the part. Please try again.');
-                });
-            });
-    </script>
+    // ==========================================
+    // HTMX RESPONSE HANDLING
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function () {
+        // Handle HTMX responses
+        document.body.addEventListener('htmx:afterSwap', function (event) {
+            if (event.detail.target.id === 'form-container') {
+                // Re-initialize tabs if needed, but the script in part_form.html does this.
+                setupVendorCatalogAutofill();
+            }
+
+            // Check for success response (assuming backend sends JSON or HTML with specific markers)
+            // Note: HTMX usually swaps HTML. If you want JSON response handling, you need hx-ext="json-enc" or similar,
+            // OR check for HX-Trigger header.
+            // The previous code assumed JSON response: const response = JSON.parse(event.detail.xhr.responseText);
+            // But hx-swap="innerHTML" implies HTML response.
+            // I will leave the existing logic but it might be broken if the response is HTML.
+
+            // Ideally, we should use HX-Trigger headers for success messages/redirects.
+        });
+
+        // Handle HTMX errors
+        document.body.addEventListener('htmx:responseError', function (event) {
+            showErrorPopup('An error occurred while saving the part. Please try again.');
+        });
+    });
+</script>
 {% endblock %}

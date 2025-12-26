@@ -19,7 +19,7 @@
     <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-start">
         <div>
             <p class="text-xs font-bold text-gray-400 uppercase">Total Customers</p>
-            <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ total_customers_count|default:"0" }}</h3>
+            <h3 class="text-xl font-extrabold text-gray-900 mt-1">{{ total_customers_count|default:"0" }}</h3>
         </div>
         <div class="p-2 bg-blue-50 rounded-lg text-blue-600"><i class="fas fa-users"></i></div>
     </div>
@@ -27,7 +27,7 @@
     <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-start">
         <div>
             <p class="text-xs font-bold text-gray-400 uppercase">Active Now</p>
-            <h3 class="text-2xl font-extrabold text-green-600 mt-1">{{ active_customers|default:"--" }}</h3>
+            <h3 class="text-xl font-extrabold text-green-600 mt-1">{{ active_customers|default:"--" }}</h3>
         </div>
         <div class="p-2 bg-green-50 rounded-lg text-green-600"><i class="fas fa-user-check"></i></div>
     </div>
@@ -35,7 +35,7 @@
     <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-start">
         <div>
             <p class="text-xs font-bold text-gray-400 uppercase">New (This Month)</p>
-            <h3 class="text-2xl font-extrabold text-purple-600 mt-1">{{ new_customers|default:"--" }}</h3>
+            <h3 class="text-xl font-extrabold text-purple-600 mt-1">{{ new_customers|default:"--" }}</h3>
         </div>
         <div class="p-2 bg-purple-50 rounded-lg text-purple-600"><i class="fas fa-user-plus"></i></div>
     </div>
@@ -43,7 +43,7 @@
     <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-start">
         <div>
             <p class="text-xs font-bold text-gray-400 uppercase">Avg. Spend</p>
-            <h3 class="text-2xl font-extrabold text-yellow-600 mt-1">{% vendor_currency avg_spend|default:"--" %}</h3>
+            <h3 class="text-xl font-extrabold text-yellow-600 mt-1">{% vendor_currency avg_spend|default:"--" %}</h3>
         </div>
         <div class="p-2 bg-yellow-50 rounded-lg text-yellow-600"><i class="fas fa-coins"></i></div>
     </div>

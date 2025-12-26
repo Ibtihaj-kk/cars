@@ -493,6 +493,19 @@ def vendor_settings_view(request):
         
     business_partner = vendor_profile.business_partner
     
+    # Get documents from VendorDocument model (collected during registration)
+    from business_partners.document_models import VendorDocument
+    registration_documents = VendorDocument.objects.filter(
+        business_partner=business_partner,
+        status='verified'
+    ).select_related('category')
+    
+    # Create a dictionary of registration documents for easy access
+    registration_docs_dict = {}
+    for doc in registration_documents:
+        category_name = doc.category.name.lower().replace(' ', '_')
+        registration_docs_dict[category_name] = doc
+    
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'remove_logo':
@@ -515,5 +528,6 @@ def vendor_settings_view(request):
     return render(request, 'vendors/settings.html', {
         'form': form,
         'vendor': business_partner,
-        'vendor_profile': vendor_profile
+        'vendor_profile': vendor_profile,
+        'registration_documents': registration_docs_dict
     })

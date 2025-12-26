@@ -1,0 +1,167 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Roles & Permissions{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+    <!-- Roles List -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl border shadow-sm p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">Roles</h3>
+                <button class="text-sm text-blue-600 hover:underline">+ Add</button>
+            </div>
+            <div class="space-y-2" id="rolesList">
+                {% for group in groups %}
+                <div class="p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition role-item {% if forloop.first %}bg-gray-50 border-black{% endif %}"
+                    data-role-id="{{ group.id }}">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold">{{ group.name|title }}</span>
+                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{{
+                            group.permissions.count }}</span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-6 text-gray-500">
+                    <p class="text-sm">No roles defined</p>
+                    <p class="text-xs mt-1">Create Django groups to manage permissions</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Permissions Matrix -->
+    <div class="lg:col-span-3">
+        <div class="bg-white rounded-2xl border shadow-sm p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-lg">Permissions Matrix</h3>
+                <button id="saveBtn"
+                    class="bg-black text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-gray-800"
+                    onclick="savePermissions()">
+                    <i class="fas fa-save mr-2"></i> Save Changes
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Module</th>
+                            <th class="px-4 py-3 text-center">View</th>
+                            <th class="px-4 py-3 text-center">Add</th>
+                            <th class="px-4 py-3 text-center">Change</th>
+                            <th class="px-4 py-3 text-center">Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        {% for category, perms in permission_categories.items %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 font-bold">
+                                <span class="capitalize">{{ category }}</span>
+                            </td>
+                            {% for perm in perms|slice:":4" %}
+                            <td class="px-4 py-3 text-center">
+                                <input type="checkbox"
+                                    class="w-4 h-4 rounded border-gray-300 text-black focus:ring-black permission-checkbox"
+                                    data-perm-id="{{ perm.id }}" {% if perm.id in current_permissions %} checked {%endif%}>
+                            </td>
+                            {%endfor%}
+                            {% for i in "1234"|make_list %}
+                            {% if perms|length < forloop.counter %} <td class="px-4 py-3 text-center">
+                                <span class="text-gray-300">—</span>
+                                </td>
+                                {% endif %}
+                                {% endfor %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-4 py-12 text-center text-gray-500">
+                                <i class="fas fa-shield-alt text-4xl mb-4 text-gray-300"></i>
+                                <p>No permissions found</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="mt-6 pt-6 border-t flex gap-4">
+                <button class="text-sm text-blue-600 hover:underline" onclick="selectAll()">
+                    <i class="fas fa-check-double mr-1"></i> Select All
+                </button>
+                <button class="text-sm text-gray-600 hover:underline" onclick="deselectAll()">
+                    <i class="fas fa-times mr-1"></i> Deselect All
+                </button>
+                <button class="text-sm text-gray-600 hover:underline" onclick="resetToDefault()">
+                    <i class="fas fa-undo mr-1"></i> Reset to Default
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentRoleId = null;
+
+    document.querySelectorAll('.role-item').forEach(item => {
+        item.addEventListener('click', function () {
+            document.querySelectorAll('.role-item').forEach(i => {
+                i.classList.remove('bg-gray-50', 'border-black');
+            });
+            this.classList.add('bg-gray-50', 'border-black');
+            currentRoleId = this.dataset.roleId;
+            // Load role permissions via AJAX if needed
+        });
+        if (item.classList.contains('border-black')) {
+            currentRoleId = item.dataset.roleId;
+        }
+    });
+
+    function selectAll() {
+        document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = true);
+    }
+
+    function deselectAll() {
+        document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = false);
+    }
+
+    function resetToDefault() {
+        if (confirm('Reset all permissions to default?')) {
+            location.reload();
+        }
+    }
+
+    function savePermissions() {
+        if (!currentRoleId) {
+            alert('Please select a role first');
+            return;
+        }
+
+        const permissions = [];
+        document.querySelectorAll('.permission-checkbox:checked').forEach(cb => {
+            permissions.push(parseInt(cb.dataset.permId));
+        });
+
+        fetch('{% url "admin_panel:update_role_permissions" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                group_id: currentRoleId,
+                permissions: permissions
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Permissions saved successfully!');
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            });
+    }
+</script>
+{% endblock %}

@@ -123,9 +123,10 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'business_partners.context_processors.vendor_access',
+                'business_partners.context_processors.vendor_profile_completion',
                 'parts.context_processors.cart_processor',
                 'core.context_processors.currency_processor',  # Multi-currency support
-               'core.context_processors.cache_clearing',  # Cache clearing flag
+                'core.context_processors.cache_clearing',  # Cache clearing flag
             ],
         },
     },

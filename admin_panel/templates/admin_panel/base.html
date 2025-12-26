@@ -1,0 +1,437 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin | Corporate Dock{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f9fafb;
+            color: #1f2937;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        /* Sidebar Transitions */
+        #sidebar {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #sidebar.collapsed {
+            width: 80px;
+        }
+
+        #sidebar.collapsed .nav-text,
+        #sidebar.collapsed .logo-text,
+        #sidebar.collapsed .section-label {
+            display: none;
+            opacity: 0;
+        }
+
+        #sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        #sidebar.collapsed .nav-link i {
+            margin-right: 0;
+            font-size: 1.25rem;
+        }
+
+        .nav-link {
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background-color: #f3f4f6;
+            color: #000;
+        }
+
+        .nav-link.active {
+            background-color: #000;
+            color: #fff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-link.active i {
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body class="antialiased flex h-screen overflow-hidden">
+
+    <aside id="sidebar"
+        class="bg-white border-r border-gray-200 flex flex-col w-72 fixed md:relative z-30 h-full hidden md:flex transition-all duration-300">
+        <div class="h-16 flex items-center px-6 border-b border-gray-100 overflow-hidden">
+            <div class="flex items-center gap-3">
+                <div
+                    class="h-8 w-8 bg-black rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
+                    C</div>
+                <span class="logo-text text-lg font-extrabold tracking-tight">Corporate Dock</span>
+            </div>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-6 px-4">
+            <div class="mb-6">
+                <button type="button"
+                    class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full"
+                    data-section-toggle="main">
+                    <span>Main</span>
+                    <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                </button>
+                <div id="sidebar-section-main" data-section-content="main" class="space-y-1">
+                    <a href="{% url 'admin_panel:dashboard' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-th-large w-6 text-center"></i>
+                        <span class="nav-text ml-3">Dashboard</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <button type="button"
+                    class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6 flex items-center justify-between w-full"
+                    data-section-toggle="administration">
+                    <span>Administration</span>
+                    <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                </button>
+                <div id="sidebar-section-administration" data-section-content="administration" class="space-y-1">
+                    <a href="{% url 'admin_panel:users' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-users w-6 text-center"></i>
+                        <span class="nav-text ml-3">User Management</span>
+                    </a>
+                    <a href="{% url 'admin_panel:roles' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-shield-alt w-6 text-center"></i>
+                        <span class="nav-text ml-3">Roles & Permissions</span>
+                    </a>
+                    <a href="{% url 'admin_panel:partners' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-handshake w-6 text-center"></i>
+                        <span class="nav-text ml-3">Business Partners</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <button type="button"
+                    class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6 flex items-center justify-between w-full"
+                    data-section-toggle="vendors">
+                    <span>Vendors</span>
+                    <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                </button>
+                <div id="sidebar-section-vendors" data-section-content="vendors" class="space-y-1">
+                    <a href="{% url 'admin_panel:vendor_management' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-store w-6 text-center"></i>
+                        <span class="nav-text ml-3">Vendor Management</span>
+                    </a>
+                    <a href="{% url 'admin_panel:vendor_approval_queue' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-user-check w-6 text-center"></i>
+                        <span class="nav-text ml-3">Approval Queue</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <button type="button"
+                    class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6 flex items-center justify-between w-full"
+                    data-section-toggle="parts">
+                    <span>Parts</span>
+                    <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                </button>
+                <div id="sidebar-section-parts" data-section-content="parts" class="space-y-1">
+                    <a href="{% url 'admin_panel:parts' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-boxes w-6 text-center"></i>
+                        <span class="nav-text ml-3">Parts Manager</span>
+                    </a>
+                    <a href="{% url 'admin_panel:categories' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-folder-tree w-6 text-center"></i>
+                        <span class="nav-text ml-3">Categories</span>
+                    </a>
+                    <a href="{% url 'admin_panel:bulk_upload' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-cloud-upload-alt w-6 text-center"></i>
+                        <span class="nav-text ml-3">Bulk Upload</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <button type="button"
+                    class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6 flex items-center justify-between w-full"
+                    data-section-toggle="operations">
+                    <span>Operations</span>
+                    <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                </button>
+                <div id="sidebar-section-operations" data-section-content="operations" class="space-y-1">
+                    <a href="{% url 'admin_panel:inventory' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-warehouse w-6 text-center"></i>
+                        <span class="nav-text ml-3">Inventory</span>
+                    </a>
+                    <a href="{% url 'admin_panel:orders' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-shopping-cart w-6 text-center"></i>
+                        <span class="nav-text ml-3">Orders</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <button type="button"
+                    class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6 flex items-center justify-between w-full"
+                    data-section-toggle="finance">
+                    <span>Finance</span>
+                    <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                </button>
+                <div id="sidebar-section-finance" data-section-content="finance" class="space-y-1">
+                    <a href="{% url 'admin_panel:payment_management' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-credit-card w-6 text-center"></i>
+                        <span class="nav-text ml-3">Payments</span>
+                    </a>
+                    <a href="{% url 'admin_panel:commission_management' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-hand-holding-usd w-6 text-center"></i>
+                        <span class="nav-text ml-3">Commissions</span>
+                    </a>
+                    <a href="{% url 'admin_panel:invoices' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-file-invoice-dollar w-6 text-center"></i>
+                        <span class="nav-text ml-3">Invoices</span>
+                    </a>
+                    <a href="{% url 'admin_panel:taxes' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-percent w-6 text-center"></i>
+                        <span class="nav-text ml-3">Tax Rules</span>
+                    </a>
+                    <a href="{% url 'admin_panel:reviews' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-star w-6 text-center"></i>
+                        <span class="nav-text ml-3">Reviews</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="pb-6">
+                <button type="button"
+                    class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6 flex items-center justify-between w-full"
+                    data-section-toggle="system">
+                    <span>System</span>
+                    <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                </button>
+                <div id="sidebar-section-system" data-section-content="system" class="space-y-1">
+                    <a href="{% url 'admin_panel:analytics' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-chart-line w-6 text-center"></i>
+                        <span class="nav-text ml-3">Analytics</span>
+                    </a>
+                    <a href="{% url 'admin_panel:activity_logs' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-history w-6 text-center"></i>
+                        <span class="nav-text ml-3">Activity Logs</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full relative overflow-hidden">
+
+        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 z-20">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSidebar()"
+                    class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition focus:outline-none">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <h1 class="text-xl font-bold text-gray-900">{% block header_title %}Overview{% endblock %}</h1>
+            </div>
+
+            <div class="flex items-center gap-6">
+                <button class="relative p-2 text-gray-400 hover:text-black transition">
+                    <i class="fas fa-bell text-lg"></i>
+                    <span class="absolute top-1.5 right-2 h-2 w-2 bg-red-500 rounded-full border-2 border-white"></span>
+                </button>
+
+                <div class="h-8 w-px bg-gray-200"></div>
+
+                <div class="relative">
+                    <button onclick="toggleUserDropdown(event)" class="flex items-center gap-2 focus:outline-none">
+                        <span class="text-right hidden sm:block">
+                            <span class="block text-sm font-bold text-gray-900">{{ user.username|default:"Admin" }}</span>
+                            <span class="block text-[10px] text-gray-500 font-medium uppercase tracking-wide">Super
+                                Admin</span>
+                        </span>
+                        <div
+                            class="h-9 w-9 bg-black text-white rounded-full flex items-center justify-center font-bold text-xs border-2 border-white shadow-sm">
+                            AD</div>
+                        <i class="fas fa-chevron-down text-xs text-gray-400 ml-1"></i>
+                    </button>
+
+                    <div id="user-dropdown"
+                        class="hidden absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 transform origin-top-right transition-all">
+                        <div class="px-4 py-3 border-b border-gray-100">
+                            <p class="text-xs text-gray-500 uppercase font-bold">Signed in as</p>
+                            <p class="text-sm font-bold text-gray-900 truncate">admin@corporatedock.com</p>
+                        </div>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
+                            <i class="fas fa-cog w-4 mr-2 text-gray-400"></i> Settings
+                        </a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
+                            <i class="fas fa-shield-alt w-4 mr-2 text-gray-400"></i> Audit Log
+                        </a>
+                        <div class="border-t border-gray-100 my-1"></div>
+                        <form method="POST" action="{% url 'admin_panel:logout' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                <i class="fas fa-sign-out-alt w-4 mr-2"></i> Logout
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-8" onclick="closeDropdowns()">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()"
+        class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden"></div>
+
+    <script>
+        // Sidebar Toggle
+        function setSidebarCollapsed(collapsed) {
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar) return;
+            if (collapsed) {
+                sidebar.classList.add('collapsed');
+            } else {
+                sidebar.classList.remove('collapsed');
+            }
+            try {
+                localStorage.setItem('admin_sidebar_collapsed', collapsed ? 'collapsed' : 'expanded');
+            } catch (e) { }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            if (window.innerWidth >= 768) {
+                // Desktop: Collapse sidebar
+                setSidebarCollapsed(!sidebar.classList.contains('collapsed'));
+            } else {
+                // Mobile: Show/Hide off-canvas sidebar
+                sidebar.classList.toggle('hidden');
+                sidebar.classList.toggle('absolute');
+                sidebar.classList.toggle('h-full');
+                sidebar.classList.toggle('z-50');
+                overlay.classList.toggle('hidden');
+            }
+        }
+
+        // Dropdown Toggle
+        function toggleUserDropdown(event) {
+            event.stopPropagation();
+            document.getElementById('user-dropdown').classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        function closeDropdowns() {
+            document.getElementById('user-dropdown').classList.add('hidden');
+        }
+
+        function setSidebarSectionCollapsed(section, collapsed) {
+            const content = document.querySelector(`[data-section-content="${section}"]`);
+            const toggle = document.querySelector(`[data-section-toggle="${section}"]`);
+            if (!content || !toggle) return;
+            const icon = toggle.querySelector('i');
+
+            if (collapsed) {
+                content.classList.add('hidden');
+                if (icon) icon.style.transform = 'rotate(-90deg)';
+            } else {
+                content.classList.remove('hidden');
+                if (icon) icon.style.transform = 'rotate(0deg)';
+            }
+
+            try {
+                localStorage.setItem(`admin_sidebar_section_${section}`, collapsed ? 'collapsed' : 'expanded');
+            } catch (e) { }
+        }
+
+        function toggleSidebarSection(section) {
+            const content = document.querySelector(`[data-section-content="${section}"]`);
+            if (!content) return;
+            setSidebarSectionCollapsed(section, !content.classList.contains('hidden'));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.innerWidth >= 768) {
+                let initialSidebar = 'collapsed';
+                try {
+                    initialSidebar = localStorage.getItem('admin_sidebar_collapsed') || 'collapsed';
+                } catch (e) { }
+                setSidebarCollapsed(initialSidebar === 'collapsed');
+            }
+
+            const defaultSectionState = {
+                main: 'expanded',
+                administration: 'expanded',
+                vendors: 'collapsed',
+                parts: 'collapsed',
+                operations: 'collapsed',
+                finance: 'collapsed',
+                system: 'collapsed',
+            };
+
+            document.querySelectorAll('[data-section-toggle]').forEach((toggle) => {
+                const section = toggle.getAttribute('data-section-toggle');
+                toggle.addEventListener('click', () => toggleSidebarSection(section));
+                let initial = defaultSectionState[section] || 'collapsed';
+                try {
+                    initial = localStorage.getItem(`admin_sidebar_section_${section}`) || initial;
+                } catch (e) { }
+                setSidebarSectionCollapsed(section, initial === 'collapsed');
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

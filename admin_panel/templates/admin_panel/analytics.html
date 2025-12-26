@@ -1,0 +1,142 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Analytics{% endblock %}
+
+{% block content %}
+<!-- Time Period Selector -->
+<div class="flex justify-between items-center mb-8">
+    <h2 class="text-2xl font-extrabold">Analytics Dashboard</h2>
+    <form method="GET" class="flex gap-2">
+        <select name="period" onchange="this.form.submit()"
+            class="bg-white border rounded-xl px-4 py-2 font-bold text-sm">
+            <option value="7" {% if period == 7 %}selected{% endif %}>Last 7 Days</option>
+            <option value="30" {% if period == 30 %}selected{% endif %}>Last 30 Days</option>
+            <option value="90" {% if period == 90 %}selected{% endif %}>Last 90 Days</option>
+            <option value="365" {% if period == 365 %}selected{% endif %}>Last Year</option>
+        </select>
+    </form>
+</div>
+
+<!-- Summary Stats -->
+<div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-6 text-white mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="text-center">
+            <p class="text-purple-200 text-sm uppercase font-bold">Total in Period</p>
+            <p class="text-4xl font-extrabold mt-1">{{ total_in_period|default:"0" }}</p>
+            <p class="text-sm text-purple-200 mt-1">listings</p>
+        </div>
+        <div class="text-center border-l border-white/20">
+            <p class="text-purple-200 text-sm uppercase font-bold">Average Daily</p>
+            <p class="text-4xl font-extrabold mt-1">{{ avg_daily_in_period|default:0|floatformat:1 }}</p>
+            <p class="text-sm text-purple-200 mt-1">listings/day</p>
+        </div>
+        <div class="text-center border-l border-white/20">
+            <p class="text-purple-200 text-sm uppercase font-bold">Top Status</p>
+            <p class="text-4xl font-extrabold mt-1">{{ status_stats.0.status|default:"N/A" }}</p>
+            <p class="text-sm text-purple-200 mt-1">{{ status_stats.0.count|default:0 }} listings</p>
+        </div>
+        <div class="text-center border-l border-white/20">
+            <p class="text-purple-200 text-sm uppercase font-bold">Top Make</p>
+            <p class="text-4xl font-extrabold mt-1">{{ make_stats.0.make__name|default:"N/A"|truncatechars:10 }}</p>
+            <p class="text-sm text-purple-200 mt-1">{{ make_stats.0.count|default:0 }} listings</p>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <!-- Daily Trend Chart -->
+    <div class="bg-white rounded-2xl border shadow-sm p-6">
+        <h3 class="font-bold text-lg mb-4">Listings Trend</h3>
+        <canvas id="trendChart" height="200"></canvas>
+    </div>
+
+    <!-- Status Distribution -->
+    <div class="bg-white rounded-2xl border shadow-sm p-6">
+        <h3 class="font-bold text-lg mb-4">Status Distribution</h3>
+        <canvas id="statusChart" height="200"></canvas>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Top Makes -->
+    <div class="bg-white rounded-2xl border shadow-sm p-6">
+        <h3 class="font-bold text-lg mb-4">Top Vehicle Makes</h3>
+        <div class="space-y-3">
+            {% for make in make_stats %}
+            <div class="flex items-center gap-4">
+                <span class="w-24 font-medium truncate">{{ make.make__name|default:"Unknown" }}</span>
+                <div class="flex-1 bg-gray-100 rounded-full h-3">
+                    <div class="bg-blue-600 h-3 rounded-full" style="width: {{ make.percentage|default:0 }}%"></div>
+                </div>
+                <span class="font-bold text-sm w-16 text-right">{{ make.count }}</span>
+            </div>
+            {% empty %}
+            <p class="text-gray-500 text-center py-4">No data available</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Top Users -->
+    <div class="bg-white rounded-2xl border shadow-sm p-6">
+        <h3 class="font-bold text-lg mb-4">Most Active Users</h3>
+        <div class="space-y-3">
+            {% for user in user_stats %}
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-8 h-8 bg-gradient-to-br from-gray-700 to-gray-900 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                    {{ user.user__email|slice:":1"|upper }}
+                </div>
+                <span class="flex-1 font-medium truncate">{{ user.user__email }}</span>
+                <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-bold text-xs">{{ user.count }}
+                    listings</span>
+            </div>
+            {% empty %}
+            <p class="text-gray-500 text-center py-4">No data available</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Trend Chart
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for item in daily_data %}'{{ item.date }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Listings',
+            data: [{% for item in daily_data %}{{ item.count }}{% if not forloop.last %}, {% endif %} {% endfor %}],
+    borderColor: '#4F46E5',
+        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            tension: 0.4,
+                fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+            plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+    }
+});
+
+    // Status Chart
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [{% for item in status_stats %}'{{ item.status|title }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for item in status_stats %}{{ item.count }}{% if not forloop.last %}, {% endif %} {% endfor %}],
+    backgroundColor: ['#10B981', '#FBBF24', '#3B82F6', '#EF4444', '#8B5CF6', '#6B7280']
+        }]
+    },
+    options: {
+        responsive: true,
+            plugins: { legend: { position: 'bottom' } }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Corporate Dock</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
+                <span class="text-3xl font-extrabold text-gray-900">C</span>
+            </div>
+            <h1 class="text-2xl font-bold text-white">Corporate Dock</h1>
+            <p class="text-gray-400 mt-2">Admin Panel</p>
+        </div>
+
+        <!-- Login Card -->
+        <div class="bg-white rounded-3xl shadow-2xl p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Welcome back</h2>
+            <p class="text-gray-600 mb-6">Sign in to access the admin dashboard</p>
+
+            {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                <div
+                    class="p-3 rounded-xl text-sm mb-2 {% if message.tags == 'error' %}bg-red-50 text-red-700{% elif message.tags == 'success' %}bg-green-50 text-green-700{% else %}bg-blue-50 text-blue-700{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{% url 'admin_panel:login' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="space-y-5">
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
+                        <div class="relative">
+                            <i class="fas fa-envelope absolute left-4 top-3.5 text-gray-400"></i>
+                            <input type="email" name="email" required
+                                class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition"
+                                placeholder="admin@example.com">
+                        </div>
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Password</label>
+                        <div class="relative">
+                            <i class="fas fa-lock absolute left-4 top-3.5 text-gray-400"></i>
+                            <input type="password" name="password" required
+                                class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition"
+                                placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    {% if require_2fa %}
+                    <!-- 2FA Code -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">2FA Code</label>
+                        <div class="relative">
+                            <i class="fas fa-shield-alt absolute left-4 top-3.5 text-gray-400"></i>
+                            <input type="text" name="otp_code" required maxlength="6"
+                                class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-black focus:border-transparent transition"
+                                placeholder="Enter 6-digit code">
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Remember Me -->
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="remember_me"
+                                class="w-4 h-4 rounded border-gray-300 text-black focus:ring-black">
+                            <span class="ml-2 text-sm text-gray-600">Remember me</span>
+                        </label>
+                    </div>
+
+                    <!-- Submit -->
+                    <button type="submit"
+                        class="w-full py-3 px-4 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black">
+                        Sign In
+                    </button>
+                </div>
+            </form>
+
+            {% if login_attempts > 0 %}
+            <div class="mt-4 p-3 bg-yellow-50 rounded-xl text-sm text-yellow-700">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                {{ login_attempts }} of {{ max_attempts }} login attempts used
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Security Notice -->
+        <div class="mt-6 text-center text-sm text-gray-500">
+            <i class="fas fa-shield-alt mr-1"></i>
+            This is a secure admin area. All actions are logged.
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,204 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Total Revenue</p>
+                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">${{ total_commission_earned|floatformat:0|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-green-50 text-green-600 rounded-lg"><i class="fas fa-dollar-sign"></i></div>
+        </div>
+        <span class="text-green-600 text-xs font-bold mt-3 block">Platform commission earnings</span>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Total Orders</p>
+                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ total_listings|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-blue-50 text-blue-600 rounded-lg"><i class="fas fa-shopping-cart"></i></div>
+        </div>
+        <span class="text-blue-600 text-xs font-bold mt-3 block">{{ pending_listings|default:"0" }} pending
+            review</span>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Active Vendors</p>
+                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ approved_vendors|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-purple-50 text-purple-600 rounded-lg"><i class="fas fa-store"></i></div>
+        </div>
+        <span class="text-purple-600 text-xs font-bold mt-3 block">{{ pending_applications|default:"0" }} pending
+            approval</span>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Pending Payments</p>
+                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ pending_payments|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-yellow-50 text-yellow-600 rounded-lg"><i class="fas fa-credit-card"></i></div>
+        </div>
+        <span class="text-yellow-600 text-xs font-bold mt-3 block">${{ total_vendor_balance|floatformat:2|default:"0" }}
+            vendor balance</span>
+    </div>
+</div>
+
+<!-- Vendor & Document Stats -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 rounded-2xl text-white shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-indigo-100 text-xs uppercase font-bold">Total Vendors</p>
+                <p class="text-2xl font-extrabold">{{ total_vendors|default:"0" }}</p>
+            </div>
+            <i class="fas fa-users text-2xl opacity-50"></i>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-green-500 to-green-600 p-4 rounded-2xl text-white shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-green-100 text-xs uppercase font-bold">Verified Docs</p>
+                <p class="text-2xl font-extrabold">{{ verified_documents|default:"0" }}</p>
+            </div>
+            <i class="fas fa-check-circle text-2xl opacity-50"></i>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-4 rounded-2xl text-white shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-orange-100 text-xs uppercase font-bold">Pending Docs</p>
+                <p class="text-2xl font-extrabold">{{ pending_verification_docs|default:"0" }}</p>
+            </div>
+            <i class="fas fa-clock text-2xl opacity-50"></i>
+        </div>
+    </div>
+    <div class="bg-gradient-to-br from-red-500 to-red-600 p-4 rounded-2xl text-white shadow-lg">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-red-100 text-xs uppercase font-bold">Unread Messages</p>
+                <p class="text-2xl font-extrabold">{{ message_stats.unread|default:"0" }}</p>
+            </div>
+            <i class="fas fa-envelope text-2xl opacity-50"></i>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold text-gray-900">Listings Trend</h3>
+            <span class="text-xs text-gray-500">Last 6 months</span>
+        </div>
+        <canvas id="revenueChart" height="120"></canvas>
+    </div>
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <h3 class="text-lg font-bold text-gray-900 mb-6">Recent Activity</h3>
+        <div class="space-y-4 max-h-80 overflow-y-auto">
+            {% for activity in recent_activities %}
+            <div class="flex gap-3">
+                <div class="w-2 h-2 mt-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                <div>
+                    <p class="text-sm font-bold text-gray-900">{{ activity.description|truncatechars:50 }}</p>
+                    <p class="text-xs text-gray-500">{{ activity.action_time|timesince }} ago</p>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-sm text-gray-500">No recent activity</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent Vendors & Payments -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Recent Vendor Applications</h3>
+            <a href="{% url 'admin_panel:vendor_management' %}" class="text-sm text-blue-600 hover:underline">View
+                all</a>
+        </div>
+        <div class="space-y-3">
+            {% for vendor in recent_vendors %}
+            <div class="flex justify-between items-center p-3 border rounded-xl hover:bg-gray-50">
+                <div>
+                    <p class="font-bold text-sm">{{ vendor.name }}</p>
+                    <p class="text-xs text-gray-500">{{ vendor.user.email }}</p>
+                </div>
+                <span class="text-xs px-2 py-1 rounded-full font-bold
+                    {% if vendor.status == 'approved' %}bg-green-100 text-green-700
+                    {% elif vendor.status == 'pending_review' %}bg-yellow-100 text-yellow-700
+                    {% else %}bg-gray-100 text-gray-700{% endif %}">
+                    {{ vendor.get_status_display }}
+                </span>
+            </div>
+            {% empty %}
+            <p class="text-sm text-gray-500">No recent vendor applications</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Recent Payments</h3>
+            <a href="{% url 'admin_panel:payment_management' %}" class="text-sm text-blue-600 hover:underline">View
+                all</a>
+        </div>
+        <div class="space-y-3">
+            {% for payment in recent_payments %}
+            <div class="flex justify-between items-center p-3 border rounded-xl hover:bg-gray-50">
+                <div>
+                    <p class="font-bold text-sm">{{ payment.vendor.name|default:"Unknown Vendor" }}</p>
+                    <p class="text-xs text-gray-500">${{ payment.amount }}</p>
+                </div>
+                <span class="text-xs px-2 py-1 rounded-full font-bold
+                    {% if payment.status == 'completed' %}bg-green-100 text-green-700
+                    {% elif payment.status == 'pending' %}bg-yellow-100 text-yellow-700
+                    {% else %}bg-gray-100 text-gray-700{% endif %}">
+                    {{ payment.status|title }}
+                </span>
+            </div>
+            {% empty %}
+            <p class="text-sm text-gray-500">No recent payments</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [{% for item in monthly_data %}'{{ item.month }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Listings',
+            data: [{% for item in monthly_data %}{{ item.count }}{% if not forloop.last %}, {% endif %} {% endfor %}],
+    borderColor: '#4F46E5',
+        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            tension: 0.4,
+                fill: true
+            }]
+        },
+    options: {
+        responsive: true,
+            plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+    });
+</script>
+{% endblock %}

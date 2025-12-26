@@ -1,47 +1,32 @@
 """
-Context processors for business partners and vendor access.
+Context processors for business partners app.
 """
-from django.db import models
-
+from .permissions import get_vendor_profile, user_has_vendor_access
 
 def vendor_access(request):
     """
-    Context processor to add vendor access information to all templates.
+    Add vendor access information to all templates.
     """
-    context = {
-        'has_vendor_access': False,
-        'vendor_profile': None,
-        'pending_orders_count': 0,
-        'reorder_alerts_count': 0,
+    return {
+        'user_has_vendor_access': user_has_vendor_access(request.user) if request.user.is_authenticated else False,
     }
+
+def vendor_profile_completion(request):
+    """
+    Add vendor profile completion percentage to all vendor templates.
+    """
+    # Only calculate for authenticated users
+    if not request.user or not request.user.is_authenticated:
+        return {}
     
-    try:
-        from .permissions import get_vendor_profile, user_has_vendor_access
-        from parts.models import Order, OrderItem
-        
-        if hasattr(request, 'user') and request.user.is_authenticated:
-            context['has_vendor_access'] = user_has_vendor_access(request.user)
-            vendor_profile = get_vendor_profile(request.user)
-            context['vendor_profile'] = vendor_profile
-            
-            # Get pending orders count for vendor
-            if vendor_profile:
-                business_partner = vendor_profile.business_partner
-                pending_orders = Order.objects.filter(
-                    items__part__vendor=business_partner,
-                    status__in=['pending', 'confirmed']
-                ).distinct().count()
-                context['pending_orders_count'] = pending_orders
-                
-                # Get reorder alerts count
-                from parts.models import Inventory
-                reorder_alerts = Inventory.objects.filter(
-                    part__vendor=business_partner,
-                    stock__lte=models.F('reorder_level')
-                ).count()
-                context['reorder_alerts_count'] = reorder_alerts
-    except Exception:
-        # Database tables might not exist yet, return default context
-        pass
+    # Get vendor profile
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        return {}
     
-    return context
+    # Get profile completion percentage
+    profile_completion_percentage = vendor_profile.get_profile_completion_percentage()
+    
+    return {
+        'profile_completion_percentage': profile_completion_percentage,
+    }

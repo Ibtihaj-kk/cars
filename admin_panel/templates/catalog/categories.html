@@ -1,0 +1,151 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Categories & Makes{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Categories Section -->
+    <div class="bg-white rounded-2xl border shadow-sm p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="font-bold text-lg">Categories <span class="text-gray-400 text-sm font-normal">({{ total_categories }})</span></h3>
+            <button onclick="document.getElementById('addCategoryModal').classList.remove('hidden')"
+                class="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-800">
+                <i class="fas fa-plus mr-1"></i> Add
+            </button>
+        </div>
+        <div class="space-y-3 max-h-96 overflow-y-auto">
+            {% for category in categories %}
+            <div class="flex justify-between items-center p-4 border rounded-xl hover:bg-gray-50 transition">
+                <div>
+                    <span class="font-bold">{{ category.name }}</span>
+                    <span class="text-xs text-gray-500 ml-2">({{ category.parts_count }} parts)</span>
+                    {% if category.description %}
+                    <p class="text-xs text-gray-400 mt-1">{{ category.description|truncatechars:50 }}</p>
+                    {% endif %}
+                </div>
+                <div class="flex gap-2">
+                    <button class="text-gray-400 hover:text-black p-2" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    {% if category.parts_count == 0 %}
+                    <form method="POST" action="{% url 'admin_panel:delete_category' category.id %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="text-gray-400 hover:text-red-600 p-2" title="Delete"
+                            onclick="return confirm('Delete this category?')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-folder-open text-3xl mb-2 text-gray-300"></i>
+                <p>No categories yet</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Brands/Makes Section -->
+    <div class="bg-white rounded-2xl border shadow-sm p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="font-bold text-lg">Vehicle Makes <span class="text-gray-400 text-sm font-normal">({{ total_brands }})</span></h3>
+            <button onclick="document.getElementById('addBrandModal').classList.remove('hidden')"
+                class="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-800">
+                <i class="fas fa-plus mr-1"></i> Add
+            </button>
+        </div>
+        <div class="space-y-3 max-h-96 overflow-y-auto">
+            {% for brand in brands %}
+            <div class="flex justify-between items-center p-4 border rounded-xl hover:bg-gray-50 transition">
+                <div class="flex items-center gap-3">
+                    {% if brand.logo %}
+                    <img src="{{ brand.logo.url }}" alt="{{ brand.name }}"
+                        class="w-10 h-10 rounded-lg object-contain bg-gray-50">
+                    {% else %}
+                    <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                        <i class="fas fa-car text-gray-400"></i>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <span class="font-bold">{{ brand.name }}</span>
+                        <span class="text-xs text-gray-500 ml-2">({{ brand.parts_count }} parts)</span>
+                        <span
+                            class="ml-2 text-xs px-2 py-0.5 rounded-full {% if brand.is_active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                            {% if brand.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button class="text-gray-400 hover:text-black p-2" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <form method="POST" action="{% url 'admin_panel:delete_brand' brand.id %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="text-gray-400 hover:text-red-600 p-2" title="Deactivate"
+                            onclick="return confirm('Deactivate this brand?')">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-car text-3xl mb-2 text-gray-300"></i>
+                <p>No makes yet</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Category Modal -->
+<div id="addCategoryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+        <h3 class="text-lg font-bold mb-4">Add Category</h3>
+        <form method="POST" action="{% url 'admin_panel:add_category' %}">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2">Name</label>
+                <input type="text" name="name" required
+                    class="w-full px-4 py-2 border rounded-xl focus:ring-black focus:border-black">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2">Description</label>
+                <textarea name="description" rows="3"
+                    class="w-full px-4 py-2 border rounded-xl focus:ring-black focus:border-black"></textarea>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button type="button" onclick="document.getElementById('addCategoryModal').classList.add('hidden')"
+                    class="px-4 py-2 border rounded-xl font-medium">Cancel</button>
+                <button type="submit" class="px-6 py-2 bg-black text-white rounded-xl font-bold">Add Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Brand Modal -->
+<div id="addBrandModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+        <h3 class="text-lg font-bold mb-4">Add Make/Brand</h3>
+        <form method="POST" action="{% url 'admin_panel:add_brand' %}">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2">Name</label>
+                <input type="text" name="name" required
+                    class="w-full px-4 py-2 border rounded-xl focus:ring-black focus:border-black">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2">Description</label>
+                <textarea name="description" rows="3"
+                    class="w-full px-4 py-2 border rounded-xl focus:ring-black focus:border-black"></textarea>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button type="button" onclick="document.getElementById('addBrandModal').classList.add('hidden')"
+                    class="px-4 py-2 border rounded-xl font-medium">Cancel</button>
+                <button type="submit" class="px-6 py-2 bg-black text-white rounded-xl font-bold">Add Brand</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

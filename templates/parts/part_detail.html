@@ -345,7 +345,7 @@
           </div>
           <div class="navbar-dropdown-menu">
               {% if user.is_authenticated %}
-                {% if user.vendor_profile or user.business_partners.exists %}
+                {% if user_has_vendor_access %}
                   <a href="{% url 'business_partners:vendor_dashboard' %}" class="navbar-dropdown-link">Dashboard</a>
                   <span class="navbar-dropdown-divider">|</span>
                   <a href="{% url 'business_partners:vendor_profile' %}" class="navbar-dropdown-link">My Profile</a>

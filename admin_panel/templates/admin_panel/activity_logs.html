@@ -1,0 +1,112 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Activity Logs{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-2xl border shadow-sm">
+    <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+        <h3 class="font-bold text-lg">Audit Trail</h3>
+        <form method="GET" class="flex gap-3 flex-wrap">
+            <div class="relative">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                <input type="text" name="user" value="{{ current_filters.user }}"
+                    class="pl-10 pr-4 py-2 bg-gray-50 border rounded-xl text-sm w-48" placeholder="Filter by user...">
+            </div>
+            <select name="action" onchange="this.form.submit()"
+                class="bg-white border rounded-xl px-4 py-2 text-sm font-medium">
+                <option value="">All Actions</option>
+                {% for value, label in action_choices %}
+                <option value="{{ value }}" {% if current_filters.action==value %}selected{% endif %}>{{ label }}
+                </option>
+                {% endfor %}
+            </select>
+            <input type="date" name="date_from" value="{{ current_filters.date_from }}"
+                class="bg-white border rounded-xl px-3 py-2 text-sm">
+            <input type="date" name="date_to" value="{{ current_filters.date_to }}"
+                class="bg-white border rounded-xl px-3 py-2 text-sm">
+            <button type="submit" class="bg-gray-100 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-200">
+                <i class="fas fa-filter"></i>
+            </button>
+        </form>
+    </div>
+
+    <div class="divide-y">
+        {% for log in page_obj %}
+        <div class="p-4 hover:bg-gray-50 transition">
+            <div class="flex items-start gap-4">
+                <div class="flex-shrink-0">
+                    <div class="w-10 h-10 rounded-full 
+                        {% if log.action_type == 'create' %}bg-green-100 text-green-600
+                        {% elif log.action_type == 'update' %}bg-blue-100 text-blue-600
+                        {% elif log.action_type == 'delete' %}bg-red-100 text-red-600
+                        {% elif log.action_type == 'login' %}bg-purple-100 text-purple-600
+                        {% else %}bg-gray-100 text-gray-600{% endif %}
+                        flex items-center justify-center">
+                        <i class="fas 
+                            {% if log.action_type == 'create' %}fa-plus
+                            {% elif log.action_type == 'update' %}fa-edit
+                            {% elif log.action_type == 'delete' %}fa-trash
+                            {% elif log.action_type == 'login' %}fa-sign-in-alt
+                            {% elif log.action_type == 'logout' %}fa-sign-out-alt
+                            {% else %}fa-info{% endif %}"></i>
+                    </div>
+                </div>
+                <div class="flex-grow">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-bold text-gray-900">{{ log.description|default:"No description" }}</p>
+                            <p class="text-sm text-gray-500 mt-1">
+                                <span class="font-medium">{{ log.user.email|default:"System" }}</span>
+                                {% if log.ip_address %}
+                                <span class="mx-2">•</span>
+                                <span>IP: {{ log.ip_address }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs px-2 py-1 rounded-full font-bold
+                                {% if log.action_type == 'create' %}bg-green-100 text-green-700
+                                {% elif log.action_type == 'update' %}bg-blue-100 text-blue-700
+                                {% elif log.action_type == 'delete' %}bg-red-100 text-red-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ log.get_action_type_display|default:log.action_type|title }}
+                            </span>
+                            <p class="text-xs text-gray-400 mt-1">{{ log.action_time|timesince }} ago</p>
+                        </div>
+                    </div>
+                    {% if log.extra_data %}
+                    <div class="mt-2 p-2 bg-gray-50 rounded-lg text-xs text-gray-600 font-mono">
+                        {{ log.extra_data|truncatechars:150 }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="p-12 text-center text-gray-500">
+            <i class="fas fa-history text-4xl mb-4 text-gray-300"></i>
+            <p>No activity logs found</p>
+            <p class="text-xs mt-1">Actions will be logged here automatically</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+        <span class="text-sm text-gray-500">
+            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} logs
+        </span>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}"
+                class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}"
+                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

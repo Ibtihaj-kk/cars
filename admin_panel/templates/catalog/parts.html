@@ -1,0 +1,155 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Parts Management{% endblock %}
+
+{% block content %}
+<!-- Statistics -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Total Parts</p>
+                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ total_parts|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-blue-50 text-blue-600 rounded-lg"><i class="fas fa-boxes"></i></div>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Active</p>
+                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ active_parts|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-green-50 text-green-600 rounded-lg"><i class="fas fa-check-circle"></i></div>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Low Stock</p>
+                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ low_stock_parts|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-yellow-50 text-yellow-600 rounded-lg"><i class="fas fa-exclamation-triangle"></i></div>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase">Categories</p>
+                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ categories.count|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-purple-50 text-purple-600 rounded-lg"><i class="fas fa-folder"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+        <form method="GET" class="flex gap-3 flex-wrap w-full md:w-auto">
+            <div class="relative flex-grow md:flex-grow-0 md:w-80">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                <input type="text" name="search" value="{{ search }}"
+                    class="w-full pl-10 pr-4 py-2 bg-gray-50 border rounded-xl" placeholder="Search Parts...">
+            </div>
+            <select name="category" onchange="this.form.submit()"
+                class="bg-white border text-gray-700 py-2 px-4 rounded-xl font-bold text-sm">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if category_filter == cat.id|stringformat:"s" %}selected{% endif %}>{{
+                    cat.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="status" onchange="this.form.submit()"
+                class="bg-white border text-gray-700 py-2 px-4 rounded-xl font-bold text-sm">
+                <option value="">All Status</option>
+                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+                <option value="low_stock" {% if status_filter == 'low_stock' %}selected{% endif %}>Low Stock</option>
+            </select>
+        </form>
+        <a href="{% url 'admin_panel:bulk_upload' %}"
+            class="bg-black text-white px-6 py-2 rounded-xl text-sm font-bold shadow hover:bg-gray-800">
+            <i class="fas fa-upload mr-2"></i>Bulk Upload
+        </a>
+    </div>
+
+    <table class="w-full text-left border-collapse text-sm">
+        <thead class="bg-gray-50 border-b text-xs uppercase font-bold text-gray-500">
+            <tr>
+                <th class="px-6 py-4">Part Info</th>
+                <th class="px-6 py-4">Category</th>
+                <th class="px-6 py-4">Stock</th>
+                <th class="px-6 py-4">Price</th>
+                <th class="px-6 py-4">Status</th>
+                <th class="px-6 py-4 text-right">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y">
+            {% for part in parts %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        {% if part.image %}
+                        <img src="{{ part.image.url }}" alt="{{ part.name }}" class="w-12 h-12 rounded-lg object-cover">
+                        {% else %}
+                        <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                            <i class="fas fa-cog text-gray-400"></i>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <p class="font-bold">{{ part.name|default:part.material_description|truncatechars:40 }}</p>
+                            <p class="text-xs text-gray-500">SKU: {{ part.sku|default:part.parts_number }}</p>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4">{{ part.category.name|default:"-" }}</td>
+                <td class="px-6 py-4">
+                    <span
+                        class="font-bold {% if part.quantity <= 10 %}text-red-600{% elif part.quantity <= 50 %}text-yellow-600{% else %}text-green-600{% endif %}">
+                        {{ part.quantity }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 font-bold">${{ part.price|floatformat:2 }}</td>
+                <td class="px-6 py-4">
+                    <span
+                        class="px-2 py-1 rounded text-xs font-bold {% if part.is_active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                        {% if part.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <a href="{% url 'admin_panel:part_detail' part.id %}" class="text-gray-400 hover:text-black mx-1"><i
+                            class="fas fa-eye"></i></a>
+                    <a href="{% url 'admin_panel:part_detail' part.id %}" class="text-gray-400 hover:text-black mx-1"><i
+                            class="fas fa-edit"></i></a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fas fa-boxes text-4xl mb-4 text-gray-300"></i>
+                    <p>No parts found</p>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+        <span class="text-sm text-gray-500">
+            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} parts
+        </span>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}"
+                class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}"
+                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -45,8 +45,7 @@ def validate_file_size(file):
     """Validate file size"""
     if file.size > MAX_FILE_SIZE:
         raise ValidationError(
-            f'File too large. Maximum size is {MAX_FILE_SIZE / (1024*1024):.0f}MB. '
-            f'Your file is {file.size / (1024*1024):.1f}MB.'
+            f'File exceeds maximum allowed size of {MAX_FILE_SIZE / (1024*1024):.0f}MB.'
         )
 
 
@@ -72,6 +71,14 @@ def validate_file_mime_type(file):
             f'File type not allowed: {mime_type}. '
             f'Allowed types: {", ".join(ALLOWED_DOCUMENT_TYPES)}'
         )
+
+    if not mime_type:
+        filename = getattr(file, 'name', '') or ''
+        file_extension = filename.split('.')[-1].lower() if '.' in filename else ''
+        if file_extension in DANGEROUS_EXTENSIONS or file_extension not in ALLOWED_DOCUMENT_EXTENSIONS:
+            raise ValidationError(
+                f'File type ".{file_extension}" is not allowed.'
+            )
 
 
 def validate_file_content(file):

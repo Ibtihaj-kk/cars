@@ -56,7 +56,7 @@ def patch_django_template_context():
         
         # Apply the patch
         BaseContext.__copy__ = fixed_copy
-        print("✅ Django BaseContext.__copy__ bug patched successfully!")
+        print("[OK] Django BaseContext.__copy__ bug patched successfully!")
         
         # --- Patch 2: RequestContext.new ---
         
@@ -82,10 +82,10 @@ def patch_django_template_context():
             
         # Apply the patch
         RequestContext.new = fixed_new
-        print("✅ Django RequestContext.new bug patched successfully!")
+        print("[OK] Django RequestContext.new bug patched successfully!")
         
     except Exception as e:
-        print(f"❌ Failed to patch Django template context: {e}")
+        print(f"[ERROR] Failed to patch Django template context: {e}")
         import traceback
         traceback.print_exc()
 

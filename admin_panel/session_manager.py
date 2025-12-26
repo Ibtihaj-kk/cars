@@ -111,7 +111,7 @@ class AdminSessionManager:
         if not session_key:
             return False, "no_session_key"
         
-        session_data = cls._get_session_data(session_key)
+        session_data = cls._get_session_data(session_key, request)
         if not session_data:
             return False, "session_not_found"
         
@@ -326,10 +326,20 @@ class AdminSessionManager:
         cache.set(cache_key, data, timeout)
     
     @classmethod
-    def _get_session_data(cls, session_key):
-        """Get session data from cache."""
+    def _get_session_data(cls, session_key, request=None):
+        """Get session data from cache or Django session as fallback."""
         cache_key = cls.SESSION_DATA_KEY.format(session_key=session_key)
-        return cache.get(cache_key)
+        data = cache.get(cache_key)
+        
+        # Fallback to Django session if cache is empty
+        if data is None and request is not None:
+            data = request.session.get('admin_session_data')
+            # If found in session, restore to cache
+            if data:
+                timeout = getattr(settings, 'ADMIN_SESSION_TIMEOUT', cls.DEFAULT_SESSION_TIMEOUT) * 60
+                cache.set(cache_key, data, timeout)
+        
+        return data
     
     @classmethod
     def _clear_session_data(cls, session_key):

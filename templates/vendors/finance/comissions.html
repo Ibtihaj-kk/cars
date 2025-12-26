@@ -1,0 +1,124 @@
+{% extends 'vendors/base.html' %}
+{% load vendor_currency %}
+
+{% block title %}Commission Breakdown - Corporate Dock{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Commission Breakdown</h1>
+        <p class="text-gray-500 text-sm mt-1">Commission summary for the last {{ lookback_days }} days.</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm text-center">
+        <p class="text-xs font-bold text-gray-400 uppercase">Total Sales</p>
+        <h3 class="text-xl font-extrabold text-gray-900 mt-2">{% vendor_currency total_sales|default:0 %}</h3>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm text-center">
+        <p class="text-xs font-bold text-gray-400 uppercase">Total Commission</p>
+        <h3 class="text-xl font-extrabold text-red-600 mt-2">- {% vendor_currency total_commission|default:0 %}</h3>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm text-center">
+        <p class="text-xs font-bold text-gray-400 uppercase">Effective Rate</p>
+        <h3 class="text-xl font-extrabold text-gray-900 mt-2">{{ effective_rate|floatformat:2 }}%</h3>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div>
+            <h3 class="text-lg font-bold text-gray-900">Current Plan: {{ current_plan_name }}</h3>
+            <p class="text-sm text-gray-500">{{ current_plan_summary }}</p>
+        </div>
+        <div class="text-sm font-bold text-gray-500">
+            <a href="{% url 'business_partners:vendor_commission_breakdown' %}" class="text-blue-600 hover:underline">Refresh</a>
+        </div>
+    </div>
+
+    {% if commission_rules %}
+    <div class="mt-4 border-t border-gray-100 pt-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            {% for r in commission_rules %}
+            <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                <div class="font-bold text-gray-900">{{ r.name }}</div>
+                <div class="text-gray-600 font-bold">
+                    {% if r.commission_type == 'percentage' %}
+                        {{ r.commission_rate }}%
+                    {% elif r.commission_type == 'fixed_amount' %}
+                        {% vendor_currency r.fixed_amount %}
+                    {% else %}
+                        Tiered
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <table class="w-full text-left">
+        <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500">
+            <tr>
+                <th class="px-6 py-3">Reference</th>
+                <th class="px-6 py-3">Type</th>
+                <th class="px-6 py-3 text-right">Sale Amount</th>
+                <th class="px-6 py-3 text-center">Rate</th>
+                <th class="px-6 py-3 text-right">Commission</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 text-sm">
+            {% for p in payments %}
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-4 font-mono font-bold">{{ p.payment_reference }}</td>
+                <td class="px-6 py-4">
+                    {% if p.commission_type == 'percentage' %}
+                        Percentage
+                    {% elif p.commission_type == 'fixed_amount' %}
+                        Fixed
+                    {% else %}
+                        Tiered
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-right font-bold">{% vendor_currency p.amount|default:0 %}</td>
+                <td class="px-6 py-4 text-center font-bold">
+                    {% if p.commission_type == 'percentage' %}
+                        {{ p.commission_rate }}%
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-right font-bold text-red-500">- {% vendor_currency p.commission_amount|default:0 %}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="px-6 py-10 text-center text-gray-500">No commission entries found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if payments.paginator.num_pages > 1 %}
+<div class="mt-6 flex items-center justify-center gap-2">
+    {% if payments.has_previous %}
+        <a href="?page={{ payments.previous_page_number }}" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50">Prev</a>
+    {% else %}
+        <span class="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-400">Prev</span>
+    {% endif %}
+
+    <span class="px-3 py-2 text-sm font-bold text-gray-700">
+        Page {{ payments.number }} of {{ payments.paginator.num_pages }}
+    </span>
+
+    {% if payments.has_next %}
+        <a href="?page={{ payments.next_page_number }}" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50">Next</a>
+    {% else %}
+        <span class="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-400">Next</span>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

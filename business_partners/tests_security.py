@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
+import hashlib
 import json
 from unittest.mock import patch, MagicMock
 
@@ -100,11 +101,13 @@ class StrongPasswordValidatorTests(TestCase):
         # Mock the Have I Been Pwned API response
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.text = "003D68EB55068C33ACE09247EE4C3173061A4:1\n1E4C9B1F6B1F6B1F6B1F6B1F6B1F6B1F6B1:2\n"
         mock_get.return_value = mock_response
         
         # This password hash would be in the mocked response
-        breached_password = 'testpassword123'
+        breached_password = 'BreachedPass123!'
+        sha1_hash = hashlib.sha1(breached_password.encode('utf-8')).hexdigest().upper()
+        suffix = sha1_hash[5:]
+        mock_response.text = f"{suffix}:1\n"
         
         with self.assertRaises(ValidationError) as cm:
             self.validator.validate(breached_password, self.user)

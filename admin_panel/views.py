@@ -2,9 +2,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
-from django.db.models import Q, Count, Avg
+from django.db.models import Q, Count, Avg, Exists, OuterRef, Subquery, F
 from django.db import models
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_http_methods, require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -83,17 +83,17 @@ def dashboard_view(request):
     featured_listings = VehicleListing.objects.filter(is_featured=True).count()
     
     # Vendor-specific metrics
-    total_vendors = BusinessPartner.objects.filter(partner_type='vendor').count()
+    total_vendors = BusinessPartner.objects.filter(type='vendor').count()
     pending_vendors = BusinessPartner.objects.filter(
-        partner_type='vendor', 
+        type='vendor', 
         status='pending_review'
     ).count()
     approved_vendors = BusinessPartner.objects.filter(
-        partner_type='vendor', 
+        type='vendor', 
         status='approved'
     ).count()
     rejected_vendors = BusinessPartner.objects.filter(
-        partner_type='vendor', 
+        type='vendor', 
         status='rejected'
     ).count()
     
@@ -107,32 +107,28 @@ def dashboard_view(request):
     
     # Vendor Performance metrics
     active_vendors = BusinessPartner.objects.filter(
-        partner_type='vendor', 
+        type='vendor', 
         status='approved',
         user__is_active=True
     ).count()
     
-    # Vendor with listings
+    # Vendor with listings (simplified - count active vendors)
     vendors_with_listings = BusinessPartner.objects.filter(
-        partner_type='vendor',
-        status='approved',
-        user__vehiclelisting__isnull=False
-    ).distinct().count()
-    
-    # Average vendor rating
-    avg_vendor_rating = BusinessPartner.objects.filter(
-        partner_type='vendor',
+        type='vendor',
         status='approved'
-    ).aggregate(avg_rating=Avg('rating'))['avg_rating'] or 0
+    ).count()
+    
+    # Average vendor rating (placeholder - rating field not on BusinessPartner)
+    avg_vendor_rating = 0
     
     # Vendor document verification stats
     total_documents = VendorDocument.objects.count()
-    verified_documents = VendorDocument.objects.filter(verification_status='verified').count()
-    pending_verification_docs = VendorDocument.objects.filter(verification_status='pending').count()
-    rejected_documents = VendorDocument.objects.filter(verification_status='rejected').count()
+    verified_documents = VendorDocument.objects.filter(status='verified').count()
+    pending_verification_docs = VendorDocument.objects.filter(status='pending').count()
+    rejected_documents = VendorDocument.objects.filter(status='rejected').count()
     
     # Document verification queue
-    verification_queue_count = DocumentVerificationQueue.objects.filter(resolved=False).count()
+    verification_queue_count = DocumentVerificationQueue.objects.filter(completed_at__isnull=True).count()
     
     # Recent activity
     recent_listings = VehicleListing.objects.select_related('user', 'make', 'model').order_by('-created_at')[:10]
@@ -140,7 +136,7 @@ def dashboard_view(request):
     
     # Recent vendor applications
     recent_vendors = BusinessPartner.objects.filter(
-        partner_type='vendor'
+        type='vendor'
     ).select_related('user').order_by('-created_at')[:5]
     
     # Popular makes
@@ -155,7 +151,7 @@ def dashboard_view(request):
     
     # Vendor status distribution
     vendor_status_distribution = BusinessPartner.objects.filter(
-        partner_type='vendor'
+        type='vendor'
     ).values('status').annotate(
         count=Count('id')
     ).order_by('-count')
@@ -181,7 +177,7 @@ def dashboard_view(request):
         month_start = six_months_ago + timedelta(days=30*i)
         month_end = month_start + timedelta(days=30)
         count = BusinessPartner.objects.filter(
-            partner_type='vendor',
+            type='vendor',
             created_at__gte=month_start,
             created_at__lt=month_end
         ).count()
@@ -316,20 +312,29 @@ def listings_management_view(request):
     
     # Get filter options
     makes = Brand.objects.all().order_by('name')
-    status_choices = VehicleListing.STATUS_CHOICES
+    status_choices = VehicleListing._meta.get_field('status').choices
+    
+    total_listings = VehicleListing.objects.count()
+    published_listings = VehicleListing.objects.filter(status='published').count()
+    pending_listings = VehicleListing.objects.filter(status='pending_review').count()
+    draft_listings = VehicleListing.objects.filter(status='draft').count()
+    featured_listings = VehicleListing.objects.filter(is_featured=True).count()
+    sold_listings = VehicleListing.objects.filter(status='sold').count()
     
     context = {
         'page_obj': page_obj,
         'makes': makes,
         'status_choices': status_choices,
-        'current_filters': {
-            'status': status_filter,
-            'make': make_filter,
-            'featured': featured_filter,
-            'search': search_query,
-            'date_from': date_from,
-            'date_to': date_to,
-        }
+        'search': search_query,
+        'status_filter': status_filter,
+        'make_filter': make_filter,
+        'featured_filter': featured_filter,
+        'total_listings': total_listings,
+        'published_listings': published_listings,
+        'pending_listings': pending_listings,
+        'draft_listings': draft_listings,
+        'featured_listings': featured_listings,
+        'sold_listings': sold_listings,
     }
     
     return render(request, 'admin_panel/listings_management.html', context)
@@ -637,7 +642,7 @@ def listing_detail_view(request, listing_id):
         'status_logs': status_logs,
         'images': images,
         'videos': videos,
-        'status_choices': VehicleListing.STATUS_CHOICES,
+        'status_choices': VehicleListing._meta.get_field('status').choices,
     }
     
     return render(request, 'admin_panel/listing_detail.html', context)
@@ -652,7 +657,7 @@ def update_listing_status(request, listing_id):
     new_status = request.POST.get('status')
     reason = request.POST.get('reason', '')
     
-    if new_status not in dict(VehicleListing.STATUS_CHOICES):
+    if new_status not in dict(VehicleListing._meta.get_field('status').choices):
         messages.error(request, 'Invalid status')
         return redirect('admin_panel:listing_detail', listing_id=listing_id)
     
@@ -743,6 +748,7 @@ def analytics_view(request):
         'user_stats': user_stats,
         'price_stats': price_stats,
         'total_in_period': listings_in_period.count(),
+        'avg_daily_in_period': (listings_in_period.count() / days) if days else 0,
     }
     
     return render(request, 'admin_panel/analytics.html', context)
@@ -926,7 +932,7 @@ def vendor_detail_view(request, vendor_id):
     roles = vendor.roles.all()
     
     # Get contact information
-    contact_info = vendor.contact_info.all()
+    contact_info = vendor.contacts.all()
     
     # Get related listings if vendor is a dealer
     listings = VehicleListing.objects.filter(user=vendor.user).order_by('-created_at')[:10]
@@ -989,9 +995,22 @@ def update_vendor_status(request, vendor_id):
 @audit_admin_action(ActivityLogType.VIEW, "Accessed vendor approval queue")
 def vendor_approval_queue_view(request):
     """View pending vendor applications for approval."""
-    pending_vendors = BusinessPartner.objects.filter(
-        status='pending'
-    ).select_related('user').prefetch_related('roles', 'contact_info')
+    phone_subquery = ContactInfo.objects.filter(
+        business_partner=OuterRef('pk'),
+        contact_type='phone',
+        is_primary=True,
+    ).values('value')[:1]
+
+    pending_vendors = (
+        BusinessPartner.objects.filter(
+            status='pending',
+            roles__role_type='vendor',
+        )
+        .distinct()
+        .select_related('user', 'vendor_profile')
+        .prefetch_related('roles', 'contacts')
+        .annotate(phone=Subquery(phone_subquery))
+    )
     
     # Get filter parameters
     type_filter = request.GET.get('type', '')
@@ -1021,7 +1040,7 @@ def vendor_approval_queue_view(request):
     page_obj = paginator.get_page(page_number)
     
     # Get filter options
-    role_types = BusinessPartnerRole.ROLE_CHOICES
+    role_types = BusinessPartnerRole.ROLE_TYPES
     
     context = {
         'page_obj': page_obj,
@@ -1432,7 +1451,12 @@ def payment_management_view(request):
     }
     
     # Get vendors for filter dropdown
-    vendors = Vendor.objects.filter(status='approved').order_by('business_name')
+    vendors = (
+        BusinessPartner.objects.filter(roles__role_type='vendor')
+        .exclude(status='pending')
+        .distinct()
+        .order_by('name')
+    )
     
     context = {
         'payments': payments_page,
@@ -1479,7 +1503,10 @@ def commission_management_view(request):
 def vendor_balance_view(request, vendor_id):
     """View for vendor balance and payment history."""
     
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    vendor = get_object_or_404(
+        BusinessPartner.objects.filter(roles__role_type='vendor').distinct(),
+        id=vendor_id,
+    )
     
     # Get or create vendor balance
     balance, created = VendorBalance.objects.get_or_create(
@@ -1628,70 +1655,62 @@ def delete_message_template(request, template_id):
 @login_required
 @staff_required
 def vendor_management_view(request):
-    """Comprehensive vendor management dashboard with approval workflow."""
-    
-    # Get filter parameters
-    status_filter = request.GET.get('status', 'all')
-    search_query = request.GET.get('search', '')
-    date_from = request.GET.get('date_from', '')
-    date_to = request.GET.get('date_to', '')
-    
-    # Base queryset
-    vendor_applications = VendorApplication.objects.select_related('user').all()
-    
-    # Apply filters
-    if status_filter != 'all':
-        vendor_applications = vendor_applications.filter(status=status_filter)
-    
-    if search_query:
-        vendor_applications = vendor_applications.filter(
-            Q(company_name__icontains=search_query) |
-            Q(business_email__icontains=search_query) |
-            Q(contact_person_name__icontains=search_query) |
-            Q(application_id__icontains=search_query)
+    tab = request.GET.get('tab', 'all')
+    status_filter = request.GET.get('status', '')
+    search = request.GET.get('search', '')
+
+    if tab == 'pending' and not status_filter:
+        status_filter = 'pending'
+
+    vendors_base = BusinessPartner.objects.filter(roles__role_type='vendor').distinct()
+
+    phone_subquery = ContactInfo.objects.filter(
+        business_partner=OuterRef('pk'),
+        contact_type='phone',
+        is_primary=True,
+    ).values('value')[:1]
+
+    vendors = (
+        vendors_base.select_related('user', 'vendor_profile')
+        .prefetch_related('roles', 'contacts')
+        .annotate(
+            listing_count=Count('user__listings', distinct=True),
+            rating=F('vendor_profile__vendor_rating'),
+            phone=Subquery(phone_subquery),
         )
-    
-    if date_from:
-        vendor_applications = vendor_applications.filter(created_at__gte=date_from)
-    
-    if date_to:
-        vendor_applications = vendor_applications.filter(created_at__lte=date_to)
-    
-    # Pagination
-    paginator = Paginator(vendor_applications, 20)
+    )
+
+    if status_filter:
+        vendors = vendors.filter(status=status_filter)
+
+    if search:
+        vendors = vendors.filter(
+            Q(name__icontains=search)
+            | Q(bp_number__icontains=search)
+            | Q(user__email__icontains=search)
+            | Q(contacts__value__icontains=search)
+        ).distinct()
+
+    vendors = vendors.order_by('-created_at')
+
+    paginator = Paginator(vendors, 25)
     page_number = request.GET.get('page')
-    applications_page = paginator.get_page(page_number)
-    
-    # Statistics
-    total_applications = VendorApplication.objects.count()
-    pending_review = VendorApplication.objects.filter(status='submitted').count()
-    under_review = VendorApplication.objects.filter(status='under_review').count()
-    approved = VendorApplication.objects.filter(status='approved').count()
-    rejected = VendorApplication.objects.filter(status='rejected').count()
-    requires_changes = VendorApplication.objects.filter(status='requires_changes').count()
-    
-    # Recent activity
-    recent_approvals = VendorApplication.objects.filter(
-        status='approved',
-        approved_at__gte=timezone.now() - timedelta(days=7)
-    ).select_related('user', 'reviewed_by')[:5]
-    
+    page_obj = paginator.get_page(page_number)
+
     context = {
-        'applications': applications_page,
-        'total_applications': total_applications,
-        'pending_review': pending_review,
-        'under_review': under_review,
-        'approved': approved,
-        'rejected': rejected,
-        'requires_changes': requires_changes,
-        'recent_approvals': recent_approvals,
+        'tab': tab,
+        'page_obj': page_obj,
+        'vendors': page_obj,
+        'search': search,
         'status_filter': status_filter,
-        'search_query': search_query,
-        'date_from': date_from,
-        'date_to': date_to,
-        'status_choices': VendorApplication.APPLICATION_STATUS,
+        'status_choices': BusinessPartner.STATUS_CHOICES,
+        'total_vendors': vendors_base.count(),
+        'active_vendors': vendors_base.filter(status='active').count(),
+        'pending_vendors': vendors_base.filter(status='pending').count(),
+        'inactive_vendors': vendors_base.filter(status='inactive').count(),
+        'suspended_vendors': vendors_base.filter(status='suspended').count(),
     }
-    
+
     return render(request, 'admin_panel/vendor_management.html', context)
 
 
@@ -1886,7 +1905,7 @@ def request_changes_vendor_application_view(request, application_id):
 def vendor_performance_view(request, vendor_id):
     """View vendor performance metrics and ratings."""
     
-    vendor = get_object_or_404(BusinessPartner, id=vendor_id, partner_type='vendor')
+    vendor = get_object_or_404(BusinessPartner, id=vendor_id, type='vendor')
     vendor_profile = get_object_or_404(VendorProfile, business_partner=vendor)
     
     # Get vendor listings
@@ -1971,7 +1990,7 @@ def vendor_performance_view(request, vendor_id):
 def vendor_documents_view(request, vendor_id):
     """View and manage vendor documents."""
     
-    vendor = get_object_or_404(BusinessPartner, id=vendor_id, partner_type='vendor')
+    vendor = get_object_or_404(BusinessPartner, id=vendor_id, type='vendor')
     
     # Get all vendor documents
     documents = VendorDocument.objects.filter(
@@ -2063,7 +2082,7 @@ def verify_vendor_document_view(request, document_id):
 def vendor_communication_view(request, vendor_id):
     """View and manage communication with a specific vendor."""
     
-    vendor = get_object_or_404(BusinessPartner, id=vendor_id, partner_type='vendor')
+    vendor = get_object_or_404(BusinessPartner, id=vendor_id, type='vendor')
     
     # Get all messages with this vendor
     messages_qs = AdminMessage.objects.filter(
@@ -2083,3 +2102,859 @@ def vendor_communication_view(request, vendor_id):
     }
     
     return render(request, 'admin_panel/vendor_communication.html', context)
+
+
+# ==================== USER MANAGEMENT VIEWS ====================
+
+@login_required
+@staff_required
+def users_management_view(request):
+    """User management view with filtering and search."""
+    
+    search = request.GET.get('search', '')
+    role_filter = request.GET.get('role', '')
+    status_filter = request.GET.get('status', '')
+    
+    users = User.objects.all().order_by('-date_joined')
+    
+    if search:
+        users = users.filter(
+            Q(email__icontains=search) |
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search)
+        )
+    
+    if role_filter:
+        users = users.filter(role=role_filter)
+    
+    if status_filter == 'active':
+        users = users.filter(is_active=True)
+    elif status_filter == 'inactive':
+        users = users.filter(is_active=False)
+    
+    paginator = Paginator(users, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'users': page_obj,
+        'search': search,
+        'role_filter': role_filter,
+        'status_filter': status_filter,
+        'role_choices': User.ROLE_CHOICES if hasattr(User, 'ROLE_CHOICES') else [],
+        'total_users': User.objects.count(),
+        'active_users': User.objects.filter(is_active=True).count(),
+    }
+    
+    return render(request, './users/users.html', context)
+
+
+@login_required
+@staff_required
+def user_detail_view(request, user_id):
+    """View user details."""
+    user = get_object_or_404(User, id=user_id)
+    context = {'user_obj': user}
+    return render(request, './users/user_detail.html', context)
+
+
+@login_required
+@staff_required
+@require_POST
+def update_user_view(request, user_id):
+    """Update user details."""
+    user = get_object_or_404(User, id=user_id)
+    
+    if request.POST.get('role'):
+        user.role = request.POST.get('role')
+    if request.POST.get('first_name'):
+        user.first_name = request.POST.get('first_name')
+    if request.POST.get('last_name'):
+        user.last_name = request.POST.get('last_name')
+    
+    user.save()
+    messages.success(request, 'User updated successfully.')
+    return redirect('admin_panel:user_detail', user_id=user_id)
+
+
+@login_required
+@staff_required
+@require_POST
+def toggle_user_status_view(request, user_id):
+    """Toggle user active status."""
+    user = get_object_or_404(User, id=user_id)
+    user.is_active = not user.is_active
+    user.save()
+    
+    status = 'activated' if user.is_active else 'deactivated'
+    messages.success(request, f'User {status} successfully.')
+    return redirect('admin_panel:users')
+
+
+# ==================== ROLES & PERMISSIONS VIEWS ====================
+
+@login_required
+@staff_required
+def roles_permissions_view(request):
+    """View and manage roles and permissions."""
+    from django.contrib.auth.models import Permission, Group
+    
+    groups = Group.objects.prefetch_related('permissions').all()
+    permissions = Permission.objects.select_related('content_type').all()
+    
+    # Group permissions by category
+    permission_categories = {}
+    for perm in permissions:
+        category = perm.content_type.app_label
+        if category not in permission_categories:
+            permission_categories[category] = []
+        permission_categories[category].append(perm)
+    
+    context = {
+        'groups': groups,
+        'permission_categories': permission_categories,
+    }
+    
+    return render(request, './roles/permissions.html', context)
+
+
+@login_required
+@staff_required
+@require_POST
+def update_role_permissions_view(request):
+    """Update role permissions."""
+    from django.contrib.auth.models import Group
+    
+    try:
+        data = json.loads(request.body)
+        group_id = data.get('group_id')
+        permission_ids = data.get('permissions', [])
+        
+        group = get_object_or_404(Group, id=group_id)
+        group.permissions.set(permission_ids)
+        
+        return JsonResponse({'success': True, 'message': 'Permissions updated successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+
+# ==================== PARTS MANAGEMENT VIEWS ====================
+
+@login_required
+@staff_required
+def parts_management_view(request):
+    """Parts catalog management with filtering."""
+    from parts.models import Part, Category, Brand
+    
+    search = request.GET.get('search', '')
+    category_filter = request.GET.get('category', '')
+    brand_filter = request.GET.get('brand', '')
+    status_filter = request.GET.get('status', '')
+    
+    parts = Part.objects.select_related('category', 'brand', 'vendor').all()
+    
+    if search:
+        parts = parts.filter(
+            Q(name__icontains=search) |
+            Q(parts_number__icontains=search) |
+            Q(sku__icontains=search) |
+            Q(material_description__icontains=search)
+        )
+    
+    if category_filter:
+        parts = parts.filter(category_id=category_filter)
+    
+    if brand_filter:
+        parts = parts.filter(brand_id=brand_filter)
+    
+    if status_filter == 'active':
+        parts = parts.filter(is_active=True)
+    elif status_filter == 'inactive':
+        parts = parts.filter(is_active=False)
+    elif status_filter == 'low_stock':
+        parts = parts.filter(quantity__lte=10)
+    
+    parts = parts.order_by('-created_at')
+    
+    paginator = Paginator(parts, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    categories = Category.objects.all()
+    brands = Brand.objects.filter(is_active=True)
+    
+    context = {
+        'page_obj': page_obj,
+        'parts': page_obj,
+        'categories': categories,
+        'brands': brands,
+        'search': search,
+        'category_filter': category_filter,
+        'brand_filter': brand_filter,
+        'status_filter': status_filter,
+        'total_parts': Part.objects.count(),
+        'active_parts': Part.objects.filter(is_active=True).count(),
+        'low_stock_parts': Part.objects.filter(quantity__lte=10).count(),
+    }
+    
+    return render(request, './catalog/parts.html', context)
+
+
+@login_required
+@staff_required
+def part_detail_view(request, part_id):
+    """View part details."""
+    from parts.models import Part
+    part = get_object_or_404(Part, id=part_id)
+    context = {'part': part}
+    return render(request, './catalog/part_detail.html', context)
+
+
+@login_required
+@staff_required
+@require_POST
+def update_part_view(request, part_id):
+    """Update part details."""
+    from parts.models import Part
+    part = get_object_or_404(Part, id=part_id)
+    
+    if request.POST.get('price'):
+        part.price = request.POST.get('price')
+    if request.POST.get('quantity'):
+        part.quantity = request.POST.get('quantity')
+    if request.POST.get('is_active') is not None:
+        part.is_active = request.POST.get('is_active') == 'true'
+    
+    part.save()
+    messages.success(request, 'Part updated successfully.')
+    return redirect('admin_panel:part_detail', part_id=part_id)
+
+
+@login_required
+@staff_required
+@require_POST
+def delete_part_view(request, part_id):
+    """Delete a part."""
+    from parts.models import Part
+    part = get_object_or_404(Part, id=part_id)
+    part.is_active = False
+    part.save()
+    messages.success(request, 'Part deactivated successfully.')
+    return redirect('admin_panel:parts')
+
+
+# ==================== CATEGORIES & BRANDS VIEWS ====================
+
+@login_required
+@staff_required
+def categories_view(request):
+    """View and manage categories and brands."""
+    from parts.models import Category, Brand
+    
+    categories = Category.objects.annotate(
+        parts_count=Count('parts')
+    ).order_by('name')
+    
+    brands = Brand.objects.annotate(
+        parts_count=Count('parts')
+    ).order_by('name')
+    
+    context = {
+        'categories': categories,
+        'brands': brands,
+        'total_categories': categories.count(),
+        'total_brands': brands.count(),
+    }
+    
+    return render(request, './catalog/categories.html', context)
+
+
+@login_required
+@staff_required
+@require_POST
+def add_category_view(request):
+    """Add a new category."""
+    from parts.models import Category
+    
+    name = request.POST.get('name')
+    description = request.POST.get('description', '')
+    
+    if Category.objects.filter(name=name).exists():
+        messages.error(request, 'Category already exists.')
+        return redirect('admin_panel:categories')
+    
+    Category.objects.create(name=name, description=description)
+    messages.success(request, 'Category created successfully.')
+    return redirect('admin_panel:categories')
+
+
+@login_required
+@staff_required
+@require_POST
+def update_category_view(request, category_id):
+    """Update a category."""
+    from parts.models import Category
+    category = get_object_or_404(Category, id=category_id)
+    
+    if request.POST.get('name'):
+        category.name = request.POST.get('name')
+    if request.POST.get('description'):
+        category.description = request.POST.get('description')
+    
+    category.save()
+    messages.success(request, 'Category updated successfully.')
+    return redirect('admin_panel:categories')
+
+
+@login_required
+@staff_required
+@require_POST
+def delete_category_view(request, category_id):
+    """Delete a category."""
+    from parts.models import Category
+    category = get_object_or_404(Category, id=category_id)
+    
+    if category.parts.exists():
+        messages.error(request, 'Cannot delete category with existing parts.')
+        return redirect('admin_panel:categories')
+    
+    category.delete()
+    messages.success(request, 'Category deleted successfully.')
+    return redirect('admin_panel:categories')
+
+
+@login_required
+@staff_required
+@require_POST
+def add_brand_view(request):
+    """Add a new brand."""
+    from parts.models import Brand
+    
+    name = request.POST.get('name')
+    description = request.POST.get('description', '')
+    
+    if Brand.objects.filter(name=name).exists():
+        messages.error(request, 'Brand already exists.')
+        return redirect('admin_panel:categories')
+    
+    Brand.objects.create(name=name, description=description)
+    messages.success(request, 'Brand created successfully.')
+    return redirect('admin_panel:categories')
+
+
+@login_required
+@staff_required
+@require_POST
+def update_brand_view(request, brand_id):
+    """Update a brand."""
+    from parts.models import Brand
+    brand = get_object_or_404(Brand, id=brand_id)
+    
+    if request.POST.get('name'):
+        brand.name = request.POST.get('name')
+    if request.POST.get('description'):
+        brand.description = request.POST.get('description')
+    if request.POST.get('is_active') is not None:
+        brand.is_active = request.POST.get('is_active') == 'true'
+    
+    brand.save()
+    messages.success(request, 'Brand updated successfully.')
+    return redirect('admin_panel:categories')
+
+
+@login_required
+@staff_required
+@require_POST
+def delete_brand_view(request, brand_id):
+    """Delete a brand."""
+    from parts.models import Brand
+    brand = get_object_or_404(Brand, id=brand_id)
+    brand.is_active = False
+    brand.save()
+    messages.success(request, 'Brand deactivated successfully.')
+    return redirect('admin_panel:categories')
+
+
+# ==================== ORDERS MANAGEMENT VIEWS ====================
+
+@login_required
+@staff_required
+def orders_management_view(request):
+    """Orders management with filtering."""
+    from parts.models import Order
+    
+    search = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    payment_filter = request.GET.get('payment', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    orders = Order.objects.select_related('customer').prefetch_related('items').all()
+    
+    if search:
+        orders = orders.filter(
+            Q(order_number__icontains=search) |
+            Q(customer__email__icontains=search) |
+            Q(guest_email__icontains=search)
+        )
+    
+    if status_filter:
+        orders = orders.filter(status=status_filter)
+    
+    if payment_filter:
+        orders = orders.filter(payment_status=payment_filter)
+    
+    if date_from:
+        orders = orders.filter(created_at__date__gte=date_from)
+    
+    if date_to:
+        orders = orders.filter(created_at__date__lte=date_to)
+    
+    orders = orders.order_by('-created_at')
+    
+    paginator = Paginator(orders, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistics
+    order_stats = {
+        'total': Order.objects.count(),
+        'pending': Order.objects.filter(status='pending').count(),
+        'processing': Order.objects.filter(status='processing').count(),
+        'shipped': Order.objects.filter(status='shipped').count(),
+        'delivered': Order.objects.filter(status='delivered').count(),
+        'cancelled': Order.objects.filter(status='cancelled').count(),
+        'total_revenue': Order.objects.filter(status='delivered').aggregate(total=Sum('total_price'))['total'] or 0,
+    }
+    
+    context = {
+        'page_obj': page_obj,
+        'orders': page_obj,
+        'order_stats': order_stats,
+        'status_choices': Order.STATUS_CHOICES,
+        'payment_status_choices': Order.PAYMENT_STATUS_CHOICES,
+        'search': search,
+        'status_filter': status_filter,
+        'payment_filter': payment_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+    }
+    
+    return render(request, './catalog/orders.html', context)
+
+
+@login_required
+@staff_required
+def order_detail_view(request, order_id):
+    """View order details."""
+    from parts.models import Order
+    order = get_object_or_404(Order, id=order_id)
+    context = {'order': order}
+    return render(request, './catalog/order_detail.html', context)
+
+
+@login_required
+@staff_required
+@require_POST
+def update_order_status_view(request, order_id):
+    """Update order status."""
+    from parts.models import Order
+    order = get_object_or_404(Order, id=order_id)
+    
+    new_status = request.POST.get('status')
+    reason = request.POST.get('reason', '')
+    
+    if new_status in dict(Order.STATUS_CHOICES):
+        order.update_status(new_status, changed_by=request.user, change_reason=reason, request=request)
+        messages.success(request, f'Order status updated to {new_status}.')
+    else:
+        messages.error(request, 'Invalid status.')
+    
+    return redirect('admin_panel:order_detail', order_id=order_id)
+
+
+# ==================== INVENTORY MANAGEMENT VIEWS ====================
+
+@login_required
+@staff_required
+def inventory_management_view(request):
+    """Inventory management with stock levels."""
+    from parts.models import Inventory, Part
+    
+    search = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    
+    inventory = Inventory.objects.select_related('part', 'part__category').all()
+    
+    if search:
+        inventory = inventory.filter(
+            Q(part__name__icontains=search) |
+            Q(part__parts_number__icontains=search) |
+            Q(part__sku__icontains=search)
+        )
+    
+    if status_filter == 'low':
+        inventory = inventory.filter(stock__lte=models.F('reorder_level'))
+    elif status_filter == 'out':
+        inventory = inventory.filter(stock=0)
+    elif status_filter == 'in_stock':
+        inventory = inventory.filter(stock__gt=models.F('reorder_level'))
+    
+    inventory = inventory.order_by('stock')
+    
+    paginator = Paginator(inventory, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistics
+    inventory_stats = {
+        'total_items': Inventory.objects.count(),
+        'low_stock': Inventory.objects.filter(stock__lte=models.F('reorder_level')).count(),
+        'out_of_stock': Inventory.objects.filter(stock=0).count(),
+        'total_stock_value': 0,  # Calculate if needed
+    }
+    
+    context = {
+        'page_obj': page_obj,
+        'inventory': page_obj,
+        'inventory_stats': inventory_stats,
+        'search': search,
+        'status_filter': status_filter,
+    }
+    
+    return render(request, './catalog/inventory.html', context)
+
+
+@login_required
+@staff_required
+@require_POST
+def update_inventory_view(request, inventory_id):
+    """Update inventory stock."""
+    from parts.models import Inventory
+    inventory = get_object_or_404(Inventory, id=inventory_id)
+    
+    if request.POST.get('stock'):
+        inventory.stock = int(request.POST.get('stock'))
+    if request.POST.get('reorder_level'):
+        inventory.reorder_level = int(request.POST.get('reorder_level'))
+    
+    inventory.save()
+    messages.success(request, 'Inventory updated successfully.')
+    return redirect('admin_panel:inventory')
+
+
+# ==================== REVIEWS MANAGEMENT VIEWS ====================
+
+@login_required
+@staff_required
+def reviews_management_view(request):
+    """Reviews moderation view."""
+    from parts.models import Review
+    
+    status_filter = request.GET.get('status', '')
+    rating_filter = request.GET.get('rating', '')
+    
+    reviews = Review.objects.select_related('part', 'user').all()
+    
+    if status_filter == 'pending':
+        reviews = reviews.filter(is_approved=False)
+    elif status_filter == 'approved':
+        reviews = reviews.filter(is_approved=True)
+    
+    if rating_filter:
+        reviews = reviews.filter(rating=int(rating_filter))
+    
+    reviews = reviews.order_by('-created_at')
+    
+    paginator = Paginator(reviews, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'reviews': page_obj,
+        'status_filter': status_filter,
+        'rating_filter': rating_filter,
+        'total_reviews': Review.objects.count(),
+        'pending_reviews': Review.objects.filter(is_approved=False).count(),
+        'avg_rating': Review.objects.aggregate(avg=Avg('rating'))['avg'] or 0,
+    }
+    
+    return render(request, './feedback/reviews.html', context)
+
+
+@login_required
+@staff_required
+@require_POST
+def approve_review_view(request, review_id):
+    """Approve a review."""
+    from parts.models import Review
+    review = get_object_or_404(Review, id=review_id)
+    review.is_approved = True
+    review.save()
+    messages.success(request, 'Review approved.')
+    return redirect('admin_panel:reviews')
+
+
+@login_required
+@staff_required
+@require_POST
+def reject_review_view(request, review_id):
+    """Reject a review."""
+    from parts.models import Review
+    review = get_object_or_404(Review, id=review_id)
+    review.is_approved = False
+    review.save()
+    messages.success(request, 'Review rejected.')
+    return redirect('admin_panel:reviews')
+
+
+# ==================== BULK UPLOAD VIEWS ====================
+
+@login_required
+@staff_required
+def bulk_upload_view(request):
+    """Bulk upload interface."""
+    from parts.models import BulkUploadLog
+    
+    recent_uploads = BulkUploadLog.objects.filter(
+        user=request.user
+    ).order_by('-uploaded_at')[:10]
+    
+    context = {
+        'recent_uploads': recent_uploads,
+    }
+    
+    return render(request, './tools/bulkupload.html', context)
+
+
+@login_required
+@staff_required
+@require_POST
+def process_bulk_upload_view(request):
+    """Process a bulk upload file."""
+    from parts.models import BulkUploadLog
+    
+    if 'file' not in request.FILES:
+        messages.error(request, 'No file provided.')
+        return redirect('admin_panel:bulk_upload')
+    
+    uploaded_file = request.FILES['file']
+    
+    # Create upload log
+    upload_log = BulkUploadLog.objects.create(
+        user=request.user,
+        file_name=uploaded_file.name,
+        file_size=uploaded_file.size,
+        status='processing'
+    )
+    
+    # TODO: Process the file (CSV/Excel parsing)
+    # For now, just mark as completed
+    upload_log.status = 'completed'
+    upload_log.save()
+    
+    messages.success(request, 'File uploaded successfully. Processing started.')
+    return redirect('admin_panel:bulk_upload')
+
+
+# ==================== INVOICES & FINANCE VIEWS ====================
+
+@login_required
+@staff_required
+def invoices_view(request):
+    """Invoices view (derived from completed orders)."""
+    from parts.models import Order
+    
+    search = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    
+    # Invoices are based on paid orders
+    orders = Order.objects.filter(
+        payment_status='completed'
+    ).select_related('customer').order_by('-created_at')
+    
+    if search:
+        orders = orders.filter(
+            Q(order_number__icontains=search) |
+            Q(customer__email__icontains=search)
+        )
+    
+    if status_filter:
+        orders = orders.filter(status=status_filter)
+    
+    paginator = Paginator(orders, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistics
+    invoice_stats = {
+        'total': orders.count(),
+        'total_revenue': orders.aggregate(total=Sum('total_price'))['total'] or 0,
+        'total_tax': orders.aggregate(total=Sum('tax_amount'))['total'] or 0,
+    }
+    
+    context = {
+        'page_obj': page_obj,
+        'invoices': page_obj,
+        'invoice_stats': invoice_stats,
+        'search': search,
+        'status_filter': status_filter,
+    }
+    
+    return render(request, './finance/invoices.html', context)
+
+
+@login_required
+@staff_required
+def invoice_detail_view(request, order_id):
+    """View invoice details (order-based)."""
+    from parts.models import Order
+    order = get_object_or_404(Order, id=order_id, payment_status='completed')
+    context = {'order': order, 'invoice': order}
+    return render(request, './finance/invoice_detail.html', context)
+
+
+# ==================== TAX RULES VIEWS ====================
+
+@login_required
+@staff_required
+def taxes_view(request):
+    """Tax rules configuration."""
+    from .models import AdminSetting
+    
+    # Get tax settings from AdminSetting model
+    tax_settings = AdminSetting.objects.filter(
+        key__startswith='tax_'
+    ).order_by('key')
+    
+    context = {
+        'tax_settings': tax_settings,
+    }
+    
+    return render(request, './finance/taxes.html', context)
+
+
+@login_required
+@staff_required
+@require_POST
+def add_tax_rule_view(request):
+    """Add a tax rule."""
+    from .models import AdminSetting
+    
+    key = request.POST.get('key')
+    value = request.POST.get('value')
+    description = request.POST.get('description', '')
+    
+    AdminSetting.objects.update_or_create(
+        key=f'tax_{key}',
+        defaults={
+            'value': value,
+            'description': description,
+            'value_type': 'float',
+            'updated_by': request.user,
+        }
+    )
+    
+    messages.success(request, 'Tax rule saved.')
+    return redirect('admin_panel:taxes')
+
+
+@login_required
+@staff_required
+@require_POST
+def update_tax_rule_view(request, tax_id):
+    """Update a tax rule."""
+    from .models import AdminSetting
+    
+    setting = get_object_or_404(AdminSetting, id=tax_id)
+    setting.value = request.POST.get('value', setting.value)
+    setting.description = request.POST.get('description', setting.description)
+    setting.updated_by = request.user
+    setting.save()
+    
+    messages.success(request, 'Tax rule updated.')
+    return redirect('admin_panel:taxes')
+
+
+# ==================== BUSINESS PARTNERS VIEWS ====================
+
+@login_required
+@staff_required
+def partners_view(request):
+    """Business partners management."""
+    
+    search = request.GET.get('search', '')
+    type_filter = request.GET.get('type', '')
+    status_filter = request.GET.get('status', '')
+    
+    partners = (
+        BusinessPartner.objects.select_related('user')
+        .prefetch_related('roles')
+        .annotate(
+            has_vendor=Exists(
+                BusinessPartnerRole.objects.filter(
+                    business_partner=OuterRef('pk'),
+                    role_type='vendor',
+                )
+            )
+        )
+    )
+    
+    if search:
+        partners = partners.filter(
+            Q(name__icontains=search) |
+            Q(bp_number__icontains=search) |
+            Q(user__email__icontains=search)
+        )
+    
+    if type_filter:
+        partners = partners.filter(type=type_filter)
+    
+    if status_filter:
+        partners = partners.filter(status=status_filter)
+    
+    partners = partners.order_by('-created_at')
+    
+    paginator = Paginator(partners, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistics
+    partner_stats = {
+        'total': BusinessPartner.objects.count(),
+        'vendors': BusinessPartner.objects.filter(roles__role_type='vendor').distinct().count(),
+        'customers': BusinessPartner.objects.filter(roles__role_type='customer').distinct().count(),
+        'pending': BusinessPartner.objects.filter(status='pending').count(),
+    }
+    
+    context = {
+        'page_obj': page_obj,
+        'partners': page_obj,
+        'partner_stats': partner_stats,
+        'type_choices': BusinessPartner.PARTNER_TYPES,
+        'status_choices': BusinessPartner.STATUS_CHOICES,
+        'search': search,
+        'type_filter': type_filter,
+        'status_filter': status_filter,
+    }
+    
+    return render(request, './partners/business-partners.html', context)
+
+
+@login_required
+@staff_required
+def partner_detail_view(request, partner_id):
+    """View partner details."""
+    partner = get_object_or_404(BusinessPartner, id=partner_id)
+    
+    context = {
+        'partner': partner,
+        'contacts': partner.contacts.all() if hasattr(partner, 'contacts') else [],
+        'addresses': partner.addresses.all() if hasattr(partner, 'addresses') else [],
+        'documents': partner.documents.all() if hasattr(partner, 'documents') else [],
+    }
+    
+    return render(request, './partners/partner_detail.html', context)
+

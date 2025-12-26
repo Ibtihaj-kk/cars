@@ -1,19 +1,23 @@
 <!-- Parts results partial for HTMX -->
 {% load vendor_currency %}
-<div class="parts-grid" id="productsContainer">
-    
+<div class="parts-grid list-view" id="productsContainer">
+
     {% for part in parts %}
     <div class="part-card">
         <a href="{% url 'parts:part_detail' part.pk %}" style="text-decoration: none;">
             <div class="part-image-container">
                 {% if part.image %}
-                <img src="{{ part.image.url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
+                <img src="{{ part.image.url }}" alt="{{ part.name }}" class="img-fluid"
+                    style="width:100%; height:100%; object-fit:cover;" />
                 {% elif part.image_url %}
-                <img src="{{ part.image_url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
+                <img src="{{ part.image_url }}" alt="{{ part.name }}" class="img-fluid"
+                    style="width:100%; height:100%; object-fit:cover;" />
                 {% elif part.images.first %}
-                <img src="{{ part.images.first.image.url }}" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
+                <img src="{{ part.images.first.image.url }}" alt="{{ part.name }}" class="img-fluid"
+                    style="width:100%; height:100%; object-fit:cover;" />
                 {% else %}
-                <img src="https://images.unsplash.com/photo-1613214150384-14921ff659b2?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
+                <img src="https://images.unsplash.com/photo-1613214150384-14921ff659b2?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                    alt="{{ part.name }}" class="img-fluid" style="width:100%; height:100%; object-fit:cover;" />
                 {% endif %}
             </div>
             <div class="part-content">
@@ -40,9 +44,9 @@
                     <div class="list-cell price">{% vendor_currency part.price %}</div>
                     <div class="list-cell stock">
                         {% if part.inventory and part.inventory.stock > 0 %}
-                            <span class="badge bg-success">In Stock ({{ part.inventory.stock }})</span>
+                        <span class="badge bg-success">In Stock ({{ part.inventory.stock }})</span>
                         {% else %}
-                            <span class="badge bg-danger">Out of Stock</span>
+                        <span class="badge bg-danger">Out of Stock</span>
                         {% endif %}
                     </div>
                 </div>
@@ -62,65 +66,59 @@
         <ul class="pagination justify-content-center">
             {% if page_obj.has_previous %}
             <li class="page-item">
-                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" 
-                                   aria-label="First"
-                                   hx-get="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
-                                   hx-target="#parts-results"
-                                   hx-push-url="true"
-                                   hx-indicator="#loading-indicator">
+                <a class="page-link"
+                    href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                    aria-label="First"
+                    hx-get="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                    hx-target="#parts-results" hx-push-url="true" hx-indicator="#loading-indicator">
                     <span aria-hidden="true">&laquo;&laquo;</span>
                 </a>
             </li>
             <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" 
-                                   aria-label="Previous"
-                                   hx-get="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
-                                   hx-target="#parts-results"
-                                   hx-push-url="true"
-                                   hx-indicator="#loading-indicator">
+                <a class="page-link"
+                    href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                    aria-label="Previous"
+                    hx-get="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                    hx-target="#parts-results" hx-push-url="true" hx-indicator="#loading-indicator">
                     <span aria-hidden="true">&laquo;</span>
                 </a>
             </li>
             {% endif %}
-            
+
             {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                <li class="page-item active">
-                    <span class="page-link">{{ num }}</span>
-                </li>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
-                                   hx-get="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
-                                   hx-target="#parts-results"
-                                   hx-push-url="true"
-                                   hx-indicator="#loading-indicator">{{ num }}</a>
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <li class="page-item">
+                <a class="page-link"
+                    href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                    hx-get="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                    hx-target="#parts-results" hx-push-url="true" hx-indicator="#loading-indicator">{{ num }}</a>
                 </li>
                 {% endif %}
-            {% endfor %}
-            
-            {% if page_obj.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" 
-                                   aria-label="Next"
-                                   hx-get="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
-                                   hx-target="#parts-results"
-                                   hx-push-url="true"
-                                   hx-indicator="#loading-indicator">
-                    <span aria-hidden="true">&raquo;</span>
-                </a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" 
-                                   aria-label="Last"
-                                   hx-get="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
-                                   hx-target="#parts-results"
-                                   hx-push-url="true"
-                                   hx-indicator="#loading-indicator">
-                    <span aria-hidden="true">&raquo;&raquo;</span>
-                </a>
-            </li>
-            {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                        href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                        aria-label="Next"
+                        hx-get="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                        hx-target="#parts-results" hx-push-url="true" hx-indicator="#loading-indicator">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link"
+                        href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                        aria-label="Last"
+                        hx-get="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.brand %}&brand={{ request.GET.brand }}{% endif %}{% if request.GET.model %}&model={{ request.GET.model }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if request.GET.trim %}&trim={{ request.GET.trim }}{% endif %}{% if request.GET.engine %}&engine={{ request.GET.engine }}{% endif %}{% if request.GET.part_number %}&part_number={{ request.GET.part_number }}{% endif %}{% if request.GET.price_min %}&price_min={{ request.GET.price_min }}{% endif %}{% if request.GET.price_max %}&price_max={{ request.GET.price_max }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}"
+                        hx-target="#parts-results" hx-push-url="true" hx-indicator="#loading-indicator">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
         </ul>
     </nav>
 </div>

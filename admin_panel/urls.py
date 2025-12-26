@@ -15,6 +15,62 @@ urlpatterns = [
     path('dashboard/', views.dashboard_view, name='dashboard_alt'),
     path('demo/', views.dashboard_demo_view, name='dashboard_demo'),
     
+    # User Management
+    path('users/', views.users_management_view, name='users'),
+    path('users/<int:user_id>/', views.user_detail_view, name='user_detail'),
+    path('users/<int:user_id>/update/', views.update_user_view, name='update_user'),
+    path('users/<int:user_id>/toggle-status/', views.toggle_user_status_view, name='toggle_user_status'),
+    
+    # Roles & Permissions
+    path('roles/', views.roles_permissions_view, name='roles'),
+    path('roles/update/', views.update_role_permissions_view, name='update_role_permissions'),
+    
+    # Parts Management
+    path('parts/', views.parts_management_view, name='parts'),
+    path('parts/<int:part_id>/', views.part_detail_view, name='part_detail'),
+    path('parts/<int:part_id>/update/', views.update_part_view, name='update_part'),
+    path('parts/<int:part_id>/delete/', views.delete_part_view, name='delete_part'),
+    
+    # Categories & Brands
+    path('categories/', views.categories_view, name='categories'),
+    path('categories/add/', views.add_category_view, name='add_category'),
+    path('categories/<int:category_id>/update/', views.update_category_view, name='update_category'),
+    path('categories/<int:category_id>/delete/', views.delete_category_view, name='delete_category'),
+    path('brands/add/', views.add_brand_view, name='add_brand'),
+    path('brands/<int:brand_id>/update/', views.update_brand_view, name='update_brand'),
+    path('brands/<int:brand_id>/delete/', views.delete_brand_view, name='delete_brand'),
+    
+    # Orders Management
+    path('orders/', views.orders_management_view, name='orders'),
+    path('orders/<int:order_id>/', views.order_detail_view, name='order_detail'),
+    path('orders/<int:order_id>/update-status/', views.update_order_status_view, name='update_order_status'),
+    
+    # Inventory Management
+    path('inventory/', views.inventory_management_view, name='inventory'),
+    path('inventory/<int:inventory_id>/update/', views.update_inventory_view, name='update_inventory'),
+    
+    # Reviews Management
+    path('reviews/', views.reviews_management_view, name='reviews'),
+    path('reviews/<int:review_id>/approve/', views.approve_review_view, name='approve_review'),
+    path('reviews/<int:review_id>/reject/', views.reject_review_view, name='reject_review'),
+    
+    # Bulk Upload
+    path('bulk-upload/', views.bulk_upload_view, name='bulk_upload'),
+    path('bulk-upload/process/', views.process_bulk_upload_view, name='process_bulk_upload'),
+    
+    # Invoices & Finance
+    path('invoices/', views.invoices_view, name='invoices'),
+    path('invoices/<int:order_id>/', views.invoice_detail_view, name='invoice_detail'),
+    
+    # Tax Rules
+    path('taxes/', views.taxes_view, name='taxes'),
+    path('taxes/add/', views.add_tax_rule_view, name='add_tax_rule'),
+    path('taxes/<int:tax_id>/update/', views.update_tax_rule_view, name='update_tax_rule'),
+    
+    # Business Partners
+    path('partners/', views.partners_view, name='partners'),
+    path('partners/<int:partner_id>/', views.partner_detail_view, name='partner_detail'),
+    
     # Listings management
     path('listings/', views.listings_management_view, name='listings_management'),
     path('listings/<int:listing_id>/', views.listing_detail_view, name='listing_detail'),

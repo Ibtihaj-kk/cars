@@ -1,0 +1,176 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Listings Management{% endblock %}
+
+{% block content %}
+<!-- Statistics -->
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center">
+        <p class="text-xs font-bold text-gray-400 uppercase">Total</p>
+        <p class="text-2xl font-extrabold text-gray-900">{{ total_listings|default:"0" }}</p>
+    </div>
+    <div class="bg-green-50 p-4 rounded-2xl border border-green-200 text-center">
+        <p class="text-xs font-bold text-green-600 uppercase">Published</p>
+        <p class="text-2xl font-extrabold text-green-700">{{ published_listings|default:"0" }}</p>
+    </div>
+    <div class="bg-yellow-50 p-4 rounded-2xl border border-yellow-200 text-center">
+        <p class="text-xs font-bold text-yellow-600 uppercase">Pending</p>
+        <p class="text-2xl font-extrabold text-yellow-700">{{ pending_listings|default:"0" }}</p>
+    </div>
+    <div class="bg-blue-50 p-4 rounded-2xl border border-blue-200 text-center">
+        <p class="text-xs font-bold text-blue-600 uppercase">Draft</p>
+        <p class="text-2xl font-extrabold text-blue-700">{{ draft_listings|default:"0" }}</p>
+    </div>
+    <div class="bg-purple-50 p-4 rounded-2xl border border-purple-200 text-center">
+        <p class="text-xs font-bold text-purple-600 uppercase">Featured</p>
+        <p class="text-2xl font-extrabold text-purple-700">{{ featured_listings|default:"0" }}</p>
+    </div>
+    <div class="bg-red-50 p-4 rounded-2xl border border-red-200 text-center">
+        <p class="text-xs font-bold text-red-600 uppercase">Sold</p>
+        <p class="text-2xl font-extrabold text-red-700">{{ sold_listings|default:"0" }}</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+        <form method="GET" class="flex gap-3 flex-wrap w-full">
+            <div class="relative flex-grow md:flex-grow-0 md:w-64">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                <input type="text" name="search" value="{{ search }}"
+                    class="w-full pl-10 pr-4 py-2 bg-gray-50 border rounded-xl text-sm"
+                    placeholder="Search listings...">
+            </div>
+            <select name="status" onchange="this.form.submit()"
+                class="bg-white border text-gray-700 py-2 px-4 rounded-xl font-bold text-sm">
+                <option value="">All Status</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <select name="make" onchange="this.form.submit()"
+                class="bg-white border text-gray-700 py-2 px-4 rounded-xl font-bold text-sm">
+                <option value="">All Makes</option>
+                {% for make in makes %}
+                <option value="{{ make.id }}" {% if make_filter == make.id|stringformat:"s" %}selected{% endif %}>{{
+                    make.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="featured" onchange="this.form.submit()"
+                class="bg-white border text-gray-700 py-2 px-4 rounded-xl font-bold text-sm">
+                <option value="">Featured Status</option>
+                <option value="true" {% if featured_filter == 'true' %}selected{% endif %}>Featured</option>
+                <option value="false" {% if featured_filter == 'false' %}selected{% endif %}>Not Featured</option>
+            </select>
+        </form>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500">
+                <tr>
+                    <th class="px-6 py-4">Vehicle</th>
+                    <th class="px-6 py-4">Seller</th>
+                    <th class="px-6 py-4">Price</th>
+                    <th class="px-6 py-4">Status</th>
+                    <th class="px-6 py-4">Featured</th>
+                    <th class="px-6 py-4">Views</th>
+                    <th class="px-6 py-4">Date</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                {% for listing in page_obj %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            {% if listing.images.first %}
+                            <img src="{{ listing.images.first.image.url }}" class="w-14 h-10 rounded-lg object-cover">
+                            {% else %}
+                            <div class="w-14 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                                <i class="fas fa-car text-gray-400"></i>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <p class="font-bold">{{ listing.title|default:listing.year }} {{
+                                    listing.make.name|default:"" }} {{ listing.model.name|default:"" }}</p>
+                                <p class="text-xs text-gray-500">{{ listing.year }} • {{ listing.kilometers|default:0|intcomma }} km</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="text-sm">{{ listing.user.email }}</p>
+                    </td>
+                    <td class="px-6 py-4 font-bold">${{ listing.price|floatformat:0|intcomma }}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded-full text-xs font-bold
+                            {% if listing.status == 'published' %}bg-green-100 text-green-700
+                            {% elif listing.status == 'pending_review' %}bg-yellow-100 text-yellow-700
+                            {% elif listing.status == 'sold' %}bg-red-100 text-red-700
+                            {% elif listing.status == 'draft' %}bg-blue-100 text-blue-700
+                            {% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ listing.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if listing.is_featured %}
+                        <span class="text-yellow-500"><i class="fas fa-star"></i></span>
+                        {% else %}
+                        <span class="text-gray-300"><i class="far fa-star"></i></span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">{{ listing.views_count|default:0 }}</td>
+                    <td class="px-6 py-4 text-gray-500">{{ listing.created_at|date:"M d, Y" }}</td>
+                    <td class="px-6 py-4 text-right">
+                        <a href="{% url 'admin_panel:listing_detail' listing.id %}"
+                            class="text-gray-400 hover:text-black mx-1" title="View">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <form method="POST" action="{% url 'admin_panel:toggle_listing_featured' listing.id %}"
+                            class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-gray-400 hover:text-yellow-500 mx-1"
+                                title="Toggle Featured">
+                                <i class="fas fa-star"></i>
+                            </button>
+                        </form>
+                        {% if listing.status == 'pending_review' %}
+                        <form method="POST" action="{% url 'admin_panel:approve_listing' listing.id %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-gray-400 hover:text-green-500 mx-1" title="Approve">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-car text-4xl mb-4 text-gray-300"></i>
+                        <p>No listings found</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+        <span class="text-sm text-gray-500">
+            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} listings
+        </span>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}"
+                class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}"
+                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

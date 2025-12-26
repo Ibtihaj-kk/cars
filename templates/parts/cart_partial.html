@@ -4,9 +4,9 @@
 
     {% if cart_items %}
     <div class="cart-grid">
-        
+
         <div class="cart-items">
-            
+
             <div class="cart-table-header">
                 <div>Product Details</div>
                 <div>Quantity</div>
@@ -18,14 +18,15 @@
             <div class="cart-item">
                 <div class="item-info">
                     {% if item.part.image %}
-                    <img src="{{ item.part.image.url }}" class="item-image" alt="{{ item.part.name }}" onerror="this.onerror=null;this.src='https://via.placeholder.com/100';">
+                    <img src="{{ item.part.image.url }}" class="item-image" alt="{{ item.part.name }}"
+                        onerror="this.onerror=null;this.src='https://via.placeholder.com/100';">
                     {% else %}
                     <img src="https://via.placeholder.com/100" class="item-image" alt="{{ item.part.name }}">
-                    {% endif %}
+                    {%endif%}
                     <div class="item-details">
                         <h3>{{ item.part.name }}</h3>
                         <div class="item-meta">
-                            Brand: {{ item.part.brand.name }}<br>
+                            Make: {{ item.part.brand.name }}<br>
                             Part #: {{ item.part.parts_number|default:item.part.sku }}
                         </div>
                         {% if item.in_stock %}
@@ -34,48 +35,38 @@
                         <span class="stock-tag out">Only {{ item.available_stock }} left</span>
                         {% else %}
                         <span class="stock-tag out">Out of Stock</span>
-                        {% endif %}
+                        {%endif%}
                     </div>
                 </div>
-                
+
                 <div class="qty-column">
-                    <div class="qty-wrapper">
-                        <button class="qty-btn" 
-                                hx-post="{% url 'parts:hx_update_cart_quantity' item.id %}" 
-                                hx-vals='{"change": -1}'
-                                hx-target="#cart-content"
-                                hx-swap="outerHTML"
-                                {% if item.quantity <= 1 %}disabled{% endif %}>-</button>
-                        
+                    <div class="qty-wrapper"><button class="qty-btn"
+                            hx-post="{% url 'parts:hx_update_cart_quantity' item.id %}" hx-vals='{"change": -1}'
+                            hx-target="#cart-content" hx-swap="outerHTML" {% if item.quantity <= 1 %} disabled
+                            {%endif%}>-</button>
+
                         <input type="number" class="qty-input" value="{{ item.quantity }}" min="1" readonly>
-                        
-                        <button class="qty-btn" 
-                                hx-post="{% url 'parts:hx_update_cart_quantity' item.id %}" 
-                                hx-vals='{"change": 1}'
-                                hx-target="#cart-content"
-                                hx-swap="outerHTML"
-                                {% if item.quantity >= item.available_stock %}disabled{% endif %}>+</button>
+
+                        <button class="qty-btn" hx-post="{% url 'parts:hx_update_cart_quantity' item.id %}" hx-vals='{"change": 1}' hx-target="#cart-content" hx-swap="outerHTML" {% if item.quantity >= item.available_stock %} disabled {%endif%} >+</button>
                     </div>
                 </div>
 
                 <div class="item-price">{% vendor_currency item.item_total %}</div>
-                
-                <button class="remove-btn" title="Remove Item"
-                        hx-post="{% url 'parts:hx_remove_from_cart' item.id %}"
-                        hx-target="#cart-content"
-                        hx-confirm="Are you sure you want to remove this item?"
-                        hx-swap="outerHTML">
+
+                <button class="remove-btn" title="Remove Item" hx-post="{% url 'parts:hx_remove_from_cart' item.id %}"
+                    hx-target="#cart-content" hx-confirm="Are you sure you want to remove this item?"
+                    hx-swap="outerHTML">
                     <i class="far fa-trash-alt"></i>
                 </button>
             </div>
-            {% endfor %}
+            {%endfor%}
 
         </div>
 
         <div class="cart-summary-wrapper">
             <div class="cart-summary">
                 <h3 class="summary-title">Order Summary</h3>
-                
+
                 <div class="summary-row">
                     <span>Subtotal</span>
                     <span style="font-weight:700;">{{ cart_total|floatformat:2 }} ر.س.</span>
@@ -106,9 +97,10 @@
                 <div style="text-align:center; color:red; margin-top:10px; font-size:12px;">
                     Some items are out of stock. Please remove them to proceed.
                 </div>
-                {% endif %}
-                
-                <a href="{% url 'parts:part_list' %}" class="btn-continue" style="display:block; text-align:center; margin-top:10px;">Continue Shopping</a>
+                {%endif%}
+
+                <a href="{% url 'parts:part_list' %}" class="btn-continue"
+                    style="display:block; text-align:center; margin-top:10px;">Continue Shopping</a>
             </div>
         </div>
 
@@ -120,5 +112,5 @@
         <p class="text-muted">Looks like you haven't added any parts to your cart yet.</p>
         <a href="{% url 'parts:part_list' %}" class="btn btn-primary mt-3">Start Shopping</a>
     </div>
-    {% endif %}
+    {%endif%}
 </div>

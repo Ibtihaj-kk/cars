@@ -6,7 +6,8 @@
 {% block header_subtitle %}{{ part.material_description|default:part.parts_number }}{% endblock %}
 
 {% block header_actions %}
-<a href="{% url 'business_partners:vendor_inventory_list' %}" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 flex items-center gap-2">
+<a href="{% url 'business_partners:vendor_inventory_list' %}"
+    class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 flex items-center gap-2">
     <i class="fas fa-arrow-left"></i> Back to Inventory
 </a>
 {% endblock %}
@@ -22,7 +23,7 @@
                     <i class="fas fa-edit"></i>
                 </a>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="text-xs font-bold text-gray-500 uppercase">Part Number</label>
@@ -37,7 +38,7 @@
                     <p class="text-sm font-medium text-gray-900">{{ part.category.name|default:"N/A" }}</p>
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-gray-500 uppercase">Brand</label>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Make</label>
                     <p class="text-sm font-medium text-gray-900">{{ part.brand.name|default:"N/A" }}</p>
                 </div>
                 <div>
@@ -55,18 +56,21 @@
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-gray-900">Current Stock Status</h3>
-                <a href="{% url 'business_partners:vendor_inventory_update' part.id %}" class="px-3 py-1 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-800">
+                <a href="{% url 'business_partners:vendor_inventory_update' part.id %}"
+                    class="px-3 py-1 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-800">
                     Update Stock
                 </a>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="text-center">
                     <div class="text-3xl font-extrabold text-gray-900">{{ part.quantity }}</div>
                     <div class="text-xs font-bold text-gray-500 uppercase mt-1">Available Stock</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-3xl font-extrabold {% if inventory.reorder_level and part.quantity <= inventory.reorder_level %}text-red-600{% else %}text-gray-900{% endif %}">{{ inventory.reorder_level|default:"N/A" }}</div>
+                    <div
+                        class="text-3xl font-extrabold {% if inventory.reorder_level and part.quantity <= inventory.reorder_level %}text-red-600{% else %}text-gray-900{% endif %}">
+                        {{ inventory.reorder_level|default:"N/A" }}</div>
                     <div class="text-xs font-bold text-gray-500 uppercase mt-1">Reorder Level</div>
                 </div>
                 <div class="text-center">
@@ -74,72 +78,76 @@
                     <div class="text-xs font-bold text-gray-500 uppercase mt-1">Safety Stock</div>
                 </div>
             </div>
-            
-            {% if inventory.reorder_level and part.quantity <= inventory.reorder_level %}
-            <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+
+            {% if inventory.reorder_level and part.quantity <= inventory.reorder_level %} <div
+                class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <div class="flex items-center">
                     <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
-                    <span class="text-sm font-medium text-red-700">Stock level is below reorder point. Consider restocking soon.</span>
+                    <span class="text-sm font-medium text-red-700">Stock level is below reorder point. Consider
+                        restocking soon.</span>
                 </div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Stock Movement Summary -->
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">Stock Movement Summary</h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div class="text-center p-4 bg-gray-50 rounded-lg">
-                    <div class="text-2xl font-extrabold text-green-600">{{ total_sold }}</div>
-                    <div class="text-xs font-bold text-gray-500 uppercase mt-1">Total Sold</div>
-                </div>
-                <div class="text-center p-4 bg-gray-50 rounded-lg">
-                    <div class="text-2xl font-extrabold text-blue-600">{{ total_restocked }}</div>
-                    <div class="text-xs font-bold text-gray-500 uppercase mt-1">Total Restocked</div>
-                </div>
-                <div class="text-center p-4 bg-gray-50 rounded-lg">
-                    <div class="text-2xl font-extrabold text-gray-900">{{ recent_transactions.count }}</div>
-                    <div class="text-xs font-bold text-gray-500 uppercase mt-1">Recent Transactions</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="space-y-6">
-        <!-- Quick Actions -->
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
-            <div class="space-y-3">
-                <a href="{% url 'business_partners:vendor_inventory_update' part.id %}" class="w-full px-4 py-2 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-800 flex items-center justify-center">
-                    <i class="fas fa-plus mr-2"></i> Update Stock Level
-                </a>
-                <a href="{% url 'business_partners:vendor_part_edit' part.id %}" class="w-full px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 flex items-center justify-center">
-                    <i class="fas fa-edit mr-2"></i> Edit Product Details
-                </a>
-                <a href="{% url 'business_partners:vendor_inventory_list' %}" class="w-full px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 flex items-center justify-center">
-                    <i class="fas fa-list mr-2"></i> Back to Inventory
-                </a>
-            </div>
-        </div>
-
-        <!-- Inventory Info -->
-        {% if created %}
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <div class="flex items-center">
-                <i class="fas fa-info-circle text-blue-500 mr-2"></i>
-                <span class="text-sm font-medium text-blue-700">New inventory record was created for this product.</span>
-            </div>
         </div>
         {% endif %}
     </div>
+
+    <!-- Stock Movement Summary -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Stock Movement Summary</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="text-center p-4 bg-gray-50 rounded-lg">
+                <div class="text-2xl font-extrabold text-green-600">{{ total_sold }}</div>
+                <div class="text-xs font-bold text-gray-500 uppercase mt-1">Total Sold</div>
+            </div>
+            <div class="text-center p-4 bg-gray-50 rounded-lg">
+                <div class="text-2xl font-extrabold text-blue-600">{{ total_restocked }}</div>
+                <div class="text-xs font-bold text-gray-500 uppercase mt-1">Total Restocked</div>
+            </div>
+            <div class="text-center p-4 bg-gray-50 rounded-lg">
+                <div class="text-2xl font-extrabold text-gray-900">{{ recent_transactions.count }}</div>
+                <div class="text-xs font-bold text-gray-500 uppercase mt-1">Recent Transactions</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sidebar -->
+<div class="space-y-6">
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
+        <div class="space-y-3">
+            <a href="{% url 'business_partners:vendor_inventory_update' part.id %}"
+                class="w-full px-4 py-2 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-800 flex items-center justify-center">
+                <i class="fas fa-plus mr-2"></i> Update Stock Level
+            </a>
+            <a href="{% url 'business_partners:vendor_part_edit' part.id %}"
+                class="w-full px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 flex items-center justify-center">
+                <i class="fas fa-edit mr-2"></i> Edit Product Details
+            </a>
+            <a href="{% url 'business_partners:vendor_inventory_list' %}"
+                class="w-full px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 flex items-center justify-center">
+                <i class="fas fa-list mr-2"></i> Back to Inventory
+            </a>
+        </div>
+    </div>
+
+    <!-- Inventory Info -->
+    {% if created %}
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div class="flex items-center">
+            <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+            <span class="text-sm font-medium text-blue-700">New inventory record was created for this product.</span>
+        </div>
+    </div>
+    {% endif %}
+</div>
 </div>
 
 <!-- Recent Transactions -->
 <div class="mt-6 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
     <h3 class="text-lg font-bold text-gray-900 mb-4">Recent Transactions</h3>
-    
+
     {% if recent_transactions %}
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
@@ -152,31 +160,33 @@
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">New</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Notes</th>
                 </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for transaction in recent_transactions %}
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ transaction.timestamp|date:"M d, Y H:i" }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 text-xs font-bold rounded-full
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for transaction in recent_transactions %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ transaction.timestamp|date:"M d, Y
+                        H:i" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs font-bold rounded-full
                                 {% if transaction.transaction_type == 'sale' %}bg-red-100 text-red-800
                                 {% elif transaction.transaction_type == 'restock' %}bg-green-100 text-green-800
                                 {% else %}bg-blue-100 text-blue-800{% endif %}">
-                                {{ transaction.get_transaction_type_display }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold
+                            {{ transaction.get_transaction_type_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold
                             {% if transaction.quantity_change > 0 %}text-green-600{% else %}text-red-600{% endif %}">
-                            {% if transaction.quantity_change > 0 %}+{% endif %}{{ transaction.quantity_change }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ transaction.previous_quantity }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ transaction.new_quantity }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ transaction.notes|default:"--" }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                        {% if transaction.quantity_change > 0 %}+{% endif %}{{ transaction.quantity_change }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ transaction.previous_quantity }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ transaction.new_quantity }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ transaction.notes|default:"--" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
     <div class="text-center py-8 text-gray-500">
         <i class="fas fa-history text-4xl mb-3"></i>

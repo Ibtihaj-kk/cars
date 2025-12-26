@@ -765,6 +765,17 @@ class VendorPartBulkImportForm(forms.Form):
         }),
         help_text='Upload CSV or Excel file with part data. Maximum file size: 10MB'
     )
+
+    import_status = forms.ChoiceField(
+        required=False,
+        initial='published',
+        choices=[
+            ('published', 'Publish'),
+            ('draft', 'Draft'),
+        ],
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='Status for newly created parts in this import'
+    )
     
     update_existing = forms.BooleanField(
         required=False,
@@ -890,6 +901,13 @@ class VendorSettingsForm(forms.Form):
     logo = forms.ImageField(required=False, widget=forms.FileInput(attrs={'class': 'absolute inset-0 w-full h-full opacity-0 cursor-pointer'}))
     cr_document = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
     business_license = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
+    vat_certificate = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
+    commercial_invoice_sample = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
+    company_profile = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
+    quality_certificate = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
+    insurance_certificate = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
+    import_export_license = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
+    supplier_certification = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
     
     # Bank Details
     bank_name = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
@@ -1034,6 +1052,22 @@ class VendorSettingsForm(forms.Form):
             if self.cleaned_data.get('bank_statement'):
                 vendor_profile.bank_statement = self.cleaned_data['bank_statement']
             
+            # Save additional documents
+            if self.cleaned_data.get('vat_certificate'):
+                vendor_profile.vat_certificate = self.cleaned_data['vat_certificate']
+            if self.cleaned_data.get('commercial_invoice_sample'):
+                vendor_profile.commercial_invoice_sample = self.cleaned_data['commercial_invoice_sample']
+            if self.cleaned_data.get('company_profile'):
+                vendor_profile.company_profile = self.cleaned_data['company_profile']
+            if self.cleaned_data.get('quality_certificate'):
+                vendor_profile.quality_certificate = self.cleaned_data['quality_certificate']
+            if self.cleaned_data.get('insurance_certificate'):
+                vendor_profile.insurance_certificate = self.cleaned_data['insurance_certificate']
+            if self.cleaned_data.get('import_export_license'):
+                vendor_profile.import_export_license = self.cleaned_data['import_export_license']
+            if self.cleaned_data.get('supplier_certification'):
+                vendor_profile.supplier_certification = self.cleaned_data['supplier_certification']
+            
             # Build bank details from form fields
             bank_details = []
             if self.cleaned_data['bank_name']:
@@ -1130,4 +1164,3 @@ class VendorApplicationReviewForm(forms.Form):
             raise ValidationError("Escalation reason is required.")
         
         return cleaned_data
-

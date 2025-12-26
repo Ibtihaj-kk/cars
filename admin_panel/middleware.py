@@ -11,6 +11,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.conf import settings
 from datetime import timedelta
+from urllib.parse import quote
 from .utils import get_client_ip, log_activity
 from .models import ActivityLogType
 
@@ -218,12 +219,13 @@ class AdminSecurityMiddleware(MiddlewareMixin):
         
         # Redirect to login page
         try:
-            login_url = reverse('admin_panel:login')
+            login_url = reverse('login')
         except Exception:
-            # Fallback to hardcoded path if reverse fails
-            login_url = '/admin-panel/login/'
+            login_url = getattr(settings, 'LOGIN_URL', '/accounts/login/')
         
-        return redirect(f"{login_url}?next={request.path}")
+        next_path = quote(request.get_full_path())
+        separator = '&' if '?' in login_url else '?'
+        return redirect(f"{login_url}{separator}next={next_path}")
 
 
 class AdminActivityTrackingMiddleware(MiddlewareMixin):

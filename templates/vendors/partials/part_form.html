@@ -1,5 +1,5 @@
 {% load vendor_currency %}
-<form id="add-part-form" method="post" enctype="multipart/form-data" {% if is_edit %} action="{{ action_url }}" {% else
+<form id="add-part-form" method="post" enctype="multipart/form-data" novalidate {% if is_edit %} action="{{ action_url }}" {% else
     %} hx-post="{% url 'business_partners:vendor_part_create_htmx' %}" hx-target="#form-container" hx-swap="innerHTML"
     hx-indicator="#loading-indicator" {% endif %} class="space-y-6">
     {% csrf_token %}
@@ -45,6 +45,27 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="md:col-span-2">
+                    <label for="{{ form.parts_number.id_for_label }}"
+                        class="block text-sm font-semibold text-gray-700 mb-1">Parts Number (Internal) <span
+                            class="text-red-500">*</span></label>
+                    {% if vendor_catalog_items %}
+                    <select name="{{ form.parts_number.html_name }}" id="{{ form.parts_number.id_for_label }}" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black">
+                        <option value="">Select Part #</option>
+                        {% for item in vendor_catalog_items %}
+                        <option value="{{ item.part_number }}" {% if form.parts_number.value == item.part_number %}selected{% endif %}>{{ item.part_number }}</option>
+                        {% endfor %}
+                    </select>
+                    {{ vendor_catalog_items|json_script:"vendor-catalog-items" }}
+                    {% else %}
+                    {{ form.parts_number }}
+                    {% endif %}
+                    {% if form.parts_number.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.parts_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="md:col-span-2">
                     <label for="{{ form.material_description.id_for_label }}"
                         class="block text-sm font-semibold text-gray-700 mb-1">Material Description (English) <span
                             class="text-red-500">*</span></label>
@@ -60,16 +81,6 @@
                     {{ form.material_description_ar }}
                     {% if form.material_description_ar.errors %}
                     <p class="text-red-500 text-xs mt-1">{{ form.material_description_ar.errors.0 }}</p>
-                    {% endif %}
-                </div>
-
-                <div>
-                    <label for="{{ form.parts_number.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Parts Number (Internal) <span
-                            class="text-red-500">*</span></label>
-                    {{ form.parts_number }}
-                    {% if form.parts_number.errors %}
-                    <p class="text-red-500 text-xs mt-1">{{ form.parts_number.errors.0 }}</p>
                     {% endif %}
                 </div>
 
@@ -122,19 +133,32 @@
                 </div>
             </div>
 
-            <!-- Legacy Fields Section -->
+            <!-- Pricing & Classification Section -->
             <div class="mt-8 pt-6 border-t border-gray-100">
-                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Legacy Fields</h4>
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Price <span
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Wholesale Price<span
                                 class="text-red-500">*</span></label>
                         {{ form.price }}
                     </div>
                     <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Retail Price</label>
+                        {{ form.standard_price }}
+                    </div>
+                    <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1">Currency <span
                                 class="text-red-500">*</span></label>
-                        {{ form.original_currency }}
+                        <select name="original_currency" id="id_original_currency"
+                            class="form-select w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            <option value="{{ vendor_profile.preferred_currency|default:'USD' }}" selected>
+                                {{vendor_profile.preferred_currency|default:'USD' }}</option>
+                            {% if vendor_profile.preferred_currency != 'USD' %}<option value="USD">USD</option>{%endif%}
+                            {% if vendor_profile.preferred_currency != 'AED' %}<option value="AED">AED</option>{%endif%}
+                            {% if vendor_profile.preferred_currency != 'SAR' %}<option value="SAR">SAR</option>{%endif%}
+                            {% if vendor_profile.preferred_currency != 'PKR' %}<option value="PKR">PKR</option>{%endif%}
+                            {% if vendor_profile.preferred_currency != 'EUR' %}<option value="EUR">EUR</option>{%endif%}
+                            {% if vendor_profile.preferred_currency != 'GBP' %}<option value="GBP">GBP</option>{%endif%}
+                        </select>
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1">Quantity <span
@@ -147,9 +171,15 @@
                         {{ form.category }}
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Brand <span
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Make <span
                                 class="text-red-500">*</span></label>
-                        {{ form.brand }}
+                        <input type="text" id="id_brand_text" name="brand_text"
+                            value="{% if form.brand.value %}{% for opt in form.brand.field.queryset %}{% if opt.pk|stringformat:'s' == form.brand.value|stringformat:'s' %}{{ opt.name }}{% endif %}{% endfor %}{% endif %}"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black"
+                            placeholder="Make">
+                        <div class="hidden">
+                            {{ form.brand }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -169,7 +199,7 @@
                         class="block text-sm font-semibold text-gray-700 mb-1">Cost Price</label>
                     <div class="relative rounded-md shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span class="text-gray-500 sm:text-sm">{% vendor_currency_code %}</span>
+                            <span class="text-gray-500 sm:text-sm" title="{% vendor_currency_code %}">{% vendor_currency_symbol %}</span>
                         </div>
                         {{ form.cost_price }}
                     </div>
@@ -191,7 +221,7 @@
                             class="text-red-500">*</span></label>
                     <div class="relative rounded-md shadow-sm">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span class="text-gray-500 sm:text-sm">{% vendor_currency_code %}</span>
+                            <span class="text-gray-500 sm:text-sm" title="{% vendor_currency_code %}">{% vendor_currency_symbol %}</span>
                         </div>
                         {{ form.standard_price }}
                     </div>

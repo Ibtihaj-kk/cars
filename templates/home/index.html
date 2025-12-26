@@ -232,16 +232,7 @@
                             <p class="text-sm font-bold text-gray-900 truncate">{{ user.email }}</p>
                         </div>
 
-                        {% if user.vendor_profile %}
-                        <a href="{% url 'business_partners:vendor_dashboard' %}"
-                            class="flex items-center px-5 py-2.5 text-sm text-gray-600 hover:text-black hover:bg-gray-50 transition-colors font-medium">
-                            <i class="fas fa-tachometer-alt w-5 text-gray-400"></i> Dashboard
-                        </a>
-                        <a href="{% url 'business_partners:vendor_profile' %}"
-                            class="flex items-center px-5 py-2.5 text-sm text-gray-600 hover:text-black hover:bg-gray-50 transition-colors font-medium">
-                            <i class="fas fa-user w-5 text-gray-400"></i> Profile
-                        </a>
-                        {% elif user.business_partners.exists %}
+                        {% if user.vendor_profiles.exists %}
                         <a href="{% url 'business_partners:vendor_dashboard' %}"
                             class="flex items-center px-5 py-2.5 text-sm text-gray-600 hover:text-black hover:bg-gray-50 transition-colors font-medium">
                             <i class="fas fa-tachometer-alt w-5 text-gray-400"></i> Dashboard

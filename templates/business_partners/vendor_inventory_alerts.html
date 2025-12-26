@@ -13,12 +13,12 @@
                 <p class="text-gray-600 mt-1">Monitor stock levels and take action on critical inventory items</p>
             </div>
             <div class="flex gap-3">
-                <a href="{% url 'business_partners:vendor_inventory_overview' %}" 
-                   class="px-4 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition">
+                <a href="{% url 'business_partners:vendor_inventory_overview' %}"
+                    class="px-4 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition">
                     <i class="fas fa-chart-line mr-2"></i>Overview
                 </a>
-                <a href="{% url 'business_partners:vendor_inventory_list' %}" 
-                   class="px-4 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 transition">
+                <a href="{% url 'business_partners:vendor_inventory_list' %}"
+                    class="px-4 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 transition">
                     <i class="fas fa-boxes mr-2"></i>All Inventory
                 </a>
             </div>
@@ -85,7 +85,7 @@
                             <tr class="border-b border-gray-200">
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Part Number</th>
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Description</th>
-                                <th class="text-left py-3 px-4 font-bold text-gray-700">Brand</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Make</th>
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Category</th>
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Actions</th>
                             </tr>
@@ -98,7 +98,8 @@
                                 </td>
                                 <td class="py-3 px-4">
                                     <div class="max-w-xs">
-                                        <p class="text-gray-900 font-medium truncate">{{ part.material_description|default:"N/A" }}</p>
+                                        <p class="text-gray-900 font-medium truncate">{{
+                                            part.material_description|default:"N/A" }}</p>
                                     </div>
                                 </td>
                                 <td class="py-3 px-4">
@@ -109,12 +110,12 @@
                                 </td>
                                 <td class="py-3 px-4">
                                     <div class="flex gap-2">
-                                        <a href="{% url 'business_partners:vendor_inventory_update' part.id %}" 
-                                           class="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded hover:bg-red-700">
+                                        <a href="{% url 'business_partners:vendor_inventory_update' part.id %}"
+                                            class="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded hover:bg-red-700">
                                             Restock
                                         </a>
-                                        <a href="{% url 'business_partners:vendor_inventory_detail' part.id %}" 
-                                           class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200">
+                                        <a href="{% url 'business_partners:vendor_inventory_detail' part.id %}"
+                                            class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200">
                                             View
                                         </a>
                                     </div>
@@ -148,7 +149,7 @@
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Part Number</th>
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Description</th>
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Current Stock</th>
-                                <th class="text-left py-3 px-4 font-bold text-gray-700">Brand</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Make</th>
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Category</th>
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Actions</th>
                             </tr>
@@ -161,7 +162,8 @@
                                 </td>
                                 <td class="py-3 px-4">
                                     <div class="max-w-xs">
-                                        <p class="text-gray-900 font-medium truncate">{{ part.material_description|default:"N/A" }}</p>
+                                        <p class="text-gray-900 font-medium truncate">{{
+                                            part.material_description|default:"N/A" }}</p>
                                     </div>
                                 </td>
                                 <td class="py-3 px-4">
@@ -175,12 +177,12 @@
                                 </td>
                                 <td class="py-3 px-4">
                                     <div class="flex gap-2">
-                                        <a href="{% url 'business_partners:vendor_inventory_update' part.id %}" 
-                                           class="px-3 py-1.5 bg-yellow-600 text-white text-xs font-bold rounded hover:bg-yellow-700">
+                                        <a href="{% url 'business_partners:vendor_inventory_update' part.id %}"
+                                            class="px-3 py-1.5 bg-yellow-600 text-white text-xs font-bold rounded hover:bg-yellow-700">
                                             Update
                                         </a>
-                                        <a href="{% url 'business_partners:vendor_inventory_detail' part.id %}" 
-                                           class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200">
+                                        <a href="{% url 'business_partners:vendor_inventory_detail' part.id %}"
+                                            class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200">
                                             View
                                         </a>
                                     </div>
@@ -215,7 +217,7 @@
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Description</th>
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Current Stock</th>
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Safety Stock</th>
-                                <th class="text-left py-3 px-4 font-bold text-gray-700">Brand</th>
+                                <th class="text-left py-3 px-4 font-bold text-gray-700">Make</th>
                                 <th class="text-left py-3 px-4 font-bold text-gray-700">Actions</th>
                             </tr>
                         </thead>
@@ -227,7 +229,8 @@
                                 </td>
                                 <td class="py-3 px-4">
                                     <div class="max-w-xs">
-                                        <p class="text-gray-900 font-medium truncate">{{ part.material_description|default:"N/A" }}</p>
+                                        <p class="text-gray-900 font-medium truncate">{{
+                                            part.material_description|default:"N/A" }}</p>
                                     </div>
                                 </td>
                                 <td class="py-3 px-4">
@@ -241,12 +244,12 @@
                                 </td>
                                 <td class="py-3 px-4">
                                     <div class="flex gap-2">
-                                        <a href="{% url 'business_partners:vendor_inventory_update' part.id %}" 
-                                           class="px-3 py-1.5 bg-orange-600 text-white text-xs font-bold rounded hover:bg-orange-700">
+                                        <a href="{% url 'business_partners:vendor_inventory_update' part.id %}"
+                                            class="px-3 py-1.5 bg-orange-600 text-white text-xs font-bold rounded hover:bg-orange-700">
                                             Restock
                                         </a>
-                                        <a href="{% url 'business_partners:vendor_inventory_detail' part.id %}" 
-                                           class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200">
+                                        <a href="{% url 'business_partners:vendor_inventory_detail' part.id %}"
+                                            class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded hover:bg-gray-200">
                                             View
                                         </a>
                                     </div>
@@ -269,8 +272,8 @@
             <h3 class="text-xl font-bold text-gray-900 mb-2">All Clear!</h3>
             <p class="text-gray-600">No inventory alerts at the moment. All your stock levels are healthy.</p>
             <div class="mt-6">
-                <a href="{% url 'business_partners:vendor_inventory_list' %}" 
-                   class="px-6 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 transition">
+                <a href="{% url 'business_partners:vendor_inventory_list' %}"
+                    class="px-6 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-gray-800 transition">
                     View All Inventory
                 </a>
             </div>
@@ -282,11 +285,11 @@
 
 {% block extra_js %}
 <script>
-// Auto-refresh alerts every 5 minutes
-document.addEventListener('DOMContentLoaded', function() {
-    setInterval(function() {
-        location.reload();
-    }, 300000); // 5 minutes
-});
+    // Auto-refresh alerts every 5 minutes
+    document.addEventListener('DOMContentLoaded', function () {
+        setInterval(function () {
+            location.reload();
+        }, 300000); // 5 minutes
+    });
 </script>
 {% endblock %}

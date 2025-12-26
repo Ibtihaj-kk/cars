@@ -1,0 +1,68 @@
+{% extends 'vendors/base.html' %}
+{% load vendor_currency %}
+
+{% block title %}Taxes - Corporate Dock{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Taxes</h1>
+        <p class="text-gray-500 text-sm mt-1">Track your current month tax amounts and manage tax details.</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Tax Liability ({{ tax_period_label }})</h3>
+        <div class="space-y-4">
+            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <span class="text-sm font-medium">Sales Tax (GST)</span>
+                <span class="font-bold">{% vendor_currency sales_tax_payable %}</span>
+            </div>
+            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <span class="text-sm font-medium">Withholding Tax</span>
+                <span class="font-bold">{% vendor_currency withholding_tax_payable %}</span>
+            </div>
+            <div class="border-t border-gray-200 pt-3 flex justify-between items-center">
+                <span class="text-sm font-extrabold uppercase">Total Payable</span>
+                <span class="font-extrabold text-xl text-red-600">{% vendor_currency total_tax_payable %}</span>
+            </div>
+        </div>
+
+        {% if has_tax_certificate %}
+            <a href="{% url 'business_partners:vendor_tax_certificate_download' %}" class="mt-6 block w-full text-center py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800">
+                Download Tax Certificate
+            </a>
+        {% else %}
+            <button type="button" disabled class="mt-6 w-full py-3 bg-gray-200 text-gray-600 font-bold rounded-xl cursor-not-allowed">
+                No Tax Certificate Uploaded
+            </button>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Tax Configuration</h3>
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Tax Registration Number (TRN)</label>
+                <input name="tax_id" type="text" value="{{ vendor_profile.tax_id|default_if_none:'' }}" class="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold">
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span class="text-sm font-medium">Certificate Status</span>
+                {% if has_tax_certificate %}
+                    <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">Uploaded</span>
+                {% else %}
+                    <span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">Missing</span>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="px-6 py-2 bg-white border border-gray-200 text-black font-bold rounded-lg hover:bg-gray-50">
+                Update Settings
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

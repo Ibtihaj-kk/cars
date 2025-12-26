@@ -1,0 +1,157 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Orders Management{% endblock %}
+
+{% block content %}
+<!-- Statistics -->
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center">
+        <p class="text-xs font-bold text-gray-400 uppercase">Total</p>
+        <p class="text-2xl font-extrabold text-gray-900">{{ order_stats.total|default:"0" }}</p>
+    </div>
+    <div class="bg-yellow-50 p-4 rounded-2xl border border-yellow-200 text-center">
+        <p class="text-xs font-bold text-yellow-600 uppercase">Pending</p>
+        <p class="text-2xl font-extrabold text-yellow-700">{{ order_stats.pending|default:"0" }}</p>
+    </div>
+    <div class="bg-blue-50 p-4 rounded-2xl border border-blue-200 text-center">
+        <p class="text-xs font-bold text-blue-600 uppercase">Processing</p>
+        <p class="text-2xl font-extrabold text-blue-700">{{ order_stats.processing|default:"0" }}</p>
+    </div>
+    <div class="bg-purple-50 p-4 rounded-2xl border border-purple-200 text-center">
+        <p class="text-xs font-bold text-purple-600 uppercase">Shipped</p>
+        <p class="text-2xl font-extrabold text-purple-700">{{ order_stats.shipped|default:"0" }}</p>
+    </div>
+    <div class="bg-green-50 p-4 rounded-2xl border border-green-200 text-center">
+        <p class="text-xs font-bold text-green-600 uppercase">Delivered</p>
+        <p class="text-2xl font-extrabold text-green-700">{{ order_stats.delivered|default:"0" }}</p>
+    </div>
+    <div class="bg-red-50 p-4 rounded-2xl border border-red-200 text-center">
+        <p class="text-xs font-bold text-red-600 uppercase">Cancelled</p>
+        <p class="text-2xl font-extrabold text-red-700">{{ order_stats.cancelled|default:"0" }}</p>
+    </div>
+    <div class="bg-gradient-to-br from-gray-800 to-gray-900 p-4 rounded-2xl text-center text-white">
+        <p class="text-xs font-bold text-gray-300 uppercase">Revenue</p>
+        <p class="text-xl font-extrabold">${{ order_stats.total_revenue|floatformat:0|default:"0" }}</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+        <form method="GET" class="flex gap-3 flex-wrap w-full">
+            <div class="relative flex-grow md:flex-grow-0 md:w-64">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                <input type="text" name="search" value="{{ search }}"
+                    class="w-full pl-10 pr-4 py-2 bg-gray-50 border rounded-xl text-sm" placeholder="Search orders...">
+            </div>
+            <select name="status" onchange="this.form.submit()"
+                class="bg-white border text-gray-700 py-2 px-4 rounded-xl font-bold text-sm">
+                <option value="">All Status</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <select name="payment" onchange="this.form.submit()"
+                class="bg-white border text-gray-700 py-2 px-4 rounded-xl font-bold text-sm">
+                <option value="">All Payments</option>
+                {% for value, label in payment_status_choices %}
+                <option value="{{ value }}" {% if payment_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <input type="date" name="date_from" value="{{ date_from }}"
+                class="bg-white border rounded-xl px-3 py-2 text-sm" placeholder="From">
+            <input type="date" name="date_to" value="{{ date_to }}" class="bg-white border rounded-xl px-3 py-2 text-sm"
+                placeholder="To">
+            <button type="submit" class="bg-gray-100 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-200">
+                <i class="fas fa-filter"></i>
+            </button>
+        </form>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+            <thead class="bg-gray-50 border-b text-xs uppercase font-bold text-gray-500">
+                <tr>
+                    <th class="px-6 py-4">Order #</th>
+                    <th class="px-6 py-4">Customer</th>
+                    <th class="px-6 py-4">Items</th>
+                    <th class="px-6 py-4">Total</th>
+                    <th class="px-6 py-4">Status</th>
+                    <th class="px-6 py-4">Payment</th>
+                    <th class="px-6 py-4">Date</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                {% for order in orders %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <span class="font-mono font-bold text-blue-600">{{ order.order_number }}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="font-bold">{{ order.customer_name|default:"Guest" }}</p>
+                        <p class="text-xs text-gray-500">{{ order.customer_email }}</p>
+                    </td>
+                    <td class="px-6 py-4">{{ order.items.count }} items</td>
+                    <td class="px-6 py-4 font-bold">${{ order.total_price|floatformat:2 }}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded-full text-xs font-bold
+                            {% if order.status == 'delivered' %}bg-green-100 text-green-700
+                            {% elif order.status == 'shipped' %}bg-purple-100 text-purple-700
+                            {% elif order.status == 'processing' %}bg-blue-100 text-blue-700
+                            {% elif order.status == 'pending' %}bg-yellow-100 text-yellow-700
+                            {% elif order.status == 'cancelled' %}bg-red-100 text-red-700
+                            {% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ order.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded text-xs font-bold
+                            {% if order.payment_status == 'completed' %}bg-green-100 text-green-700
+                            {% elif order.payment_status == 'pending' %}bg-yellow-100 text-yellow-700
+                            {% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ order.get_payment_status_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-gray-500">{{ order.created_at|date:"M d, Y" }}</td>
+                    <td class="px-6 py-4 text-right">
+                        <a href="{% url 'admin_panel:order_detail' order.id %}"
+                            class="text-gray-400 hover:text-black mx-1" title="View">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="{% url 'admin_panel:invoice_detail' order.id %}"
+                            class="text-gray-400 hover:text-black mx-1" title="Invoice">
+                            <i class="fas fa-file-invoice"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-shopping-cart text-4xl mb-4 text-gray-300"></i>
+                        <p>No orders found</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+        <span class="text-sm text-gray-500">
+            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} orders
+        </span>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}"
+                class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}"
+                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

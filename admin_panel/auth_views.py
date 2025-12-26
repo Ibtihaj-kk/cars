@@ -41,6 +41,12 @@ def admin_login_view(request):
     
     # Redirect if already authenticated admin
     if request.user.is_authenticated and _is_admin_user(request.user):
+        # Create admin session in cache if not exists
+        from .session_manager import AdminSessionManager
+        is_valid, _ = AdminSessionManager.validate_session(request)
+        if not is_valid:
+            # Create a new admin session for this authenticated user
+            AdminSessionManager.create_session(request, request.user)
         return redirect('admin_panel:dashboard')
     
     if request.method == 'POST':
@@ -212,37 +218,10 @@ def admin_logout_view(request):
 
 def _handle_logout_post(request):
     """Handle POST request for admin logout."""
-    user = request.user
-    
-    # Log logout
-    log_activity(
-        user=user,
-        action_type=ActivityLogType.LOGOUT,
-        description="Admin panel logout",
-        request=request,
-        data={
-            'session_duration': _calculate_session_duration(request),
-            'logout_type': 'manual'
-        }
-    )
-    
-    # Clear admin session data
-    admin_session_keys = [
-        'admin_login_time',
-        'admin_last_activity', 
-        'admin_session_ips',
-        'admin_2fa_user_id',
-        'admin_2fa_timestamp'
-    ]
-    
-    for key in admin_session_keys:
-        request.session.pop(key, None)
-    
-    # Logout user
-    logout(request)
-    
+    from .session_manager import AdminSessionManager
+    AdminSessionManager.terminate_session(request, reason="manual")
     messages.success(request, 'You have been successfully logged out.')
-    return redirect('admin_panel:login')
+    return redirect('login')
 
 
 @admin_required(min_role='staff')

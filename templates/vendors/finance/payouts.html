@@ -1,0 +1,121 @@
+{% extends 'vendors/base.html' %}
+{% load vendor_currency %}
+
+{% block title %}Payout Tracking - Corporate Dock{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Payout Tracking</h1>
+        <p class="text-gray-500 text-sm mt-1">Track upcoming payouts and view payout history.</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm text-center">
+        <p class="text-xs font-bold text-gray-400 uppercase">Next Payout</p>
+        <h3 class="text-xl font-extrabold text-black mt-2">
+            {% if next_payout_date %}
+                {{ next_payout_date|date:"M d, Y" }}
+            {% else %}
+                --
+            {% endif %}
+        </h3>
+        <p class="text-xs text-gray-500 mt-1">
+            Est. Amount:
+            <span class="font-bold text-gray-900">{% vendor_currency next_payout_estimated_amount|default:0 %}</span>
+        </p>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm text-center">
+        <p class="text-xs font-bold text-gray-400 uppercase">Last Payout</p>
+        <h3 class="text-xl font-extrabold text-green-600 mt-2">{% vendor_currency last_payout_amount|default:0 %}</h3>
+        <p class="text-xs text-green-600 mt-1 font-bold">
+            {% if last_payout_date %}
+                Paid on {{ last_payout_date|date:"M d, Y" }}
+            {% else %}
+                --
+            {% endif %}
+        </p>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm text-center">
+        <p class="text-xs font-bold text-gray-400 uppercase">Pending Balance</p>
+        <h3 class="text-xl font-extrabold text-gray-900 mt-2">{% vendor_currency pending_balance|default:0 %}</h3>
+        <p class="text-xs text-gray-500 mt-1">
+            {% if clearing_in_days != None %}
+                Clearing in {{ clearing_in_days }} days
+            {% else %}
+                --
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <table class="w-full text-left">
+        <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500">
+            <tr>
+                <th class="px-6 py-3">Reference ID</th>
+                <th class="px-6 py-3">Date Processed</th>
+                <th class="px-6 py-3">Bank Account</th>
+                <th class="px-6 py-3">Amount</th>
+                <th class="px-6 py-3">Status</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 text-sm">
+            {% for p in payouts %}
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-4 font-mono font-bold">{{ p.payment_reference }}</td>
+                <td class="px-6 py-4">
+                    {% if p.payment_date %}
+                        {{ p.payment_date|date:"M d, Y" }}
+                    {% elif p.processed_at %}
+                        {{ p.processed_at|date:"M d, Y" }}
+                    {% else %}
+                        {{ p.created_at|date:"M d, Y" }}
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4">{{ bank_account_display }}</td>
+                <td class="px-6 py-4 font-bold {% if p.status == 'completed' %}text-green-600{% elif p.status == 'failed' or p.status == 'cancelled' %}text-red-600{% else %}text-gray-900{% endif %}">
+                    {% vendor_currency p.net_amount|default:0 %}
+                </td>
+                <td class="px-6 py-4">
+                    {% if p.status == 'completed' %}
+                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">{{ p.get_status_display }}</span>
+                    {% elif p.status == 'pending' or p.status == 'processing' %}
+                        <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-bold">{{ p.get_status_display }}</span>
+                    {% elif p.status == 'failed' or p.status == 'cancelled' %}
+                        <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">{{ p.get_status_display }}</span>
+                    {% else %}
+                        <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-bold">{{ p.get_status_display }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="px-6 py-10 text-center text-gray-500">No payout transactions found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if payouts.paginator.num_pages > 1 %}
+<div class="mt-6 flex items-center justify-center gap-2">
+    {% if payouts.has_previous %}
+        <a href="?page={{ payouts.previous_page_number }}" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50">Prev</a>
+    {% else %}
+        <span class="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-400">Prev</span>
+    {% endif %}
+
+    <span class="px-3 py-2 text-sm font-bold text-gray-700">
+        Page {{ payouts.number }} of {{ payouts.paginator.num_pages }}
+    </span>
+
+    {% if payouts.has_next %}
+        <a href="?page={{ payouts.next_page_number }}" class="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50">Next</a>
+    {% else %}
+        <span class="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-400">Next</span>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

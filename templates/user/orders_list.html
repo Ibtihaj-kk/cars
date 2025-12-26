@@ -19,131 +19,470 @@
         box-shadow: var(--card-shadow);
         flex-wrap: wrap;
     }
-    .search-input { flex: 1; min-width: 200px; position: relative; }
-    .search-input input {
-        width: 100%; padding: 10px 15px 10px 40px; border-radius: 10px;
-        border: 1px solid var(--border-subtle); background: #f9f9f9; font-size: 14px; outline: none;
+
+    .search-input {
+        flex: 1;
+        min-width: 200px;
+        position: relative;
     }
-    .search-input i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #999; }
+
+    .search-input input {
+        width: 100%;
+        padding: 10px 15px 10px 40px;
+        border-radius: 10px;
+        border: 1px solid var(--border-subtle);
+        background: #f9f9f9;
+        font-size: 14px;
+        outline: none;
+    }
+
+    .search-input i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+    }
+
     .filter-select {
-        padding: 10px 15px; border-radius: 10px; border: 1px solid var(--border-subtle);
-        background: white; color: #333; font-size: 14px; font-weight: 600; outline: none; cursor: pointer;
+        padding: 10px 15px;
+        border-radius: 10px;
+        border: 1px solid var(--border-subtle);
+        background: white;
+        color: #333;
+        font-size: 14px;
+        font-weight: 600;
+        outline: none;
+        cursor: pointer;
     }
 
     /* --- ORDERS TABLE --- */
     .orders-card {
-        background: white; border-radius: 24px; padding: 0;
-        border: 1px solid var(--border-subtle); box-shadow: var(--card-shadow); overflow: hidden;
+        background: white;
+        border-radius: 24px;
+        padding: 0;
+        border: 1px solid var(--border-subtle);
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
     }
-    .clean-table { width: 100%; border-collapse: collapse; }
-    .clean-table th {
-        text-align: left; padding: 20px 25px; color: #888; font-size: 12px; font-weight: 700;
-        text-transform: uppercase; border-bottom: 1px solid #eee; background: #fcfcfc;
-    }
-    .clean-table td {
-        padding: 20px 25px; border-bottom: 1px solid #f5f5f5;
-        font-size: 14px; color: #333; vertical-align: middle;
-    }
-    .clean-table tr:last-child td { border-bottom: none; }
-    .clean-table tr:hover td { background: #fafafa; }
 
-    .order-id { font-family: monospace; font-weight: 700; background: #f0f0f0; padding: 5px 10px; border-radius: 6px; }
-    .order-date { color: #666; font-size: 13px; }
-    
-    .product-preview { display: flex; align-items: center; gap: 12px; }
-    .thumb-stack { display: flex; }
-    .thumb-img {
-        width: 40px; height: 40px; border-radius: 8px; border: 2px solid white;
-        object-fit: cover; background: #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    .clean-table {
+        width: 100%;
+        border-collapse: collapse;
     }
-    .thumb-img:not(:first-child) { margin-left: -15px; }
-    .more-items { font-size: 12px; color: #666; margin-left: 10px; font-weight: 600; }
+
+    .clean-table th {
+        text-align: left;
+        padding: 20px 25px;
+        color: #888;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        border-bottom: 1px solid #eee;
+        background: #fcfcfc;
+    }
+
+    .clean-table td {
+        padding: 20px 25px;
+        border-bottom: 1px solid #f5f5f5;
+        font-size: 14px;
+        color: #333;
+        vertical-align: middle;
+    }
+
+    .clean-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .clean-table tr:hover td {
+        background: #fafafa;
+    }
+
+    .order-id {
+        font-family: monospace;
+        font-weight: 700;
+        background: #f0f0f0;
+        padding: 5px 10px;
+        border-radius: 6px;
+    }
+
+    .order-date {
+        color: #666;
+        font-size: 13px;
+    }
+
+    .product-preview {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .thumb-stack {
+        display: flex;
+    }
+
+    .thumb-img {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        border: 2px solid white;
+        object-fit: cover;
+        background: #eee;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .thumb-img:not(:first-child) {
+        margin-left: -15px;
+    }
+
+    .more-items {
+        font-size: 12px;
+        color: #666;
+        margin-left: 10px;
+        font-weight: 600;
+    }
 
     .status-badge {
-        padding: 6px 12px; border-radius: 30px; font-size: 11px; font-weight: 800; text-transform: uppercase; display: inline-block;
+        padding: 6px 12px;
+        border-radius: 30px;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        display: inline-block;
     }
-    .status-completed { background: #ECFDF5; color: #10B981; }
-    .status-pending { background: #FFF7E6; color: #F59E0B; }
-    .status-cancelled { background: #FEF2F2; color: #EF4444; }
 
-    .amount { font-weight: 800; color: black; }
+    .status-completed {
+        background: #ECFDF5;
+        color: #10B981;
+    }
 
-    .actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .status-pending {
+        background: #FFF7E6;
+        color: #F59E0B;
+    }
+
+    .status-cancelled {
+        background: #FEF2F2;
+        color: #EF4444;
+    }
+
+    .amount {
+        font-weight: 800;
+        color: black;
+    }
+
+    .actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
     .btn-action {
-        padding: 8px 16px; border: 1px solid #eee; background: white; border-radius: 8px;
-        font-size: 12px; font-weight: 700; color: #333; text-decoration: none; transition: 0.2s; cursor: pointer;
+        padding: 8px 16px;
+        border: 1px solid #eee;
+        background: white;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #333;
+        text-decoration: none;
+        transition: 0.2s;
+        cursor: pointer;
     }
-    .btn-action:hover { border-color: black; color: black; background: #fcfcfc; }
-    .btn-track { background: black; color: white; border-color: black; }
-    .btn-track:hover { background: #333; border-color: #333; color: white; }
+
+    .btn-action:hover {
+        border-color: black;
+        color: black;
+        background: #fcfcfc;
+    }
+
+    .btn-track {
+        background: black;
+        color: white;
+        border-color: black;
+    }
+
+    .btn-track:hover {
+        background: #333;
+        border-color: #333;
+        color: white;
+    }
 
     /* --- MODAL STYLES --- */
     .modal-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 2000;
-        display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
     }
-    .modal-overlay.active { display: flex; opacity: 1; }
-    
+
+    .modal-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
     /* Generic Modal Content */
     .modal-card {
-        background: white; border-radius: 20px; width: 100%; max-width: 700px;
-        max-height: 90vh; overflow-y: auto; position: relative;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); transform: scale(0.95); transition: transform 0.3s ease;
+        background: white;
+        border-radius: 20px;
+        width: 100%;
+        max-width: 700px;
+        max-height: 90vh;
+        overflow-y: auto;
+        position: relative;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        transform: scale(0.95);
+        transition: transform 0.3s ease;
     }
-    .modal-overlay.active .modal-card { transform: scale(1); }
-    
+
+    .modal-overlay.active .modal-card {
+        transform: scale(1);
+    }
+
     .modal-header {
-        padding: 25px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;
-        position: sticky; top: 0; background: white; z-index: 10;
+        padding: 25px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 10;
     }
-    .modal-title { font-size: 18px; font-weight: 800; margin: 0; }
-    .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #999; }
-    .modal-close:hover { color: black; }
-    .modal-body { padding: 30px; }
+
+    .modal-title {
+        font-size: 18px;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: #999;
+    }
+
+    .modal-close:hover {
+        color: black;
+    }
+
+    .modal-body {
+        padding: 30px;
+    }
 
     /* Invoice Specific */
-    .invoice-header { display: flex; justify-content: space-between; margin-bottom: 30px; }
-    .invoice-logo img { height: 30px; margin-bottom: 10px; }
-    .invoice-meta div { font-size: 13px; color: #666; margin-bottom: 4px; }
-    .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-    .invoice-table th { text-align: left; border-bottom: 2px solid black; padding: 10px 0; font-size: 12px; text-transform: uppercase; }
-    .invoice-table td { padding: 15px 0; border-bottom: 1px solid #eee; font-size: 14px; }
-    .invoice-total { text-align: right; margin-top: 20px; }
-    .total-row { display: flex; justify-content: flex-end; gap: 40px; font-size: 14px; margin-bottom: 8px; }
-    .grand-total { font-size: 20px; font-weight: 900; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+    .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+    }
+
+    .invoice-logo img {
+        height: 30px;
+        margin-bottom: 10px;
+    }
+
+    .invoice-meta div {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 4px;
+    }
+
+    .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 30px;
+    }
+
+    .invoice-table th {
+        text-align: left;
+        border-bottom: 2px solid black;
+        padding: 10px 0;
+        font-size: 12px;
+        text-transform: uppercase;
+    }
+
+    .invoice-table td {
+        padding: 15px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+    }
+
+    .invoice-total {
+        text-align: right;
+        margin-top: 20px;
+    }
+
+    .total-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 40px;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+
+    .grand-total {
+        font-size: 20px;
+        font-weight: 900;
+        margin-top: 15px;
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+    }
 
     /* Tracking Specific */
-    .timeline { position: relative; padding-left: 20px; margin-top: 10px; }
-    .timeline-item { position: relative; padding-bottom: 30px; padding-left: 30px; border-left: 2px solid #eee; }
-    .timeline-item:last-child { border-left: none; padding-bottom: 0; }
-    .timeline-dot {
-        position: absolute; left: -7px; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #eee; border: 2px solid white; box-shadow: 0 0 0 1px #eee;
+    .timeline {
+        position: relative;
+        padding-left: 20px;
+        margin-top: 10px;
     }
-    .timeline-item.completed .timeline-dot { background: black; box-shadow: 0 0 0 1px black; }
-    .timeline-item.completed { border-left-color: black; }
-    .timeline-date { font-size: 12px; color: #888; margin-bottom: 4px; }
-    .timeline-status { font-weight: 700; font-size: 15px; color: black; }
-    .timeline-desc { font-size: 13px; color: #666; }
+
+    .timeline-item {
+        position: relative;
+        padding-bottom: 30px;
+        padding-left: 30px;
+        border-left: 2px solid #eee;
+    }
+
+    .timeline-item:last-child {
+        border-left: none;
+        padding-bottom: 0;
+    }
+
+    .timeline-dot {
+        position: absolute;
+        left: -7px;
+        top: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #eee;
+        border: 2px solid white;
+        box-shadow: 0 0 0 1px #eee;
+    }
+
+    .timeline-item.completed .timeline-dot {
+        background: black;
+        box-shadow: 0 0 0 1px black;
+    }
+
+    .timeline-item.completed {
+        border-left-color: black;
+    }
+
+    .timeline-date {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 4px;
+    }
+
+    .timeline-status {
+        font-weight: 700;
+        font-size: 15px;
+        color: black;
+    }
+
+    .timeline-desc {
+        font-size: 13px;
+        color: #666;
+    }
 
     /* Details Specific */
-    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
-    .info-group h5 { font-size: 13px; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 10px; }
-    .info-group p { font-size: 14px; color: #333; margin: 0; line-height: 1.6; }
+    .details-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+
+    .info-group h5 {
+        font-size: 13px;
+        font-weight: 700;
+        color: #999;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+    }
+
+    .info-group p {
+        font-size: 14px;
+        color: #333;
+        margin: 0;
+        line-height: 1.6;
+    }
 
     /* Pagination */
-    .pagination { display: flex; justify-content: space-between; align-items: center; padding: 20px 25px; border-top: 1px solid #eee; }
-    .page-info { font-size: 13px; color: #666; }
-    .page-btns { display: flex; gap: 5px; }
-    .page-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #eee; background: white; color: #333; font-size: 13px; cursor: pointer; transition: 0.2s; }
-    .page-btn:hover { border-color: #ccc; }
-    .page-btn.active { background: black; color: white; border-color: black; }
+    .pagination {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        border-top: 1px solid #eee;
+    }
+
+    .page-info {
+        font-size: 13px;
+        color: #666;
+    }
+
+    .page-btns {
+        display: flex;
+        gap: 5px;
+    }
+
+    .page-btn {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid #eee;
+        background: white;
+        color: #333;
+        font-size: 13px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .page-btn:hover {
+        border-color: #ccc;
+    }
+
+    .page-btn.active {
+        background: black;
+        color: white;
+        border-color: black;
+    }
 
     @media (max-width: 768px) {
-        .filters-bar { flex-direction: column; align-items: stretch; }
-        .table-wrapper { overflow-x: auto; }
-        .details-grid { grid-template-columns: 1fr; }
-        .total-row { justify-content: space-between; gap: 0; }
+        .filters-bar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .details-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .total-row {
+            justify-content: space-between;
+            gap: 0;
+        }
     }
 </style>
 {% endblock %}
@@ -197,17 +536,21 @@
                         <div class="product-preview">
                             <div class="thumb-stack">
                                 {% for item in order.items.all|slice:":2" %}
-                                    {% if item.part.image %}
-                                        <img src="{{ item.part.image.url }}" class="thumb-img" alt="{{ item.part.name }}" onerror="this.src='https://placehold.co/40'">
-                                    {% else %}
-                                        <div class="thumb-img" style="display:flex;align-items:center;justify-content:center;background:#eee;color:#999;"><i class="fas fa-box"></i></div>
-                                    {% endif %}
+                                {% if item.part.image %}
+                                <img src="{{ item.part.image.url }}" class="thumb-img" alt="{{ item.part.name }}"
+                                    onerror="this.src='https://placehold.co/40'">
+                                {% else %}
+                                <div class="thumb-img"
+                                    style="display:flex;align-items:center;justify-content:center;background:#eee;color:#999;">
+                                    <i class="fas fa-box"></i>
+                                </div>
+                                {% endif %}
                                 {% endfor %}
                             </div>
                             {% if order.items.count > 2 %}
-                                <span class="more-items">+{{ order.items.count|add:"-2" }} more</span>
+                            <span class="more-items">+{{ order.items.count|add:"-2" }} more</span>
                             {% elif order.items.count == 1 %}
-                                <span class="more-items" style="color:black;">{{ order.items.first.part.name }}</span>
+                            <span class="more-items" style="color:black;">{{ order.items.first.part.name }}</span>
                             {% endif %}
                         </div>
                     </td>
@@ -219,9 +562,12 @@
                     <td><span class="amount">{% vendor_currency order.total_price %}</span></td>
                     <td style="text-align:right;">
                         <div class="actions">
-                            <button class="btn-action btn-track" onclick="openModal('trackModal-{{ order.id }}')">Track</button>
-                            <button class="btn-action" onclick="openModal('detailsModal-{{ order.id }}')">Details</button>
-                            <button class="btn-action" onclick="openModal('invoiceModal-{{ order.id }}')"><i class="fas fa-file-invoice"></i></button>
+                            <button class="btn-action btn-track"
+                                onclick="openModal('trackModal-{{ order.id }}')">Track</button>
+                            <button class="btn-action"
+                                onclick="openModal('detailsModal-{{ order.id }}')">Details</button>
+                            <button class="btn-action" onclick="openModal('invoiceModal-{{ order.id }}')"><i
+                                    class="fas fa-file-invoice"></i></button>
                         </div>
                     </td>
                 </tr>
@@ -241,20 +587,22 @@
 
     <div class="pagination">
         {% if page_obj.has_other_pages %}
-        <div class="page-info">Showing <strong>{{ page_obj.start_index }}-{{ page_obj.end_index }}</strong> of <strong>{{ page_obj.paginator.count }}</strong> orders</div>
+        <div class="page-info">Showing <strong>{{ page_obj.start_index }}-{{ page_obj.end_index }}</strong> of
+            <strong>{{ page_obj.paginator.count }}</strong> orders
+        </div>
         <div class="page-btns">
             {% if page_obj.has_previous %}
             <a href="?page={{ page_obj.previous_page_number }}" class="page-btn"><i class="fas fa-chevron-left"></i></a>
             {% else %}
             <button class="page-btn" disabled><i class="fas fa-chevron-left"></i></button>
             {% endif %}
-            
+
             {% for i in page_obj.paginator.page_range %}
-                {% if page_obj.number == i %}
-                <button class="page-btn active">{{ i }}</button>
-                {% else %}
-                <a href="?page={{ i }}" class="page-btn">{{ i }}</a>
-                {% endif %}
+            {% if page_obj.number == i %}
+            <button class="page-btn active">{{ i }}</button>
+            {% else %}
+            <a href="?page={{ i }}" class="page-btn">{{ i }}</a>
+            {% endif %}
             {% endfor %}
 
             {% if page_obj.has_next %}
@@ -279,7 +627,8 @@
             <div class="invoice-header">
                 <div class="invoice-logo">
                     <img src="{% static 'images/logo.png' %}" alt="Logo" onerror="this.style.display='none'">
-                    <div style="font-size:13px; color:#666; margin-top:5px;">Corporate Dock Inc.<br>123 Auto Street, NY</div>
+                    <div style="font-size:13px; color:#666; margin-top:5px;">Corporate Dock Inc.<br>123 Auto Street, NY
+                    </div>
                 </div>
                 <div class="invoice-meta" style="text-align:right;">
                     <div><strong>Date:</strong> {{ order.created_at|date:"M d, Y" }}</div>
@@ -328,31 +677,34 @@
             </table>
 
             <div class="invoice-total">
-                <div class="total-row"><span>Part Price:</span> <span>{% vendor_currency order.part_price_val %}</span></div>
-                
+                <div class="total-row"><span>Part Price:</span> <span>{% vendor_currency order.part_price_val %}</span>
+                </div>
+
                 {% if order.discount_amount_val > 0 %}
                 <div class="total-row" style="color:#dc3545;">
-                    <span>Discount {% if order.discount_percentage %}({{ order.discount_percentage|floatformat:0 }}%){% endif %}:</span> 
+                    <span>Discount {% if order.discount_percentage %}({{ order.discount_percentage|floatformat:0 }}%){% endif %}:</span>
                     <span>-{% vendor_currency order.discount_amount_val %}</span>
                 </div>
                 {% endif %}
-                
+
                 <div class="total-row"><span>Gross Price:</span> <span>{% vendor_currency order.gross_price_val %}</span></div>
-                
+
                 <div class="total-row">
-                    <span>VAT {% if order.tax_percentage > 0 %}({{ order.tax_percentage|floatformat:0 }}%){% endif %}:</span> 
+                    <span>VAT {% if order.tax_percentage > 0 %}({{ order.tax_percentage|floatformat:0 }}%){% endif %}:</span>
                     <span>{% vendor_currency order.tax_amount|default:0 %}</span>
                 </div>
 
                 {% if order.shipping_cost > 0 %}
-                <div class="total-row"><span>Shipping:</span> <span>{% vendor_currency order.shipping_cost %}</span></div>
+                <div class="total-row"><span>Shipping:</span> <span>{% vendor_currency order.shipping_cost %}</span>
+                </div>
                 {% endif %}
-                
+
                 <div class="total-row grand-total"><span>Invoice Value:</span> <span>{% vendor_currency order.total_price %}</span></div>
             </div>
 
             <div style="margin-top:30px; display:flex; gap:10px;">
-                <button class="btn-action" style="background:black; color:white; border-color:black; width:100%;" onclick="window.print()"><i class="fas fa-print mr-2"></i> Print Invoice</button>
+                <button class="btn-action" style="background:black; color:white; border-color:black; width:100%;"
+                    onclick="window.print()"><i class="fas fa-print mr-2"></i> Print Invoice</button>
                 <button class="btn-action" style="width:100%;">Download PDF</button>
             </div>
         </div>
@@ -367,7 +719,8 @@
             <button class="modal-close" onclick="closeModal('trackModal-{{ order.id }}')">&times;</button>
         </div>
         <div class="modal-body">
-            <div style="margin-bottom:25px; background:#f9f9f9; padding:15px; border-radius:12px; display:flex; gap:15px; align-items:center;">
+            <div
+                style="margin-bottom:25px; background:#f9f9f9; padding:15px; border-radius:12px; display:flex; gap:15px; align-items:center;">
                 <div style="font-size:24px; color:black;"><i class="fas fa-truck"></i></div>
                 <div>
                     <div style="font-weight:700; font-size:14px;">Status</div>
@@ -417,7 +770,7 @@
             <button class="modal-close" onclick="closeModal('detailsModal-{{ order.id }}')">&times;</button>
         </div>
         <div class="modal-body">
-            
+
             <div class="details-grid">
                 <div class="info-group">
                     <h5>Shipping Address</h5>
@@ -430,34 +783,45 @@
                 </div>
                 <div class="info-group">
                     <h5>Payment Info</h5>
-                    <p><i class="fas fa-credit-card"></i> {{ order.get_payment_method_display|default:"Online Payment" }}<br>Status: {{ order.get_payment_status_display|default:"Pending" }}</p>
+                    <p><i class="fas fa-credit-card"></i> {{ order.get_payment_method_display|default:"Online Payment"
+                        }}<br>Status: {{ order.get_payment_status_display|default:"Pending" }}</p>
                 </div>
             </div>
 
             <div style="background:#f9f9f9; border-radius:12px; padding:20px; margin-bottom:20px;">
-                <h5 style="font-size:12px; font-weight:700; color:#999; text-transform:uppercase; margin-bottom:15px;">Items</h5>
-                
+                <h5 style="font-size:12px; font-weight:700; color:#999; text-transform:uppercase; margin-bottom:15px;">
+                    Items</h5>
+
                 {% for item in order.items.all %}
                 <div style="display:flex; gap:15px; margin-bottom:15px; align-items:center;">
                     {% if item.part.image %}
-                    <img src="{{ item.part.image.url }}" style="width:50px; height:50px; border-radius:8px; object-fit:cover; border:1px solid #eee;">
+                    <img src="{{ item.part.image.url }}"
+                        style="width:50px; height:50px; border-radius:8px; object-fit:cover; border:1px solid #eee;">
                     {% else %}
-                    <div style="width:50px; height:50px; border-radius:8px; background:#eee; display:flex; align-items:center; justify-content:center;"><i class="fas fa-box"></i></div>
+                    <div
+                        style="width:50px; height:50px; border-radius:8px; background:#eee; display:flex; align-items:center; justify-content:center;">
+                        <i class="fas fa-box"></i>
+                    </div>
                     {% endif %}
                     <div style="flex:1;">
                         <div style="font-weight:700; font-size:14px;">{{ item.part.name }}</div>
-                        <div style="font-size:12px; color:#666;">Brand: {{ item.part.brand.name|default:"N/A" }}</div>
+                        <div style="font-size:12px; color:#666;">Make: {{ item.part.brand.name|default:"N/A" }}</div>
                     </div>
-                    <div style="font-weight:700; font-size:14px;">{{ item.quantity }} x {% vendor_currency item.price %}</div>
+                    <div style="font-weight:700; font-size:14px;">{{ item.quantity }} x {% vendor_currency item.price %}
+                    </div>
                 </div>
                 {% endfor %}
             </div>
 
             <div style="display:flex; justify-content:flex-end;">
                 <div style="width:200px;">
-                    <div class="total-row"><span>Subtotal:</span> <span>{% vendor_currency order.total_price %}</span></div>
+                    <div class="total-row"><span>Subtotal:</span> <span>{% vendor_currency order.total_price %}</span>
+                    </div>
                     <div class="total-row"><span>Shipping:</span> <span>{% vendor_currency order.shipping_cost|default:0 %}</span></div>
-                    <div class="total-row" style="font-weight:900; color:black; font-size:16px; margin-top:10px; padding-top:10px; border-top:1px solid #ddd;"><span>Total:</span> <span>{% vendor_currency order.total_price %}</span></div>
+                    <div class="total-row"
+                        style="font-weight:900; color:black; font-size:16px; margin-top:10px; padding-top:10px; border-top:1px solid #ddd;">
+                        <span>Total:</span> <span>{% vendor_currency order.total_price %}</span>
+                    </div>
                 </div>
             </div>
 
@@ -483,7 +847,7 @@
 
     // Close on click outside
     document.querySelectorAll('.modal-overlay').forEach(modal => {
-        modal.addEventListener('click', function(e) {
+        modal.addEventListener('click', function (e) {
             if (e.target === this) {
                 this.classList.remove('active');
                 document.body.style.overflow = 'auto';
