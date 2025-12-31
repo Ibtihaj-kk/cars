@@ -14,15 +14,21 @@ urlpatterns = [
     path('', views.dashboard_view, name='dashboard'),
     path('dashboard/', views.dashboard_view, name='dashboard_alt'),
     path('demo/', views.dashboard_demo_view, name='dashboard_demo'),
+    path('settings/', views.admin_settings_view, name='settings'),
     
     # User Management
     path('users/', views.users_management_view, name='users'),
+    path('users/add/', views.add_user_view, name='add_user'),
     path('users/<int:user_id>/', views.user_detail_view, name='user_detail'),
     path('users/<int:user_id>/update/', views.update_user_view, name='update_user'),
     path('users/<int:user_id>/toggle-status/', views.toggle_user_status_view, name='toggle_user_status'),
     
     # Roles & Permissions
     path('roles/', views.roles_permissions_view, name='roles'),
+    path('roles/add/', views.add_role_view, name='add_role'),
+    path('roles/<int:role_id>/update/', views.update_role_view, name='update_role'),
+    path('roles/<int:role_id>/delete/', views.delete_role_view, name='delete_role'),
+    path('roles/<int:role_id>/permissions/', views.get_role_permissions_view, name='get_role_permissions'),
     path('roles/update/', views.update_role_permissions_view, name='update_role_permissions'),
     
     # Parts Management
@@ -48,6 +54,7 @@ urlpatterns = [
     # Inventory Management
     path('inventory/', views.inventory_management_view, name='inventory'),
     path('inventory/<int:inventory_id>/update/', views.update_inventory_view, name='update_inventory'),
+    path('inventory/bulk-status-update/', views.inventory_bulk_status_update_view, name='inventory_bulk_status_update'),
     
     # Reviews Management
     path('reviews/', views.reviews_management_view, name='reviews'),
@@ -56,6 +63,7 @@ urlpatterns = [
     
     # Bulk Upload
     path('bulk-upload/', views.bulk_upload_view, name='bulk_upload'),
+    path('bulk-upload/template/', views.bulk_upload_template_view, name='bulk_upload_template'),
     path('bulk-upload/process/', views.process_bulk_upload_view, name='process_bulk_upload'),
     
     # Invoices & Finance
@@ -95,7 +103,7 @@ urlpatterns = [
     path('vendors/applications/<int:application_id>/reject/', views.reject_vendor_application_view, name='reject_vendor_application'),
     path('vendors/applications/<int:application_id>/request-changes/', views.request_changes_vendor_application_view, name='request_changes_vendor_application'),
     path('vendors/<int:vendor_id>/documents/', views.vendor_documents_view, name='vendor_documents'),
-    path('vendors/documents/<int:document_id>/verify/', views.verify_vendor_document_view, name='verify_vendor_document'),
+    path('vendors/documents/<uuid:document_id>/verify/', views.verify_vendor_document_view, name='verify_vendor_document'),
     path('vendors/<int:vendor_id>/communication/', views.vendor_communication_view, name='vendor_communication'),
     
     # Messaging URLs
@@ -123,4 +131,5 @@ urlpatterns = [
     # API endpoints for dashboard widgets
     path('api/stats/', views.api_dashboard_stats, name='api_dashboard_stats'),
     path('api/recent-activity/', views.api_recent_activity, name='api_recent_activity'),
+    
 ]

@@ -1,0 +1,59 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Two-factor authentication{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-8">
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <h3 class="text-lg font-bold text-gray-900 mb-2">Setup 2FA</h3>
+        <p class="text-sm text-gray-500">Scan the QR code using an authenticator app, then enter the 6-digit code.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex items-center justify-center">
+                <img src="data:image/png;base64,{{ qr_code_data }}" alt="2FA QR code" class="max-w-full">
+            </div>
+            <div class="space-y-4">
+                <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                    <p class="text-xs font-bold text-gray-500 uppercase mb-2">Secret key</p>
+                    <p class="font-mono text-sm break-all">{{ secret_key }}</p>
+                </div>
+
+                <form method="POST" action="{% url 'admin_panel:setup_2fa' %}" class="space-y-3">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Authenticator code</label>
+                        <input type="text" name="otp_code" inputmode="numeric" autocomplete="one-time-code"
+                            class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10"
+                            placeholder="123456" required>
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-black text-white px-5 py-2.5 rounded-xl font-bold hover:bg-gray-800">
+                        Confirm and enable
+                    </button>
+                </form>
+
+                {% if is_2fa_enabled %}
+                <form method="POST" action="{% url 'admin_panel:disable_2fa' %}" class="space-y-3">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Confirm password to disable</label>
+                        <input type="password" name="password"
+                            class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10"
+                            placeholder="Password" required>
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-red-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-red-700">
+                        Disable 2FA
+                    </button>
+                </form>
+                {% endif %}
+
+                <a href="{% url 'admin_panel:settings' %}"
+                    class="block text-center bg-gray-100 px-5 py-2.5 rounded-xl font-bold hover:bg-gray-200">
+                    Back to settings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

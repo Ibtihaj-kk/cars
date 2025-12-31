@@ -63,7 +63,12 @@
         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fas fa-search"></i></span>
         <input type="text" name="search" value="{{ search_query }}" class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black" placeholder="Search by Name, SKU, or Location...">
         {% if category_filter %}<input type="hidden" name="category" value="{{ category_filter }}">{% endif %}
+        {% if brand_filter %}<input type="hidden" name="brand" value="{{ brand_filter }}">{% endif %}
         {% if stock_status %}<input type="hidden" name="stock_status" value="{{ stock_status }}">{% endif %}
+        {% if price_min %}<input type="hidden" name="price_min" value="{{ price_min }}">{% endif %}
+        {% if price_max %}<input type="hidden" name="price_max" value="{{ price_max }}">{% endif %}
+        {% if sort_by %}<input type="hidden" name="sort" value="{{ sort_by }}">{% endif %}
+        {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
     </form>
     
     <div class="flex gap-2 w-full lg:w-auto overflow-x-auto">

@@ -24,18 +24,18 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                         <div class="text-xs font-bold text-gray-400 uppercase">Total Items</div>
-                        <div class="text-2xl font-bold text-gray-900 mt-1">{{ total_parts|floatformat:0 }}</div>
+                        <div class="text-2xl font-bold text-gray-900 mt-1">{{ total_parts|default:"0"|compact_number }}</div>
                     </div>
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                         <div class="text-xs font-bold text-gray-400 uppercase">Stock Value</div>
-                        <div class="text-2xl font-bold text-gray-900 mt-1">{% vendor_currency total_value %}</div>
+                        <div class="text-2xl font-bold text-gray-900 mt-1">{% vendor_currency_compact total_value %}</div>
                     </div>
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-yellow-100">
                         <div class="flex justify-between items-center">
                             <div class="text-xs font-bold text-yellow-600 uppercase">Low Stock</div>
                             <i class="fas fa-exclamation-circle text-yellow-500"></i>
                         </div>
-                        <div class="text-2xl font-bold text-gray-900 mt-1">{{ stock_stats.low_stock }}</div>
+                        <div class="text-2xl font-bold text-gray-900 mt-1">{{ stock_stats.low_stock|default:"0"|compact_number }}</div>
                         <div class="text-xs text-yellow-600 mt-1">Needs Reordering</div>
                     </div>
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-red-100">
@@ -43,7 +43,7 @@
                             <div class="text-xs font-bold text-red-600 uppercase">Dead Stock</div>
                             <i class="fas fa-spider text-red-500"></i>
                         </div>
-                        <div class="text-2xl font-bold text-gray-900 mt-1">{{ stock_stats.dead_stock|default:0 }}</div>
+                        <div class="text-2xl font-bold text-gray-900 mt-1">{{ stock_stats.dead_stock|default:"0"|compact_number }}</div>
                         <div class="text-xs text-red-600 mt-1">Not sold for 30+ days</div>
                     </div>
                 </div>

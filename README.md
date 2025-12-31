@@ -157,6 +157,9 @@ For production or full feature testing, start Celery workers:
 # Start Celery worker
 celery -A yallamotor_project worker -l info
 
+# Windows tip (if `celery` is not on PATH)
+python -m celery -A yallamotor_project worker -l info -P solo
+ 
 # Start Celery beat (for scheduled tasks)
 celery -A yallamotor_project beat -l info
 ```

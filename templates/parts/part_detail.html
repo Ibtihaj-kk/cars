@@ -209,6 +209,57 @@
         }
         .rating-stars { color: #000; font-size: 12px; margin-bottom: 5px; display: block;}
 
+        .share-section {
+            margin-top: 15px;
+        }
+
+        .share-title {
+            font-size: 12px;
+            font-weight: 800;
+            color: #111;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .share-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .share-btn {
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            background: #fff;
+            color: #111;
+            text-decoration: none;
+            transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .share-btn:hover {
+            background: #f6f6f6;
+            border-color: #d5d5d5;
+            color: #000;
+            transform: translateY(-1px);
+        }
+
+        .share-btn:active {
+            transform: translateY(0);
+        }
+
+        .share-status {
+            font-size: 12px;
+            color: #555;
+            margin-top: 10px;
+            display: none;
+        }
+
         /* --- TABS SECTION --- */
         .tabs-container { margin-bottom: 60px; border: 1px solid #eee; border-radius: 4px; }
         .tabs-header { display: flex; background: #f9f9f9; border-bottom: 1px solid #eee; }
@@ -321,6 +372,18 @@
           <i class="fa-solid fa-phone"></i>
           <span class="navbar-phone-number">+92-333-3610109</span>
         </span>
+        <form method="get" action="{% url 'parts:set_country_currency' %}" style="display:flex; align-items:center; gap:6px;">
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <select name="country" onchange="this.form.submit()" style="border:1px solid #ddd; border-radius:6px; padding:4px 8px; font-size:12px; background:#fff;">
+            <option value="">Country</option>
+            <option value="Saudi Arabia" {% if current_currency and current_currency.code == 'SAR' %}selected{% endif %}>Saudi Arabia</option>
+            <option value="Qatar" {% if current_currency and current_currency.code == 'QAR' %}selected{% endif %}>Qatar</option>
+            <option value="Oman" {% if current_currency and current_currency.code == 'OMR' %}selected{% endif %}>Oman</option>
+            <option value="Bahrain" {% if current_currency and current_currency.code == 'BHD' %}selected{% endif %}>Bahrain</option>
+            <option value="United Arab Emirates" {% if current_currency and current_currency.code == 'AED' %}selected{% endif %}>UAE</option>
+            <option value="Pakistan" {% if current_currency and current_currency.code == 'PKR' %}selected{% endif %}>Pakistan</option>
+          </select>
+        </form>
         <span class="navbar-divider">|</span>
         {% if request.user.is_authenticated %}
         <a href="{% url 'parts:cart_view' %}" class="navbar-cart position-relative">
@@ -455,10 +518,13 @@
                 <div class="buy-box">
                     <div class="price-row">
                         <!-- <span class="discount">-20%</span> -->
-                        <span class="final-price">{% vendor_currency part.price %}</span>
-                        {% if part.standard_price and part.standard_price > part.price %}
-                        <span class="list-price">List Price: <span style="text-decoration:line-through">{{ part.standard_price }} ر.س.</span> <i class="fas fa-info-circle"></i></span>
-                        {% endif %}
+                        <span class="final-price">
+                            {% if part.standard_price %}
+                            {% vendor_currency_part_field part 'standard_price' %}
+                            {% else %}
+                            {% vendor_currency part %}
+                            {% endif %}
+                        </span>
                         <div class="returns-info">FREE Returns <i class="fas fa-chevron-down"></i></div>
                     </div>
 
@@ -489,6 +555,39 @@
                             <button type="button" class="btn-cart" disabled style="background-color: #eee; color: #999; border-color: #ccc; cursor: not-allowed; opacity: 0.7;">Out of Stock</button>
                         {% endif %}
                     </form>
+
+                    {% with share_url=request.build_absolute_uri %}
+                    <div class="share-section">
+                        <div class="share-title">Share</div>
+                        <div class="share-buttons">
+                            <a class="share-btn" target="_blank" rel="noopener noreferrer"
+                                href="https://www.facebook.com/sharer/sharer.php?u={{ share_url|urlencode }}"
+                                aria-label="Share on Facebook">
+                                <i class="fa-brands fa-facebook-f"></i>
+                            </a>
+                            <a class="share-btn" target="_blank" rel="noopener noreferrer"
+                                href="https://twitter.com/intent/tweet?url={{ share_url|urlencode }}&text={{ part.name|urlencode }}"
+                                aria-label="Share on Twitter">
+                                <i class="fa-brands fa-twitter"></i>
+                            </a>
+                            <a class="share-btn" target="_blank" rel="noopener noreferrer"
+                                href="https://wa.me/?text={{ part.name|urlencode }}%20{{ share_url|urlencode }}"
+                                aria-label="Share on WhatsApp">
+                                <i class="fa-brands fa-whatsapp"></i>
+                            </a>
+                            <a class="share-btn" target="_blank" rel="noopener noreferrer"
+                                href="https://www.linkedin.com/sharing/share-offsite/?url={{ share_url|urlencode }}"
+                                aria-label="Share on LinkedIn">
+                                <i class="fa-brands fa-linkedin-in"></i>
+                            </a>
+                            <button type="button" class="share-btn" id="copyShareLinkBtn"
+                                data-share-url="{{ share_url }}" onclick="copyShareLink()" aria-label="Copy link">
+                                <i class="fa-solid fa-link"></i>
+                            </button>
+                        </div>
+                        <div class="share-status" id="copyShareLinkStatus">Link copied</div>
+                    </div>
+                    {% endwith %}
 
                     <div class="seller-details">
                         <!-- <div class="rating-stars">
@@ -561,7 +660,7 @@
                             {% endif %}
                             <div class="comp-title">{{ related_part.name }}</div>
                             <div style="font-size:12px; color:#666;">Part #{{ related_part.parts_number|default:"-" }}</div>
-                            <div class="comp-price">{% vendor_currency related_part.price %}</div>
+                            <div class="comp-price">{% vendor_currency related_part %}</div>
                         </a>
                     </div>
                     {% empty %}
@@ -827,6 +926,44 @@
         if (currentVal + change >= 1) {
             input.value = currentVal + change;
         }
+    }
+
+    function copyShareLink() {
+        const btn = document.getElementById('copyShareLinkBtn');
+        const status = document.getElementById('copyShareLinkStatus');
+        const url = btn ? btn.getAttribute('data-share-url') : '';
+        if (!url) return;
+
+        const showStatus = () => {
+            if (!status) return;
+            status.style.display = 'block';
+            if (status._timeoutId) clearTimeout(status._timeoutId);
+            const timeoutId = setTimeout(() => {
+                status.style.display = 'none';
+            }, 2000);
+            status._timeoutId = timeoutId;
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(showStatus).catch(() => {
+                const input = document.createElement('input');
+                input.value = url;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                showStatus();
+            });
+            return;
+        }
+
+        const input = document.createElement('input');
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showStatus();
     }
 
     // Tabs Logic

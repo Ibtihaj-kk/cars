@@ -4,7 +4,8 @@
 {% block content %}
 <!-- Statistics -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+    <a href="{% url 'admin_panel:partners' %}?type=&status={% for key, value in preserved_query_params %}{% if key != 'type' and key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-gray-400 uppercase">Total Partners</p>
@@ -12,8 +13,9 @@
             </div>
             <div class="p-2 bg-blue-50 text-blue-600 rounded-lg"><i class="fas fa-handshake"></i></div>
         </div>
-    </div>
-    <div class="bg-purple-50 p-5 rounded-2xl border border-purple-200">
+    </a>
+    <a href="{% url 'admin_panel:vendor_management' %}"
+        class="block bg-purple-50 p-5 rounded-2xl border border-purple-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-purple-600 uppercase">Vendors</p>
@@ -21,8 +23,9 @@
             </div>
             <div class="p-2 bg-purple-100 text-purple-600 rounded-lg"><i class="fas fa-store"></i></div>
         </div>
-    </div>
-    <div class="bg-green-50 p-5 rounded-2xl border border-green-200">
+    </a>
+    <a href="{% url 'admin_panel:users' %}"
+        class="block bg-green-50 p-5 rounded-2xl border border-green-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-green-600 uppercase">Customers</p>
@@ -30,8 +33,9 @@
             </div>
             <div class="p-2 bg-green-100 text-green-600 rounded-lg"><i class="fas fa-users"></i></div>
         </div>
-    </div>
-    <div class="bg-yellow-50 p-5 rounded-2xl border border-yellow-200">
+    </a>
+    <a href="{% url 'admin_panel:partners' %}?status=pending{% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-yellow-50 p-5 rounded-2xl border border-yellow-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-yellow-600 uppercase">Pending</p>
@@ -39,7 +43,7 @@
             </div>
             <div class="p-2 bg-yellow-100 text-yellow-600 rounded-lg"><i class="fas fa-clock"></i></div>
         </div>
-    </div>
+    </a>
 </div>
 
 <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
@@ -151,17 +155,31 @@
 
     <!-- Pagination -->
     {% if page_obj.has_other_pages %}
-    <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-        <span class="text-sm text-gray-500">
-            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} partners
-        </span>
+    <div class="px-6 py-4 border-t border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <span class="text-sm text-gray-500">
+                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} partners
+            </span>
+            <form method="GET" class="flex items-center gap-2">
+                {% for key, value in preserved_query_params %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endfor %}
+                <span class="text-sm text-gray-500">Per page</span>
+                <select name="per_page" onchange="this.form.submit()"
+                    class="bg-white border border-gray-200 text-gray-700 py-1.5 px-3 rounded-lg font-bold text-sm">
+                    {% for opt in per_page_options %}
+                    <option value="{{ opt }}" {% if per_page == opt %}selected{% endif %}>{{ opt }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
         <div class="flex gap-2">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}"
+            <a href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
                 class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Previous</a>
             {% endif %}
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}"
+            <a href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
                 class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">Next</a>
             {% endif %}
         </div>

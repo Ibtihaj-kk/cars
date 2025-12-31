@@ -136,8 +136,7 @@
                                 class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Orders</span>
                             {% if stats.pending_processing_count > 0 %}
                             <span
-                                class="nav-text ml-auto bg-red-500 text-white py-0.5 px-2 rounded-full text-xs font-bold">{{
-                                stats.pending_processing_count }}</span>
+                                class="nav-text ml-auto bg-red-500 text-white py-0.5 px-2 rounded-full text-xs font-bold">{{ stats.pending_processing_count }}</span>
                             {% endif %}
                         </a>
 
@@ -283,12 +282,12 @@
     </div>
     {% endif %}
 
-    <div class="flex items-center">
+    <!-- <div class="flex items-center">
         <div class="h-9 min-w-9 px-2 flex items-center justify-center rounded-lg bg-gray-50 border border-gray-200 text-gray-800 font-bold text-sm leading-none"
             title="{% vendor_currency_code %}">
             {% vendor_currency_symbol %}
         </div>
-    </div>
+    </div> -->
 
     <button class="p-2 text-gray-400 hover:text-black relative">
         <i class="fas fa-bell text-lg"></i>

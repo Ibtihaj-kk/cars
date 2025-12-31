@@ -1,11 +1,13 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView
-from django.db.models import Count, Sum, F, Q
+from django.db.models import Count, Sum, F, Q, OuterRef, Subquery, CharField
+from django.db.models.functions import Coalesce
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 from parts.models import Order, OrderItem
+from .models import BusinessPartner
 from .utils import get_vendor_profile
 
 User = get_user_model()
@@ -38,6 +40,14 @@ class VendorCustomerListView(LoginRequiredMixin, ListView):
             )
 
         # Annotate with stats specific to this vendor
+        customer_bp_number_subquery = BusinessPartner.objects.filter(
+            user=OuterRef('pk'),
+            roles__role_type='customer',
+        ).order_by('-created_at').values('bp_number')[:1]
+        any_bp_number_subquery = BusinessPartner.objects.filter(
+            user=OuterRef('pk'),
+        ).order_by('-created_at').values('bp_number')[:1]
+
         qs = qs.annotate(
             vendor_orders_count=Count(
                 'orders',
@@ -48,7 +58,12 @@ class VendorCustomerListView(LoginRequiredMixin, ListView):
                 F('orders__items__quantity') * F('orders__items__price'),
                 filter=Q(orders__items__part__vendor=vendor_partner) & 
                        Q(orders__status__in=['delivered', 'shipped', 'processing'])
-            )
+            ),
+            bp_number=Coalesce(
+                Subquery(customer_bp_number_subquery),
+                Subquery(any_bp_number_subquery),
+                output_field=CharField(),
+            ),
         )
         
         # Order by most recent join date by default

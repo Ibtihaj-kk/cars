@@ -8,16 +8,31 @@
         <div class="bg-white rounded-2xl border shadow-sm p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="font-bold text-lg">Roles</h3>
-                <button class="text-sm text-blue-600 hover:underline">+ Add</button>
+                <button type="button" onclick="openAddRoleModal()" class="text-sm text-blue-600 hover:underline">+
+                    Add</button>
             </div>
             <div class="space-y-2" id="rolesList">
                 {% for group in groups %}
-                <div class="p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition role-item {% if forloop.first %}bg-gray-50 border-black{% endif %}"
+                <div class="p-3 border rounded-xl hover:bg-gray-50 transition role-item {% if forloop.first %}bg-gray-50 border-black{% endif %}"
                     data-role-id="{{ group.id }}">
                     <div class="flex items-center justify-between">
-                        <span class="font-bold">{{ group.name|title }}</span>
-                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{{
-                            group.permissions.count }}</span>
+                        <div class="flex items-center gap-2 cursor-pointer role-name-click"
+                            data-role-id="{{ group.id }}">
+                            <span class="font-bold">{{ group.name|title }}</span>
+                            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{{ group.permissions.count }}</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button type="button"
+                                onclick="openEditRoleModal({{ group.id }}, '{{ group.name|escapejs }}')"
+                                class="text-gray-400 hover:text-blue-600 p-1" title="Edit Role">
+                                <i class="fas fa-pencil-alt text-xs"></i>
+                            </button>
+                            <button type="button"
+                                onclick="openDeleteRoleModal({{ group.id }}, '{{ group.name|escapejs }}')"
+                                class="text-gray-400 hover:text-red-600 p-1" title="Delete Role">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 {% empty %}
@@ -46,33 +61,51 @@
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500">
                         <tr>
-                            <th class="px-4 py-3 text-left">Module</th>
+                            <th class="px-4 py-3 text-left">Page / Module</th>
                             <th class="px-4 py-3 text-center">View</th>
                             <th class="px-4 py-3 text-center">Add</th>
-                            <th class="px-4 py-3 text-center">Change</th>
-                            <th class="px-4 py-3 text-center">Delete</th>
+                            <th class="px-4 py-3 text-center">Edit</th>
+                            <th class="px-4 py-3 text-center text-red-600">Delete</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y">
-                        {% for category, perms in permission_categories.items %}
-                        <tr class="hover:bg-gray-50">
+                        {% for module in permission_modules %}
+                        <tr class="bg-gray-50">
                             <td class="px-4 py-3 font-bold">
-                                <span class="capitalize">{{ category }}</span>
+                                <button type="button" class="module-toggle flex items-center gap-2" data-module="{{ module.key }}">
+                                    <i class="fas fa-chevron-right text-xs module-toggle-icon" data-module="{{ module.key }}"></i>
+                                    <span>{{ module.label }}</span>
+                                </button>
                             </td>
-                            {% for perm in perms|slice:":4" %}
-                            <td class="px-4 py-3 text-center">
-                                <input type="checkbox"
-                                    class="w-4 h-4 rounded border-gray-300 text-black focus:ring-black permission-checkbox"
-                                    data-perm-id="{{ perm.id }}" {% if perm.id in current_permissions %} checked {%endif%}>
-                            </td>
-                            {%endfor%}
-                            {% for i in "1234"|make_list %}
-                            {% if perms|length < forloop.counter %} <td class="px-4 py-3 text-center">
-                                <span class="text-gray-300">—</span>
-                                </td>
-                                {% endif %}
-                                {% endfor %}
+                            <td class="px-4 py-3"></td>
+                            <td class="px-4 py-3"></td>
+                            <td class="px-4 py-3"></td>
+                            <td class="px-4 py-3"></td>
                         </tr>
+                            {% for page in module.pages %}
+                            <tr class="hover:bg-white module-page-row hidden" data-module="{{ module.key }}">
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-2 pl-7 text-gray-700 font-semibold">
+                                        <span class="text-gray-300">└</span>
+                                        <span>{{ page.label }}</span>
+                                    </div>
+                                </td>
+                                {% for perm in page.perms %}
+                                <td class="px-4 py-3 text-center">
+                                    {% if perm %}
+                                    <input type="checkbox"
+                                        class="w-4 h-4 rounded border-gray-300 text-black focus:ring-black permission-checkbox"
+                                        data-perm-id="{{ perm.id }}"
+                                        data-module="{{ module.key }}"
+                                        data-action="{% if forloop.counter0 == 0 %}view{% elif forloop.counter0 == 1 %}add{% elif forloop.counter0 == 2 %}change{% else %}delete{% endif %}"
+                                        {% if perm.id in current_permissions %}checked{% endif %}>
+                                    {% else %}
+                                    <span class="text-gray-300">—</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
                         {% empty %}
                         <tr>
                             <td colspan="5" class="px-4 py-12 text-center text-gray-500">
@@ -102,7 +135,14 @@
 </div>
 
 <script>
-    let currentRoleId = null;
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
+    }
+
+    let currentRoleId = {% if selected_group_id %}{{ selected_group_id }}{% else %}null{% endif %};
 
     document.querySelectorAll('.role-item').forEach(item => {
         item.addEventListener('click', function () {
@@ -111,12 +151,39 @@
             });
             this.classList.add('bg-gray-50', 'border-black');
             currentRoleId = this.dataset.roleId;
-            // Load role permissions via AJAX if needed
+            loadRolePermissions(currentRoleId);
         });
         if (item.classList.contains('border-black')) {
             currentRoleId = item.dataset.roleId;
         }
     });
+
+    function applyPermissions(permissionIds) {
+        const allowed = new Set(permissionIds.map(id => parseInt(id)));
+        document.querySelectorAll('.permission-checkbox').forEach(cb => {
+            cb.checked = allowed.has(parseInt(cb.dataset.permId));
+        });
+    }
+
+    function loadRolePermissions(roleId) {
+        if (!roleId) return;
+        fetch('{% url "admin_panel:get_role_permissions" role_id=0 %}'.replace('0', roleId), {
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    applyPermissions(data.permissions || []);
+                } else {
+                    alert('Error: ' + (data.message || 'Unable to load permissions'));
+                }
+            })
+            .catch(() => {
+                alert('Error loading permissions');
+            });
+    }
 
     function selectAll() {
         document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = true);
@@ -147,7 +214,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
+                'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
                 group_id: currentRoleId,
@@ -161,6 +228,236 @@
                 } else {
                     alert('Error: ' + data.message);
                 }
+            });
+    }
+
+    // Add Role Modal Functions
+    function openAddRoleModal() {
+        document.getElementById('addRoleModal').classList.remove('hidden');
+    }
+
+    function closeAddRoleModal() {
+        document.getElementById('addRoleModal').classList.add('hidden');
+        document.getElementById('addRoleForm').reset();
+    }
+
+    // Close modal on escape key
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeAddRoleModal();
+        }
+    });
+
+    function submitAddRole(e) {
+        e.preventDefault();
+        const form = document.getElementById('addRoleForm');
+        const formData = new FormData(form);
+
+        fetch('{% url "admin_panel:add_role" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    closeAddRoleModal();
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(err => {
+                alert('Error creating role');
+            });
+    }
+
+    document.querySelectorAll('.module-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const moduleKey = btn.dataset.module;
+            const rows = document.querySelectorAll(`.module-page-row[data-module="${moduleKey}"]`);
+            const icon = document.querySelector(`.module-toggle-icon[data-module="${moduleKey}"]`);
+            const currentlyHidden = rows.length > 0 && rows[0].classList.contains('hidden');
+            const nextHidden = !currentlyHidden;
+            rows.forEach(r => r.classList.toggle('hidden', nextHidden));
+            if (icon) {
+                icon.classList.remove('fa-chevron-down', 'fa-chevron-right');
+                icon.classList.add(nextHidden ? 'fa-chevron-right' : 'fa-chevron-down');
+            }
+        });
+    });
+</script>
+
+<!-- Add Role Modal -->
+<div id="addRoleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-900">Add New Role</h3>
+                <button type="button" onclick="closeAddRoleModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <form id="addRoleForm" onsubmit="submitAddRole(event)">
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Role Name</label>
+                    <input type="text" name="name" required
+                        class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-black focus:border-black"
+                        placeholder="e.g., Editor, Moderator">
+                </div>
+                <p class="text-sm text-gray-500">After creating the role, select it from the list to assign permissions.
+                </p>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
+                <button type="button" onclick="closeAddRoleModal()"
+                    class="px-5 py-2 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50">Cancel</button>
+                <button type="submit"
+                    class="px-5 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800">
+                    <i class="fas fa-plus mr-2"></i>Create Role
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Role Modal -->
+<div id="editRoleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-900">Edit Role</h3>
+                <button type="button" onclick="closeEditRoleModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <form id="editRoleForm" onsubmit="submitEditRole(event)">
+            <input type="hidden" name="role_id" id="editRoleId">
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Role Name</label>
+                    <input type="text" name="name" id="editRoleName" required
+                        class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-black focus:border-black">
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
+                <button type="button" onclick="closeEditRoleModal()"
+                    class="px-5 py-2 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50">Cancel</button>
+                <button type="submit"
+                    class="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700">
+                    <i class="fas fa-save mr-2"></i>Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Role Modal -->
+<div id="deleteRoleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-900">Delete Role</h3>
+                <button type="button" onclick="closeDeleteRoleModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <form id="deleteRoleForm" onsubmit="submitDeleteRole(event)">
+            <input type="hidden" name="role_id" id="deleteRoleId">
+            <div class="p-6">
+                <p class="text-gray-600">Are you sure you want to delete the role <strong id="deleteRoleName"></strong>?
+                </p>
+                <p class="text-sm text-red-600 mt-2"><i class="fas fa-exclamation-triangle mr-1"></i>This action cannot
+                    be undone. Users with this role will lose these permissions.</p>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
+                <button type="button" onclick="closeDeleteRoleModal()"
+                    class="px-5 py-2 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50">Cancel</button>
+                <button type="submit"
+                    class="px-5 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700">
+                    <i class="fas fa-trash mr-2"></i>Delete Role
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Edit Role Modal Functions
+    function openEditRoleModal(roleId, roleName) {
+        document.getElementById('editRoleId').value = roleId;
+        document.getElementById('editRoleName').value = roleName;
+        document.getElementById('editRoleModal').classList.remove('hidden');
+    }
+
+    function closeEditRoleModal() {
+        document.getElementById('editRoleModal').classList.add('hidden');
+        document.getElementById('editRoleForm').reset();
+    }
+
+    function submitEditRole(e) {
+        e.preventDefault();
+        const roleId = document.getElementById('editRoleId').value;
+        const formData = new FormData(document.getElementById('editRoleForm'));
+
+        fetch('{% url "admin_panel:update_role" role_id=0 %}'.replace('0', roleId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    closeEditRoleModal();
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(err => {
+                alert('Error updating role');
+            });
+    }
+
+    // Delete Role Modal Functions
+    function openDeleteRoleModal(roleId, roleName) {
+        document.getElementById('deleteRoleId').value = roleId;
+        document.getElementById('deleteRoleName').textContent = roleName;
+        document.getElementById('deleteRoleModal').classList.remove('hidden');
+    }
+
+    function closeDeleteRoleModal() {
+        document.getElementById('deleteRoleModal').classList.add('hidden');
+    }
+
+    function submitDeleteRole(e) {
+        e.preventDefault();
+        const roleId = document.getElementById('deleteRoleId').value;
+
+        fetch('{% url "admin_panel:delete_role" role_id=0 %}'.replace('0', roleId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    closeDeleteRoleModal();
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(err => {
+                alert('Error deleting role');
             });
     }
 </script>

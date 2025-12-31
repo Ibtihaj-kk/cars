@@ -3,7 +3,8 @@
 
 {% block content %}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+    <a href="{% url 'admin_panel:payment_management' %}"
+        class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-gray-400 uppercase">Total Revenue</p>
@@ -12,9 +13,10 @@
             <div class="p-2 bg-green-50 text-green-600 rounded-lg"><i class="fas fa-dollar-sign"></i></div>
         </div>
         <span class="text-green-600 text-xs font-bold mt-3 block">Platform commission earnings</span>
-    </div>
+    </a>
 
-    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+    <a href="{% url 'admin_panel:orders' %}"
+        class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-gray-400 uppercase">Total Orders</p>
@@ -24,9 +26,10 @@
         </div>
         <span class="text-blue-600 text-xs font-bold mt-3 block">{{ pending_listings|default:"0" }} pending
             review</span>
-    </div>
+    </a>
 
-    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+    <a href="{% url 'admin_panel:vendor_management' %}"
+        class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-gray-400 uppercase">Active Vendors</p>
@@ -36,9 +39,10 @@
         </div>
         <span class="text-purple-600 text-xs font-bold mt-3 block">{{ pending_applications|default:"0" }} pending
             approval</span>
-    </div>
+    </a>
 
-    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+    <a href="{% url 'admin_panel:payment_management' %}"
+        class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-gray-400 uppercase">Pending Payments</p>
@@ -48,12 +52,13 @@
         </div>
         <span class="text-yellow-600 text-xs font-bold mt-3 block">${{ total_vendor_balance|floatformat:2|default:"0" }}
             vendor balance</span>
-    </div>
+    </a>
 </div>
 
 <!-- Vendor & Document Stats -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-    <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 rounded-2xl text-white shadow-lg">
+    <a href="{% url 'admin_panel:vendor_management' %}"
+        class="block bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 rounded-2xl text-white shadow-lg hover:shadow-xl transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-indigo-100 text-xs uppercase font-bold">Total Vendors</p>
@@ -61,8 +66,9 @@
             </div>
             <i class="fas fa-users text-2xl opacity-50"></i>
         </div>
-    </div>
-    <div class="bg-gradient-to-br from-green-500 to-green-600 p-4 rounded-2xl text-white shadow-lg">
+    </a>
+    <a href="{% url 'admin_panel:vendor_management' %}"
+        class="block bg-gradient-to-br from-green-500 to-green-600 p-4 rounded-2xl text-white shadow-lg hover:shadow-xl transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-green-100 text-xs uppercase font-bold">Verified Docs</p>
@@ -70,8 +76,9 @@
             </div>
             <i class="fas fa-check-circle text-2xl opacity-50"></i>
         </div>
-    </div>
-    <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-4 rounded-2xl text-white shadow-lg">
+    </a>
+    <a href="{% url 'admin_panel:vendor_management' %}"
+        class="block bg-gradient-to-br from-orange-500 to-orange-600 p-4 rounded-2xl text-white shadow-lg hover:shadow-xl transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-orange-100 text-xs uppercase font-bold">Pending Docs</p>
@@ -79,8 +86,9 @@
             </div>
             <i class="fas fa-clock text-2xl opacity-50"></i>
         </div>
-    </div>
-    <div class="bg-gradient-to-br from-red-500 to-red-600 p-4 rounded-2xl text-white shadow-lg">
+    </a>
+    <a href="{% url 'admin_panel:vendor_management' %}"
+        class="block bg-gradient-to-br from-red-500 to-red-600 p-4 rounded-2xl text-white shadow-lg hover:shadow-xl transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-red-100 text-xs uppercase font-bold">Unread Messages</p>
@@ -88,7 +96,7 @@
             </div>
             <i class="fas fa-envelope text-2xl opacity-50"></i>
         </div>
-    </div>
+    </a>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">

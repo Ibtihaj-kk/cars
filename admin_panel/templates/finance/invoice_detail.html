@@ -1,0 +1,147 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Invoice Details{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between gap-4">
+    <a href="{% url 'admin_panel:invoices' %}" class="text-blue-600 hover:underline text-sm">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Invoices
+    </a>
+    <div class="flex items-center gap-2">
+        <button class="px-4 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800"
+            onclick="window.print()">
+            <i class="fas fa-print mr-2"></i>Print
+        </button>
+        <a href="{% url 'admin_panel:order_detail' order.id %}"
+            class="px-4 py-2 bg-gray-100 text-gray-900 rounded-xl text-sm font-bold hover:bg-gray-200">
+            <i class="fas fa-receipt mr-2"></i>Order
+        </a>
+    </div>
+</div>
+
+<div class="bg-white rounded-2xl border shadow-sm p-6 mb-6">
+    <div class="flex flex-col md:flex-row justify-between items-start gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-900">INV-{{ order.order_number }}</h2>
+            <p class="text-sm text-gray-500">Issued {{ order.created_at|date:"M d, Y H:i" }}</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <span class="px-3 py-1 rounded-full text-xs font-bold
+                {% if order.payment_status == 'completed' %}bg-green-100 text-green-700
+                {% elif order.payment_status == 'pending' %}bg-yellow-100 text-yellow-700
+                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                {{ order.get_payment_status_display }}
+            </span>
+            <span class="px-3 py-1 rounded-full text-xs font-bold
+                {% if order.status == 'delivered' %}bg-green-100 text-green-700
+                {% elif order.status == 'shipped' %}bg-purple-100 text-purple-700
+                {% elif order.status == 'processing' %}bg-blue-100 text-blue-700
+                {% elif order.status == 'pending' %}bg-yellow-100 text-yellow-700
+                {% elif order.status == 'cancelled' %}bg-red-100 text-red-700
+                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                {{ order.get_status_display }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900">Invoice Items</h3>
+        </div>
+        <div class="p-6 overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500">
+                    <tr>
+                        <th class="px-4 py-3">Item</th>
+                        <th class="px-4 py-3">Vendor</th>
+                        <th class="px-4 py-3">Qty</th>
+                        <th class="px-4 py-3">Unit</th>
+                        <th class="px-4 py-3 text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y text-xs">
+                    {% for item in order.items.all %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3">
+                            <p class="font-bold text-gray-900">{{ item.part.material_description|default:item.part.name|default:"-" }}</p>
+                            {% if item.part.parts_number %}
+                            <p class="text-gray-500">{{ item.part.parts_number }}</p>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3">
+                            <p class="font-bold text-gray-900">{{ item.vendor.name|default:"-" }}</p>
+                            <p class="text-gray-500">{{ item.vendor.bp_number|default:"-" }}</p>
+                        </td>
+                        <td class="px-4 py-3">{{ item.quantity }}</td>
+                        <td class="px-4 py-3">${{ item.price|floatformat:2 }}</td>
+                        <td class="px-4 py-3 text-right font-bold">${{ item.total_price|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-gray-500">No items</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="space-y-6">
+        <div class="bg-white rounded-2xl border shadow-sm p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Billed To</h3>
+            <div class="space-y-3 text-sm">
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">Name</p>
+                    <p class="font-bold text-gray-900">{{ order.customer_name|default:"Guest" }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">Email</p>
+                    <p class="text-gray-700">{{ order.customer_email|default:"-" }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">Customer BP #</p>
+                    <p class="font-bold text-gray-900">{{ customer_bp_number|default:"-" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border shadow-sm p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Vendors</h3>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between gap-4">
+                    <span class="text-gray-500">Names</span>
+                    <span class="font-bold text-gray-900 text-right">{{ vendor_names_display|default:"-" }}</span>
+                </div>
+                <div class="flex justify-between gap-4">
+                    <span class="text-gray-500">BP #</span>
+                    <span class="font-bold text-gray-900 text-right">{{ vendor_bp_numbers_display|default:"-" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border shadow-sm p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Summary</h3>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Subtotal</span>
+                    <span class="font-bold text-gray-900">${{ order.subtotal|floatformat:2|default:"0.00" }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Tax</span>
+                    <span class="font-bold text-gray-900">${{ order.tax_amount|floatformat:2|default:"0.00" }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Shipping</span>
+                    <span class="font-bold text-gray-900">${{ order.shipping_cost|floatformat:2|default:"0.00" }}</span>
+                </div>
+                <div class="border-t pt-3 flex justify-between">
+                    <span class="text-gray-500 font-bold">Total</span>
+                    <span class="text-gray-900 font-extrabold">${{ order.total_price|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -13,7 +13,7 @@ class BusinessPartner(models.Model):
     
     PARTNER_TYPES = [
         ('individual', 'Individual'),
-        ('company', 'Company'),
+        # ('company', 'Company'),
         ('organization', 'Organization'),
     ]
     
@@ -612,12 +612,7 @@ class VendorProfile(models.Model):
         required_documents = [
             'cr_document',
             'business_license',
-            'bank_statement',
             'vat_certificate',
-            'commercial_invoice_sample',
-            'company_profile',
-            'quality_certificate',
-            'insurance_certificate',
         ]
         
         # Count completed fields
@@ -1014,26 +1009,41 @@ class VendorApplication(models.Model):
             return f"Vendor Application {self.application_id} - Anonymous User"
     
     def save(self, *args, **kwargs):
-        # Auto-generate application ID if not provided
-        if not self.application_id:
-            from django.utils import timezone
-            timestamp = timezone.now().strftime('%Y%m%d')
-            last_app = VendorApplication.objects.filter(
-                application_id__startswith=f'VA{timestamp}'
-            ).order_by('-id').first()
-            
-            if last_app and len(last_app.application_id) >= 13:  # VA + YYYYMMDD + 3 digits = 11 chars minimum
-                try:
-                    # Extract the sequence number from properly formatted IDs
-                    last_number = int(last_app.application_id[-3:])
-                    self.application_id = f"VA{timestamp}{last_number + 1:03d}"
-                except (ValueError, IndexError):
-                    # If parsing fails, start from 001
-                    self.application_id = f"VA{timestamp}001"
-            else:
-                self.application_id = f"VA{timestamp}001"
-        
-        super().save(*args, **kwargs)
+        if self.application_id:
+            super().save(*args, **kwargs)
+            return
+
+        from django.utils import timezone
+        from django.db import transaction, IntegrityError
+
+        timestamp = timezone.now().strftime('%Y%m%d')
+        prefix = f'VA{timestamp}'
+
+        for _ in range(5):
+            try:
+                with transaction.atomic():
+                    last_app = (
+                        VendorApplication.objects.select_for_update()
+                        .filter(application_id__startswith=prefix)
+                        .order_by('-application_id')
+                        .first()
+                    )
+
+                    if last_app:
+                        try:
+                            last_number = int((last_app.application_id or '')[-3:])
+                            candidate = f"{prefix}{last_number + 1:03d}"
+                        except (ValueError, IndexError, TypeError):
+                            candidate = f"{prefix}001"
+                    else:
+                        candidate = f"{prefix}001"
+
+                    self.application_id = candidate
+                    super().save(*args, **kwargs)
+                    return
+            except IntegrityError:
+                self.application_id = None
+        raise IntegrityError('Could not generate a unique application_id')
     
     def get_completion_percentage(self):
         """Calculate application completion percentage."""

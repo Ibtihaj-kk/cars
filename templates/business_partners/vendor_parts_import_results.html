@@ -3,34 +3,65 @@
 {% block title %}Import Results | Corporate Dock{% endblock %}
 
 {% block content %}
+{% if job and job.status == 'processing' %}
+<meta http-equiv="refresh" content="5">
+{% endif %}
 <div class="mb-6">
     <h1 class="text-2xl font-bold text-gray-900">Import Results</h1>
     <p class="text-gray-500 text-sm mt-1">Summary of your bulk import operation.</p>
 </div>
 
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+    {% if job %}
+    <div class="p-4 border-b border-gray-200 bg-gray-50">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div class="text-sm text-gray-700">
+                <span class="font-bold">Progress:</span>
+                <span>{{ job.success_message|default:"--" }}</span>
+                {% if job_age_seconds %}
+                <span class="text-gray-400">•</span>
+                <span class="text-gray-600">Running for {{ job_age_seconds }}s</span>
+                {% endif %}
+            </div>
+            {% if job_queued_too_long %}
+            <div class="text-sm text-red-700 font-bold">
+                Not progressing. Celery worker/broker likely not running.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
     <div class="p-6 border-b border-gray-200">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
             <div class="p-4 bg-gray-50 rounded-lg">
                 <div class="text-sm text-gray-500 uppercase font-bold">Total Rows</div>
-                <div class="text-3xl font-bold text-gray-900">{{ results.total_rows }}</div>
+                <div class="text-3xl font-bold text-gray-900">{% if job %}{{ job.total_records }}{% else %}{{ results.total_rows }}{% endif %}</div>
             </div>
             <div class="p-4 bg-green-50 rounded-lg">
                 <div class="text-sm text-green-600 uppercase font-bold">Created</div>
-                <div class="text-3xl font-bold text-green-700">{{ results.created_count }}</div>
+                <div class="text-3xl font-bold text-green-700">{% if job %}{{ job.successful_records }}{% else %}{{ results.created_count }}{% endif %}</div>
             </div>
             <div class="p-4 bg-blue-50 rounded-lg">
-                <div class="text-sm text-blue-600 uppercase font-bold">Updated</div>
-                <div class="text-3xl font-bold text-blue-700">{{ results.updated_count }}</div>
+                <div class="text-sm text-blue-600 uppercase font-bold">{% if job %}Status{% else %}Updated{% endif %}</div>
+                <div class="text-3xl font-bold text-blue-700">{% if job %}{{ job.status|title }}{% else %}{{ results.updated_count }}{% endif %}</div>
             </div>
             <div class="p-4 bg-red-50 rounded-lg">
                 <div class="text-sm text-red-600 uppercase font-bold">Errors</div>
-                <div class="text-3xl font-bold text-red-700">{{ results.error_count }}</div>
+                <div class="text-3xl font-bold text-red-700">{% if job %}{{ job.failed_records }}{% else %}{{ results.error_count }}{% endif %}</div>
             </div>
         </div>
     </div>
     
-    {% if results.errors %}
+    {% if job_errors %}
+    <div class="p-6 bg-red-50 border-b border-red-100">
+        <h3 class="text-lg font-bold text-red-800 mb-3">Error Details</h3>
+        <ul class="list-disc list-inside space-y-1 text-red-700 text-sm max-h-60 overflow-y-auto">
+            {% for error in job_errors %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% elif results.errors %}
     <div class="p-6 bg-red-50 border-b border-red-100">
         <h3 class="text-lg font-bold text-red-800 mb-3">Error Details</h3>
         <ul class="list-disc list-inside space-y-1 text-red-700 text-sm max-h-60 overflow-y-auto">

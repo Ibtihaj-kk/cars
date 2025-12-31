@@ -4,26 +4,31 @@
 {% block content %}
 <!-- Statistics -->
 <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center">
+    <a href="?tab=all{% for key, value in preserved_query_params %}{% if key != 'tab' and key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <p class="text-xs font-bold text-gray-400 uppercase">Total</p>
         <p class="text-2xl font-extrabold text-gray-900">{{ total_vendors|default:"0" }}</p>
-    </div>
-    <div class="bg-green-50 p-4 rounded-2xl border border-green-200 text-center">
+    </a>
+    <a href="?tab=all&status=active{% for key, value in preserved_query_params %}{% if key != 'tab' and key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-green-50 p-4 rounded-2xl border border-green-200 text-center hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <p class="text-xs font-bold text-green-600 uppercase">Active</p>
         <p class="text-2xl font-extrabold text-green-700">{{ active_vendors|default:"0" }}</p>
-    </div>
-    <div class="bg-yellow-50 p-4 rounded-2xl border border-yellow-200 text-center">
+    </a>
+    <a href="?tab=pending&status={% for key, value in preserved_query_params %}{% if key != 'tab' and key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-yellow-50 p-4 rounded-2xl border border-yellow-200 text-center hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <p class="text-xs font-bold text-yellow-600 uppercase">Pending</p>
         <p class="text-2xl font-extrabold text-yellow-700">{{ pending_vendors|default:"0" }}</p>
-    </div>
-    <div class="bg-blue-50 p-4 rounded-2xl border border-blue-200 text-center">
+    </a>
+    <a href="?tab=all&status=inactive{% for key, value in preserved_query_params %}{% if key != 'tab' and key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-blue-50 p-4 rounded-2xl border border-blue-200 text-center hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <p class="text-xs font-bold text-blue-600 uppercase">Inactive</p>
         <p class="text-2xl font-extrabold text-blue-700">{{ inactive_vendors|default:"0" }}</p>
-    </div>
-    <div class="bg-red-50 p-4 rounded-2xl border border-red-200 text-center">
+    </a>
+    <a href="?tab=all&status=suspended{% for key, value in preserved_query_params %}{% if key != 'tab' and key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-red-50 p-4 rounded-2xl border border-red-200 text-center hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <p class="text-xs font-bold text-red-600 uppercase">Suspended</p>
         <p class="text-2xl font-extrabold text-red-700">{{ suspended_vendors|default:"0" }}</p>
-    </div>
+    </a>
 </div>
 
 <!-- Navigation Tabs -->
@@ -34,8 +39,8 @@
     <a href="?tab=pending"
         class="pb-3 px-2 font-bold text-sm {% if tab == 'pending' %}text-black border-b-2 border-black{% else %}text-gray-500{% endif %}">Pending
         Approval</a>
-    <a href="?tab=applications"
-        class="pb-3 px-2 font-bold text-sm {% if tab == 'applications' %}text-black border-b-2 border-black{% else %}text-gray-500{% endif %}">Applications</a>
+    <a href="{% url 'admin_panel:vendor_approval_queue' %}"
+        class="pb-3 px-2 font-bold text-sm text-gray-500">Applications</a>
 </div>
 
 <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
@@ -113,18 +118,42 @@
                     </td>
                     <td class="px-6 py-4 text-gray-500">{{ vendor.created_at|date:"M d, Y" }}</td>
                     <td class="px-6 py-4 text-right">
-                        <a href="{% url 'admin_panel:vendor_detail' vendor.id %}"
-                            class="text-gray-400 hover:text-black mx-1" title="View">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="{% url 'admin_panel:vendor_documents' vendor.id %}"
-                            class="text-gray-400 hover:text-black mx-1" title="Documents">
-                            <i class="fas fa-file-alt"></i>
-                        </a>
-                        <a href="{% url 'admin_panel:vendor_balance' vendor.id %}"
-                            class="text-gray-400 hover:text-black mx-1" title="Balance">
-                            <i class="fas fa-wallet"></i>
-                        </a>
+                        <div class="flex items-center justify-end gap-1">
+                            <a href="{% url 'admin_panel:vendor_detail' vendor.id %}"
+                                class="text-gray-400 hover:text-black mx-1" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'admin_panel:vendor_documents' vendor.id %}"
+                                class="text-gray-400 hover:text-black mx-1" title="Documents">
+                                <i class="fas fa-file-alt"></i>
+                            </a>
+                            <a href="{% url 'admin_panel:vendor_balance' vendor.id %}"
+                                class="text-gray-400 hover:text-black mx-1" title="Balance">
+                                <i class="fas fa-wallet"></i>
+                            </a>
+                            {% if vendor.status == 'pending' %}
+                            <form method="POST" action="{% url 'admin_panel:update_vendor_status' vendor.id %}"
+                                class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="active">
+                                <button type="submit"
+                                    class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold hover:bg-green-200"
+                                    title="Approve">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="{% url 'admin_panel:update_vendor_status' vendor.id %}"
+                                class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="rejected">
+                                <button type="submit"
+                                    class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold hover:bg-red-200"
+                                    title="Reject">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
@@ -141,17 +170,31 @@
 
     <!-- Pagination -->
     {% if page_obj.has_other_pages %}
-    <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-        <span class="text-sm text-gray-500">
-            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} vendors
-        </span>
+    <div class="px-6 py-4 border-t border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <span class="text-sm text-gray-500">
+                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} vendors
+            </span>
+            <form method="GET" class="flex items-center gap-2">
+                {% for key, value in preserved_query_params %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endfor %}
+                <span class="text-sm text-gray-500">Per page</span>
+                <select name="per_page" onchange="this.form.submit()"
+                    class="bg-white border border-gray-200 text-gray-700 py-1.5 px-3 rounded-lg font-bold text-sm">
+                    {% for opt in per_page_options %}
+                    <option value="{{ opt }}" {% if per_page == opt %}selected{% endif %}>{{ opt }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
         <div class="flex gap-2">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}"
+            <a href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
                 class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Previous</a>
             {% endif %}
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}"
+            <a href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
                 class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">Next</a>
             {% endif %}
         </div>

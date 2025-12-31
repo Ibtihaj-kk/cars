@@ -1,0 +1,26 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Two-factor verification{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+    <h3 class="text-lg font-bold text-gray-900 mb-2">Enter 2FA code</h3>
+    <p class="text-sm text-gray-500 mb-6">Enter the code from your authenticator app to continue.</p>
+
+    <form method="POST" action="{% url 'admin_panel:login' %}" class="space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="email" value="{{ email }}">
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Authenticator code</label>
+            <input type="text" name="otp_code" inputmode="numeric" autocomplete="one-time-code"
+                class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10"
+                placeholder="123456" required>
+        </div>
+
+        <button type="submit" class="w-full bg-black text-white px-5 py-2.5 rounded-xl font-bold hover:bg-gray-800">
+            Verify
+        </button>
+    </form>
+</div>
+{% endblock %}

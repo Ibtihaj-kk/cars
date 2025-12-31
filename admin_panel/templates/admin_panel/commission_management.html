@@ -4,7 +4,8 @@
 {% block content %}
 <!-- Statistics -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+    <a href="?status=&scope={% for key, value in preserved_query_params %}{% if key != 'status' and key != 'scope' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-gray-400 uppercase">Total Rules</p>
@@ -13,8 +14,9 @@
             </div>
             <div class="p-2 bg-blue-50 text-blue-600 rounded-lg"><i class="fas fa-list-alt"></i></div>
         </div>
-    </div>
-    <div class="bg-green-50 p-5 rounded-2xl border border-green-200">
+    </a>
+    <a href="?status=active{% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-green-50 p-5 rounded-2xl border border-green-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-green-600 uppercase">Active</p>
@@ -23,8 +25,9 @@
             </div>
             <div class="p-2 bg-green-100 text-green-600 rounded-lg"><i class="fas fa-check-circle"></i></div>
         </div>
-    </div>
-    <div class="bg-purple-50 p-5 rounded-2xl border border-purple-200">
+    </a>
+    <a href="?scope=vendor_specific{% for key, value in preserved_query_params %}{% if key != 'scope' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-purple-50 p-5 rounded-2xl border border-purple-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-purple-600 uppercase">Vendor-Specific</p>
@@ -32,7 +35,7 @@
             </div>
             <div class="p-2 bg-purple-100 text-purple-600 rounded-lg"><i class="fas fa-user-tag"></i></div>
         </div>
-    </div>
+    </a>
 </div>
 
 <div class="flex gap-4 mb-6">

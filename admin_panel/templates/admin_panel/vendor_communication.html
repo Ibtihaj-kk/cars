@@ -1,0 +1,67 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Vendor Communication{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between gap-3 flex-wrap">
+    <a href="{% url 'admin_panel:vendor_detail' vendor.id %}" class="text-blue-600 hover:underline text-sm">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Vendor
+    </a>
+    <a href="{% url 'admin_panel:send_vendor_message_to' vendor.id %}"
+        class="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-800">
+        <i class="fas fa-paper-plane mr-2"></i>Send Message
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-lg font-bold text-gray-900">Conversation</h2>
+            <p class="text-sm text-gray-500">{{ vendor.name }} • {{ vendor.user.email }}</p>
+        </div>
+        <div class="p-6 space-y-4">
+            {% for m in conversation_messages %}
+            <div class="border rounded-2xl p-4 {% if m.sender_id != vendor.user.id %}bg-gray-50{% else %}bg-white{% endif %}">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="font-bold text-sm text-gray-900">
+                        {% if m.sender_id == vendor.user.id %}{{ vendor.name }}{% else %}Admin{% endif %}
+                        <span class="text-gray-400 font-normal">•</span>
+                        <span class="text-gray-500 font-normal">{{ m.created_at|date:"M d, Y H:i" }}</span>
+                    </p>
+                    <span class="text-xs font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-700">
+                        {{ m.get_status_display }}
+                    </span>
+                </div>
+                <p class="text-sm font-bold text-gray-900 mt-2">{{ m.subject|default:"(No subject)" }}</p>
+                <p class="text-sm text-gray-700 mt-2 whitespace-pre-line">{{ m.content }}</p>
+            </div>
+            {% empty %}
+            <p class="text-sm text-gray-500">No messages yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-lg font-bold text-gray-900">Notifications</h2>
+        </div>
+        <div class="p-6 space-y-3">
+            {% for n in notifications %}
+            <div class="border rounded-2xl p-4">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="font-bold text-sm text-gray-900">{{ n.title }}</p>
+                    <span class="text-xs text-gray-500">{{ n.created_at|date:"M d, Y" }}</span>
+                </div>
+                <p class="text-sm text-gray-700 mt-2">{{ n.content }}</p>
+                {% if n.action_url and n.action_text %}
+                <a href="{{ n.action_url }}" class="text-sm text-blue-600 hover:underline mt-3 inline-block">
+                    {{ n.action_text }}
+                </a>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p class="text-sm text-gray-500">No notifications.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -4,22 +4,22 @@
 
 {% block content %}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
-            <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency stats.total_revenue %}</h3>
+        <a href="{% url 'business_partners:vendor_order_analytics' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition">
+            <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency_compact stats.total_revenue %}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Total Revenue</p>
-        </div>
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
-            <h3 class="text-2xl font-extrabold text-gray-900">{{ stats.total_units|intcomma|default:"0" }}</h3>
+        </a>
+        <a href="{% url 'business_partners:vendor_order_analytics' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition">
+            <h3 class="text-2xl font-extrabold text-gray-900">{{ stats.total_units|default:"0"|compact_number }}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Units Sold</p>
-        </div>
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
-            <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency stats.monthly_sales %}</h3>
+        </a>
+        <a href="{% url 'business_partners:vendor_order_analytics' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition">
+            <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency_compact stats.monthly_sales %}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Monthly Sales</p>
-        </div>
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
-            <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency stats.inventory_value %}</h3>
+        </a>
+        <a href="{% url 'business_partners:vendor_inventory_list' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition">
+            <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency_compact stats.inventory_value %}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Inventory Value</p>
-        </div>
+        </a>
     </div>
 
     <div class="max-w-4xl mx-auto">
@@ -33,13 +33,14 @@
                 <p class="text-xs text-gray-500 mt-1">Add, edit, and track stock</p>
             </a>
 
-            <a href="{% url 'business_partners:vendor_orders_list' %}" class="action-card bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40 group cursor-pointer">
-                <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-black group-hover:text-white transition-colors">
-                    <i class="fas fa-truck-loading text-xl text-gray-600 group-hover:text-white"></i>
+            <div class="action-card is-disabled bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40">
+                <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-truck-loading text-xl text-gray-600"></i>
                 </div>
-                <h3 class="text-lg font-bold text-gray-800 group-hover:text-black">FAB Dashboard</h3>
+                <h3 class="text-lg font-bold text-gray-800">FAB Dashboard</h3>
                 <p class="text-xs text-gray-500 mt-1">Fulfillment & Logistics</p>
-            </a>
+                <span class="inline-block mt-3 text-[10px] font-bold uppercase tracking-wider text-gray-600 bg-gray-100 px-3 py-1 rounded-full">Coming soon</span>
+            </div>
 
             <a href="{% url 'business_partners:vendor_catalog_management' %}" class="action-card bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40 group cursor-pointer">
                 <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-black group-hover:text-white transition-colors">
@@ -49,21 +50,32 @@
                 <p class="text-xs text-gray-500 mt-1">Manage product listings</p>
             </a>
 
-            <a href="javascript:void(0)" onclick="alert('Offers & Discount Management coming soon!')" class="action-card bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40 group cursor-pointer opacity-75">
-                <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-black group-hover:text-white transition-colors">
-                    <i class="fas fa-tags text-xl text-gray-600 group-hover:text-white"></i>
+            <div class="action-card is-disabled bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40">
+                <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-file-signature text-xl text-gray-600"></i>
                 </div>
-                <h3 class="text-lg font-bold text-gray-800 group-hover:text-black">Offers & Discount Mgmt</h3>
-                <p class="text-xs text-gray-500 mt-1">Create promotions</p>
-            </a>
+                <h3 class="text-lg font-bold text-gray-800">Procurement</h3>
+                <p class="text-xs text-gray-500 mt-1">Purchase orders & supplier workflows</p>
+                <span class="inline-block mt-3 text-[10px] font-bold uppercase tracking-wider text-gray-600 bg-gray-100 px-3 py-1 rounded-full">Coming soon</span>
+            </div>
 
-            <a href="javascript:void(0)" onclick="alert('Marketing tools coming soon!')" class="action-card bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40 group cursor-pointer md:col-span-2 lg:col-span-1 lg:col-start-1 lg:col-end-3 mx-auto w-full lg:w-1/2 opacity-75">
-                <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-black group-hover:text-white transition-colors">
-                    <i class="fas fa-bullhorn text-xl text-gray-600 group-hover:text-white"></i>
+            <div class="action-card is-disabled bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40">
+                <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-tags text-xl text-gray-600"></i>
                 </div>
-                <h3 class="text-lg font-bold text-gray-800 group-hover:text-black">Marketing</h3>
+                <h3 class="text-lg font-bold text-gray-800">Offers & Discount Mgmt</h3>
+                <p class="text-xs text-gray-500 mt-1">Create promotions</p>
+                <span class="inline-block mt-3 text-[10px] font-bold uppercase tracking-wider text-gray-600 bg-gray-100 px-3 py-1 rounded-full">Coming soon</span>
+            </div>
+
+            <div class="action-card is-disabled bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40">
+                <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-bullhorn text-xl text-gray-600"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-800">Marketing</h3>
                 <p class="text-xs text-gray-500 mt-1">Campaigns & Ads</p>
-            </a>
+                <span class="inline-block mt-3 text-[10px] font-bold uppercase tracking-wider text-gray-600 bg-gray-100 px-3 py-1 rounded-full">Coming soon</span>
+            </div>
 
         </div>
     </div>
@@ -74,5 +86,7 @@
         /* Custom Card Hover Effect */
         .action-card { transition: transform 0.2s, box-shadow 0.2s; }
         .action-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+        .action-card.is-disabled { opacity: 0.75; }
+        .action-card.is-disabled:hover { transform: none; box-shadow: none; }
     </style>
 {% endblock %}

@@ -4,7 +4,8 @@
 {% block content %}
 <!-- Statistics -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+    <a href="{% url 'admin_panel:inventory' %}?status={% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-gray-400 uppercase">Total Items</p>
@@ -13,8 +14,9 @@
             </div>
             <div class="p-2 bg-blue-50 text-blue-600 rounded-lg"><i class="fas fa-warehouse"></i></div>
         </div>
-    </div>
-    <div class="bg-yellow-50 p-5 rounded-2xl border border-yellow-200">
+    </a>
+    <a href="{% url 'admin_panel:inventory' %}?status=low{% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-yellow-50 p-5 rounded-2xl border border-yellow-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-yellow-600 uppercase">Low Stock</p>
@@ -23,8 +25,9 @@
             </div>
             <div class="p-2 bg-yellow-100 text-yellow-600 rounded-lg"><i class="fas fa-exclamation-triangle"></i></div>
         </div>
-    </div>
-    <div class="bg-red-50 p-5 rounded-2xl border border-red-200">
+    </a>
+    <a href="{% url 'admin_panel:inventory' %}?status=out{% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-red-50 p-5 rounded-2xl border border-red-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-red-600 uppercase">Out of Stock</p>
@@ -33,8 +36,9 @@
             </div>
             <div class="p-2 bg-red-100 text-red-600 rounded-lg"><i class="fas fa-times-circle"></i></div>
         </div>
-    </div>
-    <div class="bg-green-50 p-5 rounded-2xl border border-green-200">
+    </a>
+    <a href="{% url 'admin_panel:inventory' %}?status=in_stock{% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-green-50 p-5 rounded-2xl border border-green-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-green-600 uppercase">In Stock</p>
@@ -42,7 +46,7 @@
             </div>
             <div class="p-2 bg-green-100 text-green-600 rounded-lg"><i class="fas fa-check-circle"></i></div>
         </div>
-    </div>
+    </a>
 </div>
 
 <div class="bg-white rounded-2xl border shadow-sm p-6">
@@ -64,22 +68,62 @@
         </form>
     </div>
 
+    <div id="bulk-action-bar"
+        class="hidden mb-4 bg-gradient-to-r from-gray-800 to-gray-900 px-4 py-3 flex items-center justify-between rounded-xl">
+        <div class="flex items-center gap-3">
+            <span class="text-white font-bold text-sm">
+                <span id="selected-count">0</span> item(s) selected
+            </span>
+            <button type="button" onclick="selectAllParts()"
+                class="text-gray-300 hover:text-white text-xs underline">Select All</button>
+            <button type="button" onclick="deselectAllParts()"
+                class="text-gray-300 hover:text-white text-xs underline">Clear Selection</button>
+        </div>
+        <form id="bulk-status-form" method="POST" action="{% url 'admin_panel:inventory_bulk_status_update' %}"
+            class="flex items-center gap-2">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <div id="bulk-part-ids-container"></div>
+            <select name="status"
+                class="bg-gray-700 text-white text-sm rounded-lg px-3 py-1.5 border border-gray-600 focus:outline-none focus:border-white">
+                <option value="">Change Publish Status To...</option>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+            </select>
+            <button type="submit"
+                class="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
+                <i class="fas fa-check"></i> Apply
+            </button>
+        </form>
+    </div>
+
     <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
             <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500">
                 <tr>
+                    <th class="px-6 py-3 text-center">
+                        <input type="checkbox" id="select-all-checkbox" onclick="toggleSelectAll(this)"
+                            class="w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black cursor-pointer">
+                    </th>
                     <th class="px-6 py-3">Product</th>
                     <th class="px-6 py-3">Category</th>
                     <th class="px-6 py-3">Location</th>
                     <th class="px-6 py-3">Stock</th>
                     <th class="px-6 py-3">Reorder Level</th>
-                    <th class="px-6 py-3">Status</th>
+                    <th class="px-6 py-3">Publish Status</th>
+                    <th class="px-6 py-3">Stock Status</th>
                     <th class="px-6 py-3 text-right">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
                 {% for item in inventory %}
                 <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 text-center">
+                        <input type="checkbox"
+                            class="part-checkbox w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black cursor-pointer"
+                            data-part-id="{{ item.part.id }}" onchange="updateBulkActionBar()">
+                    </td>
                     <td class="px-6 py-4">
                         <p class="font-bold">{{ item.part.name|default:item.part.material_description|truncatechars:30 }}</p>
                         <p class="text-xs text-gray-500">{{ item.part.sku|default:item.part.parts_number }}</p>
@@ -93,6 +137,26 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 text-gray-500">{{ item.reorder_level }}</td>
+                    <td class="px-6 py-4">
+                        {% if item.part.status == 'published' %}
+                        <span class="px-2 py-1 rounded-full text-xs font-bold
+                            bg-green-100 text-green-700">
+                            Published
+                        </span>
+                        {% elif item.part.status == 'draft' %}
+                        <span class="px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700">
+                            Draft
+                        </span>
+                        {% elif item.part.status == 'archived' %}
+                        <span class="px-2 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-600">
+                            Archived
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500">
+                            {{ item.part.status|default:"Unknown" }}
+                        </span>
+                        {% endif %}
+                    </td>
                     <td class="px-6 py-4">
                         <span class="px-2 py-1 rounded-full text-xs font-bold
                             {% if item.stock == 0 %}bg-red-100 text-red-700
@@ -110,7 +174,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                    <td colspan="9" class="px-6 py-12 text-center text-gray-500">
                         <i class="fas fa-warehouse text-4xl mb-4 text-gray-300"></i>
                         <p>No inventory records found</p>
                     </td>
@@ -122,17 +186,31 @@
 
     <!-- Pagination -->
     {% if page_obj.has_other_pages %}
-    <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center mt-4">
-        <span class="text-sm text-gray-500">
-            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} items
-        </span>
+    <div class="px-6 py-4 border-t border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mt-4">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <span class="text-sm text-gray-500">
+                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} items
+            </span>
+            <form method="GET" class="flex items-center gap-2">
+                {% for key, value in preserved_query_params %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endfor %}
+                <span class="text-sm text-gray-500">Per page</span>
+                <select name="per_page" onchange="this.form.submit()"
+                    class="bg-white border border-gray-200 text-gray-700 py-1.5 px-3 rounded-lg font-bold text-sm">
+                    {% for opt in per_page_options %}
+                    <option value="{{ opt }}" {% if per_page == opt %}selected{% endif %}>{{ opt }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
         <div class="flex gap-2">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}"
+            <a href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
                 class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Previous</a>
             {% endif %}
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}"
+            <a href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
                 class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">Next</a>
             {% endif %}
         </div>
@@ -174,5 +252,93 @@
     function closeUpdateModal() {
         document.getElementById('updateModal').classList.add('hidden');
     }
+
+    function updateBulkActionBar() {
+        const checkboxes = document.querySelectorAll('.part-checkbox:checked');
+        const bulkActionBar = document.getElementById('bulk-action-bar');
+        const selectedCount = document.getElementById('selected-count');
+        const selectAllCheckbox = document.getElementById('select-all-checkbox');
+        const allCheckboxes = document.querySelectorAll('.part-checkbox');
+
+        selectedCount.textContent = checkboxes.length;
+
+        if (checkboxes.length > 0) {
+            bulkActionBar.classList.remove('hidden');
+        } else {
+            bulkActionBar.classList.add('hidden');
+        }
+
+        if (allCheckboxes.length > 0 && checkboxes.length === allCheckboxes.length) {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.indeterminate = false;
+        } else if (checkboxes.length > 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = true;
+        } else {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        }
+    }
+
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.part-checkbox');
+        checkboxes.forEach(cb => cb.checked = checkbox.checked);
+        updateBulkActionBar();
+    }
+
+    function selectAllParts() {
+        const checkboxes = document.querySelectorAll('.part-checkbox');
+        checkboxes.forEach(cb => cb.checked = true);
+        document.getElementById('select-all-checkbox').checked = true;
+        updateBulkActionBar();
+    }
+
+    function deselectAllParts() {
+        const checkboxes = document.querySelectorAll('.part-checkbox');
+        checkboxes.forEach(cb => cb.checked = false);
+        document.getElementById('select-all-checkbox').checked = false;
+        updateBulkActionBar();
+    }
+
+    const bulkForm = document.getElementById('bulk-status-form');
+    if (bulkForm) {
+        bulkForm.addEventListener('submit', function (e) {
+            const container = document.getElementById('bulk-part-ids-container');
+            const statusSelect = document.querySelector('[name="status"]');
+            const checkboxes = document.querySelectorAll('.part-checkbox:checked');
+
+            if (!statusSelect.value) {
+                e.preventDefault();
+                alert('Please select a status to apply.');
+                return false;
+            }
+
+            if (checkboxes.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one item.');
+                return false;
+            }
+
+            container.innerHTML = '';
+
+            checkboxes.forEach(cb => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'part_ids';
+                input.value = cb.dataset.partId;
+                container.appendChild(input);
+            });
+
+            const statusText = statusSelect.options[statusSelect.selectedIndex].text;
+            if (!confirm(`Are you sure you want to change ${checkboxes.length} item(s) to "${statusText}"?`)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        updateBulkActionBar();
+    });
 </script>
 {% endblock %}

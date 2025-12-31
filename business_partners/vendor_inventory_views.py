@@ -13,11 +13,12 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST, require_http_methods
 from django.utils import timezone
+from django.db.models import Exists, OuterRef
 from datetime import datetime, timedelta
 import csv
 import io
 
-from parts.models import Part, Inventory, InventoryTransaction, OrderItem, Brand
+from parts.models import Part, Inventory, InventoryTransaction, OrderItem, Brand, Category
 from business_partners.models import VendorProfile, BusinessPartner
 from business_partners.permissions import get_vendor_profile, vendor_required
 from parts.forms import InventoryForm, PartForm
@@ -121,24 +122,15 @@ def vendor_inventory_list(request):
                 quantity__lt=F('safety_stock')
             )
         elif stock_status == 'dead_stock':
-            # Filter for dead stock - items not sold for over a month
             one_month_ago = timezone.now() - timedelta(days=30)
-            dead_stock_part_ids = []
-            
-            for part in parts_queryset:
-                recent_sales = InventoryTransaction.objects.filter(
-                    inventory__part=part,
-                    transaction_type='sale',
-                    timestamp__gte=one_month_ago
-                ).exists()
-                
-                if not recent_sales and part.quantity > 0:
-                    dead_stock_part_ids.append(part.id)
-            
-            if dead_stock_part_ids:
-                parts_queryset = parts_queryset.filter(id__in=dead_stock_part_ids)
-            else:
-                parts_queryset = parts_queryset.none()
+            recent_sale_exists = InventoryTransaction.objects.filter(
+                inventory__part_id=OuterRef('pk'),
+                transaction_type='sale',
+                timestamp__gte=one_month_ago,
+            )
+            parts_queryset = parts_queryset.filter(quantity__gt=0).annotate(
+                has_recent_sale=Exists(recent_sale_exists)
+            ).filter(has_recent_sale=False)
     
     # Category filter
     category_filter = request.GET.get('category', '')
@@ -170,11 +162,35 @@ def vendor_inventory_list(request):
     ]
     if sort_by in valid_sort_fields:
         parts_queryset = parts_queryset.order_by(sort_by)
+    else:
+        sort_by = '-created_at'
+        parts_queryset = parts_queryset.order_by(sort_by)
     
-    # Pagination
-    paginator = Paginator(parts_queryset, 25)
-    page_number = request.GET.get('page')
-    parts = paginator.get_page(page_number)
+    per_page = 25
+    per_page_raw = request.GET.get('per_page')
+    if per_page_raw:
+        try:
+            per_page_candidate = int(per_page_raw)
+        except (TypeError, ValueError):
+            per_page_candidate = None
+
+        if per_page_candidate in {10, 25, 50, 100}:
+            per_page = per_page_candidate
+    
+    try:
+        limit = int(request.GET.get('limit') or per_page)
+    except (TypeError, ValueError):
+        limit = per_page
+    if limit not in {10, 25, 50, 100}:
+        limit = per_page
+    per_page = limit
+
+    try:
+        offset = int(request.GET.get('offset') or 0)
+    except (TypeError, ValueError):
+        offset = 0
+    if offset < 0:
+        offset = 0
     
     # Calculate inventory statistics
     total_parts = parts_queryset.count()
@@ -192,28 +208,46 @@ def vendor_inventory_list(request):
         ))
     )
     
-    # Calculate dead stock - items not sold for over a month
     one_month_ago = timezone.now() - timedelta(days=30)
-    dead_stock_parts = []
-    
-    for part in parts_queryset:
-        # Check if part has any sale transactions in the last month
-        recent_sales = InventoryTransaction.objects.filter(
-            inventory__part=part,
-            transaction_type='sale',
-            timestamp__gte=one_month_ago
-        ).exists()
-        
-        # If no recent sales and quantity > 0, consider it dead stock
-        if not recent_sales and part.quantity > 0:
-            dead_stock_parts.append(part.id)
-    
-    # Add dead stock count to stats
-    stock_stats['dead_stock'] = len(dead_stock_parts)
+    recent_sale_exists = InventoryTransaction.objects.filter(
+        inventory__part_id=OuterRef('pk'),
+        transaction_type='sale',
+        timestamp__gte=one_month_ago,
+    )
+    dead_stock_count = parts_queryset.filter(quantity__gt=0).annotate(
+        has_recent_sale=Exists(recent_sale_exists)
+    ).filter(has_recent_sale=False).count()
+    stock_stats['dead_stock'] = dead_stock_count
     
     # Get categories and brands for filters
     categories = parts_queryset.values('category__id', 'category__name').distinct().order_by('category__name')
     brands = parts_queryset.values('brand__id', 'brand__name').distinct().order_by('brand__name')
+
+    if offset >= total_parts and total_parts > 0:
+        offset = max(((total_parts - 1) // per_page) * per_page, 0)
+
+    parts = list(parts_queryset[offset:offset + per_page])
+    start_index = 0
+    end_index = 0
+    if total_parts > 0:
+        start_index = offset + 1
+        end_index = min(offset + len(parts), total_parts)
+
+    total_pages = 1
+    if per_page > 0:
+        total_pages = max((total_parts + per_page - 1) // per_page, 1)
+    current_page = (offset // per_page) + 1 if per_page > 0 else 1
+    has_previous = offset > 0
+    has_next = (offset + per_page) < total_parts
+    prev_offset = max(offset - per_page, 0)
+    next_offset = offset + per_page
+
+    preserved_params = request.GET.copy()
+    preserved_params.pop('offset', None)
+    preserved_params.pop('page', None)
+    preserved_params['per_page'] = str(per_page)
+    preserved_params['limit'] = str(per_page)
+    base_querystring = preserved_params.urlencode()
     
     context = {
         'vendor_profile': vendor_profile,
@@ -232,6 +266,18 @@ def vendor_inventory_list(request):
         'price_min': price_min,
         'price_max': price_max,
         'sort_by': sort_by,
+        'per_page': per_page,
+        'offset': offset,
+        'limit': per_page,
+        'start_index': start_index,
+        'end_index': end_index,
+        'current_page': current_page,
+        'total_pages': total_pages,
+        'has_previous': has_previous,
+        'has_next': has_next,
+        'prev_offset': prev_offset,
+        'next_offset': next_offset,
+        'base_querystring': base_querystring,
     }
     
     # Check if this is an HTMX request
@@ -978,7 +1024,7 @@ def vendor_catalog_management(request):
     
     business_partner = vendor_profile.business_partner
     
-    catalog_queryset = CatalogItem.objects.filter(vendor=business_partner).prefetch_related('images')
+    catalog_queryset = CatalogItem.objects.filter(vendor=business_partner).select_related('category').prefetch_related('images')
     
     # Apply filters
     search_query = request.GET.get('search', '')
@@ -986,11 +1032,19 @@ def vendor_catalog_management(request):
         catalog_queryset = catalog_queryset.filter(
             Q(part_number__icontains=search_query) |
             Q(description__icontains=search_query) |
+            Q(category__name__icontains=search_query) |
             Q(make__icontains=search_query) |
             Q(model__icontains=search_query) |
             Q(trim__icontains=search_query) |
             Q(engine__icontains=search_query)
         )
+
+    category_filter = request.GET.get('category', '').strip()
+    if category_filter:
+        try:
+            catalog_queryset = catalog_queryset.filter(category_id=int(category_filter))
+        except ValueError:
+            pass
 
     make_filter = request.GET.get('make', '').strip()
     if make_filter:
@@ -1014,15 +1068,29 @@ def vendor_catalog_management(request):
     page_number = request.GET.get('page')
     catalog_items = paginator.get_page(page_number)
 
-    base_queryset = CatalogItem.objects.filter(vendor=business_partner)
+    base_queryset = CatalogItem.objects.filter(vendor=business_partner).select_related('category')
     makes = base_queryset.values_list('make', flat=True).distinct().order_by('make')
-    models = base_queryset.filter(make__iexact=make_filter).values_list('model', flat=True).distinct().order_by('model') if make_filter else base_queryset.values_list('model', flat=True).distinct().order_by('model')
-    years = base_queryset.filter(make__iexact=make_filter, model__iexact=model_filter).values_list('year', flat=True).distinct().order_by('-year') if make_filter and model_filter else base_queryset.values_list('year', flat=True).distinct().order_by('-year')
+    models = (
+        base_queryset.filter(make__iexact=make_filter)
+        .exclude(model__isnull=True)
+        .values_list('model', flat=True).distinct().order_by('model')
+        if make_filter
+        else base_queryset.exclude(model__isnull=True).values_list('model', flat=True).distinct().order_by('model')
+    )
+    years = (
+        base_queryset.filter(make__iexact=make_filter, model__iexact=model_filter)
+        .exclude(year__isnull=True)
+        .values_list('year', flat=True).distinct().order_by('-year')
+        if make_filter and model_filter
+        else base_queryset.exclude(year__isnull=True).values_list('year', flat=True).distinct().order_by('-year')
+    )
 
     total_items = catalog_queryset.count()
+    categories = Category.objects.filter(vendor_catalog_items__vendor=business_partner).distinct().order_by('name')
+    category_count = base_queryset.exclude(category__isnull=True).values('category').distinct().count()
     make_count = base_queryset.values('make').distinct().count()
     model_count = base_queryset.values('model').distinct().count()
-    year_count = base_queryset.values('year').distinct().count()
+    year_count = base_queryset.exclude(year__isnull=True).values('year').distinct().count()
     
     context = {
         'vendor_profile': vendor_profile,
@@ -1032,6 +1100,8 @@ def vendor_catalog_management(request):
         'total_items': total_items,
         'total_parts': total_items,
         'total_skus': total_items,
+        'categories': categories,
+        'category_count': category_count,
         'make_count': make_count,
         'model_count': model_count,
         'year_count': year_count,
@@ -1039,6 +1109,7 @@ def vendor_catalog_management(request):
         'models': models,
         'years': years,
         'search_query': search_query,
+        'category_filter': category_filter,
         'make_filter': make_filter,
         'model_filter': model_filter,
         'year_filter': year_filter,

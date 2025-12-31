@@ -11,10 +11,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='vendorprofile',
-            name='tax_certificate',
-        ),
         migrations.AddField(
             model_name='securevendorapplication',
             name='application_reference',

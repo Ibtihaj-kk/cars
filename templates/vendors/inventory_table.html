@@ -7,7 +7,7 @@
             <input type="hidden" name="next" value="{{ request.get_full_path }}">
             <select name="status" class="block w-full sm:w-56 px-3 py-2 border border-gray-300 bg-white rounded-lg focus:ring-black focus:border-black text-sm">
                 <option value="published">Publish</option>
-                <option value="draft">Draft</option>
+                <option value="draft">Stock</option>
                 <option value="archived">Archive</option>
             </select>
             <button type="submit" class="px-4 py-2 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-900">
@@ -23,7 +23,7 @@
                             class="rounded border-gray-300 text-black focus:ring-black"></th>
                     <th class="px-4 py-4 font-medium">Product Details</th>
                     <th class="px-4 py-4 font-medium hidden lg:table-cell">SKU</th>
-                    <th class="px-4 py-4 font-medium hidden xl:table-cell">Compatibility</th>
+                    <th class="px-4 py-4 font-medium hidden xl:table-cell">Make</th>
                     <th class="px-4 py-4 font-medium">Stock</th>
                     <th class="px-4 py-4 font-medium">Price</th>
                     <th class="px-4 py-4 font-medium">Status</th>
@@ -43,10 +43,8 @@
                                 <i class="fas fa-cog"></i>
                             </div>
                             <div class="ml-4 overflow-hidden">
-                                <div class="font-bold text-gray-900 truncate" title="{{ part.material_description }}">{{
-                                    part.material_description|default:part.parts_number }}</div>
-                                <div class="text-xs text-gray-500 truncate">Category: {{
-                                    part.category.name|default:"Uncategorized" }}</div>
+                                <div class="font-bold text-gray-900 truncate" title="{{ part.material_description }}">{{ part.material_description|default:part.parts_number }}</div>
+                                <div class="text-xs text-gray-500 truncate">{{ part.category.name|default:"Uncategorized" }}</div>
                             </div>
                         </div>
                     </td>

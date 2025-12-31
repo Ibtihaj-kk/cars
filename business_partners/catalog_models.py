@@ -14,6 +14,15 @@ class CatalogItem(models.Model):
         related_name='catalog_items',
         help_text="Vendor who owns this catalog item"
     )
+
+    category = models.ForeignKey(
+        'parts.Category',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='vendor_catalog_items',
+        help_text="Category for this catalog item"
+    )
     
     part_number = models.CharField(
         max_length=100,
@@ -31,10 +40,14 @@ class CatalogItem(models.Model):
     
     model = models.CharField(
         max_length=100,
+        blank=True,
+        null=True,
         help_text="Vehicle model (e.g., Camry, Civic)"
     )
     
     year = models.PositiveIntegerField(
+        null=True,
+        blank=True,
         help_text="Vehicle year"
     )
     
@@ -61,7 +74,12 @@ class CatalogItem(models.Model):
         verbose_name_plural = 'Catalog Items'
     
     def __str__(self):
-        return f"{self.part_number} - {self.make} {self.model} ({self.year})"
+        vehicle = " ".join([p for p in [self.make, self.model] if p]).strip()
+        if self.year:
+            vehicle = f"{vehicle} ({self.year})" if vehicle else f"({self.year})"
+        if self.category_id:
+            return f"{self.category.name} - {vehicle or self.make}"
+        return vehicle or self.make
     
     def get_primary_image(self):
         """Get the primary image or first image"""

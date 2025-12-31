@@ -79,7 +79,7 @@ class User(AbstractUser):
     
     # 2FA fields
     is_2fa_enabled = models.BooleanField(default=False)
-    otp_secret = models.CharField(max_length=16, blank=True, null=True)
+    otp_secret = models.CharField(max_length=32, blank=True, null=True)
     otp_created_at = models.DateTimeField(null=True, blank=True)
     otp_attempts = models.PositiveSmallIntegerField(default=0)
     

@@ -1,0 +1,113 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Vendor Performance{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{% url 'admin_panel:vendor_detail' vendor.id %}" class="text-blue-600 hover:underline text-sm">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Vendor
+    </a>
+</div>
+
+<div class="bg-white rounded-2xl border shadow-sm p-6 mb-6">
+    <div class="flex flex-col md:flex-row justify-between items-start gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-900">{{ vendor.name }}</h2>
+            <p class="text-gray-500 text-sm">{{ vendor.user.email }}</p>
+        </div>
+        <div class="flex gap-4">
+            <div class="text-right">
+                <p class="text-xs font-bold text-gray-400 uppercase">Avg Rating</p>
+                <p class="text-2xl font-extrabold text-gray-900">{{ review_stats.avg_rating|floatformat:1|default:"0.0" }}</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs font-bold text-gray-400 uppercase">Reviews</p>
+                <p class="text-2xl font-extrabold text-gray-900">{{ review_stats.total_reviews|default:"0" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+        <p class="text-xs font-bold text-gray-400 uppercase">Total Listings</p>
+        <p class="text-2xl font-extrabold text-gray-900">{{ total_listings|default:"0" }}</p>
+    </div>
+    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+        <p class="text-xs font-bold text-gray-400 uppercase">Published</p>
+        <p class="text-2xl font-extrabold text-gray-900">{{ published_listings|default:"0" }}</p>
+    </div>
+    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+        <p class="text-xs font-bold text-gray-400 uppercase">Sold</p>
+        <p class="text-2xl font-extrabold text-gray-900">{{ sold_listings|default:"0" }}</p>
+    </div>
+    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+        <p class="text-xs font-bold text-gray-400 uppercase">Avg Days to Sell</p>
+        <p class="text-2xl font-extrabold text-gray-900">{{ avg_listing_days|default:"0" }}</p>
+    </div>
+    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+        <p class="text-xs font-bold text-gray-400 uppercase">Total Inquiries</p>
+        <p class="text-2xl font-extrabold text-gray-900">{{ total_inquiries|default:"0" }}</p>
+    </div>
+    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+        <p class="text-xs font-bold text-gray-400 uppercase">Response Rate</p>
+        <p class="text-2xl font-extrabold text-gray-900">{{ response_rate|floatformat:1|default:"0.0" }}%</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900">Monthly Performance</h3>
+            <p class="text-sm text-gray-500">Last 6 months</p>
+        </div>
+        <div class="p-6 overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500">
+                    <tr>
+                        <th class="px-4 py-3">Month</th>
+                        <th class="px-4 py-3">Listings</th>
+                        <th class="px-4 py-3">Sales</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    {% for row in monthly_performance %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 font-bold">{{ row.month }}</td>
+                        <td class="px-4 py-3">{{ row.listings }}</td>
+                        <td class="px-4 py-3">{{ row.sales }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="px-4 py-6 text-center text-gray-500">No data</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900">Recent Reviews</h3>
+        </div>
+        <div class="p-6 space-y-3">
+            {% for r in recent_reviews %}
+            <div class="border rounded-2xl p-4">
+                <div class="flex items-center justify-between">
+                    <p class="font-bold text-sm text-gray-900">{{ r.reviewer.email|default:"Reviewer" }}</p>
+                    <span class="text-xs font-bold px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                        {{ r.rating|default:"-" }}/5
+                    </span>
+                </div>
+                {% if r.comment %}
+                <p class="text-sm text-gray-700 mt-2">{{ r.comment }}</p>
+                {% endif %}
+                <p class="text-xs text-gray-500 mt-2">{{ r.created_at|date:"M d, Y" }}</p>
+            </div>
+            {% empty %}
+            <p class="text-sm text-gray-500">No reviews.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

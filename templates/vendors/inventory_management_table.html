@@ -20,7 +20,7 @@
                 class="bg-gray-700 text-white text-sm rounded-lg px-3 py-1.5 border border-gray-600 focus:outline-none focus:border-white">
                 <option value="">Change Status To...</option>
                 <option value="published">Published</option>
-                <option value="draft">Draft</option>
+                <option value="draft">Stock</option>
                 <option value="archived">Archived</option>
             </select>
             <button type="submit"
@@ -28,6 +28,56 @@
                 <i class="fas fa-check"></i> Apply
             </button>
         </form>
+    </div>
+
+    <div class="px-4 py-3 border-b border-gray-200 bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <form method="GET" hx-get="{{ request.path }}" hx-target="#inventory-table" hx-push-url="true" class="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
+            <input type="hidden" name="offset" value="0">
+            {% if search_query %}<input type="hidden" name="search" value="{{ search_query }}">{% endif %}
+            {% if category_filter %}<input type="hidden" name="category" value="{{ category_filter }}">{% endif %}
+            {% if brand_filter %}<input type="hidden" name="brand" value="{{ brand_filter }}">{% endif %}
+            {% if stock_status %}<input type="hidden" name="stock_status" value="{{ stock_status }}">{% endif %}
+            {% if price_min %}<input type="hidden" name="price_min" value="{{ price_min }}">{% endif %}
+            {% if price_max %}<input type="hidden" name="price_max" value="{{ price_max }}">{% endif %}
+
+            <div class="flex items-center gap-2">
+                <label for="sort-by" class="text-sm text-gray-600">Sort</label>
+                <select id="sort-by" name="sort" class="border border-gray-300 rounded-md text-sm px-2 py-1" onchange="this.form.submit()">
+                    <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>Newest</option>
+                    <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Oldest</option>
+                    <option value="parts_number" {% if sort_by == 'parts_number' %}selected{% endif %}>Part No (A–Z)</option>
+                    <option value="-parts_number" {% if sort_by == '-parts_number' %}selected{% endif %}>Part No (Z–A)</option>
+                    <option value="material_description" {% if sort_by == 'material_description' %}selected{% endif %}>Description (A–Z)</option>
+                    <option value="-material_description" {% if sort_by == '-material_description' %}selected{% endif %}>Description (Z–A)</option>
+                    <option value="price" {% if sort_by == 'price' %}selected{% endif %}>Price (Low–High)</option>
+                    <option value="-price" {% if sort_by == '-price' %}selected{% endif %}>Price (High–Low)</option>
+                    <option value="quantity" {% if sort_by == 'quantity' %}selected{% endif %}>Quantity (Low–High)</option>
+                    <option value="-quantity" {% if sort_by == '-quantity' %}selected{% endif %}>Quantity (High–Low)</option>
+                    <option value="-updated_at" {% if sort_by == '-updated_at' %}selected{% endif %}>Recently Updated</option>
+                    <option value="updated_at" {% if sort_by == 'updated_at' %}selected{% endif %}>Least Recently Updated</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <label for="per-page" class="text-sm text-gray-600">Rows</label>
+                <select id="per-page" name="per_page" class="border border-gray-300 rounded-md text-sm px-2 py-1" onchange="this.form.submit()">
+                    {% with current=per_page|default:25 %}
+                    <option value="10" {% if current == 10 %}selected{% endif %}>10</option>
+                    <option value="25" {% if current == 25 %}selected{% endif %}>25</option>
+                    <option value="50" {% if current == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if current == 100 %}selected{% endif %}>100</option>
+                    {% endwith %}
+                </select>
+            </div>
+        </form>
+
+        <div class="text-sm text-gray-600 whitespace-nowrap">
+            {% if total_parts %}
+            Showing <span class="font-medium">{{ start_index }}</span> to <span class="font-medium">{{ end_index }}</span> of <span class="font-medium">{{ total_parts }}</span>
+            {% else %}
+            Showing <span class="font-medium">0</span> results
+            {% endif %}
+        </div>
     </div>
 
     <div class="overflow-x-auto">
@@ -69,7 +119,7 @@
                             </div>
                             <div class="ml-4">
                                 <div class="text-sm font-bold text-gray-900">
-                                    {{Part.material_description|default:part.parts_number }}</div>
+                                    {{ part.material_description|default:part.parts_number }}</div>
                                 <div class="text-xs text-gray-500 font-mono">SKU: {{ part.parts_number }}</div>
                             </div>
                         </div>
@@ -201,31 +251,35 @@
 </div>
 
 <!-- Pagination -->
-{% if parts.paginator.num_pages > 1 %}
 <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
     <div class="flex-1 flex justify-between sm:hidden">
-        {% if parts.has_previous %}
-        <a href="?page={{ parts.previous_page_number }}"
+        {% if has_previous %}
+        <a href="?offset={{ prev_offset }}{% if base_querystring %}&{{ base_querystring }}{% endif %}"
             class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Previous</a>
         {% endif %}
-        {% if parts.has_next %}
-        <a href="?page={{ parts.next_page_number }}"
+        {% if has_next %}
+        <a href="?offset={{ next_offset }}{% if base_querystring %}&{{ base_querystring }}{% endif %}"
             class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Next</a>
         {% endif %}
     </div>
     <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
         <div>
             <p class="text-sm text-gray-700">
-                Showing <span class="font-medium">{{ parts.start_index }}</span> to <span class="font-medium">{{
-                    parts.end_index }}</span> of <span class="font-medium">{{ parts.paginator.count }}</span> results
+                {% if total_parts %}
+                Showing <span class="font-medium">{{ start_index }}</span> to <span class="font-medium">{{ end_index }}</span> of <span class="font-medium">{{ total_parts }}</span> results
+                {% else %}
+                Showing <span class="font-medium">0</span> results
+                {% endif %}
             </p>
         </div>
+        <div class="flex items-center gap-4">
         <div>
+            {% if total_pages > 1 %}
             <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                {% if parts.has_previous %}
-                <a href="?page={{ parts.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                {% if has_previous %}
+                <a href="?offset={{ prev_offset }}{% if base_querystring %}&{{ base_querystring }}{% endif %}"
                     class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                    hx-get="?page={{ parts.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                    hx-get="?offset={{ prev_offset }}{% if base_querystring %}&{{ base_querystring }}{% endif %}"
                     hx-target="#inventory-table" hx-push-url="true">
                     <span class="sr-only">Previous</span>
                     <i class="fas fa-chevron-left"></i>
@@ -234,23 +288,24 @@
 
                 <span
                     class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                    Page {{ parts.number }} of {{ parts.paginator.num_pages }}
+                    Page {{ current_page }} of {{ total_pages }}
                 </span>
 
-                {% if parts.has_next %}
-                <a href="?page={{ parts.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                {% if has_next %}
+                <a href="?offset={{ next_offset }}{% if base_querystring %}&{{ base_querystring }}{% endif %}"
                     class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                    hx-get="?page={{ parts.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                    hx-get="?offset={{ next_offset }}{% if base_querystring %}&{{ base_querystring }}{% endif %}"
                     hx-target="#inventory-table" hx-push-url="true">
                     <span class="sr-only">Next</span>
                     <i class="fas fa-chevron-right"></i>
                 </a>
                 {% endif %}
             </nav>
+            {% endif %}
+        </div>
         </div>
     </div>
 </div>
-{% endif %}
 </div>
 
 <!-- Bulk Action JavaScript -->

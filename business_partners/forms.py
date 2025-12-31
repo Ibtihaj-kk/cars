@@ -13,6 +13,7 @@ import re
 import os
 from .models import VendorApplication, VendorProfile
 from .permissions import get_vendor_profile
+from .catalog_models import CatalogItem
 from .widgets import VehicleVariantMultiSelectWidget, ProfitMarginCalculatorWidget, InventoryThresholdWidget
 from parts.models import Part, Category, Brand
 from django.contrib.auth import authenticate
@@ -731,12 +732,39 @@ class VendorPartForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.vendor = kwargs.pop('vendor', None)
         super().__init__(*args, **kwargs)
-        
+
         # Make important fields required
         self.fields['parts_number'].required = True
         self.fields['material_description'].required = True
         self.fields['category'].required = True
         self.fields['brand'].required = True
+
+        if self.vendor:
+            category_ids = list(
+                CatalogItem.objects.filter(vendor=self.vendor, category__isnull=False)
+                .values_list('category_id', flat=True)
+                .distinct()
+            )
+            if category_ids:
+                self.fields['category'].queryset = Category.objects.filter(id__in=category_ids).order_by('name')
+
+            make_names = list(
+                CatalogItem.objects.filter(vendor=self.vendor)
+                .exclude(make__isnull=True)
+                .exclude(make__exact='')
+                .values_list('make', flat=True)
+                .distinct()
+            )
+            if make_names:
+                normalized_names = sorted({str(name).strip() for name in make_names if str(name).strip()})
+                for name in normalized_names:
+                    Brand.objects.get_or_create(name=name)
+                self.fields['brand'].queryset = Brand.objects.filter(name__in=normalized_names).order_by('name')
+
+        if hasattr(self.fields['category'], 'empty_label'):
+            self.fields['category'].empty_label = "Select Category"
+        if hasattr(self.fields['brand'], 'empty_label'):
+            self.fields['brand'].empty_label = "Select Make"
         
         # Add help texts where needed
         self.fields['parts_number'].help_text = "Unique identifier for this part"
@@ -790,6 +818,15 @@ class VendorPartBulkImportForm(forms.Form):
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         help_text='Only validate the file without importing (useful for testing)'
     )
+
+    chunk_size = forms.IntegerField(
+        required=False,
+        initial=5000,
+        min_value=500,
+        max_value=50000,
+        widget=forms.NumberInput(attrs={'class': 'form-control'}),
+        help_text='Rows per write batch (500–50000)'
+    )
     
     def clean_file(self):
         """Validate uploaded file"""
@@ -798,17 +835,17 @@ class VendorPartBulkImportForm(forms.Form):
         if not file:
             raise ValidationError(_('Please select a file to upload.'))
         
-        # Check file size (10MB limit)
-        if file.size > 10 * 1024 * 1024:
-            raise ValidationError(_('File size must be less than 10MB.'))
+        max_size_mb = 500
+        if file.size > max_size_mb * 1024 * 1024:
+            raise ValidationError(_(f'File size must be less than {max_size_mb}MB.'))
         
         # Check file extension
-        allowed_extensions = ['.csv', '.xlsx', '.xls']
+        allowed_extensions = ['.csv', '.xlsx']
         file_extension = os.path.splitext(file.name)[1].lower()
         
         if file_extension not in allowed_extensions:
             raise ValidationError(
-                _('Invalid file format. Please upload CSV or Excel files only.')
+                _('Invalid file format. Please upload CSV or XLSX files only.')
             )
         
         return file
@@ -903,10 +940,8 @@ class VendorSettingsForm(forms.Form):
     business_license = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
     vat_certificate = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
     commercial_invoice_sample = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
-    company_profile = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
     quality_certificate = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
     insurance_certificate = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
-    import_export_license = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
     supplier_certification = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
     
     # Bank Details
@@ -916,11 +951,10 @@ class VendorSettingsForm(forms.Form):
     account_number = forms.CharField(max_length=50, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
     iban = forms.CharField(max_length=34, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
     swift_code = forms.CharField(max_length=11, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
-    bank_statement = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
     
     # Business Details (Financial & Additional)
     tax_id = forms.CharField(max_length=50, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
-    preferred_currency = forms.ChoiceField(choices=[('USD', 'USD'), ('SAR', 'SAR'), ('PKR', 'PKR')], required=False, widget=forms.Select(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
+    preferred_currency = forms.ChoiceField(choices=(), required=False, widget=forms.Select(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
     payment_terms = forms.ChoiceField(choices=[('net_15', 'Net 15 days'), ('net_30', 'Net 30 days'), ('net_45', 'Net 45 days'), ('net_60', 'Net 60 days'), ('cod', 'Cash on Delivery'), ('prepaid', 'Prepaid')], required=False, widget=forms.Select(attrs={'class': 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black text-sm transition-colors'}))
     
     # Additional Info
@@ -983,6 +1017,20 @@ class VendorSettingsForm(forms.Form):
                             self.fields['account_number'].initial = line.replace('Account Number:', '').strip()
                         elif line.startswith('IBAN:'):
                             self.fields['iban'].initial = line.replace('IBAN:', '').strip()
+
+        try:
+            from core.models import Currency
+
+            active_currencies = Currency.objects.filter(is_active=True).order_by('code')
+            currency_choices = [(currency.code, currency.code) for currency in active_currencies]
+
+            initial_currency = self.fields['preferred_currency'].initial
+            if initial_currency and initial_currency not in dict(currency_choices):
+                currency_choices = [(initial_currency, initial_currency)] + currency_choices
+
+            self.fields['preferred_currency'].choices = currency_choices
+        except Exception:
+            pass
 
     def save(self):
         if not self.business_partner:
@@ -1049,22 +1097,16 @@ class VendorSettingsForm(forms.Form):
                 vendor_profile.cr_document = self.cleaned_data['cr_document']
             if self.cleaned_data.get('business_license'):
                 vendor_profile.business_license = self.cleaned_data['business_license']
-            if self.cleaned_data.get('bank_statement'):
-                vendor_profile.bank_statement = self.cleaned_data['bank_statement']
             
             # Save additional documents
             if self.cleaned_data.get('vat_certificate'):
                 vendor_profile.vat_certificate = self.cleaned_data['vat_certificate']
             if self.cleaned_data.get('commercial_invoice_sample'):
                 vendor_profile.commercial_invoice_sample = self.cleaned_data['commercial_invoice_sample']
-            if self.cleaned_data.get('company_profile'):
-                vendor_profile.company_profile = self.cleaned_data['company_profile']
             if self.cleaned_data.get('quality_certificate'):
                 vendor_profile.quality_certificate = self.cleaned_data['quality_certificate']
             if self.cleaned_data.get('insurance_certificate'):
                 vendor_profile.insurance_certificate = self.cleaned_data['insurance_certificate']
-            if self.cleaned_data.get('import_export_license'):
-                vendor_profile.import_export_license = self.cleaned_data['import_export_license']
             if self.cleaned_data.get('supplier_certification'):
                 vendor_profile.supplier_certification = self.cleaned_data['supplier_certification']
             

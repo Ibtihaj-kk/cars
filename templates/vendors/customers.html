@@ -78,6 +78,7 @@
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">BP-Number</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Contact</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Orders (Yours)</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Total Spent (Yours)</th>
@@ -106,6 +107,9 @@
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-mono text-gray-900">{{ customer.bp_number|default:"--" }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm text-gray-900">{{ customer.email }}</div>
                         <div class="text-xs text-gray-500">{{ customer.phone|default:"--" }}</div>
                     </td>
@@ -132,7 +136,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="px-6 py-10 text-center text-gray-500">No customers found.</td>
+                    <td colspan="7" class="px-6 py-10 text-center text-gray-500">No customers found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

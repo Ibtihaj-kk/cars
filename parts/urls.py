@@ -12,6 +12,7 @@ urlpatterns = [
     # Public views
     path('', views.PartListView.as_view(), name='part_list'),
     path('part/<int:pk>/', views.PartDetailView.as_view(), name='part_detail'),
+    path('set-country/', views.set_country_currency, name='set_country_currency'),
     
     # Role-based parts search and filtering views
     path('search/user/', views.UserPartsListView.as_view(), name='user_parts_search'),

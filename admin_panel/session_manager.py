@@ -120,14 +120,14 @@ class AdminSessionManager:
             return False, "session_inactive"
         
         # Check session timeout
-        if cls._is_session_expired(session_data):
-            cls.terminate_session(request, "session_timeout")
-            return False, "session_expired"
-        
+        # if cls._is_session_expired(session_data):
+        #     cls.terminate_session(request, "session_timeout")
+        #     return False, "session_expired"
+        #
         # Check inactivity timeout
-        if cls._is_session_inactive(session_data):
-            cls.terminate_session(request, "inactivity_timeout")
-            return False, "inactivity_timeout"
+        # if cls._is_session_inactive(session_data):
+        #     cls.terminate_session(request, "inactivity_timeout")
+        #     return False, "inactivity_timeout"
         
         # Check IP consistency (if enabled)
         if getattr(settings, 'ADMIN_ENFORCE_IP_CONSISTENCY', False):
@@ -392,12 +392,18 @@ def require_valid_admin_session(view_func):
         is_valid, reason = AdminSessionManager.validate_session(request)
         
         if not is_valid:
+            if request.user.is_authenticated and reason in {"session_not_found", "no_session_key"}:
+                AdminSessionManager.create_session(request, request.user)
+                AdminSessionManager.update_activity(request)
+                return view_func(request, *args, **kwargs)
+
             logger.warning(f"Invalid admin session: {reason} for user {request.user.id if request.user.is_authenticated else 'anonymous'}")
-            
-            # Redirect to login with appropriate message
-            from django.shortcuts import redirect
+
             from django.contrib import messages
-            
+            from django.shortcuts import redirect
+            from django.urls import reverse
+            from urllib.parse import urlencode
+
             if reason == "session_expired":
                 messages.warning(request, "Your session has expired. Please log in again.")
             elif reason == "inactivity_timeout":
@@ -406,8 +412,10 @@ def require_valid_admin_session(view_func):
                 messages.error(request, "Security violation detected. Please log in again.")
             else:
                 messages.info(request, "Please log in to access the admin panel.")
-            
-            return redirect('admin_panel:login')
+
+            login_url = reverse('login')
+            next_url = request.get_full_path()
+            return redirect(f"{login_url}?{urlencode({'next': next_url})}")
         
         # Update activity
         AdminSessionManager.update_activity(request)

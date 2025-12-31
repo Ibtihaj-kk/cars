@@ -309,6 +309,18 @@
           <i class="fa-solid fa-phone"></i>
           <span class="navbar-phone-number">+92-333-3610109</span>
         </span>
+        <form method="get" action="{% url 'parts:set_country_currency' %}" style="display:flex; align-items:center; gap:6px;">
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <select name="country" onchange="this.form.submit()" style="border:1px solid #ddd; border-radius:6px; padding:4px 8px; font-size:12px; background:#fff;">
+            <option value="">Country</option>
+            <option value="Saudi Arabia" {% if current_currency and current_currency.code == 'SAR' %}selected{% endif %}>Saudi Arabia</option>
+            <option value="Qatar" {% if current_currency and current_currency.code == 'QAR' %}selected{% endif %}>Qatar</option>
+            <option value="Oman" {% if current_currency and current_currency.code == 'OMR' %}selected{% endif %}>Oman</option>
+            <option value="Bahrain" {% if current_currency and current_currency.code == 'BHD' %}selected{% endif %}>Bahrain</option>
+            <option value="United Arab Emirates" {% if current_currency and current_currency.code == 'AED' %}selected{% endif %}>UAE</option>
+            <option value="Pakistan" {% if current_currency and current_currency.code == 'PKR' %}selected{% endif %}>Pakistan</option>
+          </select>
+        </form>
         <span class="navbar-divider">|</span>
         {% if request.user.is_authenticated %}
         <a href="{% url 'parts:cart_view' %}" class="navbar-cart position-relative">

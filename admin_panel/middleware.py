@@ -75,8 +75,8 @@ class AdminSecurityMiddleware(MiddlewareMixin):
         """Check if the request is for authentication pages."""
         try:
             auth_paths = [
-                reverse('admin_panel:login'),
-                reverse('admin_panel:logout'),
+                reverse('login'),
+                reverse('logout'),
             ]
             return request.path in auth_paths
         except Exception:
@@ -103,9 +103,9 @@ class AdminSecurityMiddleware(MiddlewareMixin):
         """Check for various security violations."""
         
         # Check session timeout
-        timeout_violation = self._check_session_timeout(request)
-        if timeout_violation:
-            return timeout_violation
+        # timeout_violation = self._check_session_timeout(request)
+        # if timeout_violation:
+        #     return timeout_violation
             
         # Check IP address consistency
         ip_violation = self._check_ip_consistency(request)

@@ -194,6 +194,18 @@
             </div>
 
             <div class="nav-links flex items-center gap-6 font-['Plus_Jakarta_Sans']">
+                <!-- <form method="get" action="{% url 'parts:set_country_currency' %}" class="flex items-center">
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <select name="country" onchange="this.form.submit()" class="border border-gray-200 rounded-full px-4 py-2 text-sm bg-white">
+                        <option value="">Country</option>
+                        <option value="Saudi Arabia" {% if current_currency and current_currency.code == 'SAR' %}selected{% endif %}>Saudi Arabia</option>
+                        <option value="Qatar" {% if current_currency and current_currency.code == 'QAR' %}selected{% endif %}>Qatar</option>
+                        <option value="Oman" {% if current_currency and current_currency.code == 'OMR' %}selected{% endif %}>Oman</option>
+                        <option value="Bahrain" {% if current_currency and current_currency.code == 'BHD' %}selected{% endif %}>Bahrain</option>
+                        <option value="United Arab Emirates" {% if current_currency and current_currency.code == 'AED' %}selected{% endif %}>UAE</option>
+                        <option value="Pakistan" {% if current_currency and current_currency.code == 'PKR' %}selected{% endif %}>Pakistan</option>
+                    </select>
+                </form> -->
 
                 {% if user.is_authenticated %}
                 <div class="relative group">

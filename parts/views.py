@@ -15,6 +15,7 @@ from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.core.paginator import Paginator
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from datetime import timedelta
 import json
 import requests
@@ -89,6 +90,27 @@ def dealer_admin_required(view_func):
     return user_passes_test(check_permissions)(login_required(view_func))
 
 
+def set_country_currency(request):
+    from business_partners.utils import get_currency_for_country
+    from core.models import Currency
+
+    country = (request.GET.get('country') or '').strip()
+    currency_code = get_currency_for_country(country) if country else 'USD'
+    currency_code = (currency_code or 'USD').upper()
+
+    try:
+        currency = Currency.objects.get(code=currency_code, is_active=True)
+        request.session['currency_code'] = currency.code
+    except Exception:
+        request.session['currency_code'] = currency_code
+
+    next_url = request.GET.get('next') or request.META.get('HTTP_REFERER') or '/'
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        next_url = '/'
+
+    return redirect(next_url)
+
+
 # Public Views
 class PartListView(ListView):
     """Public view to list all active parts with search and filtering, including vendor parts."""
@@ -96,6 +118,18 @@ class PartListView(ListView):
     template_name = 'home/parts.html'
     context_object_name = 'parts'
     paginate_by = 12
+
+    def get_paginate_by(self, queryset):
+        per_page_raw = self.request.GET.get('per_page')
+        if not per_page_raw:
+            return self.paginate_by
+        try:
+            per_page = int(per_page_raw)
+        except (TypeError, ValueError):
+            return self.paginate_by
+
+        allowed = {12, 24, 48, 96}
+        return per_page if per_page in allowed else self.paginate_by
     
     def get_queryset(self):
         """Get optimized queryset with select_related and prefetch_related for performance."""
@@ -223,6 +257,11 @@ class PartListView(ListView):
             queryset = queryset.filter(vendor__vendor_profile__isnull=False)
         elif vendor_filter == 'top_rated':
             queryset = queryset.filter(vendor__vendor_profile__vendor_rating__gte=4.0)
+
+        seller_param = (self.request.GET.get('seller') or '').strip()
+        if seller_param:
+            if seller_param.isdigit():
+                queryset = queryset.filter(vendor_id=int(seller_param))
         
         # Vendor rating filter
         vendor_min_rating = self.request.GET.get('vendor_min_rating')
@@ -329,7 +368,7 @@ class PartListView(ListView):
             queryset = queryset.filter(vehicle_variants__engine_code__in=engines).distinct()
         
         # Sorting
-        sort_by = self.request.GET.get('sort', '-created_at')
+        sort_by = self.request.GET.get('sort') or '-created_at'
         if sort_by in ['name', '-name', 'price', '-price', 'created_at', '-created_at', 'vendor_rating', '-vendor_rating']:
             queryset = queryset.order_by(sort_by)
         
@@ -515,6 +554,23 @@ class PartListView(ListView):
         context['stock_filter'] = self.request.GET.get('stock_availability', '')
         context['vendor_filter'] = self.request.GET.get('vendor_type', '')
         context['sort_by'] = self.request.GET.get('sort', '-created_at')
+        context['current_per_page'] = self.get_paginate_by(context.get('object_list'))
+        context['current_seller'] = self.request.GET.get('seller', '')
+
+        seller_vendors = BusinessPartner.objects.filter(
+            roles__role_type='vendor',
+            status='active'
+        ).select_related('vendor_profile').order_by('name')
+
+        seller_options = []
+        for vendor in seller_vendors:
+            seller_options.append({'value': str(vendor.id), 'label': vendor.name})
+        context['seller_options'] = seller_options
+
+        query_params = self.request.GET.copy()
+        if 'page' in query_params:
+            query_params.pop('page')
+        context['querystring'] = query_params.urlencode()
         
         return context
     

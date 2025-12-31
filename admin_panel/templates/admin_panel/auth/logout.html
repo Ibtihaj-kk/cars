@@ -1,0 +1,19 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Logout{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+    <h3 class="text-lg font-bold text-gray-900 mb-2">Sign out</h3>
+    <p class="text-sm text-gray-500 mb-6">Are you sure you want to log out?</p>
+    <form method="POST" action="{% url 'admin_panel:logout' %}" class="flex gap-3 justify-end">
+        {% csrf_token %}
+        <a href="{% url 'admin_panel:dashboard' %}" class="bg-gray-100 px-5 py-2.5 rounded-xl font-bold hover:bg-gray-200">
+            Cancel
+        </a>
+        <button type="submit" class="bg-black text-white px-5 py-2.5 rounded-xl font-bold hover:bg-gray-800">
+            Logout
+        </button>
+    </form>
+</div>
+{% endblock %}
+

@@ -13,12 +13,125 @@ import io
 import requests
 from decimal import Decimal
 import logging
+from django.db.utils import OperationalError
+from celery.exceptions import MaxRetriesExceededError
 
 from .models import Part, Category, Brand, BulkUploadLog, IntegrationSource, Cart
 from .cache import warm_cache, invalidate_part_cache, get_cached_popular_parts
 from users.models import User
 
 logger = logging.getLogger(__name__)
+
+
+@shared_task(bind=True, soft_time_limit=3600, time_limit=7200)
+def process_vendor_parts_import(
+    self,
+    upload_log_id,
+    storage_path,
+    business_partner_id,
+    import_status='published',
+    update_existing=False,
+    chunk_size=5000,
+):
+    from django.core.files.storage import default_storage
+    from django.utils import timezone
+    from business_partners.models import BusinessPartner
+    from business_partners.vendor_views import process_import_file
+
+    upload_log = BulkUploadLog.objects.filter(id=upload_log_id).first()
+    if not upload_log:
+        return {'success': False, 'error': 'Upload log not found'}
+
+    upload_log.status = 'processing'
+    upload_log.success_message = 'Processing'
+    upload_log.save(update_fields=['status', 'success_message'])
+
+    business_partner = BusinessPartner.objects.filter(id=business_partner_id).first()
+    if not business_partner:
+        upload_log.status = 'failed'
+        upload_log.error_log = 'Vendor not found'
+        upload_log.completed_at = timezone.now()
+        upload_log.save(update_fields=['status', 'error_log', 'completed_at'])
+        return {'success': False, 'error': 'Vendor not found'}
+
+    try:
+        with default_storage.open(storage_path, 'rb') as f:
+            results = process_import_file(
+                f,
+                business_partner,
+                import_status,
+                update_existing,
+                validate_only=False,
+                upload_log_id=upload_log.id,
+                chunk_size=chunk_size,
+            )
+
+        total = int(results.get('total_rows') or 0)
+        created = int(results.get('created_count') or 0)
+        updated = int(results.get('updated_count') or 0)
+        errors = results.get('errors') or []
+        warnings = results.get('warnings') or []
+
+        upload_log.total_records = total
+        upload_log.successful_records = created + updated
+        upload_log.failed_records = int(results.get('error_count') or 0)
+        upload_log.status = 'completed' if upload_log.failed_records == 0 else 'partial'
+        upload_log.success_message = f'Created: {created}, Updated: {updated}'
+        upload_log.error_log = '\n'.join([*errors[:500], *warnings[:200]]) if (errors or warnings) else None
+        upload_log.completed_at = timezone.now()
+        upload_log.save(
+            update_fields=[
+                'total_records',
+                'successful_records',
+                'failed_records',
+                'status',
+                'success_message',
+                'error_log',
+                'completed_at',
+            ]
+        )
+
+        try:
+            warm_cache()
+        except Exception:
+            pass
+
+        return {
+            'success': True,
+            'total_rows': total,
+            'created_count': created,
+            'updated_count': updated,
+            'error_count': upload_log.failed_records,
+        }
+    except OperationalError as e:
+        try:
+            upload_log.status = 'processing'
+            upload_log.error_log = str(e)
+            upload_log.save(update_fields=['status', 'error_log'])
+        except Exception:
+            pass
+        try:
+            raise self.retry(exc=e, countdown=10, max_retries=3)
+        except MaxRetriesExceededError:
+            try:
+                upload_log.status = 'failed'
+                upload_log.error_log = str(e)
+                upload_log.completed_at = timezone.now()
+                upload_log.save(update_fields=['status', 'error_log', 'completed_at'])
+            except Exception:
+                pass
+            raise
+    except Exception as e:
+        upload_log.status = 'failed'
+        upload_log.error_log = str(e)
+        upload_log.completed_at = timezone.now()
+        upload_log.save(update_fields=['status', 'error_log', 'completed_at'])
+        return {'success': False, 'error': str(e)}
+    finally:
+        try:
+            default_storage.delete(storage_path)
+        except Exception:
+            pass
 
 
 @shared_task(bind=True)

@@ -24,10 +24,6 @@
             class="flex items-center px-4 py-2 bg-gray-700 text-white text-sm font-bold rounded-lg hover:bg-gray-600 shadow-md transition">
             <i class="fas fa-book mr-2"></i> Add Catalog
         </a>
-        <a href="{% url 'business_partners:vendor_part_create' %}"
-            class="flex items-center px-4 py-2 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-800 shadow-md transition">
-            <i class="fas fa-plus mr-2"></i> Add Product
-        </a>
     </div>
 </div>
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -78,10 +74,17 @@
                 class="fas fa-search"></i></span>
         <input type="text" name="search" value="{{ search_query|default:'' }}"
             class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
-            placeholder="Search by part #, description, make, model...">
+            placeholder="Search by category, make, model...">
     </div>
 
     <div class="flex gap-3 w-full sm:w-auto overflow-x-auto">
+        <select name="category"
+            class="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 focus:border-black outline-none">
+            <option value="">Category: All</option>
+            {% for c in categories %}
+            <option value="{{ c.id }}" {% if category_filter == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
         <select name="make"
             class="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 focus:border-black outline-none">
             <option value="">Make: All</option>
@@ -116,16 +119,12 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Part #</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Parts Des
-                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Category</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Year</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Make</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Model</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Year</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Trim</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Engine</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Pictures
-                    </th>
                     <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions
                     </th>
                 </tr>
@@ -133,28 +132,12 @@
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for product in product_list %}
                 <tr class="hover:bg-gray-50 transition">
-                    <td class="px-6 py-4 text-sm text-gray-900 font-mono whitespace-nowrap">{{ product.part_number }}
-                    </td>
-                    <td class="px-6 py-4 text-sm text-gray-900">
-                        <div class="font-semibold">{{ product.description }}</div>
-                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">{% firstof product.category.name "-" %}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{% firstof product.year "-" %}</td>
                     <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{% firstof product.make "-" %}</td>
                     <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{% firstof product.model "-" %}</td>
-                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{% firstof product.year "-" %}</td>
                     <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{% firstof product.trim "-" %}</td>
                     <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{% firstof product.engine "-" %}</td>
-                    <td class="px-6 py-4">
-                        <div
-                            class="h-10 w-10 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden flex items-center justify-center">
-                            {% with img=product.get_primary_image %}
-                            {% if img %}
-                            <img class="h-full w-full object-contain" src="{{ img.image.url }}" alt="">
-                            {% else %}
-                            <i class="fas fa-image text-gray-400"></i>
-                            {% endif %}
-                            {% endwith %}
-                        </div>
-                    </td>
                     <td class="px-6 py-4 text-right">
                         <a href="{% url 'business_partners:vendor_catalog_detail' product.id %}"
                             class="text-gray-400 hover:text-blue-600 transition mr-3" title="View">
@@ -174,7 +157,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="9" class="px-6 py-10 text-center text-gray-500">No catalog items found.</td>
+                    <td colspan="7" class="px-6 py-10 text-center text-gray-500">No catalog items found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

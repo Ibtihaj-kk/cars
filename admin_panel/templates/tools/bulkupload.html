@@ -40,7 +40,7 @@
                         id="uploadBtn" disabled>
                         <i class="fas fa-upload mr-2"></i> Upload & Process
                     </button>
-                    <a href="#" class="px-6 py-3 border rounded-xl text-sm font-medium hover:bg-gray-50">
+                    <a href="{% url 'admin_panel:bulk_upload_template' %}" class="px-6 py-3 border rounded-xl text-sm font-medium hover:bg-gray-50" download>
                         <i class="fas fa-download mr-2"></i> Download Template
                     </a>
                 </div>
@@ -101,8 +101,13 @@
                     </div>
                     <div class="flex justify-between text-xs text-gray-500">
                         <span>{{ upload.uploaded_at|date:"M d, Y H:i" }}</span>
-                        <span>{{ upload.records_processed|default:0 }} records</span>
+                        <span>{{ upload.total_records|default:0 }} records</span>
                     </div>
+                    {% if upload.status == 'failed' and upload.error_log %}
+                    <div class="mt-2 text-xs text-red-600 whitespace-pre-line">
+                        {{ upload.error_log|truncatechars:220 }}
+                    </div>
+                    {% endif %}
                 </div>
                 {% empty %}
                 <div class="text-center py-8 text-gray-500">

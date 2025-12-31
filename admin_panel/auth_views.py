@@ -35,6 +35,14 @@ def admin_login_view(request):
     """
     Admin panel login view with enhanced security features.
     """
+    if request.method == 'GET':
+        login_url = reverse('login')
+        next_url = request.GET.get('next', '')
+        if next_url:
+            from urllib.parse import urlencode
+            return redirect(f"{login_url}?{urlencode({'next': next_url})}")
+        return redirect(login_url)
+
     # Clear any existing messages to prevent duplicates
     storage = messages.get_messages(request)
     storage.used = True
@@ -69,11 +77,79 @@ def _handle_login_post(request):
     otp_code = request.POST.get('otp_code', '').strip()
     remember_me = request.POST.get('remember_me') == 'on'
     next_url = request.POST.get('next', '')
+
+    pending_2fa_user_id = request.session.get('admin_2fa_user_id')
+    pending_2fa_timestamp = request.session.get('admin_2fa_timestamp')
+    if pending_2fa_user_id and otp_code and not password:
+        try:
+            user = User.objects.get(id=pending_2fa_user_id)
+        except User.DoesNotExist:
+            request.session.pop('admin_2fa_user_id', None)
+            request.session.pop('admin_2fa_timestamp', None)
+            messages.error(request, 'Authentication expired. Please log in again.')
+            return redirect('login')
+
+        if pending_2fa_timestamp:
+            try:
+                created_at = timezone.datetime.fromisoformat(pending_2fa_timestamp)
+                if timezone.now() - created_at > timedelta(minutes=5):
+                    request.session.pop('admin_2fa_user_id', None)
+                    request.session.pop('admin_2fa_timestamp', None)
+                    messages.error(request, 'Authentication expired. Please log in again.')
+                    return redirect('login')
+            except (ValueError, TypeError):
+                request.session.pop('admin_2fa_user_id', None)
+                request.session.pop('admin_2fa_timestamp', None)
+                messages.error(request, 'Authentication expired. Please log in again.')
+                return redirect('login')
+
+        if not _is_admin_user(user):
+            request.session.pop('admin_2fa_user_id', None)
+            request.session.pop('admin_2fa_timestamp', None)
+            messages.error(request, 'You do not have permission to access the admin panel.')
+            return redirect('login')
+
+        if not _verify_otp(user, otp_code):
+            log_activity(
+                user=user,
+                action_type=ActivityLogType.LOGIN,
+                description="Failed 2FA verification for admin login",
+                request=request,
+                data={
+                    'email': user.email,
+                    'reason': 'invalid_2fa_code'
+                }
+            )
+            messages.error(request, 'Invalid 2FA code.')
+            return redirect('login')
+
+        login(request, user)
+        request.session.pop('admin_login_attempts', None)
+        request.session.pop('admin_2fa_user_id', None)
+        request.session.pop('admin_2fa_timestamp', None)
+        request.session['admin_login_time'] = timezone.now().isoformat()
+        request.session['admin_last_activity'] = timezone.now().isoformat()
+        request.session['admin_session_ips'] = [get_client_ip(request)]
+
+        log_activity(
+            user=user,
+            action_type=ActivityLogType.LOGIN,
+            description="Successful admin panel login (2FA)",
+            request=request,
+            data={
+                'remember_me': remember_me,
+                'session_timeout': not remember_me
+            }
+        )
+
+        if next_url and next_url.startswith(('/admin_panel/', '/admin-panel/')):
+            return redirect(next_url)
+        return redirect('admin_panel:dashboard')
     
     # Basic validation
     if not email or not password:
         messages.error(request, 'Email and password are required.')
-        return redirect('admin_panel:login')
+        return redirect('login')
     
     # Check login attempts
     login_attempts = request.session.get('admin_login_attempts', 0)
@@ -87,7 +163,7 @@ def _handle_login_post(request):
         )
         
         messages.error(request, 'Too many login attempts. Please try again later.')
-        return redirect('admin_panel:login')
+        return redirect('login')
     
     # Authenticate user
     user = authenticate(request, username=email, password=password)
@@ -110,7 +186,7 @@ def _handle_login_post(request):
         )
         
         messages.error(request, 'Invalid email or password.')
-        return redirect('admin_panel:login')
+        return redirect('login')
     
     # Check if user is admin
     if not _is_admin_user(user):
@@ -130,7 +206,7 @@ def _handle_login_post(request):
         )
         
         messages.error(request, 'You do not have permission to access the admin panel.')
-        return redirect('admin_panel:login')
+        return redirect('login')
     
     # Check 2FA if enabled
     if user.is_2fa_enabled:
@@ -163,7 +239,7 @@ def _handle_login_post(request):
             )
             
             messages.error(request, 'Invalid 2FA code.')
-            return redirect('admin_panel:login')
+            return redirect('login')
     
     # Successful authentication - log in user
     login(request, user)
@@ -174,8 +250,8 @@ def _handle_login_post(request):
     request.session.pop('admin_2fa_timestamp', None)
     
     # Set session timeout
-    if not remember_me:
-        request.session.set_expiry(getattr(settings, 'ADMIN_SESSION_TIMEOUT', 30) * 60)
+    # if not remember_me:
+    #     request.session.set_expiry(getattr(settings, 'ADMIN_SESSION_TIMEOUT', 30) * 60)
     
     # Initialize admin session data
     request.session['admin_login_time'] = timezone.now().isoformat()
@@ -197,7 +273,7 @@ def _handle_login_post(request):
     messages.success(request, f'Welcome back, {user.first_name or user.email}!')
     
     # Redirect to next URL or dashboard
-    if next_url and next_url.startswith('/admin-panel/'):
+    if next_url and next_url.startswith(('/admin_panel/', '/admin-panel/')):
         return redirect(next_url)
     
     return redirect('admin_panel:dashboard')
@@ -288,7 +364,7 @@ def _handle_2fa_setup_post(request):
         )
         
         messages.success(request, '2FA has been successfully enabled for your account.')
-        return redirect('admin_panel:dashboard')
+        return redirect('admin_panel:settings')
     else:
         messages.error(request, 'Invalid 2FA code. Please try again.')
         return redirect('admin_panel:setup_2fa')
@@ -306,7 +382,7 @@ def disable_2fa_view(request):
     # Verify password before disabling 2FA
     if not user.check_password(password):
         messages.error(request, 'Invalid password.')
-        return redirect('admin_panel:setup_2fa')
+        return redirect('admin_panel:settings')
     
     # Disable 2FA
     user.is_2fa_enabled = False
@@ -322,7 +398,7 @@ def disable_2fa_view(request):
     )
     
     messages.warning(request, '2FA has been disabled for your account.')
-    return redirect('admin_panel:setup_2fa')
+    return redirect('admin_panel:settings')
 
 
 # Helper functions

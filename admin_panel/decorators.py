@@ -307,7 +307,7 @@ def _handle_access_denied(request, message):
     else:
         # Regular request
         messages.error(request, message)
-        return redirect(reverse('admin_panel:login'))
+        return redirect(reverse('login'))
 
 
 def _handle_2fa_required(request):

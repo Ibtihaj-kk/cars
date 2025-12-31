@@ -167,19 +167,19 @@
                 <button type="button"
                     class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6 flex items-center justify-between w-full"
                     data-section-toggle="parts">
-                    <span>Parts</span>
+                    <span>Inventory</span>
                     <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
                 </button>
                 <div id="sidebar-section-parts" data-section-content="parts" class="space-y-1">
-                    <a href="{% url 'admin_panel:parts' %}"
-                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
-                        <i class="fas fa-boxes w-6 text-center"></i>
-                        <span class="nav-text ml-3">Parts Manager</span>
-                    </a>
                     <a href="{% url 'admin_panel:categories' %}"
                         class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
                         <i class="fas fa-folder-tree w-6 text-center"></i>
                         <span class="nav-text ml-3">Categories</span>
+                    </a>
+                    <a href="{% url 'admin_panel:inventory' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-warehouse w-6 text-center"></i>
+                        <span class="nav-text ml-3">Inventory</span>
                     </a>
                     <a href="{% url 'admin_panel:bulk_upload' %}"
                         class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
@@ -192,16 +192,11 @@
             <div class="mb-6">
                 <button type="button"
                     class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6 flex items-center justify-between w-full"
-                    data-section-toggle="operations">
-                    <span>Operations</span>
+                    data-section-toggle="sales">
+                    <span>Sales</span>
                     <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
                 </button>
-                <div id="sidebar-section-operations" data-section-content="operations" class="space-y-1">
-                    <a href="{% url 'admin_panel:inventory' %}"
-                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
-                        <i class="fas fa-warehouse w-6 text-center"></i>
-                        <span class="nav-text ml-3">Inventory</span>
-                    </a>
+                <div id="sidebar-section-sales" data-section-content="sales" class="space-y-1">
                     <a href="{% url 'admin_panel:orders' %}"
                         class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
                         <i class="fas fa-shopping-cart w-6 text-center"></i>
@@ -305,12 +300,12 @@
                         class="hidden absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 transform origin-top-right transition-all">
                         <div class="px-4 py-3 border-b border-gray-100">
                             <p class="text-xs text-gray-500 uppercase font-bold">Signed in as</p>
-                            <p class="text-sm font-bold text-gray-900 truncate">admin@corporatedock.com</p>
+                            <p class="text-sm font-bold text-gray-900 truncate">{{ user.email|default:"" }}</p>
                         </div>
-                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
+                        <a href="{% url 'admin_panel:settings' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
                             <i class="fas fa-cog w-4 mr-2 text-gray-400"></i> Settings
                         </a>
-                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
+                        <a href="{% url 'admin_panel:activity_logs' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
                             <i class="fas fa-shield-alt w-4 mr-2 text-gray-400"></i> Audit Log
                         </a>
                         <div class="border-t border-gray-100 my-1"></div>

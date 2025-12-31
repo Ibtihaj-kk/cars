@@ -366,6 +366,8 @@ let selectedCities = [];
 
 // Initialize the page
 document.addEventListener("DOMContentLoaded", () => {
+const productsGrid = document.getElementById("productsGrid");
+if (!productsGrid) return;
 renderProducts();
 initializeFilters();
 initializeEventListeners();

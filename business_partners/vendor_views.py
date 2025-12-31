@@ -779,10 +779,18 @@ def vendor_tax_summary(request):
     withholding_tax_payable = Decimal('0.00')
     total_payable = sales_tax_payable + withholding_tax_payable
 
-    tax_certificate = (
-        getattr(vendor_profile, 'tax_certificate', None)
-        or getattr(vendor_profile, 'vat_certificate', None)
+    from .document_models import VendorDocument
+
+    tax_certificate_doc = (
+        VendorDocument.objects.filter(
+            business_partner=business_partner,
+            category__name__iexact='Tax Certificate',
+        )
+        .order_by('-uploaded_at')
+        .first()
     )
+    tax_certificate_file = tax_certificate_doc.file if tax_certificate_doc else None
+    vat_certificate_file = getattr(vendor_profile, 'vat_certificate', None)
 
     pending_processing_count = 0
     try:
@@ -801,7 +809,7 @@ def vendor_tax_summary(request):
         'sales_tax_payable': sales_tax_payable,
         'withholding_tax_payable': withholding_tax_payable,
         'total_tax_payable': total_payable,
-        'has_tax_certificate': bool(tax_certificate),
+        'has_tax_certificate': bool(tax_certificate_file or vat_certificate_file),
         'stats': {
             'pending_processing_count': pending_processing_count,
             'critical_notifications': 0,
@@ -819,16 +827,30 @@ def vendor_tax_certificate_download(request):
         messages.error(request, 'Vendor profile not found.')
         return redirect('business_partners:vendor_registration_single')
 
-    certificate = (
-        getattr(vendor_profile, 'tax_certificate', None)
-        or getattr(vendor_profile, 'vat_certificate', None)
+    business_partner = vendor_profile.business_partner
+
+    from .document_models import VendorDocument
+
+    tax_certificate_doc = (
+        VendorDocument.objects.filter(
+            business_partner=business_partner,
+            category__name__iexact='Tax Certificate',
+        )
+        .order_by('-uploaded_at')
+        .first()
     )
-    if not certificate:
+
+    if tax_certificate_doc and tax_certificate_doc.file:
+        file_field = tax_certificate_doc.file
+    else:
+        file_field = getattr(vendor_profile, 'vat_certificate', None)
+
+    if not file_field:
         messages.error(request, 'No tax certificate uploaded.')
         return redirect('business_partners:vendor_tax_summary')
 
-    filename = (certificate.name or '').rsplit('/', 1)[-1] or 'tax-certificate'
-    return FileResponse(certificate.open('rb'), as_attachment=True, filename=filename)
+    filename = (file_field.name or '').rsplit('/', 1)[-1] or 'tax-certificate'
+    return FileResponse(file_field.open('rb'), as_attachment=True, filename=filename)
 
 
 @vendor_required
@@ -2239,35 +2261,67 @@ def vendor_parts_import(request):
             import_status = form.cleaned_data.get('import_status') or 'published'
             update_existing = form.cleaned_data['update_existing']
             validate_only = form.cleaned_data['validate_only']
+            chunk_size = form.cleaned_data.get('chunk_size') or 5000
             
             try:
-                # Use transaction to ensure data integrity
-                with transaction.atomic():
-                    # Process the import file
-                    results = process_import_file(
-                        import_file, 
-                        business_partner, 
-                        import_status,
-                        update_existing, 
-                        validate_only
-                    )
-                    
-                    # If validation only or critical errors occurred, rollback
-                    if validate_only:
-                        messages.info(request, f'Validation complete. {results["valid_count"]} valid rows, {results["error_count"]} errors.')
+                if validate_only:
+                    with transaction.atomic():
+                        results = process_import_file(
+                            import_file,
+                            business_partner,
+                            import_status,
+                            update_existing,
+                            validate_only=True,
+                        )
+                        messages.info(
+                            request,
+                            f'Validation complete. {results["valid_count"]} valid rows, {results["error_count"]} errors.',
+                        )
                         transaction.set_rollback(True)
-                    elif results['error_count'] > 0 and results['created_count'] == 0 and results['updated_count'] == 0:
-                        # If everything failed, treat as error but don't rollback (nothing happened anyway)
-                        messages.error(request, f'Import failed. {results["error_count"]} errors found. No parts were imported.')
-                    else:
-                        if results['error_count'] > 0:
-                            messages.warning(request, f'Import completed with errors. {results["created_count"]} created, {results["updated_count"]} updated, {results["error_count"]} failed.')
-                        else:
-                            messages.success(request, f'Import success! {results["created_count"]} parts created, {results["updated_count"]} parts updated.')
-                
-                # Store results in session for display
-                request.session['import_results'] = results
-                return redirect('business_partners:vendor_parts_import_results')
+
+                    request.session['import_results'] = results
+                    return redirect('business_partners:vendor_parts_import_results')
+
+                import os
+                import uuid
+                from django.core.files.storage import default_storage
+                from parts.models import BulkUploadLog
+                from parts.tasks import process_vendor_parts_import
+
+                upload_log = BulkUploadLog.objects.create(
+                    user=request.user,
+                    file_name=import_file.name,
+                    file_size=import_file.size,
+                    status='processing',
+                )
+                upload_log.success_message = 'Queued'
+                upload_log.save(update_fields=['success_message'])
+
+                safe_name = os.path.basename(import_file.name or 'import.csv')
+                storage_path = default_storage.save(
+                    f'tmp/vendor_imports/{uuid.uuid4().hex}_{safe_name}',
+                    import_file,
+                )
+
+                async_result = process_vendor_parts_import.apply_async(
+                    kwargs={
+                        'upload_log_id': upload_log.id,
+                        'storage_path': storage_path,
+                        'business_partner_id': business_partner.id,
+                        'import_status': import_status,
+                        'update_existing': update_existing,
+                        'chunk_size': chunk_size,
+                    },
+                    queue='celery',
+                )
+                try:
+                    upload_log.success_message = f'Queued ({async_result.id})'
+                    upload_log.save(update_fields=['success_message'])
+                except Exception:
+                    pass
+
+                messages.info(request, 'Import started in background. This page will update when finished.')
+                return redirect(f'{reverse_lazy("business_partners:vendor_parts_import_results")}?job={upload_log.id}')
                 
             except Exception as e:
                 import traceback
@@ -2294,20 +2348,52 @@ def vendor_parts_import_results(request):
         messages.error(request, 'You do not have vendor access.')
         return redirect('home')
     
+    job_id = request.GET.get('job')
+    if job_id:
+        from parts.models import BulkUploadLog
+        from django.utils import timezone
+
+        upload_log = BulkUploadLog.objects.filter(id=job_id, user=request.user).first()
+        if not upload_log:
+            messages.warning(request, 'Import job not found.')
+            return redirect('business_partners:vendor_parts_import')
+
+        error_lines = []
+        if upload_log.error_log:
+            error_lines = [line for line in upload_log.error_log.splitlines() if line][:200]
+
+        job_age_seconds = 0
+        if upload_log.uploaded_at:
+            job_age_seconds = int((timezone.now() - upload_log.uploaded_at).total_seconds())
+
+        job_queued_too_long = False
+        if upload_log.status == 'processing':
+            msg = (upload_log.success_message or '').strip()
+            if msg.startswith('Queued') and job_age_seconds >= 180:
+                job_queued_too_long = True
+
+        context = {
+            'vendor_profile': vendor_profile,
+            'job': upload_log,
+            'job_errors': error_lines,
+            'job_age_seconds': job_age_seconds,
+            'job_queued_too_long': job_queued_too_long,
+        }
+        return render(request, 'business_partners/vendor_parts_import_results.html', context)
+
     results = request.session.get('import_results', {})
     if not results:
         messages.warning(request, 'No import results found.')
         return redirect('business_partners:vendor_parts_import')
-    
-    # Clear results from session
+
     if 'import_results' in request.session:
         del request.session['import_results']
-    
+
     context = {
         'vendor_profile': vendor_profile,
         'results': results,
     }
-    
+
     return render(request, 'business_partners/vendor_parts_import_results.html', context)
 
 
@@ -2360,7 +2446,16 @@ def vendor_parts_export(request):
     return render(request, 'business_partners/vendor_parts_export.html', context)
 
 
-def process_import_file(import_file, business_partner, import_status, update_existing, validate_only):
+def process_import_file(
+    import_file,
+    business_partner,
+    import_status,
+    update_existing,
+    validate_only,
+    *,
+    upload_log_id=None,
+    chunk_size=5000,
+):
     """
     Process CSV or Excel import file and create/update parts with comprehensive validation.
     """
@@ -2368,9 +2463,12 @@ def process_import_file(import_file, business_partner, import_status, update_exi
     import io
     from decimal import Decimal, InvalidOperation
     from django.utils.dateparse import parse_date
+    from django.utils import timezone
     from django.core.validators import URLValidator
     from django.core.exceptions import ValidationError
-    from vehicles.models import VehicleVariant
+    import hashlib
+    import os
+    from django.utils.text import slugify
     
     results = {
         'total_rows': 0,
@@ -2385,7 +2483,14 @@ def process_import_file(import_file, business_partner, import_status, update_exi
     }
     
     # Define field validation rules
-    REQUIRED_FIELDS = ['parts_number', 'material_description', 'base_unit_of_measure', 'category_name', 'brand_name', 'price']
+    REQUIRED_FIELDS = [
+        'parts_number',
+        'category_name',
+        'brand_name',
+        'manufacturer_part_number',
+        'manufacturer_oem_number',
+    ]
+    VALIDATION_FIELDS = set(REQUIRED_FIELDS)
     
     # Map Excel/CSV headers to model fields
     HEADER_MAPPINGS = {
@@ -2405,8 +2510,6 @@ def process_import_file(import_file, business_partner, import_status, update_exi
         'UOM': 'base_unit_of_measure',
         'Image URL': 'image_url',
         'Image': 'image_url',
-        'Compatible Vehicles': 'vehicle_variants',
-        'Vehicles': 'vehicle_variants',  # Alias
         'Manufacturer Part Number': 'manufacturer_part_number',
         'MPN': 'manufacturer_part_number',
         'OEM Number': 'manufacturer_oem_number',
@@ -2426,7 +2529,6 @@ def process_import_file(import_file, business_partner, import_status, update_exi
         'parts_number': 'parts_number',
         'material_description': 'material_description',
         'material_description_ar': 'material_description_ar',
-        'vehicle_variants': 'compatible_vehicles',
         'image_url': 'image_url'
     }
     
@@ -2550,125 +2652,259 @@ def process_import_file(import_file, business_partner, import_status, update_exi
         
         return errors, value
 
-    def validate_vehicle_variants(variants_str, row_num):
-        """Validate vehicle variants field"""
-        errors = []
-        valid_variants = []
-        
-        if not variants_str or not variants_str.strip():
-            return errors, valid_variants
-        
-        # Split by comma and clean
-        variant_names = [v.strip() for v in variants_str.split(',') if v.strip()]
-        
-        for variant_name in variant_names:
-            try:
-                # Use filter().first() instead of get() to handle duplicates gracefully
-                variant = VehicleVariant.objects.filter(name__iexact=variant_name).first()
-                if variant:
-                    valid_variants.append(variant)
-                else:
-                    # If exact match fails, try partial match or log error
-                    # For now, we'll treat it as not found to be safe
-                    errors.append(f"Row {row_num}: Vehicle variant '{variant_name}' not found in system")
-            except Exception as e:
-                errors.append(f"Row {row_num}: Error validating variant '{variant_name}': {str(e)}")
-        
-        return errors, valid_variants
+    def normalize_row(row):
+        normalized_row = {}
+        for key, value in row.items():
+            if key is None:
+                continue
 
-    try:
-        # Determine file type and read data
-        file_extension = import_file.name.lower().split('.')[-1]
-        
-        if file_extension == 'csv':
-            # Handle CSV file
-            file_content = import_file.read().decode('utf-8-sig')  # Handle BOM
-            csv_reader = csv.DictReader(io.StringIO(file_content))
-            rows = list(csv_reader)
-        elif file_extension in ['xlsx', 'xls']:
-            # Handle Excel file
+            key_str = str(key).strip()
+            mapped_key = None
+
+            if key_str in HEADER_MAPPINGS:
+                mapped_key = HEADER_MAPPINGS[key_str]
+            else:
+                for header, field in HEADER_MAPPINGS.items():
+                    if header.lower() == key_str.lower():
+                        mapped_key = field
+                        break
+
+            if not mapped_key:
+                clean_key = key_str.lower().replace(' ', '_')
+                all_known_fields = (
+                    set(REQUIRED_FIELDS)
+                    | set(NUMERIC_FIELDS.keys())
+                    | set(STRING_FIELDS.keys())
+                    | set(BOOLEAN_FIELDS)
+                    | set(DATE_FIELDS)
+                    | set(URL_FIELDS)
+                )
+
+                if clean_key in all_known_fields:
+                    mapped_key = clean_key
+                else:
+                    mapped_key = key_str
+
+            normalized_row[mapped_key] = value
+
+        return normalized_row
+
+    def coerce_optional_value(field_name, value):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return None
+        if field_name in NUMERIC_FIELDS:
+            rules = NUMERIC_FIELDS[field_name]
+            try:
+                decimal_value = Decimal(str(value))
+            except (InvalidOperation, ValueError):
+                return None
+            if rules['decimal_places'] == 0:
+                try:
+                    return int(decimal_value)
+                except Exception:
+                    return None
+            return decimal_value
+        if field_name in BOOLEAN_FIELDS:
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, str):
+                value_lower = value.lower()
+                if value_lower in ['yes', 'true', '1', 'y', 'on']:
+                    return True
+                if value_lower in ['no', 'false', '0', 'n', 'off', '']:
+                    return False
+            return None
+        if isinstance(value, str):
+            return value
+        return value
+
+    def iter_normalized_rows(file_obj):
+        file_name = getattr(file_obj, 'name', '') or ''
+        ext = os.path.splitext(file_name)[1].lower().lstrip('.')
+
+        base_file = getattr(file_obj, 'file', file_obj)
+        try:
+            base_file.seek(0)
+        except Exception:
+            pass
+
+        if ext == 'csv':
+            text_stream = io.TextIOWrapper(base_file, encoding='utf-8-sig', newline='')
+            reader = csv.DictReader(text_stream)
+            for row in reader:
+                yield normalize_row(row)
+            return
+
+        if ext == 'xlsx':
             try:
                 import openpyxl
-                workbook = openpyxl.load_workbook(import_file)
-                worksheet = workbook.active
-                
-                # Get headers from first row
-                headers = [cell.value for cell in worksheet[1]]
-                
-                # Get data rows
-                rows = []
-                for row in worksheet.iter_rows(min_row=2, values_only=True):
-                    row_dict = dict(zip(headers, row))
-                    rows.append(row_dict)
             except ImportError:
                 raise Exception("openpyxl library is required for Excel file processing")
-        else:
-            raise Exception("Unsupported file format. Please use CSV or Excel files.")
-        
-        results['total_rows'] = len(rows)
-        
-        # Normalize headers in rows
-        normalized_rows = []
-        for row in rows:
-            normalized_row = {}
-            for key, value in row.items():
-                if key is None: continue
-                
-                # Check if key matches a mapping (case insensitive)
-                key_str = str(key).strip()
-                mapped_key = None
-                
-                # Try direct match
-                if key_str in HEADER_MAPPINGS:
-                    mapped_key = HEADER_MAPPINGS[key_str]
-                # Try case-insensitive match
-                else:
-                    for header, field in HEADER_MAPPINGS.items():
-                        if header.lower() == key_str.lower():
-                            mapped_key = field
-                            break
-                
-                # If no mapping found, check if it matches a field name directly
-                if not mapped_key:
-                    # Clean the key to snake_case
-                    clean_key = key_str.lower().replace(' ', '_')
-                    
-                    # Check if it's a known field
-                    all_known_fields = set(REQUIRED_FIELDS) | set(NUMERIC_FIELDS.keys()) | set(STRING_FIELDS.keys()) | set(BOOLEAN_FIELDS) | set(DATE_FIELDS) | set(URL_FIELDS)
-                    
-                    if clean_key in all_known_fields:
-                        mapped_key = clean_key
-                    else:
-                        mapped_key = key_str # Keep original if unknown
-                
-                normalized_row[mapped_key] = value
-            normalized_rows.append(normalized_row)
-        
-        rows = normalized_rows
-        
-        # Initialize field error tracking
+
+            workbook = openpyxl.load_workbook(base_file, read_only=True, data_only=True)
+            worksheet = workbook.active
+
+            header_row = next(worksheet.iter_rows(min_row=1, max_row=1, values_only=True), None)
+            headers = [h for h in (header_row or [])]
+
+            for values in worksheet.iter_rows(min_row=2, values_only=True):
+                row_dict = dict(zip(headers, values))
+                yield normalize_row(row_dict)
+            return
+
+        raise Exception("Unsupported file format. Please use CSV or XLSX files.")
+
+    def make_part_slug(vendor_id, parts_number):
+        base = slugify(f'{vendor_id}-{parts_number}')
+        digest = hashlib.md5(f'{vendor_id}:{parts_number}'.encode('utf-8'), usedforsecurity=False).hexdigest()[:10]
+        if not base:
+            base = digest
+        slug = f'{base}-{digest}'
+        return slug[:250]
+
+    def add_limited(target_list, new_items, limit):
+        if not new_items or len(target_list) >= limit:
+            return
+        remaining = limit - len(target_list)
+        target_list.extend(new_items[:remaining])
+
+    try:
         for field in REQUIRED_FIELDS + list(NUMERIC_FIELDS.keys()) + list(STRING_FIELDS.keys()) + BOOLEAN_FIELDS + DATE_FIELDS + URL_FIELDS:
             results['field_errors'][field] = 0
         
-        for row_num, row in enumerate(rows, start=2):
+        category_cache = {}
+        brand_cache = {}
+
+        buffered_rows = []
+        max_errors_to_keep = 1000
+        max_warnings_to_keep = 1000
+        try:
+            chunk_size = int(chunk_size)
+        except Exception:
+            chunk_size = 5000
+        if chunk_size < 500:
+            chunk_size = 500
+        if chunk_size > 50000:
+            chunk_size = 50000
+
+        upload_log = None
+        if upload_log_id:
+            try:
+                from parts.models import BulkUploadLog
+
+                upload_log = BulkUploadLog.objects.filter(id=upload_log_id).first()
+            except Exception:
+                upload_log = None
+
+        def flush_buffer():
+            if not buffered_rows or validate_only:
+                buffered_rows.clear()
+                return
+
+            parts_numbers = [item['validated_data']['parts_number'] for item in buffered_rows if item['validated_data'].get('parts_number')]
+            existing_by_parts_number = {}
+            if parts_numbers:
+                for p in Part.objects.filter(vendor=business_partner, parts_number__in=parts_numbers):
+                    existing_by_parts_number[p.parts_number] = p
+
+            to_create = []
+            to_update = []
+            update_fields = set()
+
+            for item in buffered_rows:
+                row_num = item['row_num']
+                validated_data = item['validated_data']
+
+                parts_number = validated_data.get('parts_number')
+                if not parts_number:
+                    continue
+
+                existing_part = existing_by_parts_number.get(parts_number)
+                if existing_part and not update_existing:
+                    add_limited(results['warnings'], [f"Row {row_num}: Part {parts_number} already exists (skipped)"], max_warnings_to_keep)
+                    continue
+
+                status_value = validated_data.get('status')
+                if status_value not in ['draft', 'published', 'archived']:
+                    validated_data['status'] = 'published'
+
+                if existing_part:
+                    for key, value in validated_data.items():
+                        if key in ['id', 'vendor', 'parts_number', 'slug']:
+                            continue
+                        setattr(existing_part, key, value)
+                        update_fields.add(key)
+                    existing_part.updated_at = timezone.now()
+                    update_fields.add('updated_at')
+                    to_update.append(existing_part)
+                    results['updated_count'] += 1
+                else:
+                    material_desc = validated_data.get('material_description') or ''
+                    validated_data.setdefault('name', material_desc)
+                    validated_data.setdefault('sku', parts_number)
+                    validated_data.setdefault('description', material_desc)
+                    validated_data['slug'] = make_part_slug(business_partner.id, parts_number)
+                    to_create.append(Part(**validated_data))
+                    results['created_count'] += 1
+
+            if to_create:
+                Part.objects.bulk_create(to_create, batch_size=chunk_size)
+            if to_update and update_fields:
+                Part.objects.bulk_update(to_update, fields=sorted(update_fields), batch_size=chunk_size)
+
+            buffered_rows.clear()
+            if upload_log:
+                BulkUploadLog.objects.filter(id=upload_log.id).update(
+                    total_records=results['total_rows'],
+                    successful_records=results['created_count'] + results['updated_count'],
+                    failed_records=results['error_count'],
+                    success_message=f'Writing ({results["created_count"] + results["updated_count"]} saved)',
+                )
+
+        for row_num, row in enumerate(iter_normalized_rows(import_file), start=2):
             row_errors = []
             row_warnings = []
             validated_data = {}
             
             try:
+                results['total_rows'] += 1
+                if upload_log and (results['total_rows'] % 200 == 0):
+                    try:
+                        from parts.models import BulkUploadLog
+
+                        BulkUploadLog.objects.filter(id=upload_log.id).update(
+                            total_records=results['total_rows'],
+                            successful_records=results['created_count'] + results['updated_count'],
+                            failed_records=results['error_count'],
+                            success_message=f'Validating ({results["total_rows"]} rows)',
+                        )
+                    except Exception:
+                        pass
+
                 # Validate all fields
                 for field_name, raw_value in row.items():
-                    if field_name and raw_value is not None:
+                    if not field_name:
+                        continue
+                    if field_name in VALIDATION_FIELDS:
                         field_errors, validated_value = validate_field(field_name, raw_value, row_num)
                         row_errors.extend(field_errors)
-                        
+
                         if field_errors:
                             results['field_errors'][field_name] = results['field_errors'].get(field_name, 0) + len(field_errors)
-                        
+
                         if validated_value is not None:
-                            # Map field names
                             mapped_field = FIELD_MAPPINGS.get(field_name, field_name)
                             validated_data[mapped_field] = validated_value
+                        continue
+
+                    coerced_value = coerce_optional_value(field_name, raw_value)
+                    if coerced_value is not None:
+                        mapped_field = FIELD_MAPPINGS.get(field_name, field_name)
+                        validated_data[mapped_field] = coerced_value
                 
                 # Special validation for required fields
                 for required_field in REQUIRED_FIELDS:
@@ -2676,62 +2912,32 @@ def process_import_file(import_file, business_partner, import_status, update_exi
                         row_errors.append(f"Row {row_num}: {required_field} is required")
                         results['field_errors'][required_field] = results['field_errors'].get(required_field, 0) + 1
                 
-                # Validate vehicle variants
-                if 'vehicle_variants' in row:
-                    variant_errors, valid_variants = validate_vehicle_variants(row['vehicle_variants'], row_num)
-                    row_errors.extend(variant_errors)
-                    if valid_variants:
-                        validated_data['compatible_vehicles'] = valid_variants
-                
                 # Validate category and brand existence
                 if 'category_name' in validated_data:
-                    try:
-                        category_val = validated_data['category_name']
-                        # Try exact match first
-                        try:
-                            category = Category.objects.filter(name__iexact=category_val).first()
-                            if not category:
-                                raise Category.DoesNotExist
-                        except Category.DoesNotExist:
-                            # Try contains if exact fails? No, safer to be strict or fallback to default
-                            raise Category.DoesNotExist
-                            
+                    category_val = validated_data['category_name']
+                    cache_key = str(category_val).strip().lower()
+                    if cache_key not in category_cache:
+                        category_cache[cache_key] = Category.objects.filter(name__iexact=category_val).first()
+                    category = category_cache[cache_key]
+                    if category:
                         validated_data['category'] = category
                         del validated_data['category_name']
-                    except Category.DoesNotExist:
+                    else:
                         row_errors.append(f"Row {row_num}: Category '{validated_data['category_name']}' not found")
                         results['field_errors']['category_name'] = results['field_errors'].get('category_name', 0) + 1
                 
                 if 'brand_name' in validated_data:
-                    try:
-                        brand_val = validated_data['brand_name']
-                        try:
-                            brand = Brand.objects.filter(name__iexact=brand_val).first()
-                            if not brand:
-                                raise Brand.DoesNotExist
-                        except Brand.DoesNotExist:
-                            raise Brand.DoesNotExist
-                            
+                    brand_val = validated_data['brand_name']
+                    cache_key = str(brand_val).strip().lower()
+                    if cache_key not in brand_cache:
+                        brand_cache[cache_key] = Brand.objects.filter(name__iexact=brand_val).first()
+                    brand = brand_cache[cache_key]
+                    if brand:
                         validated_data['brand'] = brand
                         del validated_data['brand_name']
-                    except Brand.DoesNotExist:
+                    else:
                         row_errors.append(f"Row {row_num}: Brand '{validated_data['brand_name']}' not found")
                         results['field_errors']['brand_name'] = results['field_errors'].get('brand_name', 0) + 1
-                
-                # Check for duplicate part number
-                if 'parts_number' in validated_data:
-                    existing_part = None
-                    # Filter by parts_number AND vendor to allow different vendors to sell the same part number
-                    existing_parts = Part.objects.filter(
-                        parts_number=validated_data['parts_number'],
-                        vendor=business_partner
-                    )
-                    if existing_parts.exists():
-                        existing_part = existing_parts.first()
-                    
-                    if existing_part and not update_existing:
-                        row_warnings.append(f"Row {row_num}: Part {validated_data['parts_number']} already exists (skipped)")
-                        continue
                 
                 # Business logic validations
                 if 'safety_stock' in validated_data and 'quantity' in validated_data:
@@ -2744,51 +2950,39 @@ def process_import_file(import_file, business_partner, import_status, update_exi
                 
                 # Add vendor to validated data
                 validated_data['vendor'] = business_partner
+                if import_status in ['draft', 'published', 'archived']:
+                    validated_data['status'] = import_status
                 
                 # If there are errors, skip this row
                 if row_errors:
-                    results['errors'].extend(row_errors)
+                    add_limited(results['errors'], row_errors, max_errors_to_keep)
                     results['error_count'] += 1
                     continue
                 
                 # Add warnings to results
                 if row_warnings:
-                    results['warnings'].extend(row_warnings)
-                
-                # Create or update part if not validation-only mode
-                if not validate_only:
-                    compatible_vehicles = validated_data.pop('compatible_vehicles', [])
-                    
-                    if existing_part:
-                        # Update existing part
-                        for key, value in validated_data.items():
-                            if key != 'vendor':  # Don't update vendor
-                                setattr(existing_part, key, value)
-                        existing_part.save()
-                        
-                        # Update vehicle compatibility
-                        if compatible_vehicles and hasattr(existing_part, 'compatible_vehicles'):
-                            existing_part.compatible_vehicles.set(compatible_vehicles)
-                        
-                        results['updated_count'] += 1
-                    else:
-                        # Create new part
-                        if import_status in ['draft', 'published', 'archived']:
-                            validated_data['status'] = import_status
-                        new_part = Part.objects.create(**validated_data)
-                        
-                        # Set vehicle compatibility
-                        if compatible_vehicles and hasattr(new_part, 'compatible_vehicles'):
-                            new_part.compatible_vehicles.set(compatible_vehicles)
-                        
-                        results['created_count'] += 1
-                
+                    add_limited(results['warnings'], row_warnings, max_warnings_to_keep)
+
                 results['valid_count'] += 1
+                buffered_rows.append({'row_num': row_num, 'validated_data': validated_data})
+                if len(buffered_rows) >= chunk_size:
+                    flush_buffer()
                 
             except Exception as e:
                 error_msg = f"Row {row_num}: Unexpected error - {str(e)}"
-                results['errors'].append(error_msg)
+                add_limited(results['errors'], [error_msg], max_errors_to_keep)
                 results['error_count'] += 1
+
+        flush_buffer()
+        if upload_log:
+            from parts.models import BulkUploadLog
+
+            BulkUploadLog.objects.filter(id=upload_log.id).update(
+                total_records=results['total_rows'],
+                successful_records=results['created_count'] + results['updated_count'],
+                failed_records=results['error_count'],
+                success_message=f'Done (created {results["created_count"]}, updated {results["updated_count"]})',
+            )
         
         # Generate validation summary
         results['validation_summary'] = {

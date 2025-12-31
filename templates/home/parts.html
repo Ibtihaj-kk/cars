@@ -206,7 +206,7 @@
         .parts-grid {
             display: grid;
             /* Creates a 3-column layout on desktop (approx 33% width each) */
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
             gap: 24px;
             /* Increased gap for a cleaner look */
         }
@@ -361,7 +361,7 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 0;
-            grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr;
+            grid-template-columns: 2fr 1.2fr 1.3fr 1.2fr 1fr 1fr;
             gap: 15px;
             border-top-left-radius: 8px;
             border-top-right-radius: 8px;
@@ -437,7 +437,7 @@
         /* List View Grid Container */
         .parts-grid.list-view .list-view-content {
             display: grid;
-            grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr;
+            grid-template-columns: 2fr 1.2fr 1.3fr 1.2fr 1fr 1fr;
             gap: 15px;
             width: 100%;
             align-items: center;
@@ -464,6 +464,10 @@
 
         .parts-grid.list-view .list-cell.part-number {
             font-family: monospace;
+            color: #666;
+        }
+
+        .parts-grid.list-view .list-cell.seller {
             color: #666;
         }
 
@@ -502,9 +506,12 @@
         }
 
         .parts-grid.list-view .list-view-content {
-            display: flex;
+            display: grid;
+            grid-template-columns: 2fr 1.2fr 1.3fr 1.2fr 1fr 1fr;
+            gap: 15px;
             width: 100%;
             align-items: center;
+            padding: 15px 20px;
         }
 
         /* List view cell styling */
@@ -818,6 +825,18 @@
                 <i class="fa-solid fa-phone"></i>
                 <span class="navbar-phone-number">+92-333-3610109</span>
             </span>
+            <form method="get" action="{% url 'parts:set_country_currency' %}" style="display:flex; align-items:center; gap:6px;">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <select name="country" onchange="this.form.submit()" style="border:1px solid #ddd; border-radius:6px; padding:4px 8px; font-size:12px; background:#fff;">
+                    <option value="">Country</option>
+                    <option value="Saudi Arabia" {% if current_currency and current_currency.code == 'SAR' %}selected{% endif %}>Saudi Arabia</option>
+                    <option value="Qatar" {% if current_currency and current_currency.code == 'QAR' %}selected{% endif %}>Qatar</option>
+                    <option value="Oman" {% if current_currency and current_currency.code == 'OMR' %}selected{% endif %}>Oman</option>
+                    <option value="Bahrain" {% if current_currency and current_currency.code == 'BHD' %}selected{% endif %}>Bahrain</option>
+                    <option value="United Arab Emirates" {% if current_currency and current_currency.code == 'AED' %}selected{% endif %}>UAE</option>
+                    <option value="Pakistan" {% if current_currency and current_currency.code == 'PKR' %}selected{% endif %}>Pakistan</option>
+                </select>
+            </form>
             <span class="navbar-divider">|</span>
             {% if request.user.is_authenticated %}
             <a href="{% url 'parts:cart_view' %}" class="navbar-cart position-relative">
@@ -893,8 +912,10 @@
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
                             <input type="text" class="form-control" name="search" value="{{ search_query }}"
                                 placeholder="Search parts..." hx-get="{% url 'parts:part_list' %}"
-                                hx-trigger="keyup changed delay:500ms" hx-target="#productsContainer"
-                                hx-push-url="true">
+                                hx-trigger="input changed delay:300ms" hx-target="#parts-results" hx-push-url="true"
+                                hx-indicator="#loading-indicator"
+                                hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
+                                hx-vals='{"page":1}'>
                             <button type="submit" class="btn btn-primary px-4">Search</button>
                         </div>
                     </div>
@@ -915,7 +936,8 @@
                         </div>
 
                         <form method="GET" id="filterForm" hx-get="{% url 'parts:part_list' %}"
-                            hx-target="#parts-results" hx-push-url="true" hx-indicator="#loading-indicator">
+                            hx-target="#parts-results" hx-push-url="true" hx-indicator="#loading-indicator"
+                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect" hx-vals='{"page":1}'>
                             <div class="sidebar-scroll-area">
 
                                 <div class="filter-section">
@@ -928,7 +950,9 @@
                                             value="{{ current_part_number }}" placeholder="Search Part #"
                                             hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
                                             hx-push-url="true" hx-indicator="#loading-indicator"
-                                            hx-trigger="keyup changed delay:500ms">
+                                            hx-trigger="input changed delay:300ms"
+                                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
+                                            hx-vals='{"page":1}'>
                                     </div>
                                 </div>
 
@@ -940,7 +964,9 @@
                                     <div class="filter-body">
                                         <select class="form-select form-select-sm" name="category"
                                             hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
-                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change">
+                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change"
+                                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
+                                            hx-vals='{"page":1}'>
                                             <option value="">Select Category</option>
                                             {% for category in categories %}
                                             <option value="{{ category.id }}" {% if current_category|add:0 == category.id %} selected {%endif%} >{{ category.name }}</option>
@@ -957,7 +983,9 @@
                                     <div class="filter-body">
                                         <select class="form-select form-select-sm" name="brand"
                                             hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
-                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change">
+                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change"
+                                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
+                                            hx-vals='{"page":1}'>
                                             <option value="">Select Make</option>
                                             {% for brand in brands %}
                                             <option value="{{ brand.id }}" {% if current_brand|add:0 == brand.id %} selected {%endif%} >{{ brand.name }}</option>
@@ -974,7 +1002,9 @@
                                     <div class="filter-body">
                                         <select class="form-select form-select-sm" name="vehicle_model"
                                             hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
-                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change">
+                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change"
+                                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
+                                            hx-vals='{"page":1}'>
                                             <option value="">Select Model</option>
                                             {% for model in vehicle_models %}
                                             <option value="{{ model.id }}" {% if current_vehicle_model|add:0 == model.id %} selected {%endif%} >{{ model.make.name }} {{ model.name }}</option>
@@ -991,7 +1021,9 @@
                                     <div class="filter-body">
                                         <select class="form-select form-select-sm" name="year"
                                             hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
-                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change">
+                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change"
+                                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
+                                            hx-vals='{"page":1}'>
                                             <option value="">Year</option>
                                             {% for year in available_years %}
                                             <option value="{{ year }}" {% if current_year|add:0 == year %} selected {%endif%} >{{ year }}</option>
@@ -1008,7 +1040,9 @@
                                     <div class="filter-body">
                                         <select class="form-select form-select-sm" name="trim"
                                             hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
-                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change">
+                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change"
+                                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
+                                            hx-vals='{"page":1}'>
                                             <option value="">Trim</option>
                                             {% for trim in available_trims %}
                                             <option value="{{ trim }}" {% if current_trim|add:0 == trim %} selected {%endif%} >{{ trim }}</option>
@@ -1025,7 +1059,9 @@
                                     <div class="filter-body">
                                         <select class="form-select form-select-sm" name="engine"
                                             hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
-                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change">
+                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change"
+                                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
+                                            hx-vals='{"page":1}'>
                                             <option value="">Engine</option>
                                             {% for engine in available_engines %}
                                             <option value="{{ engine }}" {% if current_engine|add:0 == engine %} selected {%endif%} >{{ engine }}</option>
@@ -1045,13 +1081,36 @@
                                                 value="{{ current_price_min }}" placeholder="Min"
                                                 hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
                                                 hx-push-url="true" hx-indicator="#loading-indicator"
-                                                hx-trigger="change">
+                                                hx-trigger="input changed delay:300ms"
+                                                hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
+                                                hx-vals='{"page":1}'>
                                             <input type="number" class="form-control form-control-sm" name="price_max"
                                                 value="{{ current_price_max }}" placeholder="Max"
                                                 hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
                                                 hx-push-url="true" hx-indicator="#loading-indicator"
-                                                hx-trigger="change">
+                                                hx-trigger="input changed delay:300ms"
+                                                hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
+                                                hx-vals='{"page":1}'>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div class="filter-section">
+                                    <div class="filter-header" onclick="toggleFilter(this)">
+                                        <span>Seller</span>
+                                        <i class="fas fa-chevron-down chevron"></i>
+                                    </div>
+                                    <div class="filter-body">
+                                        <select class="form-select form-select-sm" name="seller" id="sellerSelect"
+                                            hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
+                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change"
+                                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
+                                            hx-vals='{"page":1}'>
+                                            <option value="">All Sellers</option>
+                                            {% for seller in seller_options %}
+                                            <option value="{{ seller.value }}" {% if current_seller == seller.value %} selected {% endif %}>{{ seller.label }}</option>
+                                            {% endfor %}
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -1076,25 +1135,41 @@
 
                             <div class="d-flex align-items-center">
                                 <span class="me-2 text-muted"
+                                    style="font-size: 13px; font-weight: 600; white-space: nowrap;">Rows:</span>
+                                <select class="form-select form-select-sm" name="per_page" id="perPageSelect"
+                                    style="width: 110px; font-size: 13px; border-color: #dddddd;"
+                                    hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results" hx-push-url="true"
+                                    hx-indicator="#loading-indicator" hx-trigger="change"
+                                    hx-include="input[name], select[name]" hx-vals='{"page":1}'>
+                                    <option value="12" {% if current_per_page|add:0 == 12 %} selected {% endif %}>12</option>
+                                    <option value="24" {% if current_per_page|add:0 == 24 %} selected {% endif %}>24</option>
+                                    <option value="48" {% if current_per_page|add:0 == 48 %} selected {% endif %}>48</option>
+                                    <option value="96" {% if current_per_page|add:0 == 96 %} selected {% endif %}>96</option>
+                                </select>
+                            </div>
+
+                            <div class="d-flex align-items-center">
+                                <span class="me-2 text-muted"
                                     style="font-size: 13px; font-weight: 600; white-space: nowrap;">Sort By:</span>
-                                <select class="form-select form-select-sm" name="sort"
+                                <select class="form-select form-select-sm" name="sort" id="sortSelect"
                                     style="width: 160px; font-size: 13px; border-color: #dddddd;"
                                     hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results" hx-push-url="true"
-                                    hx-indicator="#loading-indicator" hx-trigger="change">
-                                    <option value="" {% if current_sort|add:0 == '' %} selected {%endif%}>Relevance
+                                    hx-indicator="#loading-indicator" hx-trigger="change"
+                                    hx-include="input[name], select[name]" hx-vals='{"page":1}'>
+                                    <option value="" {% if current_sort == '' %} selected {%endif%}>Relevance
                                     </option>
-                                    <option value="-created_at" {% if current_sort|add:0 == '-created_at' %} selected
+                                    <option value="-created_at" {% if current_sort == '-created_at' %} selected
                                         {%endif%}>
                                         Newest First</option>
-                                    <option value="price" {% if current_sort|add:0 == 'price' %} selected {%endif%}>Price:
+                                    <option value="price" {% if current_sort == 'price' %} selected {%endif%}>Price:
                                         Low
                                         to High</option>
-                                    <option value="-price" {% if current_sort|add:0 == '-price' %} selected {%endif%}>
+                                    <option value="-price" {% if current_sort == '-price' %} selected {%endif%}>
                                         Price: High to Low</option>
-                                    <option value="name" {% if current_sort|add:0 == 'name' %} selected {%endif%}>Name: A
+                                    <option value="name" {% if current_sort == 'name' %} selected {%endif%}>Name: A
                                         to Z
                                     </option>
-                                    <option value="-name" {% if current_sort|add:0 == '-name' %} selected {%endif%}>Name:   
+                                    <option value="-name" {% if current_sort == '-name' %} selected {%endif%}>Name:
                                         Z to A
                                     </option>
                                 </select>
@@ -1117,6 +1192,7 @@
                         <div>Model / Name</div>
                         <div>Make</div>
                         <div>Part Number</div>
+                        <div>Seller</div>
                         <div>Price</div>
                         <div>Stock</div>
                     </div>
@@ -1132,68 +1208,7 @@
 
                     <!-- Parts results container for HTMX -->
                     <div id="parts-results">
-                        <div class="parts-grid list-view" id="productsContainer">
-
-                            {% for part in parts %}
-                            <div class="part-card">
-                                <a href="{% url 'parts:part_detail' part.pk %}" style="text-decoration: none;">
-                                    <div class="part-image-container">
-                                        {% if part.image %}
-                                        <img src="{{ part.image.url }}" alt="{{ part.name }}" class="img-fluid"
-                                            style="width:100%; height:250px; object-fit:cover;" />
-                                        {% elif part.image_url %}
-                                        <img src="{{ part.image_url }}" alt="{{ part.name }}" class="img-fluid"
-                                            style="width:100%; height:250px; object-fit:cover;" />
-                                        {% elif part.images.first %}
-                                        <img src="{{ part.images.first.image.url }}" alt="{{ part.name }}"
-                                            class="img-fluid" style="width:100%; height:250px; object-fit:cover;" />
-                                        {% else %}
-                                        <img src="https://images.unsplash.com/photo-1613214150384-14921ff659b2?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                                            alt="{{ part.name }}" class="img-fluid"
-                                            style="width:100%; height:100%; object-fit:cover;" />
-                                        {% endif %}
-                                    </div>
-                                    <div class="part-content">
-                                        <!-- Grid View Content -->
-                                        <div class="grid-view-content">
-                                            <div class="part-header">
-                                                <div class="part-title">{{ part.name }}</div>
-                                                <div class="part-subtitle">{{ part.brand.name }}</div>
-                                            </div>
-                                            <div class="part-category">
-                                                <span class="badge bg-secondary">{{ part.category.name }}</span>
-                                            </div>
-                                            <div class="part-price">{{ part.price }} ر.س.</div>
-                                            <div class="part-meta">
-                                                {% if part.vin %}VIN: {{ part.vin }}<br>{% endif %}
-                                                Part #: {{ part.parts_number }}<br>
-                                            </div>
-                                        </div>
-                                        <!-- List View Content -->
-                                        <div class="list-view-content">
-                                            <div class="list-cell model-name">{{ part.name }}</div>
-                                            <div class="list-cell make">{{ part.brand.name }}</div>
-                                            <div class="list-cell part-number">{{ part.parts_number }}</div>
-                                            <div class="list-cell price">{{ part.retail_price }} ر.س.</div>
-                                            <div class="list-cell stock">
-                                                {% if part.inventory and part.inventory.stock > 0 %}
-                                                <span class="badge bg-success">In Stock ({{ part.inventory.stock
-                                                    }})</span>
-                                                {% else %}
-                                                <span class="badge bg-danger">Out of Stock</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </a>
-                            </div>
-                            {% empty %}
-                            <div class="col-12 text-center py-5">
-                                <p>No parts found matching your criteria.</p>
-                            </div>
-                            {% endfor %}
-                        </div>
-
+                        {% include 'home/parts_results_partial.html' %}
                     </div> <!-- End parts-results container -->
 
                 </div>
@@ -1435,6 +1450,48 @@
 
             // Set view based on stored preference (defaults to list)
             setView(currentView);
+
+            const sortSelect = document.getElementById('sortSelect');
+            const perPageSelect = document.getElementById('perPageSelect');
+            const searchForm = document.getElementById('searchForm');
+            const filterForm = document.getElementById('filterForm');
+
+            function setParamsFromForm(url, form) {
+                if (!form) return;
+                const data = new FormData(form);
+                const valuesByKey = {};
+                for (const [key, value] of data.entries()) {
+                    if (!valuesByKey[key]) valuesByKey[key] = [];
+                    valuesByKey[key].push(value);
+                }
+                Object.keys(valuesByKey).forEach((key) => {
+                    url.searchParams.delete(key);
+                    valuesByKey[key].forEach((value) => {
+                        if (value !== null && String(value).trim() !== '') {
+                            url.searchParams.append(key, value);
+                        }
+                    });
+                });
+            }
+
+            function applyControlsAndNavigate() {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('page');
+                setParamsFromForm(url, searchForm);
+                setParamsFromForm(url, filterForm);
+                if (sortSelect) {
+                    if (sortSelect.value) url.searchParams.set('sort', sortSelect.value);
+                    else url.searchParams.delete('sort');
+                }
+                if (perPageSelect) {
+                    if (perPageSelect.value) url.searchParams.set('per_page', perPageSelect.value);
+                    else url.searchParams.delete('per_page');
+                }
+                window.location.href = url.toString();
+            }
+
+            if (sortSelect) sortSelect.addEventListener('change', applyControlsAndNavigate);
+            if (perPageSelect) perPageSelect.addEventListener('change', applyControlsAndNavigate);
 
             // Handle HTMX messages auto-hide and close functionality
             function setupAutoHide() {

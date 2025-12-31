@@ -250,10 +250,11 @@
     <table class="catalog-table">
         <thead>
             <tr>
-                <th>Image</th>
-                <th>Part #</th>
-                <th>Description</th>
-                <th>Vehicle</th>
+                <th>Category</th>
+                <th>Year</th>
+                <th>Make</th>
+                <th>Model</th>
+                <th>Trim</th>
                 <th>Engine</th>
                 <th>Actions</th>
             </tr>
@@ -261,24 +262,12 @@
         <tbody>
             {% for item in catalog_items %}
             <tr>
-                <td>
-                    {% if item.get_primary_image %}
-                    <img src="{{ item.get_primary_image.image.url }}" class="item-image" alt="{{ item.part_number }}">
-                    {% else %}
-                    <div class="no-image"><i class="fas fa-image"></i></div>
-                    {% endif %}
-                </td>
-                <td><span class="part-number">{{ item.part_number }}</span></td>
-                <td>{{ item.description|truncatewords:15 }}</td>
-                <td>
-                    <div class="vehicle-info">
-                        {{ item.make }} {{ item.model }} ({{ item.year }})
-                        {% if item.trim %}
-                        <small>Trim: {{ item.trim }}</small>
-                        {% endif %}
-                    </div>
-                </td>
-                <td>{{ item.engine|default:"-" }}</td>
+                <td>{% firstof item.category.name "-" %}</td>
+                <td>{% firstof item.year "-" %}</td>
+                <td>{% firstof item.make "-" %}</td>
+                <td>{% firstof item.model "-" %}</td>
+                <td>{% firstof item.trim "-" %}</td>
+                <td>{% firstof item.engine "-" %}</td>
                 <td>
                     <form action="{% url 'business_partners:vendor_catalog_delete' item.pk %}" method="post"
                         style="display:inline;"

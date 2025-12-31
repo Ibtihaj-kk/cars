@@ -4,30 +4,36 @@
 {% block content %}
 <!-- Statistics -->
 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center">
+    <a href="?status=&featured={% for key, value in preserved_query_params %}{% if key != 'status' and key != 'featured' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <p class="text-xs font-bold text-gray-400 uppercase">Total</p>
         <p class="text-2xl font-extrabold text-gray-900">{{ total_listings|default:"0" }}</p>
-    </div>
-    <div class="bg-green-50 p-4 rounded-2xl border border-green-200 text-center">
+    </a>
+    <a href="?status=published{% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-green-50 p-4 rounded-2xl border border-green-200 text-center hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <p class="text-xs font-bold text-green-600 uppercase">Published</p>
         <p class="text-2xl font-extrabold text-green-700">{{ published_listings|default:"0" }}</p>
-    </div>
-    <div class="bg-yellow-50 p-4 rounded-2xl border border-yellow-200 text-center">
+    </a>
+    <a href="?status=pending_review{% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-yellow-50 p-4 rounded-2xl border border-yellow-200 text-center hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <p class="text-xs font-bold text-yellow-600 uppercase">Pending</p>
         <p class="text-2xl font-extrabold text-yellow-700">{{ pending_listings|default:"0" }}</p>
-    </div>
-    <div class="bg-blue-50 p-4 rounded-2xl border border-blue-200 text-center">
+    </a>
+    <a href="?status=draft{% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-blue-50 p-4 rounded-2xl border border-blue-200 text-center hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <p class="text-xs font-bold text-blue-600 uppercase">Draft</p>
         <p class="text-2xl font-extrabold text-blue-700">{{ draft_listings|default:"0" }}</p>
-    </div>
-    <div class="bg-purple-50 p-4 rounded-2xl border border-purple-200 text-center">
+    </a>
+    <a href="?featured=true{% for key, value in preserved_query_params %}{% if key != 'featured' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-purple-50 p-4 rounded-2xl border border-purple-200 text-center hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <p class="text-xs font-bold text-purple-600 uppercase">Featured</p>
         <p class="text-2xl font-extrabold text-purple-700">{{ featured_listings|default:"0" }}</p>
-    </div>
-    <div class="bg-red-50 p-4 rounded-2xl border border-red-200 text-center">
+    </a>
+    <a href="?status=sold{% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
+        class="block bg-red-50 p-4 rounded-2xl border border-red-200 text-center hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
         <p class="text-xs font-bold text-red-600 uppercase">Sold</p>
         <p class="text-2xl font-extrabold text-red-700">{{ sold_listings|default:"0" }}</p>
-    </div>
+    </a>
 </div>
 
 <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
@@ -156,17 +162,31 @@
 
     <!-- Pagination -->
     {% if page_obj.has_other_pages %}
-    <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-        <span class="text-sm text-gray-500">
-            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} listings
-        </span>
+    <div class="px-6 py-4 border-t border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <span class="text-sm text-gray-500">
+                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} listings
+            </span>
+            <form method="GET" class="flex items-center gap-2">
+                {% for key, value in preserved_query_params %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endfor %}
+                <span class="text-sm text-gray-500">Per page</span>
+                <select name="per_page" onchange="this.form.submit()"
+                    class="bg-white border border-gray-200 text-gray-700 py-1.5 px-3 rounded-lg font-bold text-sm">
+                    {% for opt in per_page_options %}
+                    <option value="{{ opt }}" {% if per_page == opt %}selected{% endif %}>{{ opt }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
         <div class="flex gap-2">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}"
+            <a href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
                 class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Previous</a>
             {% endif %}
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}"
+            <a href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
                 class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">Next</a>
             {% endif %}
         </div>

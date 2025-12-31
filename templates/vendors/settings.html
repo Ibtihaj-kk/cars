@@ -45,8 +45,7 @@
             <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Public Profile</h3>
                 <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200 mb-3">
-                    <span class="text-xs text-gray-600 truncate mr-2" id="profileUrl">corporatedock.com/v/{{ vendor.slug
-                        }}</span>
+                    <span class="text-xs text-gray-600 truncate mr-2" id="profileUrl">corporatedock.com/v/{{ vendor.slug }}</span>
                     <button type="button"
                         onclick="navigator.clipboard.writeText(document.getElementById('profileUrl').innerText)"
                         class="text-black hover:text-gray-600">
@@ -289,29 +288,6 @@
                             {% endif %}
                         </div>
 
-                        <!-- Bank Statement -->
-                        <div class="space-y-2">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
-                                Bank Statement <span class="text-red-500">*</span>
-                            </label>
-                            {{ form.bank_statement }}
-                            {% if vendor.vendor_profile.bank_statement %}
-                            <div
-                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
-                                <div class="flex items-center space-x-2">
-                                    <i class="fas fa-check-circle text-green-500"></i>
-                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
-                                </div>
-                                <a href="{{ vendor.vendor_profile.bank_statement.url }}" target="_blank"
-                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
-                                    View Document
-                                </a>
-                            </div>
-                            {% else %}
-                            <p class="text-xs text-gray-500">Upload recent bank statement (last 3 months)</p>
-                            {% endif %}
-                        </div>
-
                         <!-- Tax Certificate from Registration -->
                         {% if registration_documents.tax_certificate %}
                         <div class="space-y-2">
@@ -354,29 +330,6 @@
                             </div>
                             {% else %}
                             <p class="text-xs text-gray-500">Upload your VAT registration certificate</p>
-                            {% endif %}
-                        </div>
-
-                        <!-- Company Profile -->
-                        <div class="space-y-2">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
-                                Company Profile/Brochure <span class="text-red-500">*</span>
-                            </label>
-                            {{ form.company_profile }}
-                            {% if vendor.vendor_profile.company_profile %}
-                            <div
-                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
-                                <div class="flex items-center space-x-2">
-                                    <i class="fas fa-check-circle text-green-500"></i>
-                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
-                                </div>
-                                <a href="{{ vendor.vendor_profile.company_profile.url }}" target="_blank"
-                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
-                                    View Document
-                                </a>
-                            </div>
-                            {% else %}
-                            <p class="text-xs text-gray-500">Upload your company profile or brochure</p>
                             {% endif %}
                         </div>
 
@@ -426,29 +379,6 @@
                             {% endif %}
                         </div>
 
-                        <!-- Import/Export License -->
-                        <div class="space-y-2">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
-                                Import/Export License
-                            </label>
-                            {{ form.import_export_license }}
-                            {% if vendor.vendor_profile.import_export_license %}
-                            <div
-                                class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
-                                <div class="flex items-center space-x-2">
-                                    <i class="fas fa-check-circle text-green-500"></i>
-                                    <span class="text-sm font-medium text-green-700">Document Uploaded</span>
-                                </div>
-                                <a href="{{ vendor.vendor_profile.import_export_license.url }}" target="_blank"
-                                    class="text-xs text-green-600 hover:text-green-800 font-medium">
-                                    View Document
-                                </a>
-                            </div>
-                            {% else %}
-                            <p class="text-xs text-gray-500">Upload import/export license (if applicable)</p>
-                            {% endif %}
-                        </div>
-
                         <!-- Supplier Certification -->
                         <div class="space-y-2">
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
@@ -476,7 +406,7 @@
                         <!-- Commercial Invoice Sample -->
                         <div class="space-y-2 ">
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
-                                Sample Commercial Invoice <span class="text-red-500">*</span>
+                                Sample Commercial Invoice
                             </label>
                             {{ form.commercial_invoice_sample }}
                             {% if vendor.vendor_profile.commercial_invoice_sample %}
@@ -492,7 +422,7 @@
                                 </a>
                             </div>
                             {% else %}
-                            <p class="text-xs text-gray-500">Upload a sample of your commercial invoice format</p>
+                            <p class="text-xs text-gray-500">Upload a sample of your commercial invoice format (optional)</p>
                             {% endif %}
                         </div>
                     </div>
@@ -726,8 +656,7 @@
         // Add document completion progress indicator
         function updateDocumentProgress() {
             const requiredDocs = [
-                'cr_document', 'business_license', 'bank_statement',
-                'vat_certificate', 'commercial_invoice_sample', 'company_profile'
+                'cr_document', 'business_license', 'vat_certificate'
             ];
 
             let uploadedCount = 0;

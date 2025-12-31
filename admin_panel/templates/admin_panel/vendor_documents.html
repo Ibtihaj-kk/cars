@@ -1,0 +1,146 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}Vendor Documents{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{% url 'admin_panel:vendor_detail' vendor.id %}" class="text-blue-600 hover:underline text-sm">
+        <i class="fas fa-arrow-left mr-2"></i>Back to {{ vendor.name }}
+    </a>
+</div>
+
+<!-- Document Statistics -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+    <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm text-center">
+        <p class="text-xs font-bold text-gray-400 uppercase">Total</p>
+        <p class="text-2xl font-extrabold text-gray-900">{{ document_stats.total|default:0 }}</p>
+    </div>
+    <div class="bg-green-50 p-4 rounded-2xl border border-green-200 text-center">
+        <p class="text-xs font-bold text-green-600 uppercase">Verified</p>
+        <p class="text-2xl font-extrabold text-green-700">{{ document_stats.verified|default:0 }}</p>
+    </div>
+    <div class="bg-yellow-50 p-4 rounded-2xl border border-yellow-200 text-center">
+        <p class="text-xs font-bold text-yellow-600 uppercase">Pending</p>
+        <p class="text-2xl font-extrabold text-yellow-700">{{ document_stats.pending|default:0 }}</p>
+    </div>
+    <div class="bg-red-50 p-4 rounded-2xl border border-red-200 text-center">
+        <p class="text-xs font-bold text-red-600 uppercase">Rejected</p>
+        <p class="text-2xl font-extrabold text-red-700">{{ document_stats.rejected|default:0 }}</p>
+    </div>
+    <div class="bg-orange-50 p-4 rounded-2xl border border-orange-200 text-center">
+        <p class="text-xs font-bold text-orange-600 uppercase">Expired</p>
+        <p class="text-2xl font-extrabold text-orange-700">{{ document_stats.expired|default:0 }}</p>
+    </div>
+</div>
+
+<!-- Documents Table -->
+<div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-bold text-gray-900">Documents for {{ vendor.name }}</h3>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead class="bg-gray-50 border-b border-gray-200 text-xs uppercase font-bold text-gray-500">
+                <tr>
+                    <th class="px-6 py-4">Document</th>
+                    <th class="px-6 py-4">Category</th>
+                    <th class="px-6 py-4">Status</th>
+                    <th class="px-6 py-4">Uploaded</th>
+                    <th class="px-6 py-4">Expiry</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 text-sm">
+                {% for doc in documents %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold">{{ doc.name|default:"Document" }}</p>
+                                <p class="text-xs text-gray-500">{{ doc.file_size|filesizeformat }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">{{ doc.category.name|default:"Uncategorized" }}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded-full text-xs font-bold
+                            {% if doc.status == 'verified' %}bg-green-100 text-green-700
+                            {% elif doc.status == 'pending' %}bg-yellow-100 text-yellow-700
+                            {% elif doc.status == 'rejected' %}bg-red-100 text-red-700
+                            {% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ doc.status|title }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-gray-500">{{ doc.uploaded_at|date:"M d, Y" }}</td>
+                    <td class="px-6 py-4 text-gray-500">{{ doc.expiry_date|date:"M d, Y"|default:"N/A" }}</td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            {% if doc.file %}
+                            <a href="{{ doc.file.url }}" target="_blank" class="text-gray-400 hover:text-blue-600"
+                                title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ doc.file.url }}" download class="text-gray-400 hover:text-green-600"
+                                title="Download">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            {% endif %}
+                            {% if doc.status == 'pending' %}
+                            <form method="POST" action="{% url 'admin_panel:verify_vendor_document' doc.id %}"
+                                class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="verify">
+                                <button type="submit" class="text-gray-400 hover:text-green-600" title="Verify">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="{% url 'admin_panel:verify_vendor_document' doc.id %}"
+                                class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reject">
+                                <button type="submit" class="text-gray-400 hover:text-red-600" title="Reject">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-file-alt text-4xl mb-4 text-gray-300"></i>
+                        <p>No documents uploaded yet</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pending Verifications -->
+{% if pending_verifications %}
+<div class="bg-white rounded-2xl border shadow-sm overflow-hidden mt-6">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-bold text-gray-900">Pending Verifications</h3>
+    </div>
+    <div class="p-6 space-y-3">
+        {% for verification in pending_verifications %}
+        <div class="flex justify-between items-center p-4 border rounded-xl">
+            <div>
+                <p class="font-bold">{{ verification.document.name|default:"Document" }}</p>
+                <p class="text-sm text-gray-500">Assigned to: {{ verification.assigned_to.email|default:"Unassigned" }}
+                </p>
+            </div>
+            <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-bold">Pending</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
