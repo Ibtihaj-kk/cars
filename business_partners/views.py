@@ -721,8 +721,8 @@ class VendorSinglePageRegistrationView(VendorRegistrationMixin, View):
         application = self.get_or_create_application(request.user)
         
         # Get cities for dropdown
-        from parts.models import SaudiCity
-        cities = SaudiCity.objects.filter(is_active=True).order_by('name')
+        from parts.models import City
+        cities = City.objects.filter(is_active=True).order_by('name')
         
         context = {
             'application': application,
@@ -931,9 +931,10 @@ class VendorSinglePageRegistrationView(VendorRegistrationMixin, View):
                              application.user = user
                              application.save()
                              
-                             # Auto-login the user
-                             from django.contrib.auth import login
-                             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                             # Auto-login the user using CentralizedAuthenticationService
+                             from core.authentication import CentralizedAuthenticationService
+                             auth_service = CentralizedAuthenticationService()
+                             auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
                 
                 messages.success(request, 'Your vendor application has been submitted successfully!')
                 

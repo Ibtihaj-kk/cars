@@ -1,5 +1,5 @@
 """
-Enhanced admin authentication middleware for CorporateDock admin panel.
+Enhanced admin authentication middleware for CarSyncro admin panel.
 Provides session timeout, IP validation, and comprehensive security features.
 """
 import logging

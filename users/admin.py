@@ -65,7 +65,28 @@ class UserAdmin(BaseUserAdmin):
     inlines = (UserProfileInline,)
     
     # Custom admin actions
-    actions = ['make_verified', 'make_unverified', 'enable_2fa', 'disable_2fa', 'ban_users', 'unban_users', 'suspend_users', 'unsuspend_users', 'soft_delete_users', 'restore_users']
+    actions = ['reset_login_attempts', 'make_verified', 'make_unverified', 'enable_2fa', 'disable_2fa', 'ban_users', 'unban_users', 'suspend_users', 'unsuspend_users', 'soft_delete_users', 'restore_users']
+
+    def reset_login_attempts(self, request, queryset):
+        from django.apps import apps
+
+        AccessAttempt = apps.get_model('axes', 'AccessAttempt')
+        AccessFailureLog = apps.get_model('axes', 'AccessFailureLog')
+
+        deleted_attempts = 0
+        deleted_failures = 0
+        for user in queryset:
+            username = user.get_username()
+            deleted_attempts += AccessAttempt.objects.filter(username=username).delete()[0]
+            deleted_failures += AccessFailureLog.objects.filter(username=username).delete()[0]
+
+        self.message_user(
+            request,
+            f"Cleared {deleted_attempts} access attempts and {deleted_failures} failure logs.",
+            level=messages.SUCCESS,
+        )
+
+    reset_login_attempts.short_description = "Unlock selected users (reset login attempts)"
     
     def make_verified(self, request, queryset):
         """Mark selected users as verified."""

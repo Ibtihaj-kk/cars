@@ -450,7 +450,7 @@ def send_import_notification_email(user_id, upload_log_id, import_type):
         user = User.objects.get(id=user_id)
         upload_log = BulkUploadLog.objects.get(id=upload_log_id)
         
-        subject = f'CorporateDock - {import_type.upper()} Import Completed'
+        subject = f'CarSyncro - {import_type.upper()} Import Completed'
         
         if upload_log.status == 'completed':
             message = f"""

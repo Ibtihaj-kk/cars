@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base.html' %}
+{% load vendor_currency %}
 {% block header_title %}Listings Management{% endblock %}
 
 {% block content %}
@@ -105,7 +106,7 @@
                     <td class="px-6 py-4">
                         <p class="text-sm">{{ listing.user.email }}</p>
                     </td>
-                    <td class="px-6 py-4 font-bold">${{ listing.price|floatformat:0|intcomma }}</td>
+                    <td class="px-6 py-4 font-bold">{% vendor_currency listing.price|default:0 %}</td>
                     <td class="px-6 py-4">
                         <span class="px-2 py-1 rounded-full text-xs font-bold
                             {% if listing.status == 'published' %}bg-green-100 text-green-700

@@ -178,14 +178,14 @@
                                     class="text-red-500">*</span></label>
                             <select name="original_currency" id="id_original_currency"
                                 class="form-select w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                <option value="{{ vendor_profile.preferred_currency|default:'USD' }}" selected>
-                                    {{vendor_profile.preferred_currency|default:'USD' }}</option>
-                                {% if vendor_profile.preferred_currency != 'USD' %}<option value="USD">USD</option>{%endif%}
+                                <option value="{{ vendor_profile.preferred_currency|default:'AED' }}" selected>
+                                    {{vendor_profile.preferred_currency|default:'AED' }}</option>
                                 {% if vendor_profile.preferred_currency != 'AED' %}<option value="AED">AED</option>{%endif%}
                                 {% if vendor_profile.preferred_currency != 'SAR' %}<option value="SAR">SAR</option>{%endif%}
+                                {% if vendor_profile.preferred_currency != 'QAR' %}<option value="QAR">QAR</option>{%endif%}
+                                {% if vendor_profile.preferred_currency != 'OMR' %}<option value="OMR">OMR</option>{%endif%}
+                                {% if vendor_profile.preferred_currency != 'BHD' %}<option value="BHD">BHD</option>{%endif%}
                                 {% if vendor_profile.preferred_currency != 'PKR' %}<option value="PKR">PKR</option>{%endif%}
-                                {% if vendor_profile.preferred_currency != 'EUR' %}<option value="EUR">EUR</option>{%endif%}
-                                {% if vendor_profile.preferred_currency != 'GBP' %}<option value="GBP">GBP</option>{%endif%}
                             </select>
                         </div>
                         <div>

@@ -5,7 +5,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corporate Dock | Automotive Marketplace</title>
+    <title>CarSyncro | Automotive Marketplace</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon-cs.png' %}">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap"
@@ -188,8 +189,8 @@
         <nav class="flex items-center justify-between relative z-50 p-4 md:px-8">
             <div>
                 <a href="{% url 'home' %}">
-                    <img src="{% static 'images/logo.png' %}" alt="Corporate Dock Logo"
-                        class="h-16 md:h-20 w-auto object-contain">
+                    <img src="{% static 'images/car-syncro.png' %}" alt="CarSyncro Logo"
+                        class="h-10 md:h-12 w-auto object-contain">
                 </a>
             </div>
 
@@ -244,10 +245,19 @@
                             <p class="text-sm font-bold text-gray-900 truncate">{{ user.email }}</p>
                         </div>
 
-                        {% if user.vendor_profiles.exists %}
+                        {% if user.is_admin or user.is_staff_member %}
+                        <a href="{% url 'admin_panel:dashboard' %}"
+                            class="flex items-center px-5 py-2.5 text-sm text-gray-600 hover:text-black hover:bg-gray-50 transition-colors font-medium">
+                            <i class="fas fa-tachometer-alt w-5 text-gray-400"></i> Admin Dashboard
+                        </a>
+                        <a href="{% url 'admin_panel:settings' %}"
+                            class="flex items-center px-5 py-2.5 text-sm text-gray-600 hover:text-black hover:bg-gray-50 transition-colors font-medium">
+                            <i class="fas fa-cog w-5 text-gray-400"></i> Settings
+                        </a>
+                        {% elif user.vendor_profiles.exists or user.is_seller or user_has_vendor_access %}
                         <a href="{% url 'business_partners:vendor_dashboard' %}"
                             class="flex items-center px-5 py-2.5 text-sm text-gray-600 hover:text-black hover:bg-gray-50 transition-colors font-medium">
-                            <i class="fas fa-tachometer-alt w-5 text-gray-400"></i> Dashboard
+                            <i class="fas fa-tachometer-alt w-5 text-gray-400"></i> Vendor Dashboard
                         </a>
                         <a href="{% url 'business_partners:vendor_profile' %}"
                             class="flex items-center px-5 py-2.5 text-sm text-gray-600 hover:text-black hover:bg-gray-50 transition-colors font-medium">
@@ -256,7 +266,7 @@
                         {% else %}
                         <a href="{% url 'users:user-dashboard' %}"
                             class="flex items-center px-5 py-2.5 text-sm text-gray-600 hover:text-black hover:bg-gray-50 transition-colors font-medium">
-                            <i class="fas fa-tachometer-alt w-5 text-gray-400"></i> Dashboard
+                            <i class="fas fa-tachometer-alt w-5 text-gray-400"></i> User Dashboard
                         </a>
                         <a href="{% url 'users:user-profile' %}"
                             class="flex items-center px-5 py-2.5 text-sm text-gray-600 hover:text-black hover:bg-gray-50 transition-colors font-medium">
@@ -359,7 +369,7 @@
                 <h2 class="retail-title">Easy Retail & Online Store</h2>
                 <p class="retail-text">
                     Seamlessly manage your automotive business with our comprehensive vendor tools. From real-time
-                    inventory tracking to automated order fulfillment, Corporate Dock streamlines your operations so you
+                    inventory tracking to automated order fulfillment, CarSyncro streamlines your operations so you
                     can focus on growth.
                     <br><br>
                     Our platform integrates secure payment gateways, instant messaging with customers, and detailed
@@ -388,7 +398,7 @@
                     <div class="ad-content">
                         <h3 style="color: white;">Strategic Partnerships</h3>
                         <p class="ad-description" style="color: #ccc;">
-                            Collaborate with Corporate Dock for premium homepage banner placements. Perfect for verified
+                            Collaborate with CarSyncro for premium homepage banner placements. Perfect for verified
                             vendors launching new product lines or running seasonal clearance campaigns.
                         </p>
                     </div>
@@ -412,7 +422,7 @@
             </button>
 
             <div class="text-center mb-8">
-                <h2 class="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Join Corporate Dock</h2>
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Join CarSyncro</h2>
                 <p class="text-gray-500">Select your account type to continue</p>
             </div>
 

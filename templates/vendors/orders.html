@@ -1,7 +1,7 @@
 {% extends 'vendors/base.html' %}
 {% load static %}
 
-{% block title %}Orders - Corporate Dock{% endblock %}
+{% block title %}Orders - CarSyncro{% endblock %}
 
 {% load vendor_currency %}
 
@@ -80,7 +80,7 @@
                         <th class="px-6 py-4 font-medium whitespace-nowrap">Customer</th>
                         <th class="px-6 py-4 font-medium whitespace-nowrap">Payment</th>
                         <th class="px-6 py-4 font-medium whitespace-nowrap">Fulfillment</th>
-                        <th class="px-6 py-4 font-medium whitespace-nowrap">Total</th>
+                        <th class="px-6 py-4 font-medium whitespace-nowrap relative pr-10">Total <span class="absolute top-2 right-2 text-[10px] font-extrabold text-gray-400">{% vendor_currency_symbol %}</span></th>
                         <th class="px-6 py-4 font-medium text-right whitespace-nowrap">Action</th>
                     </tr>
                 </thead>
@@ -113,7 +113,7 @@
                                 {{ order.get_status_display }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 font-bold whitespace-nowrap">{% vendor_currency order.vendor_total %}</td>
+                        <td class="px-6 py-4 font-bold whitespace-nowrap">{% vendor_currency_value order.vendor_total %}</td>
                         <td class="px-6 py-4 text-right whitespace-nowrap">
                             <a href="{% url 'business_partners:vendor_order_detail' order.id %}" class="bg-black text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-gray-800 shadow-sm inline-block">
                                 Manage Order

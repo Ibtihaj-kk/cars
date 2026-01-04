@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base.html' %}
+{% load vendor_currency %}
 {% block header_title %}Orders Management{% endblock %}
 
 {% block content %}
@@ -35,9 +36,10 @@
         <p class="text-2xl font-extrabold text-red-700">{{ order_stats.cancelled|default:"0" }}</p>
     </a>
     <a href="{% url 'admin_panel:orders' %}?status={% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
-        class="block bg-gradient-to-br from-gray-800 to-gray-900 p-4 rounded-2xl text-center text-white hover:shadow-xl transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
+        class="block bg-gradient-to-br from-gray-800 to-gray-900 p-4 rounded-2xl text-center text-white hover:shadow-xl transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 relative">
+        <span class="absolute top-2 right-2 text-xs font-extrabold text-gray-200">{% vendor_currency_symbol %}</span>
         <p class="text-xs font-bold text-gray-300 uppercase">Revenue</p>
-        <p class="text-xl font-extrabold">${{ order_stats.total_revenue|floatformat:0|default:"0" }}</p>
+        <p class="text-xl font-extrabold">{% vendor_currency_value order_stats.total_revenue|default:0 %}</p>
     </a>
 </div>
 
@@ -110,7 +112,7 @@
                         <span class="font-bold">{{ order.vendor_bp_numbers_display|default:"-" }}</span>
                     </td>
                     <td class="px-6 py-4">{{ order.items.count }} items</td>
-                    <td class="px-6 py-4 font-bold">${{ order.total_price|floatformat:2 }}</td>
+                    <td class="px-6 py-4 font-bold">{% vendor_currency order.total_price|default:0 %}</td>
                     <td class="px-6 py-4">
                         <span class="px-2 py-1 rounded-full text-xs font-bold
                             {% if order.status == 'delivered' %}bg-green-100 text-green-700

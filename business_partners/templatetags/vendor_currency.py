@@ -18,6 +18,23 @@ CURRENCY_SYMBOLS = {
     'INR': '₹',
 }
 
+def _format_amount_without_symbol(currency, amount):
+    rounded_amount = round(float(amount), currency.decimal_places)
+
+    if currency.decimal_places > 0:
+        formatted_amount = f"{rounded_amount:,.{currency.decimal_places}f}"
+    else:
+        formatted_amount = f"{int(rounded_amount):,}"
+
+    if currency.thousands_separator != ',':
+        formatted_amount = formatted_amount.replace(',', '|TEMP|')
+        formatted_amount = formatted_amount.replace('.', currency.decimal_separator)
+        formatted_amount = formatted_amount.replace('|TEMP|', currency.thousands_separator)
+    elif currency.decimal_separator != '.':
+        formatted_amount = formatted_amount.replace('.', currency.decimal_separator)
+
+    return formatted_amount
+
 def _compact_number(value):
     try:
         number = float(value)
@@ -126,6 +143,52 @@ def vendor_currency(context, amount):
         return f"{symbol} {formatted_amount}"
 
 @register.simple_tag(takes_context=True)
+def vendor_currency_value(context, amount):
+    if amount is None:
+        return ""
+
+    request = context.get('request')
+    currency_code = None
+
+    if request:
+        currency_code = request.session.get('currency_code') if hasattr(request, 'session') else None
+        if not currency_code and getattr(request, 'currency', None):
+            currency_code = request.currency.code
+
+    if not currency_code and request and hasattr(request, 'user') and request.user.is_authenticated:
+        currency_code = get_user_currency(request.user)
+
+    currency_code = (currency_code or 'USD').upper()
+
+    if hasattr(amount, 'get_display_price') and callable(getattr(amount, 'get_display_price', None)):
+        try:
+            displayed = amount.get_display_price(currency_code)
+            if isinstance(displayed, str):
+                return displayed
+        except Exception:
+            pass
+
+    try:
+        amount = float(amount)
+    except (ValueError, TypeError):
+        return amount
+
+    try:
+        from core.models import Currency, ExchangeRate
+        from decimal import Decimal as D
+
+        display_currency = Currency.objects.get(code=currency_code, is_active=True)
+        base_amount = D(str(amount))
+
+        if display_currency.code != 'USD':
+            rate_from_usd = ExchangeRate.get_current_rate('USD', display_currency.code)
+            base_amount = base_amount * D(str(rate_from_usd))
+
+        return _format_amount_without_symbol(display_currency, base_amount)
+    except Exception:
+        return intcomma(f"{float(amount):.2f}")
+
+@register.simple_tag(takes_context=True)
 def vendor_currency_part_field(context, part, field_name):
     if part is None or not field_name:
         return ""
@@ -221,6 +284,49 @@ def vendor_currency_compact(context, amount):
             formatted_amount = intcomma(f"{float(amount):.2f}")
             return f"{symbol} {formatted_amount}"
         return f"{symbol} {compact}"
+
+@register.simple_tag(takes_context=True)
+def vendor_currency_compact_value(context, amount):
+    if amount is None:
+        return ""
+
+    request = context.get('request')
+    currency_code = None
+
+    if request:
+        currency_code = request.session.get('currency_code') if hasattr(request, 'session') else None
+        if not currency_code and getattr(request, 'currency', None):
+            currency_code = request.currency.code
+
+    if not currency_code and request and hasattr(request, 'user') and request.user.is_authenticated:
+        currency_code = get_user_currency(request.user)
+
+    currency_code = (currency_code or 'USD').upper()
+
+    try:
+        amount = float(amount)
+    except (ValueError, TypeError):
+        return amount
+
+    try:
+        from core.models import Currency, ExchangeRate
+        from decimal import Decimal as D
+
+        display_currency = Currency.objects.get(code=currency_code, is_active=True)
+        base_amount = D(str(amount))
+
+        if display_currency.code != 'USD':
+            rate_from_usd = ExchangeRate.get_current_rate('USD', display_currency.code)
+            base_amount = base_amount * D(str(rate_from_usd))
+
+        if abs(float(base_amount)) < 1000:
+            return _format_amount_without_symbol(display_currency, base_amount)
+
+        return _compact_number(float(base_amount))
+    except Exception:
+        if abs(amount) < 1000:
+            return intcomma(f"{float(amount):.2f}")
+        return _compact_number(amount)
 
 @register.simple_tag(takes_context=True)
 def vendor_currency_symbol(context):

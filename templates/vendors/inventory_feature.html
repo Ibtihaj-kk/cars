@@ -4,20 +4,23 @@
 
 {% block content %}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <a href="{% url 'business_partners:vendor_order_analytics' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition">
-            <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency_compact stats.total_revenue %}</h3>
+        <a href="{% url 'business_partners:vendor_order_analytics' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition relative">
+            <span class="absolute top-4 right-4 text-md font-extrabold text-gray-400 z-10">{% vendor_currency_symbol %}</span>
+            <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency_compact_value stats.total_revenue %}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Total Revenue</p>
         </a>
         <a href="{% url 'business_partners:vendor_order_analytics' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition">
             <h3 class="text-2xl font-extrabold text-gray-900">{{ stats.total_units|default:"0"|compact_number }}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Units Sold</p>
         </a>
-        <a href="{% url 'business_partners:vendor_order_analytics' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition">
-            <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency_compact stats.monthly_sales %}</h3>
+        <a href="{% url 'business_partners:vendor_order_analytics' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition relative">
+            <span class="absolute top-4 right-4 text-md font-extrabold text-gray-400 z-10">{% vendor_currency_symbol %}</span>
+            <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency_compact_value stats.monthly_sales %}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Monthly Sales</p>
         </a>
-        <a href="{% url 'business_partners:vendor_inventory_list' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition">
-            <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency_compact stats.inventory_value %}</h3>
+        <a href="{% url 'business_partners:vendor_inventory_list' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition relative">
+            <span class="absolute top-4 right-4 text-md font-extrabold text-gray-400 z-10">{% vendor_currency_symbol %}</span>
+            <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency_compact_value stats.inventory_value %}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Inventory Value</p>
         </a>
     </div>

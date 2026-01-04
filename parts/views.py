@@ -24,7 +24,7 @@ from decimal import Decimal
 
 from .models import (
     Part, Category, Brand, Inventory, Order, OrderItem, Review, BulkUploadLog, 
-    IntegrationSource, Cart, CartItem, DiscountCode, OrderDiscount, SaudiCity, 
+    IntegrationSource, Cart, CartItem, DiscountCode, OrderDiscount, City, 
     CityArea, ShippingRate, OrderShipping, OrderStatusHistory
 )
 # from vehicles.models import VehicleMake, VehicleModelTaxonomy, VehicleVariant  # Disabled - vehicles not in INSTALLED_APPS
@@ -94,15 +94,26 @@ def set_country_currency(request):
     from business_partners.utils import get_currency_for_country
     from core.models import Currency
 
-    country = (request.GET.get('country') or '').strip()
-    currency_code = get_currency_for_country(country) if country else 'USD'
-    currency_code = (currency_code or 'USD').upper()
+    allowed_codes = {'AED', 'SAR', 'QAR', 'OMR', 'BHD', 'PKR'}
+
+    currency_param = (request.GET.get('currency') or '').strip()
+    if currency_param:
+        currency_code = currency_param
+    else:
+        country = (request.GET.get('country') or '').strip()
+        currency_code = get_currency_for_country(country) if country else 'USD'
+
+    currency_code = (currency_code or 'SAR').upper()
+    if currency_code not in allowed_codes:
+        currency_code = 'SAR'
 
     try:
         currency = Currency.objects.get(code=currency_code, is_active=True)
         request.session['currency_code'] = currency.code
+        request.session['currency_override'] = currency.code
     except Exception:
         request.session['currency_code'] = currency_code
+        request.session['currency_override'] = currency_code
 
     next_url = request.GET.get('next') or request.META.get('HTTP_REFERER') or '/'
     if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
@@ -2082,7 +2093,10 @@ def add_to_cart(request, part_id):
                         cart_item.quantity = new_quantity
                     else:
                         cart_item.quantity = quantity
-                    cart_item.save()
+                    
+                    # Lock exchange rate for 15 minutes (Amazon-style soft lock)
+                    cart_item.lock_exchange_rate()
+                    cart.refresh_rate_locks()
                     cart_count = cart.total_items
                     cart_total = float(cart.total_price)
                 else:
@@ -2605,7 +2619,7 @@ def checkout_view(request):
                     order.deduct_inventory()
                     
                     # Create Shipping Info
-                    city = SaudiCity.objects.get(id=city_id)
+                    city = City.objects.get(id=city_id)
                     city_area = None
                     if city_area_id:
                          try:
@@ -2661,15 +2675,15 @@ def checkout_view(request):
                 # But here the template uses a select box with ID. 
                 # Ideally we should store city ID in profile or handle matching logic.
                 # For now, let's pass it and let the template decide or if we can match it.
-                # Check if profile.city matches any SaudiCity name
-                city_obj = SaudiCity.objects.filter(name__iexact=profile.city).first()
+                # Check if profile.city matches any City name
+                city_obj = City.objects.filter(name__iexact=profile.city).first()
                 if city_obj:
                     user_data['city_id'] = city_obj.id
             if profile.postal_code:
                 user_data['postal_code'] = profile.postal_code
 
     # Cities for dropdown
-    cities = SaudiCity.objects.filter(is_active=True).order_by('name')
+    cities = City.objects.filter(is_active=True).order_by('name')
     
     context = {
         'cart_items': cart_items_list,
@@ -2708,7 +2722,7 @@ def send_order_confirmation_email(order):
         send_mail(
             subject=subject,
             message=message,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@corporatedock.com'),
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@carsyncro.com'),
             recipient_list=[order.customer_email],
             html_message=html_message,
             fail_silently=False,
@@ -2763,6 +2777,10 @@ def add_to_cart_authenticated(request, part_id):
                 })
             cart_item.quantity = new_quantity
             cart_item.save()
+        
+        # Lock exchange rate for 15 minutes (Amazon-style soft lock)
+        cart_item.lock_exchange_rate()
+        cart.refresh_rate_locks()
         
         return JsonResponse({
             'success': True,
@@ -3125,7 +3143,7 @@ def checkout_view(request):
                         part.save()
                     
                     # Create Shipping Info
-                    city = SaudiCity.objects.get(id=city_id)
+                    city = City.objects.get(id=city_id)
                     city_area = None
                     if city_area_id:
                          try:
@@ -3177,15 +3195,15 @@ def checkout_view(request):
             if profile.address:
                 user_data['address'] = profile.address
             if profile.city:
-                # Check if profile.city matches any SaudiCity name
-                city_obj = SaudiCity.objects.filter(name__iexact=profile.city).first()
+                # Check if profile.city matches any City name
+                city_obj = City.objects.filter(name__iexact=profile.city).first()
                 if city_obj:
                     user_data['city_id'] = city_obj.id
             if profile.postal_code:
                 user_data['postal_code'] = profile.postal_code
 
     # Cities for dropdown
-    cities = SaudiCity.objects.filter(is_active=True).order_by('name')
+    cities = City.objects.filter(is_active=True).order_by('name')
 
     context = {
         'cart_items': cart_items_list,
@@ -3446,7 +3464,7 @@ def checkout_step2_shipping_info(request):
                 messages.warning(request, 'Your cart is empty.')
                 return redirect('parts:cart_view')
     
-    cities = SaudiCity.objects.filter(is_active=True).order_by('name')
+    cities = City.objects.filter(is_active=True).order_by('name')
     
     if request.method == 'POST':
         # Collect shipping information - map template field names to our data structure
@@ -3493,7 +3511,7 @@ def checkout_step2_shipping_info(request):
                 messages.error(request, error)
         else:
             try:
-                city = SaudiCity.objects.get(id=city_id, is_active=True)
+                city = City.objects.get(id=city_id, is_active=True)
                 city_area = None
                 if city_area_id:
                     city_area = CityArea.objects.get(id=city_area_id, city=city, is_active=True)
@@ -3601,7 +3619,7 @@ def checkout_step2_shipping_info(request):
                 
                 return redirect('parts:checkout_step3')
                 
-            except (SaudiCity.DoesNotExist, CityArea.DoesNotExist):
+            except (City.DoesNotExist, CityArea.DoesNotExist):
                 messages.error(request, 'Invalid city or area selection.')
     
     # Get city areas for each city to populate the area dropdown
@@ -3723,6 +3741,43 @@ def checkout_step3_payment_method(request):
                             
                             # Create the order
                             order = Order.objects.create(**order_data)
+                            
+                            # Lock exchange rates for 24 hours (Amazon-style hard lock)
+                            if not buy_now_order:
+                                if request.user.is_authenticated:
+                                    # Database cart for authenticated users
+                                    if cart:
+                                        order.lock_exchange_rates(cart)
+                                else:
+                                    # Session cart for guest users - validate rates are still valid
+                                    cart_data = get_cart(request)
+                                    if cart_data:
+                                        # For guest users, we need to validate that rates haven't expired
+                                        # during the checkout process (15-minute soft lock)
+                                        from datetime import timedelta
+                                        from django.utils import timezone
+                                        
+                                        # Check if any cart items have expired rates
+                                        rate_expired = False
+                                        for part_id, item_data in cart_data.items():
+                                            try:
+                                                part = Part.objects.get(id=part_id, is_active=True)
+                                                # Check if this part has a vendor with currency
+                                                if hasattr(part, 'vendor') and part.vendor and part.vendor.currency:
+                                                    # Check if rate was locked and if it's still valid
+                                                    rate_key = f"locked_rate_{part_id}"
+                                                    if rate_key in request.session:
+                                                        rate_data = request.session[rate_key]
+                                                        locked_at = rate_data.get('locked_at')
+                                                        if locked_at and timezone.now() > locked_at + timedelta(minutes=15):
+                                                            rate_expired = True
+                                                            break
+                                            except Part.DoesNotExist:
+                                                continue
+                                        
+                                        if rate_expired:
+                                            messages.error(request, 'Exchange rates have expired. Please review your cart and try again.')
+                                            return redirect('parts:cart_view')
                         
                         # Create order items (only for regular cart orders)
                         if not buy_now_order:
@@ -3730,11 +3785,17 @@ def checkout_step3_payment_method(request):
                                 # Database cart for authenticated users
                                 if cart:
                                     for cart_item in cart.items.all():
+                                        # Use locked exchange rate if available, otherwise fallback to current price
+                                        locked_price = cart_item.get_price_in_user_currency() if hasattr(cart_item, 'get_price_in_user_currency') else cart_item.part.price
+                                        
                                         OrderItem.objects.create(
                                             order=order,
                                             part=cart_item.part,
                                             quantity=cart_item.quantity,
-                                            price=cart_item.part.price
+                                            price=locked_price,
+                                            locked_exchange_rate=cart_item.locked_exchange_rate if hasattr(cart_item, 'locked_exchange_rate') else None,
+                                            original_currency_code=cart_item.part.vendor.currency.code if hasattr(cart_item.part, 'vendor') and cart_item.part.vendor and cart_item.part.vendor.currency else 'USD',
+                                            vendor_currency_amount=cart_item.vendor_currency_amount if hasattr(cart_item, 'vendor_currency_amount') else None
                                         )
                             else:
                                 # Session cart for guest users
@@ -3758,7 +3819,7 @@ def checkout_step3_payment_method(request):
                             order.deduct_inventory()
                         
                         # Create shipping information (for both buy now and regular orders)
-                        city = SaudiCity.objects.get(id=checkout_data['city_id'])
+                        city = City.objects.get(id=checkout_data['city_id'])
                         city_area = None
                         if checkout_data.get('city_area_id'):
                             city_area = CityArea.objects.get(id=checkout_data['city_area_id'])
@@ -3899,7 +3960,7 @@ def get_city_areas(request):
     
     if city_id:
         try:
-            city = SaudiCity.objects.get(id=city_id, is_active=True)
+            city = City.objects.get(id=city_id, is_active=True)
             areas = city.areas.filter(is_active=True).order_by('name')
             
             areas_data = [
@@ -3911,12 +3972,42 @@ def get_city_areas(request):
                 'success': True,
                 'areas': areas_data
             })
-        except SaudiCity.DoesNotExist:
+        except City.DoesNotExist:
             pass
     
     return JsonResponse({
         'success': False,
         'areas': []
+    })
+
+
+def get_cities_by_country(request):
+    """Get cities for a selected country via AJAX."""
+    country_code = request.GET.get('country_code')
+    
+    if country_code:
+        try:
+            # Get cities for the selected country
+            cities = City.objects.filter(
+                country__code=country_code, 
+                is_active=True
+            ).order_by('name')
+            
+            cities_data = [
+                {'id': city.id, 'name': city.name}
+                for city in cities
+            ]
+            
+            return JsonResponse({
+                'success': True,
+                'cities': cities_data
+            })
+        except Exception as e:
+            print(f"Error fetching cities for country {country_code}: {e}")
+    
+    return JsonResponse({
+        'success': False,
+        'cities': []
     })
 
 

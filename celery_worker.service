@@ -7,15 +7,15 @@ Type=forking
 User=www-data
 Group=www-data
 WorkingDirectory=/var/www/CorporateDock
-Environment="PATH=/var/www/CorporateDock/venv/bin"
-Environment="DJANGO_SETTINGS_MODULE=CorporateDock_project.settings"
+Environment="PATH=/var/www/CarSyncro/venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=yallamotor_project.settings"
 ExecStart=/var/www/CorporateDock/venv/bin/celery -A CorporateDock_project worker \
     --detach \
     --loglevel=info \
-    --logfile=/var/log/celery/CorporateDock-worker.log \
+    --logfile=/var/log/celery/CarSyncro-worker.log \
     --pidfile=/var/run/celery/CorporateDock-worker.pid
 ExecStop=/var/www/CorporateDock/venv/bin/celery -A CorporateDock_project control shutdown
-ExecReload=/var/www/CorporateDock/venv/bin/celery -A CorporateDock_project control reload
+ExecReload=/var/www/CarSyncro/venv/bin/celery -A yallamotor_project control reload
 Restart=always
 RestartSec=10s
 

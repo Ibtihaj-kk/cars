@@ -226,6 +226,27 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
             
             item_tax = item.quantity * item.price * tax_rate
             item_total_with_tax = (item.quantity * item.price) + item_tax
+            
+            # Get vendor currency amounts using locked exchange rates
+            vendor_currency_amount = None
+            vendor_currency_code = None
+            vendor_currency_total = None
+            vendor_currency_tax = None
+            vendor_currency_grand_total = None
+            
+            if hasattr(item, 'vendor_currency_amount') and item.vendor_currency_amount:
+                vendor_currency_amount = item.vendor_currency_amount
+                vendor_currency_code = item.original_currency_code if hasattr(item, 'original_currency_code') else 'USD'
+                vendor_currency_total = item.quantity * vendor_currency_amount
+                vendor_currency_tax = vendor_currency_total * tax_rate
+                vendor_currency_grand_total = vendor_currency_total + vendor_currency_tax
+            elif hasattr(item.part, 'vendor') and item.part.vendor and item.part.vendor.currency:
+                # Fallback: calculate using current exchange rates if locked rates not available
+                vendor_currency_code = item.part.vendor.currency.code
+                vendor_currency_amount = item.part.get_price_in_vendor_currency()
+                vendor_currency_total = item.quantity * vendor_currency_amount
+                vendor_currency_tax = vendor_currency_total * tax_rate
+                vendor_currency_grand_total = vendor_currency_total + vendor_currency_tax
 
             item_data = {
                 'item': item,
@@ -237,7 +258,12 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
                 'tax_rate': tax_rate,
                 'tax_rate_display': tax_rate_display,
                 'tax_amount': item_tax,
-                'total_with_tax': item_total_with_tax
+                'total_with_tax': item_total_with_tax,
+                'vendor_currency_amount': vendor_currency_amount,
+                'vendor_currency_code': vendor_currency_code,
+                'vendor_currency_total': vendor_currency_total,
+                'vendor_currency_tax': vendor_currency_tax,
+                'vendor_currency_grand_total': vendor_currency_grand_total
             }
             enhanced_vendor_items.append(item_data)
             vendor_statuses_list.append(current_status)

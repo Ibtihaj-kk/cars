@@ -25,7 +25,7 @@
                     <th class="px-4 py-4 font-medium hidden lg:table-cell">SKU</th>
                     <th class="px-4 py-4 font-medium hidden xl:table-cell">Make</th>
                     <th class="px-4 py-4 font-medium">Stock</th>
-                    <th class="px-4 py-4 font-medium">Price</th>
+                    <th class="px-4 py-4 font-medium relative pr-8">Price <span class="absolute top-2 right-2 text-[10px] font-extrabold text-gray-400">{% vendor_currency_symbol %}</span></th>
                     <th class="px-4 py-4 font-medium">Status</th>
                     <th class="px-4 py-4 font-medium text-right">Actions</th>
                 </tr>
@@ -80,7 +80,7 @@
                             {% endif %}
                         </div>
                     </td>
-                    <td class="px-4 py-4 font-bold whitespace-nowrap">{% vendor_currency part.price %}</td>
+                    <td class="px-4 py-4 font-bold whitespace-nowrap">{% vendor_currency_value part.price %}</td>
                     <td class="px-4 py-4 whitespace-nowrap">
                         <div class="flex flex-col gap-1">
                             <!-- Publication Status -->

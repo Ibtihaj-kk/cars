@@ -2,186 +2,188 @@
 {% load static %}
 {% load vendor_currency %}
 
-{% block title %}My Dashboard | CorporateDock{% endblock %}
+{% block title %}My Dashboard | CarSyncro{% endblock %}
 
 {% block content %}
 <div class="stats-grid">
     {% if user.is_admin %}
-        <!-- Admin Stats -->
-        <div class="stat-card dark">
-            <div class="stat-header">
-                <div class="stat-icon"><i class="fas fa-users"></i></div>
-            </div>
-            <div class="stat-value">{{ total_users }}</div>
-            <div class="stat-label">Total Users</div>
+    <!-- Admin Stats -->
+    <div class="stat-card dark">
+        <div class="stat-header">
+            <div class="stat-icon"><i class="fas fa-users"></i></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon" style="color:black;"><i class="fas fa-car"></i></div>
-            </div>
-            <div class="stat-value">{{ total_listings }}</div>
-            <div class="stat-label">Total Listings</div>
+        <div class="stat-value">{{ total_users }}</div>
+        <div class="stat-label">Total Users</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color:black;"><i class="fas fa-car"></i></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon" style="color:#F59E0B;"><i class="fas fa-envelope"></i></div>
-            </div>
-            <div class="stat-value">{{ total_inquiries }}</div>
-            <div class="stat-label">Total Inquiries</div>
+        <div class="stat-value">{{ total_listings }}</div>
+        <div class="stat-label">Total Listings</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color:#F59E0B;"><i class="fas fa-envelope"></i></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon" style="color:#EF4444;"><i class="fas fa-chart-line"></i></div>
-            </div>
-            <div class="stat-value">Active</div>
-            <div class="stat-label">System Status</div>
+        <div class="stat-value">{{ total_inquiries }}</div>
+        <div class="stat-label">Total Inquiries</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color:#EF4444;"><i class="fas fa-chart-line"></i></div>
         </div>
+        <div class="stat-value">Active</div>
+        <div class="stat-label">System Status</div>
+    </div>
 
     {% elif user.is_seller %}
-        <!-- Seller Stats -->
-        <div class="stat-card dark">
-            <div class="stat-header">
-                <div class="stat-icon"><i class="fas fa-car"></i></div>
-            </div>
-            <div class="stat-value">{{ total_listings }}</div>
-            <div class="stat-label">My Listings</div>
+    <!-- Seller Stats -->
+    <div class="stat-card dark">
+        <div class="stat-header">
+            <div class="stat-icon"><i class="fas fa-car"></i></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon" style="color:black;"><i class="fas fa-envelope"></i></div>
-            </div>
-            <div class="stat-value">{{ total_inquiries }}</div>
-            <div class="stat-label">Inquiries Received</div>
+        <div class="stat-value">{{ total_listings }}</div>
+        <div class="stat-label">My Listings</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color:black;"><i class="fas fa-envelope"></i></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon" style="color:#F59E0B;"><i class="fas fa-star"></i></div>
-            </div>
-            <div class="stat-value">--</div>
-            <div class="stat-label">Rating</div>
+        <div class="stat-value">{{ total_inquiries }}</div>
+        <div class="stat-label">Inquiries Received</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color:#F59E0B;"><i class="fas fa-star"></i></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon" style="color:#EF4444;"><i class="fas fa-eye"></i></div>
-            </div>
-            <div class="stat-value">--</div>
-            <div class="stat-label">Total Views</div>
+        <div class="stat-value">--</div>
+        <div class="stat-label">Rating</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color:#EF4444;"><i class="fas fa-eye"></i></div>
         </div>
+        <div class="stat-value">--</div>
+        <div class="stat-label">Total Views</div>
+    </div>
 
     {% else %}
-        <!-- Client Stats -->
-        <div class="stat-card dark">
-            <div class="stat-header">
-                <div class="stat-icon"><i class="fas fa-wallet"></i></div>
-                <span style="font-size:20px;">...</span>
-            </div>
-            <div class="stat-value">{% vendor_currency total_spent %}</div>
-            <div class="stat-trend"><i class="fas fa-arrow-up"></i> Total Spent</div>
+    <!-- Client Stats -->
+    <div class="stat-card dark">
+        <div class="stat-header">
+            <div class="stat-icon"><i class="fas fa-wallet"></i></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon" style="color:black;"><i class="fas fa-box-open"></i></div>
-            </div>
-            <div class="stat-value">{{ total_orders }}</div>
-            <div class="stat-label">Total Orders</div>
+        <span class="currency-symbol-top-right">{% vendor_currency_symbol %}</span>
+        <div class="stat-value">{% vendor_currency_value total_spent %}</div>
+        <div class="stat-trend"><i class="fas fa-arrow-up"></i> Total Spent</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color:black;"><i class="fas fa-box-open"></i></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon" style="color:#F59E0B;"><i class="fas fa-truck"></i></div>
-            </div>
-            <div class="stat-value">{{ pending_orders_count }}</div>
-            <div class="stat-label">Pending Orders</div>
+        <div class="stat-value">{{ total_orders }}</div>
+        <div class="stat-label">Total Orders</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color:#F59E0B;"><i class="fas fa-truck"></i></div>
         </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon" style="color:#EF4444;"><i class="fas fa-heart"></i></div>
-            </div>
-            <div class="stat-value">{{ saved_listings_count }}</div>
-            <div class="stat-label">Saved Items</div>
+        <div class="stat-value">{{ pending_orders_count }}</div>
+        <div class="stat-label">Pending Orders</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color:#EF4444;"><i class="fas fa-heart"></i></div>
         </div>
+        <div class="stat-value">{{ saved_listings_count }}</div>
+        <div class="stat-label">Saved Items</div>
+    </div>
     {% endif %}
 </div>
 
 <div class="dashboard-grid">
-    
+
     <div class="content-card">
         {% if user.is_seller %}
-            <div class="card-head">
-                <h3>Recent Listings</h3>
-                <a href="#" class="link-muted">View All</a>
-            </div>
-            <div class="table-wrapper">
-                <table class="clean-table">
-                    <thead>
-                        <tr>
-                            <th>Title</th>
-                            <th>Price</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for listing in recent_listings %}
-                        <tr>
-                            <td>{{ listing.title }}</td>
-                            <td>${{ listing.price }}</td>
-                            <td><span class="status">{{ listing.status }}</span></td>
-                            <td>{{ listing.created_at|date:"M d" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="4" style="text-align:center;">No listings found.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="card-head">
+            <h3>Recent Listings</h3>
+            <a href="#" class="link-muted">View All</a>
+        </div>
+        <div class="table-wrapper">
+            <table class="clean-table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for listing in recent_listings %}
+                    <tr>
+                        <td>{{ listing.title }}</td>
+                        <td>${{ listing.price }}</td>
+                        <td><span class="status">{{ listing.status }}</span></td>
+                        <td>{{ listing.created_at|date:"M d" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align:center;">No listings found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% elif user.is_admin %}
-            <div class="card-head">
-                <h3>System Overview</h3>
-            </div>
-            <p style="padding: 20px;">Welcome to the Admin Dashboard.</p>
+        <div class="card-head">
+            <h3>System Overview</h3>
+        </div>
+        <p style="padding: 20px;">Welcome to the Admin Dashboard.</p>
         {% else %}
-            <div class="card-head">
-                <h3>Recent Orders</h3>
-                <a href="{% url 'users:user-orders' %}" class="link-muted">View All</a>
-            </div>
-            
-            <div class="table-wrapper">
-                <table class="clean-table">
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Items</th>
-                            <th>Date</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in recent_orders %}
-                        <tr>
-                            <td><span class="order-id">#{{ order.order_number }}</span></td>
-                            <td>
-                                {% for item in order.items.all|slice:":1" %}
-                                    {{ item.part.name }}{% if order.items.count > 1 %}...{% endif %}
-                                {% endfor %}
-                            </td>
-                            <td>{{ order.created_at|date:"M d" }}</td>
-                            <td>{% vendor_currency order.total_price %}</td>
-                            <td><span class="status {{ order.status|lower }}">{{ order.get_status_display }}</span></td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" style="text-align:center;">No recent orders.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="card-head">
+            <h3>Recent Orders</h3>
+            <a href="{% url 'users:user-orders' %}" class="link-muted">View All</a>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="clean-table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Items</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td><span class="order-id">#{{ order.order_number }}</span></td>
+                        <td>
+                            {% for item in order.items.all|slice:":1" %}
+                            {{ item.part.name }}{% if order.items.count > 1 %}...{% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>{{ order.created_at|date:"M d" }}</td>
+                        <td>{% vendor_currency order.total_price %}</td>
+                        <td><span class="status {{ order.status|lower }}">{{ order.get_status_display }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align:center;">No recent orders.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% endif %}
     </div>
 
     <div style="display:flex; flex-direction:column; gap:30px;">
-        
+
         <div class="content-card">
             <div class="card-head">
                 <h3>Spending</h3>
@@ -203,10 +205,10 @@
                     <div style="font-weight:800; font-size:14px;">Home</div>
                     <div style="font-size:13px; color:#666; line-height:1.5; margin-top:5px;">
                         {% if profile.address %}
-                            {{ profile.address }}<br>
-                            {{ profile.city }}, {{ profile.postal_code }}, {{ profile.country }}
+                        {{ profile.address }}<br>
+                        {{ profile.city }}, {{ profile.postal_code }}, {{ profile.country }}
                         {% else %}
-                            No address set.
+                        No address set.
                         {% endif %}
                     </div>
                 </div>
@@ -237,10 +239,10 @@
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: {display: false} },
+            plugins: { legend: { display: false } },
             scales: {
                 y: { display: false },
-                x: { grid: { display: false }, ticks: { font: {size: 10} } }
+                x: { grid: { display: false }, ticks: { font: { size: 10 } } }
             }
         }
     });

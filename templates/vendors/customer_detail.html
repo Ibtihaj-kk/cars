@@ -2,7 +2,7 @@
 {% load static %}
 {% load vendor_currency %}
 
-{% block title %}{{ customer.get_full_name }} | Corporate Dock{% endblock %}
+{% block title %}{{ customer.get_full_name }} | CarSyncro{% endblock %}
 {% block header_title %}Customer Profile{% endblock %}
 {% block header_subtitle %}View details for {{ customer.get_full_name }}{% endblock %}
 
@@ -80,9 +80,10 @@
                 <p class="text-xs font-bold text-gray-400 uppercase">Total Orders (Yours)</p>
                 <h3 class="text-xl font-extrabold text-gray-900 mt-1">{{ orders_count }}</h3>
             </div>
-            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+            <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm relative">
+                <span class="absolute top-4 right-4 text-md font-extrabold text-gray-400 z-10">{% vendor_currency_symbol %}</span>
                 <p class="text-xs font-bold text-gray-400 uppercase">Total Spent (Yours)</p>
-                <h3 class="text-xl font-extrabold text-green-600 mt-1">{% vendor_currency vendor_total_spent %}</h3>
+                <h3 class="text-xl font-extrabold text-green-600 mt-1">{% vendor_currency_value vendor_total_spent %}</h3>
             </div>
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                 <p class="text-xs font-bold text-gray-400 uppercase">Last Order</p>
@@ -102,7 +103,7 @@
                             <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Order ID</th>
                             <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Date</th>
                             <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Items (Yours)</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Amount (Yours)</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase relative pr-10">Amount (Yours) <span class="absolute top-2 right-2 text-[10px] font-extrabold text-gray-400">{% vendor_currency_symbol %}</span></th>
                             <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
                             <th class="px-6 py-3"></th>
                         </tr>
@@ -119,9 +120,7 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {{ order.vendor_items_count }} items
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                                {% vendor_currency order.vendor_total %}
-                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{% vendor_currency_value order.vendor_total %}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 {% if order.status == 'delivered' %}
                                     <span class="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 uppercase">Delivered</span>

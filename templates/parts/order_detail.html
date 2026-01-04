@@ -2,7 +2,7 @@
 {% load static %}
 {% load vendor_currency %}
 
-{% block title %}Order #{{ order.order_number }} - Corporate Dock{% endblock %}
+{% block title %}Order #{{ order.order_number }} - CarSyncro{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
@@ -28,7 +28,8 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Order Items -->
             <div class="lg:col-span-2 space-y-6">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
+                    <span class="absolute top-4 right-4 text-md font-extrabold text-gray-400 z-10">{% vendor_currency_symbol %}</span>
                     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
                         <h3 class="font-bold text-gray-900">Items ({{ order.items.count }})</h3>
                     </div>
@@ -46,9 +47,9 @@
                                 <div class="flex justify-between mb-1">
                                     <h4 class="font-bold text-gray-900">{{ item_data.item.part.name }}</h4>
                                     <div class="text-right">
-                                        <span class="font-bold text-gray-900">{% vendor_currency item_data.item.price %}</span>
+                                        <span class="font-bold text-gray-900">{% vendor_currency_value item_data.item.price %}</span>
                                         {% if item_data.tax_amount > 0 %}
-                                        <p class="text-xs text-gray-500">+ {% vendor_currency item_data.tax_amount %} Tax ({{ item_data.tax_rate_display }})</p>
+                                        <p class="text-xs text-gray-500">+ {% vendor_currency_value item_data.tax_amount %} Tax ({{ item_data.tax_rate_display }})</p>
                                         {% else %}
                                         <p class="text-xs text-gray-500">Tax: {{ item_data.tax_rate_display }}</p>
                                         {% endif %}
@@ -66,28 +67,28 @@
                     <div class="bg-gray-50 px-6 py-4 border-t border-gray-100">
                         <div class="flex justify-between text-sm mb-2">
                             <span class="text-gray-500">Subtotal</span>
-                            <span class="font-medium">{% vendor_currency order.gross_price_val %}</span>
+                            <span class="font-medium">{% vendor_currency_value order.gross_price_val %}</span>
                         </div>
                         <div class="flex justify-between text-sm mb-2">
                             <span class="text-gray-500">Shipping</span>
-                            <span class="font-medium">{% vendor_currency order.shipping_cost %}</span>
+                            <span class="font-medium">{% vendor_currency_value order.shipping_cost %}</span>
                         </div>
                         <div class="flex justify-between text-sm mb-2">
                             <span class="text-gray-500">Tax (VAT)</span>
-                            <span class="font-medium">{% vendor_currency order.tax_amount %}</span>
+                            <span class="font-medium">{% vendor_currency_value order.tax_amount %}</span>
                         </div>
                         {% if order.discount_amount_val > 0 %}
                         <div class="flex justify-between text-sm mb-2 text-green-600">
                             <span>Discount</span>
-                            <span class="font-medium">- {% vendor_currency order.discount_amount_val %}</span>
+                            <span class="font-medium">- {% vendor_currency_value order.discount_amount_val %}</span>
                         </div>
                         {% endif %}
                         <div class="flex justify-between text-lg font-bold border-t border-gray-200 pt-3 mt-2">
                             <span>Total</span>
-                            <span>{% vendor_currency order.total_price %}</span>
-                        </div>
+                            <span>{% vendor_currency_value order.total_price %}</span>
                     </div>
                 </div>
+            </div>
             </div>
 
             <!-- Sidebar Info -->

@@ -69,21 +69,12 @@ def custom_login_view(request):
         print(f"Authentication result: {user is not None}")
         
         if user is not None:
-            login(request, user)
-            print(f"User logged in successfully: {user.email}")
+            # Use CentralizedAuthenticationService for robust session establishment
+            from core.authentication import CentralizedAuthenticationService
+            auth_service = CentralizedAuthenticationService()
+            auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
             
-            # Ensure session is properly persisted and available to middleware
-            # This fixes the first-time login redirect issue
-            from django.contrib.auth import update_session_auth_hash
-            update_session_auth_hash(request, user)  # Persists session and updates auth
-            
-            # Explicitly save session to ensure all changes are persisted
-            request.session.save()
-            print(f"Session explicitly saved for user: {user.email}")
-            
-            # Set a flag to indicate recent login to help middleware
-            request.session['_just_logged_in'] = True
-            request.session.modified = True
+            print(f"User logged in successfully with centralized auth: {user.email}")
             
             # Check if user is vendor or seller
             is_vendor = False
@@ -127,7 +118,7 @@ def dashboard(request):
     """Main dashboard view"""
     context = {
         'user': request.user,
-        'dashboard_title': 'CorporateDock Dashboard'
+        'dashboard_title': 'CarSyncro Dashboard'
     }
     return render(request, 'core/dashboard.html', context)
 

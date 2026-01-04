@@ -5,16 +5,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ part.name }} | corporatedock</title>
+    <title>{{ part.name }} | CarSyncro</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon-cs.png' %}">
     
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-    <link href="//cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet"/>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 
-    <script type="module" src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
     <link rel="stylesheet" href="{% static 'css/navbar.css' %}" />
@@ -361,29 +362,36 @@
     {% endif %}
 
     <button class="mobile-menu-toggle" id="mobileMenuToggle"><span></span><span></span><span></span></button>
-    <div class="navbar-top-header">
+    <div class="navbar-top-header" style="justify-content: flex-start !important;">
       <div class="navbar-logo">
         <a href="{% url 'home' %}">
-          <img src="{% static 'images/logo.png' %}" alt="CorporateDock Logo"/>
+          <img src="{% static 'images/car-syncro.png' %}" alt="CarSyncro Logo"/>
         </a>
       </div>
+      
+      <!-- Currency Dropdown - Moved left after logo -->
+      <div class="navbar-currency-selector" style="display: flex; align-items: center; margin-left: 30px; margin-right: auto;">
+        <span class="deliver-to-label" style="font-size: 12px; color: #666; margin-right: 8px;">Deliver To</span>
+        <form method="get" action="{% url 'parts:set_country_currency' %}" style="display:flex; align-items:center; gap:6px;">
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <select name="currency" onchange="this.form.submit()" style="border:1px solid #ddd; border-radius:6px; padding:4px 8px 4px 30px; font-size:12px; background:#fff; background-position: 8px center; background-repeat: no-repeat; background-size: 16px;">
+            <option value="" data-flag="">Currency</option>
+            {% for currency in available_currencies %}
+            <option value="{{ currency.code }}" 
+                    {% if current_currency and current_currency.code == currency.code %}selected{% endif %}
+                    data-flag="/static/flags/{{ currency.code|lower }}.svg">
+              {{ currency.code }} - {{ currency.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+      
       <div class="navbar-right-info">
         <span class="navbar-phone-info">
           <i class="fa-solid fa-phone"></i>
           <span class="navbar-phone-number">+92-333-3610109</span>
         </span>
-        <form method="get" action="{% url 'parts:set_country_currency' %}" style="display:flex; align-items:center; gap:6px;">
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <select name="country" onchange="this.form.submit()" style="border:1px solid #ddd; border-radius:6px; padding:4px 8px; font-size:12px; background:#fff;">
-            <option value="">Country</option>
-            <option value="Saudi Arabia" {% if current_currency and current_currency.code == 'SAR' %}selected{% endif %}>Saudi Arabia</option>
-            <option value="Qatar" {% if current_currency and current_currency.code == 'QAR' %}selected{% endif %}>Qatar</option>
-            <option value="Oman" {% if current_currency and current_currency.code == 'OMR' %}selected{% endif %}>Oman</option>
-            <option value="Bahrain" {% if current_currency and current_currency.code == 'BHD' %}selected{% endif %}>Bahrain</option>
-            <option value="United Arab Emirates" {% if current_currency and current_currency.code == 'AED' %}selected{% endif %}>UAE</option>
-            <option value="Pakistan" {% if current_currency and current_currency.code == 'PKR' %}selected{% endif %}>Pakistan</option>
-          </select>
-        </form>
         <span class="navbar-divider">|</span>
         {% if request.user.is_authenticated %}
         <a href="{% url 'parts:cart_view' %}" class="navbar-cart position-relative">
@@ -408,12 +416,16 @@
           </div>
           <div class="navbar-dropdown-menu">
               {% if user.is_authenticated %}
-                {% if user_has_vendor_access %}
-                  <a href="{% url 'business_partners:vendor_dashboard' %}" class="navbar-dropdown-link">Dashboard</a>
+                {% if user.is_admin or user.is_staff_member %}
+                  <a href="{% url 'admin_panel:dashboard' %}" class="navbar-dropdown-link">Admin Dashboard</a>
+                  <span class="navbar-dropdown-divider">|</span>
+                  <a href="{% url 'admin_panel:settings' %}" class="navbar-dropdown-link">Settings</a>
+                {% elif user.vendor_profiles.exists or user.is_seller or user_has_vendor_access %}
+                  <a href="{% url 'business_partners:vendor_dashboard' %}" class="navbar-dropdown-link">Vendor Dashboard</a>
                   <span class="navbar-dropdown-divider">|</span>
                   <a href="{% url 'business_partners:vendor_profile' %}" class="navbar-dropdown-link">My Profile</a>
                 {% else %}
-                  <a href="{% url 'users:user-dashboard' %}" class="navbar-dropdown-link">Dashboard</a>
+                  <a href="{% url 'users:user-dashboard' %}" class="navbar-dropdown-link">User Dashboard</a>
                   <span class="navbar-dropdown-divider">|</span>
                   <a href="{% url 'users:user-profile' %}" class="navbar-dropdown-link">My Profile</a>
                 {% endif %}
@@ -434,7 +446,7 @@
         <div class="mobile-menu-header">
           <div class="mobile-logo">
             <a href="{% url 'home' %}">
-                <img src="{% static 'images/logo.png' %}" alt="CorporateDock Logo"/>
+                <img src="{% static 'images/car-syncro.png' %}" alt="CarSyncro Logo"/>
             </a>
           </div>
           <button class="mobile-menu-close" id="mobileMenuClose"></button>
@@ -682,7 +694,7 @@
                 </svg>
             </button>
             <div class="text-center">
-                <h2 class="signup-title">Join Corporate Dock</h2>
+                <h2 class="signup-title">Join CarSyncro</h2>
                 <p class="signup-subtitle">Select your account type to continue</p>
             </div>
             <div class="signup-options">
@@ -801,7 +813,7 @@
                   ></path>
                   <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
-                support@corporatedock.com
+                support@carsyncro.com
               </li>
             </ul>
           </div>
@@ -1083,6 +1095,38 @@
             }, 300);
         }
     };
+    
+    // Flag display functionality for currency dropdown
+    function updateFlagDisplay() {
+        const currencySelects = document.querySelectorAll('select[name="currency"]');
+        currencySelects.forEach(select => {
+            const selectedOption = select.options[select.selectedIndex];
+            const flagUrl = selectedOption.getAttribute('data-flag');
+            
+            if (flagUrl) {
+                select.style.backgroundImage = `url(${flagUrl})`;
+            } else {
+                select.style.backgroundImage = '';
+            }
+            
+            // Update on change
+            select.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const flagUrl = selectedOption.getAttribute('data-flag');
+                
+                if (flagUrl) {
+                    this.style.backgroundImage = `url(${flagUrl})`;
+                } else {
+                    this.style.backgroundImage = '';
+                }
+            });
+        });
+    }
+    
+    // Initialize flag display on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateFlagDisplay();
+    });
     </script>
   </body>
 </html>

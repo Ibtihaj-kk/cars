@@ -1,16 +1,18 @@
 {% extends 'admin_panel/base.html' %}
+{% load vendor_currency %}
 {% block header_title %}Dashboard{% endblock %}
 
 {% block content %}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <a href="{% url 'admin_panel:payment_management' %}"
-        class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
+        class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 relative">
+        <span class="absolute top-4 right-4 text-md font-extrabold text-black-400">{% vendor_currency_symbol %}</span>
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-gray-400 uppercase">Total Revenue</p>
-                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">${{ total_commission_earned|floatformat:0|default:"0" }}</h3>
+                <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{% vendor_currency_value total_commission_earned|default:0 %}</h3>
             </div>
-            <div class="p-2 bg-green-50 text-green-600 rounded-lg"><i class="fas fa-dollar-sign"></i></div>
+            <!-- <div class="p-2 bg-green-50 text-green-600 rounded-lg"><i class="fas fa-dollar-sign"></i></div> -->
         </div>
         <span class="text-green-600 text-xs font-bold mt-3 block">Platform commission earnings</span>
     </a>
@@ -42,15 +44,16 @@
     </a>
 
     <a href="{% url 'admin_panel:payment_management' %}"
-        class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
+        class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 relative">
+        <span class="absolute top-4 right-4 text-md font-extrabold text-black-400">{% vendor_currency_symbol %}</span>
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-gray-400 uppercase">Pending Payments</p>
                 <h3 class="text-2xl font-extrabold text-gray-900 mt-1">{{ pending_payments|default:"0" }}</h3>
             </div>
-            <div class="p-2 bg-yellow-50 text-yellow-600 rounded-lg"><i class="fas fa-credit-card"></i></div>
+            <!-- <div class="p-2 bg-yellow-50 text-yellow-600 rounded-lg"><i class="fas fa-credit-card"></i></div> -->
         </div>
-        <span class="text-yellow-600 text-xs font-bold mt-3 block">${{ total_vendor_balance|floatformat:2|default:"0" }}
+        <span class="text-yellow-600 text-md font-bold mt-3 block">{% vendor_currency_value total_vendor_balance|default:0 %}
             vendor balance</span>
     </a>
 </div>

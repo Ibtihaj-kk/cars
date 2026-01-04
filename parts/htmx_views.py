@@ -166,6 +166,10 @@ def add_to_cart_htmx(request, part_id):
     if not created:
         cart_item.quantity += quantity
         cart_item.save()
+    
+    # Lock exchange rate for 15 minutes (Amazon-style soft lock)
+    cart_item.lock_exchange_rate()
+    cart.refresh_rate_locks()
 
     # Get updated cart
     cart_items = CartItem.objects.filter(cart=cart).select_related('part')

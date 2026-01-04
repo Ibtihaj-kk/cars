@@ -2,7 +2,7 @@
 {% load static %}
 {% load vendor_currency %}
 
-{% block title %}Customer Management | Corporate Dock{% endblock %}
+{% block title %}Customer Management | CarSyncro{% endblock %}
 {% block header_title %}Customer Management{% endblock %}
 {% block header_subtitle %}Manage your client relationships and view purchase history{% endblock %}
 
@@ -40,10 +40,11 @@
         <div class="p-2 bg-purple-50 rounded-lg text-purple-600"><i class="fas fa-user-plus"></i></div>
     </div>
 
-    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-start">
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex justify-between items-start relative">
+        <span class="absolute top-4 right-16 text-md font-extrabold text-gray-400 z-10">{% vendor_currency_symbol %}</span>
         <div>
             <p class="text-xs font-bold text-gray-400 uppercase">Avg. Spend</p>
-            <h3 class="text-xl font-extrabold text-yellow-600 mt-1">{% vendor_currency avg_spend|default:"--" %}</h3>
+            <h3 class="text-xl font-extrabold text-yellow-600 mt-1">{% vendor_currency_value avg_spend|default:"--" %}</h3>
         </div>
         <div class="p-2 bg-yellow-50 rounded-lg text-yellow-600"><i class="fas fa-coins"></i></div>
     </div>
@@ -81,7 +82,7 @@
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">BP-Number</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Contact</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Orders (Yours)</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Total Spent (Yours)</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider relative pr-10">Total Spent (Yours) <span class="absolute top-2 right-2 text-[10px] font-extrabold text-gray-400">{% vendor_currency_symbol %}</span></th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
                     <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -118,9 +119,7 @@
                             {{ customer.vendor_orders_count }} Orders
                         </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                        {% vendor_currency customer.vendor_total_spent %}
-                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{% vendor_currency_value customer.vendor_total_spent %}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         {% if customer.is_active %}
                         <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800">Active</span>

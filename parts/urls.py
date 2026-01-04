@@ -83,6 +83,7 @@ urlpatterns = [
     
     # AJAX endpoints for checkout
     path('ajax/city-areas/', views.get_city_areas, name='get_city_areas'),
+    path('ajax/cities/', views.get_cities_by_country, name='get_cities_by_country'),
     path('ajax/verify-discount/', views.verify_discount_code, name='verify_discount_code'),
     
     # CSV Upload

@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>Vendor Registration | Corporate Dock</title>
+    <title>Vendor Registration | CarSyncro</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon-cs.png' %}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -145,8 +146,8 @@
         <div class="mb-10">
             <a href="{% url 'home' %}" class="block">
                 <div class="flex items-center gap-3 mb-2">
-                    <img src="{%static 'images/logo.png'%}" alt="Corporate Dock" class="h-10 w-auto object-contain">
-                    <span class="text-lg font-bold tracking-tight">Corporate Dock</span>
+                    <img src="{%static 'images/car-syncro.png'%}" alt="CarSyncro" class="h-9 w-auto object-contain">
+                    <!-- <span class="text-lg font-bold tracking-tight">CarSyncro</span> -->
                 </div>
                 <div class="md:hidden text-xs font-bold text-gray-400 uppercase tracking-wide">
                     Step <span id="mobile-step-count">1</span> of 5
@@ -170,7 +171,7 @@
         </div>
 
         <div class="hidden md:block text-xs text-gray-400 mt-auto">
-            &copy; 2024 Corporate Dock Inc.
+            &copy; 2024 CarSyncro Inc.
         </div>
 
     </aside>
@@ -276,12 +277,12 @@
                             <div class="relative">
                                 <select name="country" id="vendorCountrySelect" class="modern-input appearance-none cursor-pointer" required>
                                     <option value="" disabled selected>Select Country</option>
-                                    <option value="Saudi Arabia">Saudi Arabia</option>
-                                    <option value="USA">United States</option>
-                                    <option value="UK">United Kingdom</option>
-                                    <option value="Canada">Canada</option>
-                                    <option value="Pakistan">Pakistan</option>
-                                    <option value="UAE">United Arab Emirates</option>
+                                    <option value="AE">United Arab Emirates</option>
+                                    <option value="SA">Saudi Arabia</option>
+                                    <option value="QA">Qatar</option>
+                                    <option value="OM">Oman</option>
+                                    <option value="BH">Bahrain</option>
+                                    <option value="PK">Pakistan</option>
                                 </select>
                                 <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -291,15 +292,8 @@
 
                         <div>
                             <label class="input-label">City</label>
-                            <select name="city_id" id="vendorCitySelect" class="modern-input cursor-pointer bg-white" 
-                                hx-post="/business-partners/htmx/registration/validate/" 
-                                hx-trigger="change"
-                                hx-target="#city-validation"
-                                hx-swap="outerHTML" required>
+                            <select name="city_id" id="vendorCitySelect" class="modern-input cursor-pointer bg-white" required>
                                 <option value="" disabled selected>Select City</option>
-                                {% for city in cities %}
-                                    <option value="{{ city.id }}">{{ city.name }}</option>
-                                {% endfor %}
                             </select>
                             <div id="city-validation"></div>
                         </div>
@@ -327,12 +321,12 @@
                             <div class="relative">
                                 <select name="currency" class="modern-input appearance-none cursor-pointer bg-white" required>
                                     <option value="" disabled selected>Select Currency</option>
-                                    <option value="USD">USD - US Dollar</option>
-                                    <option value="EUR">EUR - Euro</option>
-                                    <option value="GBP">GBP - British Pound</option>
-                                    <option value="PKR">PKR - Pakistani Rupee</option>
                                     <option value="AED">AED - UAE Dirham</option>
                                     <option value="SAR">SAR - Saudi Riyal</option>
+                                    <option value="QAR">QAR - Qatari Riyal</option>
+                                    <option value="OMR">OMR - Omani Rial</option>
+                                    <option value="BHD">BHD - Bahraini Dinar</option>
+                                    <option value="PKR">PKR - Pakistani Rupee</option>
                                 </select>
                                 <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -518,10 +512,10 @@
                     <div class="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100">
                         <h3 class="font-bold text-gray-900 mb-3 text-sm uppercase tracking-wide">Terms & Conditions</h3>
                         <div class="bg-white rounded-xl p-4 h-32 overflow-y-auto text-xs text-gray-500 mb-4 border border-gray-200 terms-scroll leading-relaxed">
-                            <p class="mb-2"><strong>1. Acceptance of Terms:</strong> By registering as a vendor on Corporate Dock, you agree to these terms...</p>
+                            <p class="mb-2"><strong>1. Acceptance of Terms:</strong> By registering as a vendor on CarSyncro, you agree to these terms...</p>
                             <p class="mb-2"><strong>2. Vendor Obligations:</strong> You agree to provide accurate business information and maintain valid licenses...</p>
                             <p class="mb-2"><strong>3. Fees & Payments:</strong> Applicable subscription fees and transaction commissions will be deducted...</p>
-                            <p><strong>4. Termination:</strong> Corporate Dock reserves the right to suspend accounts violating policies...</p>
+                            <p><strong>4. Termination:</strong> CarSyncro reserves the right to suspend accounts violating policies...</p>
                         </div>
                         <label class="flex items-start space-x-3 cursor-pointer p-2 hover:bg-gray-100 rounded-lg transition">
                             <div class="flex items-center h-5">
@@ -828,22 +822,19 @@
             }
 
             // Auto-select currency based on country
-            function autoSelectCurrency(country) {
+            function autoSelectCurrency(countryCode) {
                 if (!currencySelect) return;
                 
                 const currencyMap = {
-                    'Saudi Arabia': 'SAR',
-                    'United States': 'USD',
-                    'USA': 'USD',
-                    'United Kingdom': 'GBP',
-                    'UK': 'GBP',
-                    'Canada': 'CAD',
-                    'Pakistan': 'PKR',
-                    'UAE': 'AED',
-                    'United Arab Emirates': 'AED'
+                    'AE': 'AED',
+                    'SA': 'SAR',
+                    'QA': 'QAR',
+                    'OM': 'OMR',
+                    'BH': 'BHD',
+                    'PK': 'PKR'
                 };
 
-                const currencyCode = currencyMap[country];
+                const currencyCode = currencyMap[countryCode];
                 if (currencyCode) {
                     for (let i = 0; i < currencySelect.options.length; i++) {
                         if (currencySelect.options[i].value === currencyCode) {
@@ -852,6 +843,33 @@
                         }
                     }
                 }
+            }
+
+            // Fetch cities based on selected country
+            function fetchCities(countryCode) {
+                if (!countryCode) {
+                    citySelect.innerHTML = '<option value="" disabled selected>Select City</option>';
+                    cityAreaContainer.style.display = 'none';
+                    return;
+                }
+
+                fetch(`/parts/ajax/cities/?country_code=${countryCode}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.cities.length > 0) {
+                            citySelect.innerHTML = '<option value="" disabled selected>Select City</option>';
+                            data.cities.forEach(city => {
+                                const option = document.createElement('option');
+                                option.value = city.id;
+                                option.textContent = city.name;
+                                citySelect.appendChild(option);
+                            });
+                        } else {
+                            citySelect.innerHTML = '<option value="" disabled selected>No cities available</option>';
+                            cityAreaContainer.style.display = 'none';
+                        }
+                    })
+                    .catch(error => console.error('Error fetching cities:', error));
             }
 
             // Set up event listeners
@@ -869,11 +887,13 @@
             if (countrySelect && currencySelect) {
                 countrySelect.addEventListener('change', function() {
                     autoSelectCurrency(this.value);
+                    fetchCities(this.value);
                 });
                 
-                // Auto-select currency on page load if country is already selected
+                // Auto-select currency and fetch cities on page load if country is already selected
                 if (countrySelect.value) {
                     autoSelectCurrency(countrySelect.value);
+                    fetchCities(countrySelect.value);
                 }
             }
             

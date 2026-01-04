@@ -1,5 +1,5 @@
 """
-WSGI config for CorporateDock project.
+WSGI config for CarSyncro project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

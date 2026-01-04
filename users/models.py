@@ -25,6 +25,8 @@ class UserManager(BaseUserManager):
         """Create and save a user with the given email and password."""
         if not email:
             raise ValueError('The Email field must be set')
+        if not password:
+            raise ValueError('The Password field must be set')
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -114,6 +116,16 @@ class User(AbstractUser):
         null=True, 
         blank=True, 
         related_name='suspended_users'
+    )
+    
+    # ISO 8000 Compliant Business Partner Number
+    bp_number = models.CharField(
+        max_length=20,
+        unique=True,
+        blank=True,
+        null=True,
+        verbose_name=_('Business Partner Number'),
+        help_text=_('ISO 8000 compliant universal business partner identifier')
     )
 
     USERNAME_FIELD = 'email'
@@ -269,6 +281,15 @@ class User(AbstractUser):
             updated = True
             
         return updated
+    
+    def assign_bp_number(self):
+        """Assign ISO 8000 compliant BP number to user"""
+        if not self.bp_number:
+            from core.bp_number_system import BPNumberSystem
+            bp_system = BPNumberSystem()
+            self.bp_number = bp_system.generate_bp_number(self)
+            self.save(update_fields=['bp_number'])
+        return self.bp_number
 
 
 class UserProfile(models.Model):

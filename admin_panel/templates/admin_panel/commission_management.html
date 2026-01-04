@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base.html' %}
+{% load vendor_currency %}
 {% block header_title %}Commission Rules{% endblock %}
 
 {% block content %}
@@ -81,12 +82,12 @@
                         {% if rule.commission_type == 'percentage' %}
                         {{ rule.commission_rate }}%
                         {% else %}
-                        ${{ rule.commission_rate }}
+                        {% vendor_currency rule.commission_rate|default:0 %}
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 text-gray-500">
                         {% if rule.min_amount or rule.max_amount %}
-                        ${{ rule.min_amount|default:0 }} - ${{ rule.max_amount|default:"∞" }}
+                        {% vendor_currency rule.min_amount|default:0 %} - {% if rule.max_amount %}{% vendor_currency rule.max_amount %}{% else %}∞{% endif %}
                         {% else %}
                         No limit
                         {% endif %}
@@ -157,16 +158,16 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-bold mb-2">Rate (%/$)</label>
+                    <label class="block text-sm font-bold mb-2">Rate (% / {% vendor_currency_symbol %})</label>
                     <input type="number" name="commission_rate" step="0.01" required
                         class="w-full px-4 py-2 border rounded-xl">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold mb-2">Min Amount ($)</label>
+                    <label class="block text-sm font-bold mb-2">Min Amount ({% vendor_currency_symbol %})</label>
                     <input type="number" name="min_amount" step="0.01" class="w-full px-4 py-2 border rounded-xl">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold mb-2">Max Amount ($)</label>
+                    <label class="block text-sm font-bold mb-2">Max Amount ({% vendor_currency_symbol %})</label>
                     <input type="number" name="max_amount" step="0.01" class="w-full px-4 py-2 border rounded-xl">
                 </div>
                 <div class="flex items-center">

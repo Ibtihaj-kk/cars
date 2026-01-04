@@ -31,6 +31,9 @@ Allows users to switch between available currencies
          x-transition:leave-start="opacity-100 transform scale-100"
          x-transition:leave-end="opacity-0 transform scale-95"
          class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-64 overflow-y-auto">
+        <div class="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+            We detect your country for better pricing
+        </div>
         {% for currency in available_currencies %}
         <a href="?currency={{ currency.code }}" 
            class="block px-4 py-2 hover:bg-blue-50 transition-colors duration-150 {% if currency.code == current_currency.code %}bg-blue-50 border-l-4 border-blue-500{% endif %}">

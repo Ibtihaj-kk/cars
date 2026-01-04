@@ -6,7 +6,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corporate Dock - Vendor Portal</title>
+    <title>CarSyncro - Vendor Portal</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon-cs.png' %}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -80,17 +81,17 @@
                 <div class="flex items-center gap-3 overflow-hidden">
                     {% if user.business_partners.first.logo %}
                     <img src="{{ user.business_partners.first.logo.url }}" alt="Vendor Logo"
-                        class="h-12 w-auto object-contain flex-shrink-0">
+                        class="h-10 w-auto object-contain flex-shrink-0">
                     {% else %}
-                    <img src="{% static 'images/logo.png' %}" alt="Corporate Dock"
-                        class="h-12 w-auto object-contain flex-shrink-0">
+                    <img src="{% static 'images/car-syncro.png' %}" alt="CarSyncro"
+                        class="h-10 w-auto object-contain flex-shrink-0">
                     {% endif %}
 
                     <span id="brand-text" class="text-xl font-bold text-gray-800 whitespace-nowrap tracking-tight">
                         {% if user.business_partners.first.name %}
                         {{ user.business_partners.first.name }}
                         {% else %}
-                        Corporate Dock
+                        CarSyncro
                         {% endif %}
                     </span>
                 </div>
@@ -282,12 +283,18 @@
     </div>
     {% endif %}
 
-    <!-- <div class="flex items-center">
-        <div class="h-9 min-w-9 px-2 flex items-center justify-center rounded-lg bg-gray-50 border border-gray-200 text-gray-800 font-bold text-sm leading-none"
-            title="{% vendor_currency_code %}">
-            {% vendor_currency_symbol %}
-        </div>
-    </div> -->
+    <!-- Currency Selector -->
+    <div class="flex items-center">
+        <form method="get" action="{% url 'parts:set_country_currency' %}" style="display:flex; align-items:center; gap:6px;">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <select name="currency" onchange="this.form.submit()" style="border:1px solid #ddd; border-radius:6px; padding:4px 8px; font-size:12px; background:#fff; min-width:80px;">
+                <option value="">Currency</option>
+                {% for currency in available_currencies %}
+                <option value="{{ currency.code }}" {% if current_currency and current_currency.code == currency.code %}selected{% endif %}>{{ currency.code }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
 
     <button class="p-2 text-gray-400 hover:text-black relative">
         <i class="fas fa-bell text-lg"></i>

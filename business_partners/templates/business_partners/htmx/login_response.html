@@ -24,10 +24,10 @@
     
     {% if redirect_url %}
         <script>
-            // Redirect after successful login - reduced delay for better session persistence
+            // Redirect after successful login - increased delay for proper session persistence
             setTimeout(function() {
                 window.location.href = '{{ redirect_url }}';
-            }, 500);  // Reduced from 1500ms to 500ms
+            }, 1500);  // Increased to 1500ms for better session handling
         </script>
     {% endif %}
 {% else %}

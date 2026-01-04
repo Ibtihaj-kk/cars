@@ -1,7 +1,7 @@
 {% extends 'user/base.html' %}
 {% load static %}
 
-{% block title %}Corporate Dock Registration{% endblock %}
+{% block title %}CarSyncro Registration{% endblock %}
 
 {% block css_dependencies %}
     <script src="https://cdn.tailwindcss.com"></script>
@@ -67,7 +67,7 @@
         
         <div class="flex justify-between items-center md:block">
             <a href="{% url 'home' %}">
-            <img src="{% static 'images/logo.png' %}" alt="Logo-Image" class="h-20"></a>
+            <img src="{% static 'images/car-syncro.png' %}" alt="Logo-Image" class="h-12 md:h-14 w-auto object-contain"></a>
             <div class="md:hidden text-sm font-bold text-gray-400">
                 Step <span id="mobile-step-count">1</span>/3
             </div>
@@ -105,7 +105,7 @@
             
             <section id="step-1" class="step-content w-full max-w-lg text-center fade-in">
                 <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4 mt-8 md:mt-0">Create your Account</h1>
-                <p class="text-gray-500 mb-10">Sign up to get started with Corporate Dock</p>
+                <p class="text-gray-500 mb-10">Sign up to get started with CarSyncro</p>
                 
                 <div class="flex flex-col items-center space-y-5 w-full">
                     <div class="w-full text-left">
@@ -158,20 +158,24 @@
                         <input type="text" name="address" id="addressInput" class="modern-input" placeholder="House/Apartment No, Street Name">
                         <p id="addressError" class="text-red-500 text-sm mt-1 hidden"></p>
                     </div>
-                    
+
                     <div>
-                        <label class="input-label">Postal Code</label>
-                        <input type="text" name="postal_code" id="postalCodeInput" class="modern-input" placeholder="Zip/Postal Code">
-                        <p id="postalCodeError" class="text-red-500 text-sm mt-1 hidden"></p>
+                        <label class="input-label">Country</label>
+                        <select name="country" id="regCountrySelect" class="modern-input cursor-pointer bg-white">
+                            <option value="" disabled selected>Select Country</option>
+                            <option value="AE">United Arab Emirates</option>
+                            <option value="SA">Saudi Arabia</option>
+                            <option value="QA">Qatar</option>
+                            <option value="OM">Oman</option>
+                            <option value="BH">Bahrain</option>
+                            <option value="PK">Pakistan</option>
+                        </select>
                     </div>
 
                     <div>
                         <label class="input-label">City</label>
                         <select name="city_id" id="regCitySelect" class="modern-input cursor-pointer bg-white" required>
                             <option value="" disabled selected>Select City</option>
-                            {% for city in cities %}
-                                <option value="{{ city.id }}">{{ city.name }}</option>
-                            {% endfor %}
                         </select>
                         <p id="cityError" class="text-red-500 text-sm mt-1 hidden"></p>
                     </div>
@@ -182,19 +186,13 @@
                             <option value="">Select Area</option>
                         </select>
                     </div>
-
-                    <div>
-                        <label class="input-label">Country</label>
-                        <select name="country" class="modern-input cursor-pointer bg-white">
-                            <option value="Saudi Arabia" selected>Saudi Arabia</option>
-                            <option value="USA">USA</option>
-                            <option value="UK">UK</option>
-                            <option value="Canada">Canada</option>
-                            <option value="Pakistan">Pakistan</option>
-                            <option value="UAE">UAE</option>
-                        </select>
-                    </div>
                     
+                    <div>
+                        <label class="input-label">Postal Code</label>
+                        <input type="text" name="postal_code" id="postalCodeInput" class="modern-input" placeholder="Zip/Postal Code">
+                        <p id="postalCodeError" class="text-red-500 text-sm mt-1 hidden"></p>
+                    </div>
+
                     <div class="md:col-span-1">
                         <label class="input-label">Phone Number</label>
                         <div class="flex">
@@ -502,6 +500,34 @@
             const citySelect = document.getElementById('regCitySelect');
             const cityAreaSelect = document.getElementById('regCityAreaSelect');
             const cityAreaContainer = document.getElementById('regCityAreaContainer');
+            const countrySelect = document.getElementById('regCountrySelect');
+
+            // Fetch cities based on selected country
+            function fetchCities(countryCode) {
+                if (!countryCode) {
+                    citySelect.innerHTML = '<option value="" disabled selected>Select City</option>';
+                    cityAreaContainer.style.display = 'none';
+                    return;
+                }
+
+                fetch(`/parts/ajax/cities/?country_code=${countryCode}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.cities.length > 0) {
+                            citySelect.innerHTML = '<option value="" disabled selected>Select City</option>';
+                            data.cities.forEach(city => {
+                                const option = document.createElement('option');
+                                option.value = city.id;
+                                option.textContent = city.name;
+                                citySelect.appendChild(option);
+                            });
+                        } else {
+                            citySelect.innerHTML = '<option value="" disabled selected>No cities available</option>';
+                            cityAreaContainer.style.display = 'none';
+                        }
+                    })
+                    .catch(error => console.error('Error fetching cities:', error));
+            }
 
             function fetchAreas(cityId) {
                 if (!cityId) {
@@ -537,6 +563,17 @@
                 // If re-rendering with value selected
                 if (citySelect.value) {
                     fetchAreas(citySelect.value);
+                }
+            }
+
+            if (countrySelect) {
+                countrySelect.addEventListener('change', function() {
+                    fetchCities(this.value);
+                });
+                
+                // Fetch cities on page load if country is already selected
+                if (countrySelect.value) {
+                    fetchCities(countrySelect.value);
                 }
             }
         });

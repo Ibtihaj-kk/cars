@@ -29,11 +29,9 @@ class Command(BaseCommand):
             'SAR': Decimal('3.75'),    # Saudi Riyal (pegged to USD)
             'AED': Decimal('3.67'),    # UAE Dirham (pegged to USD)
             'QAR': Decimal('3.64'),    # Qatari Riyal (pegged to USD)
-            'KWD': Decimal('0.307'),   # Kuwaiti Dinar
             'OMR': Decimal('0.385'),   # Omani Rial (pegged to USD)
             'BHD': Decimal('0.376'),   # Bahraini Dinar (pegged to USD)
-            'EGP': Decimal('48.85'),   # Egyptian Pound (fluctuates)
-            'JOD': Decimal('0.709'),   # Jordanian Dinar (pegged to USD)
+            'PKR': Decimal('280.0'),   # Pakistani Rupee (fluctuates)
         }
         
         created_count = 0

@@ -32,9 +32,10 @@ def currency_processor(request):
     """
     try:
         from core.models import Currency
+        allowed_codes = ['AED', 'SAR', 'QAR', 'OMR', 'BHD', 'PKR']
         return {
             'current_currency': getattr(request, 'currency', None),
-            'available_currencies': Currency.objects.filter(is_active=True).order_by('name'),
+            'available_currencies': Currency.objects.filter(is_active=True, code__in=allowed_codes).order_by('name'),
         }
     except Exception:
         return {

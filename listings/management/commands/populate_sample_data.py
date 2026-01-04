@@ -13,7 +13,7 @@ class Command(BaseCommand):
         # Create sample users if they don't exist
         sample_users = []
         for i in range(3):
-            email = f'seller{i+1}@corporatedock.com'
+            email = f'seller{i+1}@carsyncro.com'
             if not User.objects.filter(email=email).exists():
                 user = User.objects.create_user(
                     email=email,

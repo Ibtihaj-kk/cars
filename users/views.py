@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import get_user_model, login, logout
+from django.contrib.auth import views as auth_views
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Sum
@@ -43,9 +44,34 @@ from .serializers import (
     ProfileUpdateSerializer
 )
 from core.permissions import IsAdminUser, IsOwnerOrAdmin
-from parts.models import SaudiCity, CityArea
+from parts.models import City, CityArea
 
 User = get_user_model()
+
+
+class LoginView(auth_views.LoginView):
+    """
+    Custom LoginView that uses CentralizedAuthenticationService
+    to ensure robust session establishment.
+    """
+    def form_valid(self, form):
+        """Security-enhanced session establishment on successful login."""
+        user = form.get_user()
+        
+        # Use CentralizedAuthenticationService for robust session establishment
+        from core.authentication import CentralizedAuthenticationService
+        auth_service = CentralizedAuthenticationService()
+        
+        # Establish session with all security flags
+        auth_service.establish_secure_session(
+            self.request, 
+            user, 
+            remember_me=form.cleaned_data.get('remember_me', False),
+            backend=user.backend if hasattr(user, 'backend') else 'django.contrib.auth.backends.ModelBackend'
+        )
+        
+        # Perform standard redirect
+        return redirect(self.get_success_url())
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -81,11 +107,11 @@ class UserRegistrationView(generics.CreateAPIView):
         html_message = f'''
         <html>
             <body>
-                <h2>Welcome to CorporateDock!</h2>
+                <h2>Welcome to CarSyncro!</h2>
                 <p>Thank you for registering. Please click the link below to verify your email address:</p>
                 <p><a href="{verification_url}">Verify Email</a></p>
                 <p>This link will expire in 24 hours.</p>
-                <p>If you did not register for a CorporateDock account, please ignore this email.</p>
+                <p>If you did not register for a CarSyncro account, please ignore this email.</p>
             </body>
         </html>
         '''
@@ -405,7 +431,8 @@ def register_page(request):
         messages.info(request, msg)
 
     # Get cities for dropdown
-    cities = SaudiCity.objects.filter(is_active=True).order_by('name')
+    from parts.models import City
+    cities = City.objects.filter(is_active=True).order_by('name')
         
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -420,9 +447,9 @@ def register_page(request):
         city_name = ""
         if city_id:
             try:
-                city_obj = SaudiCity.objects.get(id=city_id)
+                city_obj = City.objects.get(id=city_id)
                 city_name = city_obj.name
-            except SaudiCity.DoesNotExist:
+            except City.DoesNotExist:
                 pass
         
         # Resolve city area name from ID
@@ -596,7 +623,11 @@ def register_page(request):
             if user:
                 if not hasattr(user, 'backend'):
                      user.backend = 'django.contrib.auth.backends.ModelBackend'
-                login(request, user)
+                
+                # Use CentralizedAuthenticationService for robust session establishment
+                from core.authentication import CentralizedAuthenticationService
+                auth_service = CentralizedAuthenticationService()
+                auth_service.establish_secure_session(request, user, backend=user.backend)
                 
                 next_url = request.GET.get('next')
                 if next_url:
@@ -744,8 +775,8 @@ def user_profile(request):
             )
     
     # Get cities for dropdown
-    from parts.models import SaudiCity, CityArea
-    cities = SaudiCity.objects.filter(is_active=True).order_by('name')
+    from parts.models import City, CityArea
+    cities = City.objects.filter(is_active=True).order_by('name')
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -764,8 +795,10 @@ def user_profile(request):
             else:
                 user.set_password(new_password)
                 user.save()
-                # Keep user logged in
-                login(request, user)
+                # Keep user logged in with robust session setup
+                from core.authentication import CentralizedAuthenticationService
+                auth_service = CentralizedAuthenticationService()
+                auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
                 messages.success(request, 'Password updated successfully.')
                 
             return redirect('users:user-profile')
@@ -784,9 +817,9 @@ def user_profile(request):
             city_id = request.POST.get('city_id')
             if city_id:
                 try:
-                    city_obj = SaudiCity.objects.get(id=city_id)
+                    city_obj = City.objects.get(id=city_id)
                     profile.city = city_obj.name
-                except SaudiCity.DoesNotExist:
+                except City.DoesNotExist:
                     pass
             else:
                 # Fallback to text input if needed or just keep existing

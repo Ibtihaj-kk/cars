@@ -1,5 +1,5 @@
 """
-URL configuration for CorporateDock project.
+URL configuration for CarSyncro project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from users.views import LoginView
 from django.views.generic import TemplateView
 
 # Simple home view since core app is disabled
@@ -48,10 +49,10 @@ from drf_yasg import openapi
 # API Documentation Schema
 schema_view = get_schema_view(
     openapi.Info(
-        title="CorporateDock API",
+        title="CarSyncro API",
         default_version='v1',
-        description="API documentation for CorporateDock backend",
-        contact=openapi.Contact(email="contact@corporatedock.com"),
+        description="API documentation for CarSyncro backend",
+        contact=openapi.Contact(email="contact@carsyncro.com"),
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
@@ -60,7 +61,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('', home, name='home'),
     path('admin/', admin.site.urls),
-    path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
+    path('accounts/login/', LoginView.as_view(), name='login'),
     path('accounts/logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
     # Enabled apps only
     path('api/users/', include('users.urls')),
@@ -79,6 +80,7 @@ urlpatterns = [
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 # Custom error handlers
 handler404 = 'yallamotor_project.urls.custom_404_view'

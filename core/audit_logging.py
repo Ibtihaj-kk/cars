@@ -247,6 +247,67 @@ class AuditLogger:
             success=success,
             error_message=error_message
         )
+
+    @staticmethod
+    def log_authentication_success(user, primary_role, client_ip, request):
+        """Log successful authentication"""
+        return AuditLogger.log_action(
+            action_type='AUTH_SUCCESS',
+            user=user,
+            object_type='User',
+            object_id=user.id,
+            object_repr=user.email,
+            ip_address=client_ip,
+            user_agent=request.META.get('HTTP_USER_AGENT', '') if request else None,
+            request_path=request.path if request else None,
+            request_method=request.method if request else None,
+            additional_data={
+                'primary_role': primary_role,
+                'login_method': 'centralized'
+            },
+            success=True
+        )
+
+    @staticmethod
+    def log_authentication_failure(email, client_ip, request):
+        """Log failed authentication"""
+        return AuditLogger.log_action(
+            action_type='AUTH_FAILURE',
+            user=None,
+            object_type='User',
+            object_repr=email,
+            ip_address=client_ip,
+            user_agent=request.META.get('HTTP_USER_AGENT', '') if request else None,
+            request_path=request.path if request else None,
+            request_method=request.method if request else None,
+            additional_data={
+                'attempted_email': email,
+                'failure_reason': 'Invalid credentials'
+            },
+            success=False,
+            error_message='Invalid credentials'
+        )
+
+    @staticmethod
+    def log_access_denied(user, primary_role, client_ip, request):
+        """Log access denied event"""
+        return AuditLogger.log_action(
+            action_type='ACCESS_DENIED',
+            user=user,
+            object_type='User',
+            object_id=user.id,
+            object_repr=user.email,
+            ip_address=client_ip,
+            user_agent=request.META.get('HTTP_USER_AGENT', '') if request else None,
+            request_path=request.path if request else None,
+            request_method=request.method if request else None,
+            additional_data={
+                'primary_role': primary_role,
+                'reason': 'Insufficient privileges'
+            },
+            success=False,
+            error_message='Access denied'
+        )
     
     @staticmethod
     def get_client_ip(request):

@@ -1,5 +1,5 @@
 """
-ASGI config for CorporateDock project.
+ASGI config for CarSyncro project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 

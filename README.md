@@ -1,4 +1,4 @@
-# CorporateDock - Vehicle Marketplace Platform
+# CarSyncro - Vehicle Marketplace Platform
 
 A comprehensive Django-based backend and frontend for a vehicle marketplace platform, featuring advanced search, user management, listings, inquiries, reviews, and subscription management.
 
@@ -30,7 +30,7 @@ A comprehensive Django-based backend and frontend for a vehicle marketplace plat
 ## 🏗️ Project Structure
 
 ```
-corporatedock/
+carsyncro/
 ├── admin_panel/          # Custom admin interface and analytics
 ├── content/              # CMS functionality and dynamic content
 ├── core/                 # Shared utilities, permissions, and mixins
@@ -44,7 +44,7 @@ corporatedock/
 ├── vehicles/             # Vehicle data models and specifications
 ├── static/               # Frontend assets (CSS, JS, images)
 ├── templates/            # HTML templates
-├── yallamotor_project/   # Django project settings (CorporateDock)
+├── yallamotor_project/   # Django project settings (CarSyncro)
 └── requirements.txt      # Python dependencies
 ```
 
@@ -62,7 +62,7 @@ corporatedock/
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd corporatedock
+   cd carsyncro
    ```
 
 2. **Create and activate virtual environment**
@@ -91,7 +91,7 @@ corporatedock/
    ALLOWED_HOSTS=localhost,127.0.0.1
    
    # Database Configuration
-   DATABASE_URL=postgresql://username:password@localhost:5432/corporatedock_db
+   DATABASE_URL=postgresql://username:password@localhost:5432/carsyncro_db
    
    # Redis Configuration
    REDIS_URL=redis://localhost:6379/0
@@ -125,7 +125,7 @@ corporatedock/
 5. **Database Setup**
    ```bash
    # Create database (PostgreSQL example)
-   createdb corporatedock_db
+   createdb carsyncro_db
    
    # Run migrations
    python manage.py migrate
@@ -375,4 +375,4 @@ For support and questions:
 
 ---
 
-**CorporateDock** - Connecting buyers and sellers in the automotive marketplace.
+**CarSyncro** - Connecting buyers and sellers in the automotive marketplace.

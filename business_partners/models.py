@@ -520,9 +520,26 @@ class VendorProfile(models.Model):
         help_text="Business references or previous partnerships"
     )
     
+    # Vendor approval state machine - ISO 27001 compliant approval workflow
+    approval_state = models.CharField(
+        max_length=20,
+        choices=[
+            ('PENDING', 'Pending Review'),
+            ('UNDER_REVIEW', 'Under Review'),
+            ('REQUIRES_CHANGES', 'Requires Changes'),
+            ('APPROVED', 'Approved'),
+            ('REJECTED', 'Rejected'),
+            ('SUSPENDED', 'Suspended'),
+            ('REVOKED', 'Revoked'),
+        ],
+        default='PENDING',
+        help_text="ISO 27001 compliant vendor approval state"
+    )
+    
+    # Legacy field for backward compatibility
     is_approved = models.BooleanField(
         default=False,
-        help_text="Whether the vendor profile is approved for platform access"
+        help_text="Legacy field - use approval_state instead"
     )
     registration_date = models.DateField(
         blank=True,
@@ -659,6 +676,46 @@ class VendorProfile(models.Model):
         total_completion = field_completion + document_completion
         
         return round(total_completion, 1)
+    
+    def save(self, *args, **kwargs):
+        """Override save to sync approval state with legacy is_approved field"""
+        # Sync approval_state with legacy is_approved for backward compatibility
+        if self.approval_state == 'APPROVED':
+            self.is_approved = True
+        else:
+            self.is_approved = False
+        
+        super().save(*args, **kwargs)
+    
+    def get_approval_state(self):
+        """Get current approval state from state machine"""
+        from core.vendor_access_controller import VendorAccessController
+        controller = VendorAccessController()
+        return controller.get_current_state(self)
+    
+    def transition_approval_state(self, new_state, reason=None, performed_by=None):
+        """Transition to a new approval state"""
+        from core.vendor_access_controller import VendorAccessController
+        controller = VendorAccessController()
+        return controller.transition_state(self, new_state, reason, performed_by)
+    
+    def can_access_feature(self, feature_name):
+        """Check if vendor can access specific feature based on approval state"""
+        from core.vendor_access_controller import VendorAccessController
+        controller = VendorAccessController()
+        return controller.can_access_feature(self, feature_name)
+    
+    def get_available_actions(self):
+        """Get available state transition actions"""
+        from core.vendor_access_controller import VendorAccessController
+        controller = VendorAccessController()
+        return controller.get_available_actions(self)
+    
+    def get_approval_history(self):
+        """Get approval state transition history"""
+        from core.vendor_access_controller import VendorAccessController
+        controller = VendorAccessController()
+        return controller.get_state_history(self)
 
 
 class CustomerProfile(models.Model):
@@ -1280,7 +1337,7 @@ Please review the application in the admin panel.
                 from django.core.mail import send_mail
                 from django.conf import settings
                 
-                subject = 'Welcome to Corporate Dock - Application Approved'
+                subject = 'Welcome to CarSyncro - Application Approved'
                 message = f"""
 Dear {self.contact_person_name},
 
@@ -1295,7 +1352,7 @@ You now have full access to your vendor dashboard, including:
 You can log in here: {getattr(settings, 'SITE_URL', 'http://localhost:8000')}/business-partners/vendor/login/
 
 Best regards,
-Corporate Dock Team
+CarSyncro Team
                 """.strip()
                 
                 send_mail(
@@ -1328,7 +1385,7 @@ Corporate Dock Team
                 from django.core.mail import send_mail
                 from django.conf import settings
                 
-                subject = 'Update on your Vendor Application - Corporate Dock'
+                subject = 'Update on your Vendor Application - CarSyncro'
                 message = f"""
 Dear {self.contact_person_name},
 
@@ -1343,7 +1400,7 @@ Reason:
 Please contact support if you have any questions.
 
 Best regards,
-Corporate Dock Team
+CarSyncro Team
                 """.strip()
                 
                 send_mail(

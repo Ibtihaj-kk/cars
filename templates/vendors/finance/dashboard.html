@@ -1,7 +1,7 @@
 {% extends 'vendors/base.html' %}
 {% load vendor_currency %}
 
-{% block title %}Finance Dashboard - Corporate Dock{% endblock %}
+{% block title %}Finance Dashboard - CarSyncro{% endblock %}
 
 {% block content %}
 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -21,11 +21,12 @@
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
     <a href="{% url 'business_partners:vendor_finance_ledger' %}" class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+        <span class="absolute top-4 right-4 text-md font-extrabold text-black-400 z-10">{% vendor_currency_symbol %}</span>
         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
             <i class="fas fa-wallet text-6xl text-green-500"></i>
         </div>
         <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Cash Received</p>
-        <h3 class="text-2xl font-extrabold text-green-600 mt-2">{% vendor_currency_compact cash_received|default:0 %}</h3>
+        <h3 class="text-2xl font-extrabold text-green-600 mt-2">{% vendor_currency_compact_value cash_received|default:0 %}</h3>
     </a>
 
     <a href="{% url 'business_partners:vendor_invoices' %}" class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group hover:shadow-md transition">
@@ -37,35 +38,39 @@
     </a>
 
     <a href="{% url 'business_partners:vendor_tax_summary' %}" class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+        <span class="absolute top-4 right-4 text-md font-extrabold text-black-400 z-10">{% vendor_currency_symbol %}</span>
         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
             <i class="fas fa-hand-holding-usd text-6xl text-red-500"></i>
         </div>
         <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Tax Payable</p>
-        <h3 class="text-2xl font-extrabold text-red-600 mt-2">{% vendor_currency_compact tax_payable|default:0 %}</h3>
+        <h3 class="text-2xl font-extrabold text-red-600 mt-2">{% vendor_currency_compact_value tax_payable|default:0 %}</h3>
     </a>
 
     <a href="{% url 'business_partners:vendor_finance_ledger' %}" class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+        <span class="absolute top-4 right-4 text-md font-extrabold text-black-400 z-10">{% vendor_currency_symbol %}</span>
         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
             <i class="fas fa-shipping-fast text-6xl text-purple-500"></i>
         </div>
         <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Shipping Cost</p>
-        <h3 class="text-2xl font-extrabold text-purple-600 mt-2">{% vendor_currency_compact shipping_cost|default:0 %}</h3>
+        <h3 class="text-2xl font-extrabold text-purple-600 mt-2">{% vendor_currency_compact_value shipping_cost|default:0 %}</h3>
     </a>
 
     <a href="{% url 'business_partners:vendor_commission_breakdown' %}" class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+        <span class="absolute top-4 right-4 text-md font-extrabold text-black-400 z-10">{% vendor_currency_symbol %}</span>
         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
             <i class="fas fa-handshake text-6xl text-red-500"></i>
         </div>
         <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Marketplace Commission</p>
-        <h3 class="text-2xl font-extrabold text-red-500 mt-2">{% vendor_currency_compact marketplace_commission|default:0 %}</h3>
+        <h3 class="text-2xl font-extrabold text-red-500 mt-2">{% vendor_currency_compact_value marketplace_commission|default:0 %}</h3>
     </a>
 
     <a href="{% url 'business_partners:vendor_finance_ledger' %}" class="block bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+        <span class="absolute top-4 right-4 text-md font-extrabold text-black-400 z-10">{% vendor_currency_symbol %}</span>
         <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
             <i class="fas fa-undo text-6xl text-orange-500"></i>
         </div>
         <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Refund Amount</p>
-        <h3 class="text-2xl font-extrabold text-orange-500 mt-2">{% vendor_currency_compact refund_amount|default:0 %}</h3>
+        <h3 class="text-2xl font-extrabold text-orange-500 mt-2">{% vendor_currency_compact_value refund_amount|default:0 %}</h3>
     </a>
 </div>
 

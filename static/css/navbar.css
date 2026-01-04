@@ -110,8 +110,9 @@ body {
   display: flex;
   align-items: center;
   padding-top: 4px;
-  width: 150px;
-  height: 25px;
+  width: auto;
+  max-width: 150px;
+  height: 24px;
   object-fit: contain;
 }
 
@@ -277,8 +278,9 @@ body {
 }
 
 .navbar-logo img {
-  width: 200px;
-  height: 60px;
+  width: auto;
+  max-width: 200px;
+  height: 36px;
   object-fit: contain;
 }
 
@@ -1471,7 +1473,8 @@ body {
   }
 
   .navbar-logo img {
-    width: 160px;
+    width: auto;
+    max-width: 170px;
     height: 32px;
   }
 
@@ -1497,7 +1500,8 @@ body {
   }
 
   .navbar-logo img {
-    width: 140px;
+    width: auto;
+    max-width: 150px;
     height: 28px;
   }
 
@@ -1526,8 +1530,9 @@ body {
 
   .navbar-logo img {
     margin-left: 10px;
-        width: 130px;
-        height: 49px;
+    width: auto;
+    max-width: 140px;
+    height: 26px;
   }
 
   .mobile-menu-toggle {
@@ -1545,8 +1550,9 @@ body {
 /* Extra Small Mobile */
 @media (max-width: 360px) {
   .navbar-logo img {
-    width: 100px;
-    height: 20px;
+    width: auto;
+    max-width: 120px;
+    height: 22px;
   }
 
   .mobile-menu-toggle {

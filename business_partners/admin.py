@@ -613,6 +613,6 @@ class ReorderNotificationAdmin(admin.ModelAdmin):
 
 
 # Custom admin site configuration
-admin.site.site_header = "CorporateDock Business Partners Administration"
+admin.site.site_header = "CarSyncro Business Partners Administration"
 admin.site.site_title = "Business Partners Admin"
 admin.site.index_title = "Welcome to Business Partners Administration"

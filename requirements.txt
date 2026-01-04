@@ -17,6 +17,8 @@ drf-yasg
 
 # File Type Detection
 puremagic
+python-magic; platform_system != "Windows"
+python-magic-bin; platform_system == "Windows"
 
 # Authentication & Security
 django-allauth
@@ -26,6 +28,7 @@ django-two-factor-auth
 django-phonenumber-field
 django-rest-passwordreset
 djangorestframework-simplejwt
+django-cryptography
 pyotp
 qrcode
 

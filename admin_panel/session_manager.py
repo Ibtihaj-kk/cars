@@ -1,5 +1,5 @@
 """
-Admin session management for CorporateDock admin panel.
+Admin session management for CarSyncro admin panel.
 Handles session security, concurrent sessions, and automatic logout.
 """
 import logging

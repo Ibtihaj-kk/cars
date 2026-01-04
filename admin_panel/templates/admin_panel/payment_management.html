@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base.html' %}
+{% load vendor_currency %}
 {% block header_title %}Payments{% endblock %}
 
 {% block content %}
@@ -16,21 +17,23 @@
         </div>
     </a>
     <a href="{% url 'admin_panel:payment_management' %}?status={% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
-        class="block bg-green-50 p-5 rounded-2xl border border-green-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
+        class="block bg-green-50 p-5 rounded-2xl border border-green-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 relative">
+        <span class="absolute top-4 right-4 text-md font-extrabold text-gray-700">{% vendor_currency_symbol %}</span>
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-green-600 uppercase">Total Amount</p>
-                <h3 class="text-2xl font-extrabold text-green-700 mt-1">${{ payment_stats.total_amount|floatformat:2|default:"0" }}</h3>
+                <h3 class="text-2xl font-extrabold text-green-700 mt-1">{% vendor_currency_value payment_stats.total_amount|default:0 %}</h3>
             </div>
-            <div class="p-2 bg-green-100 text-green-600 rounded-lg"><i class="fas fa-dollar-sign"></i></div>
+            <div class="p-2 bg-green-100 text-green-600 rounded-lg"><i class="fas fa-coins"></i></div>
         </div>
     </a>
     <a href="{% url 'admin_panel:payment_management' %}?status={% for key, value in preserved_query_params %}{% if key != 'status' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}"
-        class="block bg-purple-50 p-5 rounded-2xl border border-purple-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2">
+        class="block bg-purple-50 p-5 rounded-2xl border border-purple-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 relative">
+        <span class="absolute top-4 right-4 text-md font-extrabold text-gray-700">{% vendor_currency_symbol %}</span>
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-xs font-bold text-purple-600 uppercase">Commission</p>
-                <h3 class="text-2xl font-extrabold text-purple-700 mt-1">${{ payment_stats.total_commission|floatformat:2|default:"0" }}</h3>
+                <h3 class="text-2xl font-extrabold text-purple-700 mt-1">{% vendor_currency_value payment_stats.total_commission|default:0 %}</h3>
             </div>
             <div class="p-2 bg-purple-100 text-purple-600 rounded-lg"><i class="fas fa-percentage"></i></div>
         </div>
@@ -100,9 +103,9 @@
                     <td class="px-6 py-4">
                         <p class="font-bold">{{ payment.vendor.name|default:"Unknown" }}</p>
                     </td>
-                    <td class="px-6 py-4">${{ payment.amount|floatformat:2 }}</td>
-                    <td class="px-6 py-4 text-red-600">${{ payment.commission_amount|floatformat:2 }}</td>
-                    <td class="px-6 py-4 font-bold text-green-600">${{ payment.net_amount|floatformat:2 }}</td>
+                    <td class="px-6 py-4">{% vendor_currency payment.amount|default:0 %}</td>
+                    <td class="px-6 py-4 text-red-600">{% vendor_currency payment.commission_amount|default:0 %}</td>
+                    <td class="px-6 py-4 font-bold text-green-600">{% vendor_currency payment.net_amount|default:0 %}</td>
                     <td class="px-6 py-4">
                         <span class="px-2 py-1 rounded-full text-xs font-bold
                             {% if payment.status == 'completed' %}bg-green-100 text-green-700

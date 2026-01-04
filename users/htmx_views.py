@@ -37,10 +37,21 @@ def login_submit_htmx(request):
     user = authenticate(request, username=username, password=password)
 
     if user is not None:
-        login(request, user)
+        # Use CentralizedAuthenticationService for robust session establishment
+        from core.authentication import CentralizedAuthenticationService
+        auth_service = CentralizedAuthenticationService()
+        auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        
+        # Determine correct redirect URL based on role
+        from core.role_routing_engine import RoleResolver
+        resolver = RoleResolver()
+        redirect_url = request.POST.get('next')
+        if not redirect_url or redirect_url == '/':
+            redirect_url = resolver.get_role_based_redirect(user)
+            
         context = {
             'message': 'Login successful',
-            'redirect_url': request.POST.get('next', '/'),
+            'redirect_url': redirect_url,
         }
         return render(request, 'users/htmx/login_success.html', context)
     else:
@@ -113,12 +124,20 @@ def register_submit_htmx(request):
         last_name=last_name
     )
 
-    # Auto login
-    login(request, user)
+    # Auto login using CentralizedAuthenticationService
+    from core.authentication import CentralizedAuthenticationService
+    auth_service = CentralizedAuthenticationService()
+    auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
+
+    # Determine correct redirect URL based on role
+    from core.role_routing_engine import RoleResolver
+    resolver = RoleResolver()
+    redirect_url = resolver.get_role_based_redirect(user)
 
     context = {
         'message': 'Registration successful',
         'user': user,
+        'redirect_url': redirect_url,
     }
 
     return render(request, 'users/htmx/register_success.html', context)
@@ -314,8 +333,10 @@ def change_password_submit_htmx(request):
     user.set_password(new_password)
     user.save()
 
-    # Re-login user
-    login(request, user)
+    # Re-login user using CentralizedAuthenticationService
+    from core.authentication import CentralizedAuthenticationService
+    auth_service = CentralizedAuthenticationService()
+    auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
 
     context = {
         'message': 'Password changed successfully',

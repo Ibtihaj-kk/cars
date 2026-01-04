@@ -5,7 +5,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'yallamotor_project.settings')
 django.setup()
 
-from parts.models import SaudiCity, CityArea
+from parts.models import City, CityArea, Country
 
 def populate_locations():
     print("Starting location population...")
@@ -65,7 +65,18 @@ def populate_locations():
 
     for city_name, (region, areas) in cities_data.items():
         # Create or get city
-        city, created = SaudiCity.objects.get_or_create(
+        # Get or create Saudi Arabia country
+        sa_country, _ = Country.objects.get_or_create(
+            code='SA',
+            defaults={
+                'name': 'Saudi Arabia',
+                'name_ar': 'المملكة العربية السعودية',
+                'is_active': True
+            }
+        )
+        
+        city, created = City.objects.get_or_create(
+            country=sa_country,
             name=city_name,
             defaults={
                 'region': region,
@@ -99,7 +110,7 @@ def populate_locations():
     print(f"\nPopulation complete!")
     print(f"Total Cities Created: {cities_created}")
     print(f"Total Areas Created: {areas_created}")
-    print(f"Total Cities in DB: {SaudiCity.objects.count()}")
+    print(f"Total Cities in DB: {City.objects.count()}")
     print(f"Total Areas in DB: {CityArea.objects.count()}")
 
 if __name__ == '__main__':

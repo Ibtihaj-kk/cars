@@ -22,7 +22,7 @@
                    name="email" 
                    placeholder="vendor@example.com"
                    hx-post="{% url 'vendors_htmx:login_validate' %}"
-                   hx-trigger="keyup changed delay:500ms"
+                   hx-trigger="blur"
                    hx-target="#email-error"
                    hx-indicator="#email-spinner"
                    required>
@@ -47,7 +47,7 @@
                        name="password" 
                        placeholder="******************"
                        hx-post="{% url 'vendors_htmx:login_validate' %}"
-                       hx-trigger="keyup changed delay:500ms"
+                       hx-trigger="blur"
                        hx-target="#password-error"
                        hx-indicator="#password-spinner"
                        required>
@@ -151,7 +151,22 @@ document.getElementById('password').addEventListener('input', validateForm);
 validateForm();
 
 // Status checking function
+let loginStatusInterval = null;
+let pollCount = 0;
+const MAX_POLLS = 15; // Stop after 15 seconds
+
+function stopLoginStatusPolling() {
+    if (loginStatusInterval) {
+        clearInterval(loginStatusInterval);
+        loginStatusInterval = null;
+        pollCount = 0;
+    }
+}
+
 function checkLoginStatus() {
+    // Prevent multiple intervals from running
+    stopLoginStatusPolling();
+
     const statusDiv = document.getElementById('login-status');
     const statusMessage = document.getElementById('status-message');
     
@@ -159,32 +174,54 @@ function checkLoginStatus() {
     statusMessage.textContent = 'Verifying your credentials...';
     
     // Poll for login status
-    const checkStatus = setInterval(function() {
+    loginStatusInterval = setInterval(function() {
+        pollCount++;
+        
+        if (pollCount > MAX_POLLS) {
+            console.log('Login status polling timed out');
+            stopLoginStatusPolling();
+            return;
+        }
+
         fetch('{% url "vendors_htmx:login_status" %}')
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'complete') {
                     statusMessage.textContent = 'Login successful! Redirecting...';
-                    clearInterval(checkStatus);
+                    stopLoginStatusPolling();
                     setTimeout(() => {
                         window.location.href = data.redirect_url;
                     }, 1000);
                 } else if (data.status === 'error') {
-                    statusMessage.textContent = 'Login failed. Please try again.';
-                    clearInterval(checkStatus);
+                    statusMessage.textContent = data.message || 'Login failed. Please try again.';
+                    stopLoginStatusPolling();
                 } else {
                     statusMessage.textContent = data.message || 'Processing...';
                 }
             })
             .catch(error => {
                 console.error('Status check failed:', error);
-                clearInterval(checkStatus);
+                stopLoginStatusPolling();
             });
     }, 1000);
 }
 
 // Hook into form submission to start status checking
-document.getElementById('vendor-login-form').addEventListener('htmx:beforeRequest', function() {
-    checkLoginStatus();
+document.getElementById('vendor-login-form').addEventListener('htmx:beforeRequest', function(evt) {
+    // Only start status check if the request is from the form itself (submission)
+    // and not from individual field validations
+    if (evt.detail.elt.id === 'vendor-login-form') {
+        checkLoginStatus();
+    }
+});
+
+// Stop polling if the HTMX request finishes (either success or failure)
+document.getElementById('vendor-login-form').addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.elt.id === 'vendor-login-form') {
+        // Wait a small bit to allow the redirect if it was successful, 
+        // but if it's an error response that swapped into the page, 
+        // we definitely want to stop polling.
+        setTimeout(stopLoginStatusPolling, 2000);
+    }
 });
 </script>

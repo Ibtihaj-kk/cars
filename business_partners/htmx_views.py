@@ -778,6 +778,7 @@ def vendor_registration_submit_htmx(request):
         business_email = request.POST.get('business_email', '').strip()
         business_name = request.POST.get('business_name', '').strip()
         address = request.POST.get('address', '').strip()
+        selected_currency = request.POST.get('currency', '').strip()
         
         # Handle city (check city_id first as it's a select box now)
         city_id = request.POST.get('city_id', '').strip()
@@ -785,9 +786,9 @@ def vendor_registration_submit_htmx(request):
         
         if not city and city_id:
             try:
-                from parts.models import SaudiCity
+                from parts.models import City
                 if city_id.isdigit():
-                    city = SaudiCity.objects.get(id=int(city_id)).name
+                    city = City.objects.get(id=int(city_id)).name
             except Exception:
                 pass
                 
@@ -912,9 +913,7 @@ def vendor_registration_submit_htmx(request):
                 )
                 
                 # Create vendor profile with enhanced details and timestamps
-                from .utils import get_currency_for_country
-                currency = get_currency_for_country(country)
-                
+                # Use the currency selected by the vendor during registration
                 vendor_profile = VendorProfile.objects.create(
                     business_partner=business_partner,
                     user=user,  # Link to Django user account
@@ -923,7 +922,7 @@ def vendor_registration_submit_htmx(request):
                     registration_date=current_time.date(),  # Set registration date
                     created_at=current_time,  # Set creation timestamp
                     updated_at=current_time,   # Set initial update timestamp
-                    preferred_currency=currency
+                    preferred_currency=selected_currency
                 )
                 
                 # Handle file uploads
@@ -1022,9 +1021,10 @@ def vendor_registration_submit_htmx(request):
                 # No need to call create_provisional_profile() as we manually created the full profile above
                 # application.create_provisional_profile()
             
-            # Auto-login the user
-            from django.contrib.auth import login
-            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            # Auto-login the user with CentralizedAuthenticationService
+            from core.authentication import CentralizedAuthenticationService
+            auth_service = CentralizedAuthenticationService()
+            auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
 
             response_data['success'] = True
             response_data['message'] = 'Registration successful.'
@@ -1129,6 +1129,10 @@ def vendor_login_submit_htmx(request):
     password = request.POST.get('password', '')
     remember_me = request.POST.get('remember_me', 'false') == 'true'
     
+    # Clear any previous login errors from session
+    if hasattr(request, 'session'):
+        request.session.pop('login_error', None)
+    
     # Initialize response data
     response_data = {
         'success': False,
@@ -1147,80 +1151,43 @@ def vendor_login_submit_htmx(request):
         return render(request, 'business_partners/htmx/login_response.html', response_data)
     
     try:
-        # Authenticate user
-        try:
-            user_obj = User.objects.get(email=email)
-            username = user_obj.username if user_obj.username else user_obj.email
-        except User.DoesNotExist:
-            username = email
-
-        user = authenticate(request, username=username, password=password)
+        # Use centralized authentication service
+        from core.authentication import CentralizedAuthenticationService
+        auth_service = CentralizedAuthenticationService()
+        
+        # Authenticate user through unified system
+        user, redirect_url = auth_service.authenticate_user(
+            request, email, password, remember_me
+        )
         
         if user is not None:
             # Check if user has vendor profile
             vendor_profile = get_vendor_profile(user)
             
             if vendor_profile:
-                # Allow login regardless of approval status
-                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                
-                # Set session expiry based on remember me
-                if remember_me:
-                    request.session.set_expiry(2592000)  # 30 days
-                else:
-                    request.session.set_expiry(0)  # Browser session
-                
-                # Set flag to indicate recent login for middleware
-                request.session['_just_logged_in'] = True
-                request.session['_login_timestamp'] = timezone.now().isoformat()
-                request.session.modified = True
-                
-                # Force session save to ensure middleware can see it
-                request.session.save()
-                
+                # Vendor login successful
                 response_data['success'] = True
                 response_data['message'] = 'Login successful! Redirecting...'
-                print(f"Vendor login successful for user: {user}")
-                # Redirect to dashboard regardless of approval status
-                response_data['redirect_url'] = '/business-partners/vendor/dashboard/'
-                
+                # Prefer the redirect_url from auth_service, but fallback to vendor dashboard
+                response_data['redirect_url'] = redirect_url if redirect_url and 'dashboard' in redirect_url else '/business-partners/vendor/dashboard/'
             else:
-                # Authenticated user but no vendor profile (Client/User/Staff/Admin)
-                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                
-                # Set session expiry based on remember me
-                if remember_me:
-                    request.session.set_expiry(2592000)  # 30 days
-                else:
-                    request.session.set_expiry(0)  # Browser session
-                
-                # Set flag to indicate recent login for middleware
-                request.session['_just_logged_in'] = True
-                request.session['_login_timestamp'] = timezone.now().isoformat()
-                request.session.modified = True
-                
-                # Force session save to ensure middleware can see it
-                request.session.save()
-                
+                # Non-vendor login (e.g. admin or regular user)
                 response_data['success'] = True
                 response_data['message'] = 'Login successful! Redirecting...'
-                
-                # Determine redirect URL based on role
-                if user.is_superuser or user.is_staff:
-                    response_data['redirect_url'] = '/admin_panel/' 
-                elif user.role == UserRole.CLIENT:
-                    response_data['redirect_url'] = '/api/users/dashboard/'  # Redirect clients to user dashboard
-                else:
-                    response_data['redirect_url'] = '/'  # Default redirect
-                    
+                response_data['redirect_url'] = redirect_url or '/'
         else:
             # Authentication failed
-            response_data['message'] = 'Invalid email or password'
-            response_data['errors']['general'] = 'Invalid credentials. Please try again.'
-        print(response_data,'Kuch bhi');
+            error_msg = redirect_url or 'Invalid email or password'
+            response_data['message'] = error_msg
+            response_data['errors']['general'] = error_msg
+            
+            # Store error in session so the status polling endpoint can catch it
+            if hasattr(request, 'session'):
+                request.session['login_error'] = error_msg
+            
     except Exception as e:
-        response_data['message'] = 'Invalid email or password'
-        response_data['errors']['general'] = 'Invalid credentials. Please try again.'
+        response_data['message'] = 'Authentication error'
+        response_data['errors']['general'] = f'Error: {str(e)}'
     
     return render(request, 'business_partners/htmx/login_response.html', response_data)
 
@@ -1231,23 +1198,84 @@ def vendor_login_status_htmx(request):
     HTMX endpoint to check login status and progress
     Returns login status for progress saving
     """
+    from django.http import JsonResponse
     from django.contrib.auth import get_user_model
     from .permissions import get_vendor_profile
+    from django.contrib.sessions.exceptions import SessionInterrupted
     
     User = get_user_model()
     
     status_data = {
-        'is_authenticated': request.user.is_authenticated,
-        'user_email': request.user.email if request.user.is_authenticated else None,
+        'is_authenticated': False,
+        'user_email': None,
         'is_vendor': False,
         'vendor_status': None,
+        'status': 'pending',
+        'redirect_url': None
     }
     
-    if request.user.is_authenticated:
-        vendor_profile = get_vendor_profile(request.user)
-        if vendor_profile:
-            status_data['is_vendor'] = True
-            status_data['vendor_status'] = vendor_profile.status
-            status_data['is_approved'] = vendor_profile.is_approved
+    try:
+        # Check authentication status
+        status_data['is_authenticated'] = request.user.is_authenticated
+        if request.user.is_authenticated:
+            status_data['user_email'] = request.user.email
+            
+            # Determine correct redirect URL based on role
+            from core.role_routing_engine import RoleResolver
+            resolver = RoleResolver()
+            redirect_url = resolver.get_role_based_redirect(request.user)
+            status_data['redirect_url'] = redirect_url
+
+            vendor_profile = get_vendor_profile(request.user)
+            if vendor_profile:
+                status_data['is_vendor'] = True
+                # Use approval_state as the status field for VendorProfile
+                status_data['vendor_status'] = vendor_profile.approval_state
+                # Also check legacy is_approved field for backward compatibility
+                is_approved = vendor_profile.approval_state == 'APPROVED' or getattr(vendor_profile, 'is_approved', False)
+                status_data['is_approved'] = is_approved
+                
+                # Determine redirect URL based on status
+                status_data['status'] = 'complete'
+                # Already set redirect_url above, but ensure it's vendor dashboard if they are a vendor
+                if not status_data['redirect_url'] or 'vendor' not in status_data['redirect_url']:
+                    status_data['redirect_url'] = '/business-partners/vendor/dashboard/'
+            else:
+                # Regular user logged in
+                status_data['status'] = 'complete'
+                # redirect_url already set by resolver above
+                
+        # Check for login error in session
+        if hasattr(request, 'session'):
+            try:
+                login_error = request.session.get('login_error')
+                if login_error:
+                    status_data['status'] = 'error'
+                    status_data['message'] = login_error
+                    # Clear it so we don't keep returning error
+                    request.session.pop('login_error', None)
+            except Exception:
+                pass
+
+    except SessionInterrupted:
+        # Handle concurrent session cycling (e.g. during login)
+        status_data['status'] = 'pending'
+        status_data['is_authenticated'] = False
+    except Exception as e:
+        import logging
+        logger = logging.getLogger('django')
+        logger.error(f"Error in vendor_login_status_htmx: {str(e)}")
+        status_data['status'] = 'pending'
+            
+    response = JsonResponse(status_data)
     
-    return render(request, 'business_partners/htmx/login_status.html', status_data)
+    # CRITICAL: Prevent HTMX polling from ever sending a session cookie.
+    # This prevents the "unauthenticated poll" from overwriting the "authenticated login" cookie.
+    if hasattr(request, 'session'):
+        request.session.modified = False
+    
+    # Force removal of set-cookie header for this polling endpoint
+    if 'Set-Cookie' in response:
+        del response['Set-Cookie']
+        
+    return response

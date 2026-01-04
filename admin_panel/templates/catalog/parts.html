@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base.html' %}
+{% load vendor_currency %}
 {% block header_title %}Parts Management{% endblock %}
 
 {% block content %}
@@ -112,7 +113,7 @@
                         {{ part.quantity }}
                     </span>
                 </td>
-                <td class="px-6 py-4 font-bold">${{ part.price|floatformat:2 }}</td>
+                <td class="px-6 py-4 font-bold">{% vendor_currency part.price|default:0 %}</td>
                 <td class="px-6 py-4">
                     <span
                         class="px-2 py-1 rounded text-xs font-bold {% if part.is_active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">

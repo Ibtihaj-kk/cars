@@ -54,24 +54,34 @@ class VendorAccessMiddleware:
         # Check if user is authenticated
         print(f"Middleware check: User authenticated: {request.user.is_authenticated}, Path: {request.path}")
         
+        # Debug session accessibility
+        print(f"Middleware DEBUG: Has session: {hasattr(request, 'session')}")
+        if hasattr(request, 'session'):
+            print(f"Middleware DEBUG: Session keys: {list(request.session.keys())}")
+            print(f"Middleware DEBUG: _auth_user_id: {request.session.get('_auth_user_id')}")
+            print(f"Middleware DEBUG: _just_logged_in: {request.session.get('_just_logged_in')}")
+        
         # Check for recent login flag - this helps with first-time login redirect issue
         if (hasattr(request, 'session') and 
             request.session.get('_just_logged_in')):
             print(f"Middleware: Detected recent login, allowing request to proceed")
-            # Don't clear the flag immediately - let it persist for a few requests
-            # This handles the JavaScript redirect delay
             
-            # Add a counter to eventually clear the flag
-            login_count = request.session.get('_login_request_count', 0)
-            login_count += 1
-            request.session['_login_request_count'] = login_count
+            # Skip incrementing counter for HTMX polling requests to prevent premature flag clearing
+            is_htmx = request.headers.get('HX-Request') == 'true'
             
-            # Clear flags after 3 requests (to handle redirect chain)
-            if login_count >= 3:
-                request.session.pop('_just_logged_in', None)
-                request.session.pop('_login_timestamp', None)
-                request.session.pop('_login_request_count', None)
-                print(f"Middleware: Cleared login flags after {login_count} requests")
+            if not is_htmx:
+                # Add a counter to eventually clear the flag
+                login_count = request.session.get('_login_request_count', 0)
+                login_count += 1
+                request.session['_login_request_count'] = login_count
+                
+                # Clear flags after 10 full page requests (to handle redirect chain and session persistence)
+                if login_count >= 10:
+                    request.session.pop('_just_logged_in', None)
+                    request.session.pop('_login_timestamp', None)
+                    request.session.pop('_login_session_id', None)
+                    request.session.pop('_login_request_count', None)
+                    print(f"Middleware: Cleared login flags after {login_count} requests")
             
             return self.get_response(request)
         
@@ -84,42 +94,63 @@ class VendorAccessMiddleware:
                 if datetime.now() - login_time < timedelta(minutes=5):
                     print(f"Middleware: Detected recent login timestamp, allowing request to proceed")
                     
-                    # Add a counter to eventually clear the flag
-                    login_count = request.session.get('_login_request_count', 0)
-                    login_count += 1
-                    request.session['_login_request_count'] = login_count
-                    
-                    # Clear flags after 3 requests (to handle redirect chain)
-                    if login_count >= 3:
-                        request.session.pop('_just_logged_in', None)
-                        request.session.pop('_login_timestamp', None)
-                        request.session.pop('_login_request_count', None)
-                        print(f"Middleware: Cleared login flags after {login_count} requests")
+                    # Skip counter for HTMX
+                    is_htmx = request.headers.get('HX-Request') == 'true'
+                    if not is_htmx:
+                        # Add a counter to eventually clear the flag
+                        login_count = request.session.get('_login_request_count', 0)
+                        login_count += 1
+                        request.session['_login_request_count'] = login_count
+                        
+                        # Clear flags after several requests
+                        if login_count >= 15:
+                            request.session.pop('_just_logged_in', None)
+                            request.session.pop('_login_timestamp', None)
+                            request.session.pop('_login_session_id', None)
+                            request.session.pop('_login_request_count', None)
                     
                     return self.get_response(request)
             except (ValueError, TypeError):
-                pass  # Invalid timestamp format, ignore
+                pass
         
-        if not request.user.is_authenticated:
-            # Check if this is a login redirect by examining session
-            # This prevents redirect loops when user just logged in
-            print(f"Middleware: Request user: {request.user}")
-            print(f"Middleware: User not authenticated. Session auth ID: {request.session.get('_auth_user_id')}, Method: {request.method}")
-            
-            # Allow the request if user just logged in (session has auth user ID but user not yet authenticated)
-            if (hasattr(request, 'session') and 
-                request.session.get('_auth_user_id')):
-                print(f"Middleware: Detected auth user ID in session, allowing request to proceed")
-                return self.get_response(request)
-            
-            # Also check for the _just_logged_in flag as a fallback
-            if (hasattr(request, 'session') and 
-                request.session.get('_just_logged_in')):
-                print(f"Middleware: Detected _just_logged_in flag, allowing request to proceed")
-                return self.get_response(request)
-            
-            print(f"Middleware: Redirecting to login")
+        # Debug session state
+        import logging
+        logger = logging.getLogger(__name__)
+        session_id = getattr(request.session, 'session_key', 'No Key')
+        logger.info(f"Middleware DEBUG: Path: {request.path}")
+        logger.info(f"Middleware DEBUG: Session ID: {session_id}")
+        logger.info(f"Middleware DEBUG: Session Keys: {list(request.session.keys())}")
+        logger.info(f"Middleware DEBUG: User: {request.user}")
+        logger.info(f"Middleware DEBUG: Auth: {request.user.is_authenticated}")
+        
+        # Check if user is authenticated OR if session has auth user ID (login in progress)
+        has_auth_user_id = hasattr(request, 'session') and request.session.get('_auth_user_id')
+        has_just_logged_in = hasattr(request, 'session') and request.session.get('_just_logged_in')
+        has_login_timestamp = hasattr(request, 'session') and request.session.get('_login_timestamp')
+        
+        # Emergency recovery: if we have auth user ID but request.user is not authenticated,
+        # it means AuthenticationMiddleware might have missed it due to session race condition.
+        if not request.user.is_authenticated and has_auth_user_id:
+            from django.contrib.auth import get_user
+            logger.warning(f"Middleware: User not authenticated but _auth_user_id found for session {request.session.session_key}. Attempting recovery.")
+            request.user = get_user(request)
+            logger.info(f"Middleware: Recovery successful. User: {request.user}, Auth: {request.user.is_authenticated}")
+        
+        if not request.user.is_authenticated and not has_auth_user_id and not has_just_logged_in and not has_login_timestamp:
+            logger.warning(f"Middleware: Unauthorized access attempt to {request.path}. Redirecting to login.")
             return redirect('login')
+        
+        # If we have auth user ID but user is not authenticated yet, allow the request to proceed
+        if has_auth_user_id and not request.user.is_authenticated:
+            return self.get_response(request)
+        
+        # Also check for the _just_logged_in flag as a fallback
+        if has_just_logged_in and not request.user.is_authenticated:
+            return self.get_response(request)
+        
+        # Check for login timestamp as additional fallback
+        if has_login_timestamp and not request.user.is_authenticated:
+            return self.get_response(request)
         
         # Check if user has vendor profile
         vendor_profile = get_vendor_profile(request.user)
@@ -146,7 +177,25 @@ class VendorAccessMiddleware:
         if vendor_profile.is_approved and vendor_profile.business_partner.status != 'active':
             return HttpResponseForbidden("Access denied: Vendor account suspended.")
         
-        return self.get_response(request)
+        # Log session state before view processing
+        if request.user.is_authenticated:
+            request._initial_session_id = request.session.session_key
+            request._initial_user_id = request.user.id
+
+        response = self.get_response(request)
+        
+        # Log session state after view processing to detect wipes
+        if hasattr(request, '_initial_user_id'):
+            current_session_id = request.session.session_key
+            current_user_id = getattr(request.user, 'id', None)
+            
+            if not request.user.is_authenticated or current_user_id != request._initial_user_id:
+                logger.error(f"CRITICAL: Session wipe detected during request to {request.path}!")
+                logger.error(f"Initial User: {request._initial_user_id}, Current User: {current_user_id}")
+                logger.error(f"Initial Session: {request._initial_session_id}, Current Session: {current_session_id}")
+                logger.error(f"Session Keys: {list(request.session.keys())}")
+        
+        return response
 
 
 class Require2FAMiddleware:

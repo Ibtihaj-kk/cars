@@ -141,30 +141,30 @@ const videosData = [
     title: "We Took On 15 Insane Challenges Each in Audi RS M...",
     thumbnail: "audi-episode",
     overlayText: "The Ultimate Audi Episode",
-    channel: "CorporateDock",
+    channel: "CarSyncro",
     duration: "45:33 min",
     date: "24 July 2025",
     videoUrl: "#",
   },
   {
     id: 2,
-    title: "New 2025 C63 S Hybrid - Love It or Hate It?",
-    thumbnail: "c63-hybrid",
-    overlayText: "GoodBye V8 ? Hello E-Hybrid?",
-    channel: "CorporateDock",
+    title: "Off-Road Adventure with Land Rover Defender",
+    thumbnail: "https://images.pexels.com/photos/1631209/pexels-photo-1631209.jpeg?auto=compress&cs=tinysrgb&w=800",
+    overlayText: "Off-Road Adventure with Land Rover Defender",
+    channel: "CarSyncro",
     duration: "15:59 min",
     date: "22 July 2025",
-    videoUrl: "#",
+    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   },
   {
     id: 3,
-    title: "The Fastest SUV in the world? Audi RSQ8 2025",
-    thumbnail: "rsq8-suv",
-    overlayText: "Fastest SUV in the world ? The Audi RSQ8",
-    channel: "CorporateDock",
+    title: "Tesla Model S Plaid Review",
+    thumbnail: "https://images.pexels.com/photos/11139552/pexels-photo-11139552.jpeg?auto=compress&cs=tinysrgb&w=800",
+    overlayText: "Tesla Model S Plaid Review",
+    channel: "CarSyncro",
     duration: "07:52 min",
     date: "20 July 2025",
-    videoUrl: "#",
+    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   },
 ];
 
@@ -553,7 +553,7 @@ function playVideo(videoUrl) {
 
 function subscribeYoutube() {
   // In a real application, this would redirect to the YouTube channel
-  alert("Redirecting to CorporateDock YouTube channel...");
+  alert("Redirecting to CarSyncro YouTube channel...");
   // window.open('https://youtube.com/corporatedock', '_blank');
 }
 

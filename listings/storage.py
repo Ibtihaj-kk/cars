@@ -13,7 +13,7 @@ import os
 
 class MediaStorage(S3Boto3Storage):
     """Custom S3 storage for media files."""
-    bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'corporatedock-media')
+    bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'carsyncro-media')
     location = 'media'
     default_acl = 'public-read'
     file_overwrite = False
@@ -22,7 +22,7 @@ class MediaStorage(S3Boto3Storage):
 
 class StaticStorage(S3Boto3Storage):
     """Custom S3 storage for static files."""
-    bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'corporatedock-static')
+    bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', 'carsyncro-static')
     location = 'static'
     default_acl = 'public-read'
 

@@ -609,3 +609,20 @@ class DashboardWidget(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.get_widget_type_display()})"
+
+
+class SequenceCounter(models.Model):
+    """Atomic sequence counter for BP number generation and other sequential numbering"""
+    name = models.CharField(max_length=100, unique=True, db_index=True)
+    value = models.PositiveBigIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'core_sequence_counter'
+        verbose_name = 'Sequence Counter'
+        verbose_name_plural = 'Sequence Counters'
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"{self.name}: {self.value}"

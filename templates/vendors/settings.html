@@ -1,7 +1,7 @@
 {% extends 'vendors/base.html' %}
 {% load static %}
 
-{% block title %}Business Settings | Corporate Dock{% endblock %}
+{% block title %}Business Settings | CarSyncro{% endblock %}
 {% block header_title %}Business Settings{% endblock %}
 {% block header_subtitle %}Manage your vendor profile, branding, and contact information{% endblock %}
 
@@ -21,8 +21,8 @@
                     {% if vendor.logo %}
                     <img src="{{ vendor.logo.url }}" alt="Logo" class="w-full h-full object-cover">
                     {% else %}
-                    <img src="{% static 'images/logo.png' %}" alt="Default Logo"
-                        class="w-full h-full object-contain p-4 opacity-50">
+                    <img src="{% static 'images/car-syncro.png' %}" alt="Default Logo"
+                        class="w-full h-full object-contain p-3 opacity-50">
                     <div
                         class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-50 opacity-0 group-hover:opacity-100 transition duration-200">
                         <i class="fas fa-camera text-gray-800 text-2xl mb-1"></i>
@@ -45,7 +45,7 @@
             <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Public Profile</h3>
                 <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200 mb-3">
-                    <span class="text-xs text-gray-600 truncate mr-2" id="profileUrl">corporatedock.com/v/{{ vendor.slug }}</span>
+                    <span class="text-xs text-gray-600 truncate mr-2" id="profileUrl">carsyncro.com/v/{{ vendor.slug }}</span>
                     <button type="button"
                         onclick="navigator.clipboard.writeText(document.getElementById('profileUrl').innerText)"
                         class="text-black hover:text-gray-600">

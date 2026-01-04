@@ -1,0 +1,317 @@
+CarSyncro — Module-wise Project Report (Flows + Checkout)
+
+1) Project Overview
+
+This repository is a Django 5.x monolith that mixes:
+- Server-rendered pages (Django templates, including HTMX partials)
+- REST APIs (Django REST Framework)
+- JWT auth endpoints (SimpleJWT) alongside classic session auth
+- A marketplace-like domain: public parts catalog + cart/checkout + vendor portal + custom admin panel
+
+Main URL entrypoint:
+- yallamotor_project/urls.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/yallamotor_project/urls.py#L60-L77
+
+Core settings / installed apps / middleware:
+- yallamotor_project/settings.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/yallamotor_project/settings.py#L52-L110
+
+Enabled “entry” apps (as wired in root urls):
+- users at /api/users/
+- business_partners at /business-partners/
+- parts at /parts/
+- admin_panel at /admin_panel/
+- DRF Swagger at /api/docs/ (and related endpoints)
+
+
+2) High-Level Request Flow
+
+2.1 Request lifecycle (common)
+1. Request comes in → routed by yallamotor_project/urls.py
+2. Middleware runs (notably):
+   - Currency selection: core.middleware.CurrencyMiddleware
+   - Vendor gating: business_partners.middleware.VendorAccessMiddleware
+   - User restriction: users.middleware.UserRestrictionMiddleware
+3. View executes (template or API)
+4. Templates have shared context processors (cart count, vendor flags, currency)
+
+2.2 “Frontend” in this repo
+No separate React/Vue frontend (no package.json found). The “frontend” is:
+- Django templates under /templates (public pages, user pages, vendor pages, admin panel pages)
+- HTMX endpoints for partial updates
+
+Templates root:
+- templates/: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/templates
+
+
+3) Module: yallamotor_project (Project Shell)
+
+Responsibilities
+- Root URL routing and documentation endpoints
+- Development media serving
+- Fallback “home” view rendering home/index.html
+
+Key files
+- yallamotor_project/urls.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/yallamotor_project/urls.py#L60-L77
+- yallamotor_project/settings.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/yallamotor_project/settings.py#L52-L133
+
+
+4) Module: core (Home + Custom Login + Currency)
+
+4.1 Public home
+Root / renders home/index.html via project-level home() in yallamotor_project/urls.py.
+There is also a core home view depending on which URL is used (core/urls.py).
+
+Core URLs:
+- core/urls.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/core/urls.py#L9-L15
+
+4.2 User login (session-based) with role-based redirects
+Core provides a “custom login view”:
+- URL: /core/login/ (via core/urls.py)
+- It authenticates by email/password and then redirects based on vendor role/approval status.
+
+Implementation:
+- core/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/core/views.py#L32-L110
+
+4.3 Currency selection
+Parts module exposes /parts/set-country/ to set request.session['currency_code'].
+Implementation:
+- parts/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/views.py#L93-L111
+
+
+5) Module: users (Accounts, Roles, JWT API, Template Views)
+
+5.1 Data model
+Custom AUTH_USER_MODEL = 'users.User'
+- settings.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/yallamotor_project/settings.py#L325
+
+Key entities:
+- UserRole enum: users/models.py file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/users/models.py#L54-L62
+- User: users/models.py file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/users/models.py#L64-L125
+- UserProfile: users/models.py file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/users/models.py#L274-L296
+
+5.2 Routing (user endpoints)
+All user routes live under /api/users/ because of root include:
+- yallamotor_project/urls.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/yallamotor_project/urls.py#L66-L71
+
+Important endpoints:
+- users/urls.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/users/urls.py#L1-L72
+  - Template registration page: GET/POST /api/users/signup/ → register_page
+  - API registration: POST /api/users/register/ → UserRegistrationView
+  - API login (JWT): POST /api/users/login/ → CustomTokenObtainPairView
+  - Token refresh: POST /api/users/token/refresh/
+  - Template dashboard/profile/orders/logout:
+    - /api/users/dashboard/, /api/users/profile/, /api/users/orders/, /api/users/logout/
+
+5.3 “Frontend user process” (server-rendered) — end-to-end
+A) Register
+1. Open /api/users/signup/
+2. register_page() renders templates/user/registration.html with cities dropdown from SaudiCity
+   - users/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/users/views.py#L397-L610
+3. On POST it:
+   - Creates users.User + users.UserProfile
+   - Assigns role based on form input (seller vs client)
+   - Logs the user in with session auth (login(request, user))
+   - users/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/users/views.py#L595-L605
+4. Redirects to /api/users/dashboard/
+
+B) Dashboard
+- user_dashboard() renders templates/user/user_dashboard.html and populates role-specific stats.
+- It ensures BusinessPartner + CustomerProfile exists for normal customers and syncs currency to profile.country.
+  - users/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/users/views.py#L613-L697
+
+C) Profile
+- user_profile() renders templates/user/profile.html and updates both User + UserProfile, and ensures customer BusinessPartner objects exist.
+  - users/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/users/views.py#L700-L749
+
+Note: multiple auth approaches exist in parallel:
+- Session login via core.custom_login_view
+- Session login via users.register_page (auto login)
+- JWT login via /api/users/login/ (SimpleJWT)
+- HTMX login in users/htmx_views.py uses django.contrib.auth.models.User which conflicts with AUTH_USER_MODEL='users.User'
+  - users/htmx_views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/users/htmx_views.py#L1-L124
+
+5.4 JWT login flow (API)
+- /api/users/login/ uses SimpleJWT serializer override: adds user metadata and can require 2FA by generating OTP and withholding tokens.
+  - users/serializers.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/users/serializers.py#L80-L116
+
+
+6) Module: parts (Catalog, Cart, Checkout, Orders)
+
+6.1 Public catalog “frontend”
+- GET /parts/ → PartListView renders templates/home/parts.html
+  - parts/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/views.py#L114-L171
+- GET /parts/part/<id>/ → PartDetailView renders templates/parts/part_detail.html
+  - parts/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/views.py#L1169-L1172
+
+Routes:
+- parts/urls.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/urls.py#L11-L103
+
+6.2 Cart: authenticated vs guest
+Authenticated (DB cart)
+- parts.models.Cart and CartItem
+  - parts/models.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/models.py#L1724-L1798
+
+Guest (session cart)
+- Stored at request.session['cart'] as:
+  {
+    "<part_id>": {
+      "quantity": <int>,
+      "name": "<string>",
+      "price": <float>,
+      "sku": "<string>",
+      "image_url": "<string>"
+    }
+  }
+
+Cart count in templates:
+- parts/context_processors.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/context_processors.py#L1-L34
+
+6.3 Checkout procedure from scratch (end-to-end)
+Primary routes:
+- parts/urls.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/urls.py#L77-L87
+
+There are two checkout implementations:
+- Single-page checkout view checkout_view() renders templates/parts/checkout.html
+  - parts/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/views.py#L3160-L3201
+- Multi-step checkout: checkout_step1/2/3 (cleanest end-to-end Python flow)
+  - parts/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/views.py#L3203-L3960
+
+Step 0 — Add items to cart
+- Auth: DB cart
+- Guest: session cart
+- Stock checks enforced before increasing quantities
+
+Step 1 — Order Summary
+URL: GET/POST /parts/checkout/step1/ → checkout_step1_order_summary()
+- Resolves cart items (DB vs session)
+- Computes tax per item based on part.tax_classification_material (default 15%)
+- Applies discount code from session applied_discount_code
+- On proceed_to_shipping persists request.session['checkout_data'] with items_total + discount info
+Code:
+- parts/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/views.py#L3203-L3404
+
+Step 2 — Shipping Info
+URL: GET/POST /parts/checkout/step2/ → checkout_step2_shipping_info()
+- Requires checkout_data from step1
+- Accepts contact + address + city + area fields
+- Computes shipping via ShippingRate(city), fallback default 25.00
+- Computes tax again and sets grand_total
+- Saves updated checkout_data back to session and redirects to step3
+Code:
+- parts/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/views.py#L3406-L3626
+
+Shipping/location models:
+- SaudiCity, CityArea, ShippingRate, OrderShipping
+  - parts/models.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/models.py#L1878-L2015
+
+Step 3 — Payment Method (Order Creation)
+URL: GET/POST /parts/checkout/step3/ → checkout_step3_payment_method()
+- Requires checkout_data fields
+- Implements: cash_on_delivery, bank_transfer
+- Creates Order + OrderItem rows inside a transaction (or updates buy-now order)
+- Deducts inventory via Order.deduct_inventory()
+- Creates OrderShipping
+- Creates OrderDiscount and increments discount usage count
+- Clears cart + checkout session data
+- Redirects to order confirmation
+Code:
+- parts/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/views.py#L3629-L3810
+
+Order models:
+- Order: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/models.py#L1145-L1344
+- OrderItem: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/models.py#L1437-L1473
+- OrderDiscount: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/models.py#L2017-L2043
+- InventoryTransaction: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/models.py#L1651-L1703
+
+Order inventory deduction:
+- Order.deduct_inventory(): file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/models.py#L1345-L1390
+
+Step 4 — Order Confirmation
+URL: /parts/order-confirmation/<order_number>/ → order_confirmation()
+- Auth users must match Order.customer
+- Guest users allowed by order number with recency constraint
+- Computes item-level tax for receipt display and renders templates/parts/thankyou.html
+Code:
+- parts/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/views.py#L3838-L3892
+
+Checkout templates:
+- Single-page checkout template exists:
+  - templates/parts/checkout.html: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/templates/parts/checkout.html
+- Multi-step views reference:
+  - parts/checkout/step1_order_summary.html
+  - parts/checkout/step2_shipping_info.html
+  - parts/checkout/step3_payment_method.html
+  These referenced files were not found in the repo snapshot.
+
+
+7) Module: business_partners (Vendors, Registration, 2FA, Vendor Ops)
+
+7.1 Vendor authentication + 2FA
+Entry URLs:
+- business_partners/urls.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/business_partners/urls.py#L1-L40
+
+Vendor login flow:
+- /business-partners/vendor/login/ → VendorLoginView
+- If vendor has two_factor_enabled, sets pre_2fa_user_id in session → /vendor/2fa/verify/
+Implementation:
+- business_partners/auth_views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/business_partners/auth_views.py#L32-L169
+
+7.2 Vendor registration workflow (multi-step)
+Entry URLs:
+- business_partners/urls.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/business_partners/urls.py#L63-L104
+
+Workflow logic:
+- business_partners/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/business_partners/views.py#L1-L90
+
+Key model: VendorApplication (tracks steps and approval state)
+- business_partners/models.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/business_partners/models.py#L719-L789
+
+7.3 Vendor portal (inventory + orders + finance)
+Inventory:
+- vendor_inventory_overview: business_partners/vendor_inventory_views.py file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/business_partners/vendor_inventory_views.py#L1-L83
+- vendor_inventory_detail: business_partners/vendor_inventory_views.py file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/business_partners/vendor_inventory_views.py#L288-L340
+
+Finance:
+- vendor_finance_dashboard: business_partners/vendor_views.py file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/business_partners/vendor_views.py#L268-L316
+
+Vendor-specific order item tracking (in parts):
+- VendorOrderItemStatus: parts/models.py file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/parts/models.py#L2045-L2119
+
+
+8) Module: admin_panel (Custom Backoffice)
+
+Responsibilities
+- Custom admin-like dashboard (separate from Django admin)
+- Order management + invoice listing derived from orders
+- Vendor payments batch processing
+
+Entry routes:
+- admin_panel/urls.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/admin_panel/urls.py#L1-L40
+
+Invoices are computed from parts.Order with payment_status='completed' (no separate invoice model):
+- admin_panel/views.py: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/admin_panel/views.py#L3589-L3640
+
+Templates:
+- admin_panel/templates/: file:///c:/Users/Ibtihaj/.gemini/antigravity/scratch/yallamotor-analysis/admin_panel/templates
+
+
+9) Other Modules (Brief)
+
+These exist in INSTALLED_APPS but are not the core checkout pipeline:
+- vehicles: vehicle metadata (brands/models/specs)
+- listings: vehicle listings marketplace
+- inquiries: listing inquiries
+- reviews: review features
+- subscriptions, notifications, content, analytics: DRF-style app structure (models/serializers/views/urls)
+
+
+10) Key Takeaways / “How it really works”
+
+- The “frontend” user shopping experience is primarily Django templates:
+  browse parts → add to cart → checkout → place order → confirmation.
+- Checkout supports:
+  authenticated users (DB-backed cart) and guests (session cart),
+  discount codes + shipping rates by city,
+  inventory deduction with InventoryTransaction logging.
+- Parallel auth infrastructure exists:
+  session-based web login, JWT auth endpoints, vendor-specific login + optional 2FA.
+  Some HTMX auth code conflicts with the custom AUTH_USER_MODEL and should be treated cautiously.

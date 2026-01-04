@@ -18,7 +18,7 @@ from pathlib import Path
 
 # Determine the Python interpreter path from virtual environment
 # Adjust this path based on your cPanel setup
-INTERP = os.path.join(os.environ.get('HOME', ''), 'CorporateDock', 'venv', 'bin', 'python')
+INTERP = os.path.join(os.environ.get('HOME', ''), 'CarSyncro', 'venv', 'bin', 'python')
 
 # Check if we're using the correct Python interpreter
 if sys.executable != INTERP:
@@ -33,7 +33,7 @@ project_root = os.path.join(os.environ.get('HOME', ''), 'CorporateDock')
 sys.path.insert(0, project_root)
 
 # Add the project settings directory to path
-sys.path.insert(0, os.path.join(project_root, 'CorporateDock_project'))
+sys.path.insert(0, os.path.join(project_root, 'yallamotor_project'))
 
 # ===========================================================================
 # Load environment variables from .env file

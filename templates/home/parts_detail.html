@@ -1,22 +1,24 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GM Engine Parts | corporatedock</title>
+    <title>GM Engine Parts | CarSyncro</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon-cs.png' %}">
     
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-    <link href="//cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet"/>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="//fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 
-    <script type="module" src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="//unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 
-    <link rel="stylesheet" href="./css/styles.css" />
-    <link rel="stylesheet" href="./css/navbar.css" />
-    <link rel="stylesheet" href="./css/parts.css">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/navbar.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/parts.css' %}">
 
     <style>
         /* --- THEME VARIABLES --- */
@@ -261,8 +263,8 @@
     <button class="mobile-menu-toggle" id="mobileMenuToggle"><span></span><span></span><span></span></button>
     <div class="navbar-top-header">
       <div class="navbar-logo">
-        <a href="index.html">
-          <img src="./assets/images/logo.png" alt="CorporateDock Logo"/>
+        <a href="{% url 'home' %}">
+          <img src="{% static 'images/car-syncro.png' %}" alt="CarSyncro Logo"/>
         </a>
       </div>
       <div class="navbar-right-info">
@@ -281,9 +283,27 @@
             <i class="fa-solid fa-chevron-down navbar-dropdown-arrow"></i>
           </div>
           <div class="navbar-dropdown-menu">
-              <a href="{% url 'login' %}" class="navbar-dropdown-link">Login</a>
-              <span class="navbar-dropdown-divider">|</span>
-              <a href="#" class="navbar-dropdown-link" onclick="openSignupModal(); return false;">Signup</a>
+              {% if user.is_authenticated %}
+                {% if user.is_admin or user.is_staff_member %}
+                  <a href="{% url 'admin_panel:dashboard' %}" class="navbar-dropdown-link">Admin Dashboard</a>
+                  <span class="navbar-dropdown-divider">|</span>
+                  <a href="{% url 'admin_panel:settings' %}" class="navbar-dropdown-link">Settings</a>
+                {% elif user.vendor_profiles.exists or user.is_seller or user_has_vendor_access %}
+                  <a href="{% url 'business_partners:vendor_dashboard' %}" class="navbar-dropdown-link">Vendor Dashboard</a>
+                  <span class="navbar-dropdown-divider">|</span>
+                  <a href="{% url 'business_partners:vendor_profile' %}" class="navbar-dropdown-link">My Profile</a>
+                {% else %}
+                  <a href="{% url 'users:user-dashboard' %}" class="navbar-dropdown-link">User Dashboard</a>
+                  <span class="navbar-dropdown-divider">|</span>
+                  <a href="{% url 'users:user-profile' %}" class="navbar-dropdown-link">My Profile</a>
+                {% endif %}
+                <span class="navbar-dropdown-divider">|</span>
+                <a href="{% url 'users:logout' %}" class="navbar-dropdown-link">Logout</a>
+              {% else %}
+                <a href="{% url 'login' %}" class="navbar-dropdown-link">Login</a>
+                <span class="navbar-dropdown-divider">|</span>
+                <a href="#" class="navbar-dropdown-link" onclick="openSignupModal(); return false;">Signup</a>
+              {% endif %}
           </div>
         </div>
       </div>
@@ -293,8 +313,8 @@
       <div class="mobile-menu-content">
         <div class="mobile-menu-header">
           <div class="mobile-logo">
-            <a href="index.html">
-                <img src="images/logo.png" alt="CorporateDock Logo"/>
+            <a href="{% url 'home' %}">
+                <img src="{% static 'images/car-syncro.png' %}" alt="CarSyncro Logo"/>
             </a>
           </div>
           <button class="mobile-menu-close" id="mobileMenuClose"></button>
@@ -460,7 +480,7 @@
                 </svg>
             </button>
             <div class="text-center">
-                <h2 class="signup-title">Join Corporate Dock</h2>
+                <h2 class="signup-title">Join CarSyncro</h2>
                 <p class="signup-subtitle">Select your account type to continue</p>
             </div>
             <div class="signup-options">
@@ -579,7 +599,7 @@
                   ></path>
                   <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
-                support@corporatedock.com
+                support@carsyncro.com
               </li>
             </ul>
           </div>

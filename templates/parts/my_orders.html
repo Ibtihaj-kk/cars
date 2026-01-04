@@ -2,7 +2,7 @@
 {% load static %}
 {% load vendor_currency %}
 
-{% block title %}My Orders - Corporate Dock{% endblock %}
+{% block title %}My Orders - CarSyncro{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
@@ -17,7 +17,8 @@
         {% if orders %}
         <div class="space-y-4">
             {% for order in orders %}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow relative">
+                <span class="absolute top-4 right-4 text-md font-extrabold text-gray-400 z-10">{% vendor_currency_symbol %}</span>
                 <div class="p-6">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div class="flex-1">
@@ -40,7 +41,7 @@
                             <div class="flex items-center text-sm text-gray-600">
                                 <i class="fas fa-box mr-1"></i> {{ order.items.count }} item{{ order.items.count|pluralize }}
                                 <span class="mx-2">•</span>
-                                <i class="fas fa-money-bill mr-1"></i> {% vendor_currency order.total_amount %}
+                                <i class="fas fa-money-bill mr-1"></i> {% vendor_currency_value order.total_amount %}
                             </div>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-2">

@@ -1,5 +1,5 @@
 """
-Admin authentication views for CorporateDock admin panel.
+Admin authentication views for CarSyncro admin panel.
 Provides secure login/logout with comprehensive logging and 2FA support.
 """
 import logging
@@ -123,7 +123,11 @@ def _handle_login_post(request):
             messages.error(request, 'Invalid 2FA code.')
             return redirect('login')
 
-        login(request, user)
+        # Use CentralizedAuthenticationService to establish secure session
+        from core.authentication import CentralizedAuthenticationService
+        auth_service = CentralizedAuthenticationService()
+        auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        
         request.session.pop('admin_login_attempts', None)
         request.session.pop('admin_2fa_user_id', None)
         request.session.pop('admin_2fa_timestamp', None)
@@ -242,7 +246,9 @@ def _handle_login_post(request):
             return redirect('login')
     
     # Successful authentication - log in user
-    login(request, user)
+    from core.authentication import CentralizedAuthenticationService
+    auth_service = CentralizedAuthenticationService()
+    auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
     
     # Clear login attempts
     request.session.pop('admin_login_attempts', None)
@@ -319,7 +325,7 @@ def setup_2fa_view(request):
     totp = pyotp.TOTP(user.otp_secret)
     provisioning_uri = totp.provisioning_uri(
         name=user.email,
-        issuer_name="CorporateDock Admin"
+        issuer_name="CarSyncro Admin"
     )
     
     # Create QR code image

@@ -78,12 +78,13 @@ class VendorLoginView(View):
                         request.session['pre_2fa_user_id'] = user.id
                         return redirect('business_partners:vendor_2fa_verify')
                     else:
-                        # Login directly
-                        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                        messages.success(request, f'Welcome back, {user.get_full_name() or user.email}!')
-                        
-                        # Redirect to dashboard regardless of approval status
-                        return redirect('business_partners:vendor_dashboard')
+                            # Use CentralizedAuthenticationService to establish secure session with all security flags
+                            from core.authentication import CentralizedAuthenticationService
+                            auth_service = CentralizedAuthenticationService()
+                            auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                            
+                            messages.success(request, f'Welcome back, {user.get_full_name() or user.email}!')
+                            return redirect('business_partners:vendor_dashboard')
             else:
                 messages.error(request, 'Invalid email or password.')
         
@@ -148,15 +149,21 @@ class Vendor2FAVerifyView(View):
                     totp = pyotp.TOTP(vendor_profile.two_factor_secret)
                     
                     if totp.verify(token, valid_window=1):
-                        # Login user
-                        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                        # Use CentralizedAuthenticationService to establish secure session
+                        from core.authentication import CentralizedAuthenticationService
+                        auth_service = CentralizedAuthenticationService()
+                        auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                        
                         del request.session['pre_2fa_user_id']
                         messages.success(request, f'Welcome back, {user.get_full_name() or user.email}!')
                         return redirect('business_partners:vendor_dashboard')
                     else:
                         # Check if it's a backup code
                         if vendor_profile.use_backup_code(token):
-                            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                            from core.authentication import CentralizedAuthenticationService
+                            auth_service = CentralizedAuthenticationService()
+                            auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                            
                             del request.session['pre_2fa_user_id']
                             messages.success(request, 'Login successful using backup code.')
                             return redirect('business_partners:vendor_dashboard')
@@ -196,7 +203,7 @@ class Vendor2FASetupView(View):
         # Generate QR code
         totp_uri = pyotp.totp.TOTP(secret).provisioning_uri(
             name=request.user.email,
-            issuer_name='CorporateDock Vendor Portal'
+            issuer_name='CarSyncro Vendor Portal'
         )
         
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
@@ -300,11 +307,11 @@ class VendorPasswordResetRequestView(View):
                     )
                     
                     # Send reset email
-                    subject = 'Password Reset - CorporateDock Vendor Portal'
+                    subject = 'Password Reset - CarSyncro Vendor Portal'
                     html_message = render_to_string('business_partners/emails/vendor_password_reset.html', {
                         'user': user,
                         'reset_url': reset_url,
-                        'site_name': 'CorporateDock Vendor Portal'
+                        'site_name': 'CarSyncro Vendor Portal'
                     })
                     plain_message = strip_tags(html_message)
                     

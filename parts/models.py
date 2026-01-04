@@ -1433,6 +1433,108 @@ class Order(models.Model):
                     order_item.part.quantity += order_item.quantity
                     order_item.part.save()
 
+    def lock_exchange_rates(self, commit=True):
+        """
+        Lock exchange rates for all order items (24-hour hard lock).
+        This should be called during order creation/checkout.
+        """
+        from django.utils import timezone
+        from core.models import ExchangeRate
+        from decimal import Decimal as D
+        
+        # Set 24-hour validity period
+        self.exchange_rate_locked_at = timezone.now()
+        self.exchange_rate_valid_until = timezone.now() + timezone.timedelta(hours=24)
+        
+        # Lock rates for each order item
+        for item in self.items.all():
+            # Store vendor currency amount
+            item.vendor_currency_amount = item.part.price
+            item.original_currency_code = getattr(item.part, 'original_currency', 'USD') or 'USD'
+            
+            # Lock exchange rate if not USD
+            if item.original_currency_code != 'USD':
+                current_rate = ExchangeRate.get_current_rate(
+                    item.original_currency_code, 
+                    'USD'
+                )
+                item.locked_exchange_rate = D(str(current_rate))
+            
+            item.save()
+        
+        if commit:
+            self.save()
+    
+    def are_exchange_rates_valid(self):
+        """Check if the locked exchange rates are still valid."""
+        from django.utils import timezone
+        
+        if not self.exchange_rate_valid_until:
+            return False
+            
+        return timezone.now() <= self.exchange_rate_valid_until
+    
+    def get_display_price_in_currency(self, currency_code='USD'):
+        """
+        Get order total in specified currency using locked rates.
+        
+        Args:
+            currency_code (str): ISO currency code for display
+            
+        Returns:
+            str: Formatted price string in requested currency
+        """
+        from core.models import Currency, ExchangeRate
+        from decimal import Decimal as D
+        
+        try:
+            display_currency = Currency.objects.get(code=currency_code, is_active=True)
+        except Currency.DoesNotExist:
+            # Fallback to USD
+            try:
+                display_currency = Currency.objects.get(is_base=True)
+            except Currency.DoesNotExist:
+                return f"${self.total_price}"
+        
+        # Calculate total using locked rates
+        total_in_display_currency = D('0.00')
+        
+        for item in self.items.all():
+            # Use locked rate if available, otherwise current rate
+            if item.locked_exchange_rate and self.are_exchange_rates_valid():
+                # Item price is already in USD (locked rate was vendor_currency → USD)
+                item_price_usd = item.price
+            else:
+                # Fallback to current conversion
+                original_curr_code = getattr(item.part, 'original_currency', 'USD') or 'USD'
+                if original_curr_code != 'USD':
+                    current_rate = ExchangeRate.get_current_rate(original_curr_code, 'USD')
+                    item_price_usd = item.part.price * D(str(current_rate))
+                else:
+                    item_price_usd = item.part.price
+            
+            # Convert from USD to display currency
+            if display_currency.code != 'USD':
+                display_rate = ExchangeRate.get_current_rate('USD', display_currency.code)
+                item_display_price = item_price_usd * D(str(display_rate)) * item.quantity
+            else:
+                item_display_price = item_price_usd * item.quantity
+            
+            total_in_display_currency += item_display_price
+        
+        # Add shipping and tax (these are typically in base currency)
+        if display_currency.code != 'USD':
+            display_rate = ExchangeRate.get_current_rate('USD', display_currency.code)
+            shipping_display = self.shipping_cost * D(str(display_rate))
+            tax_display = self.tax_amount * D(str(display_rate))
+        else:
+            shipping_display = self.shipping_cost
+            tax_display = self.tax_amount
+        
+        total_in_display_currency += shipping_display + tax_display
+        
+        return display_currency.format_price(total_in_display_currency)
+
 
 class OrderItem(models.Model):
     """Model for individual items in an order."""
@@ -1471,6 +1573,69 @@ class OrderItem(models.Model):
         if self.quantity is not None and self.price is not None:
             return self.quantity * self.price
         return 0
+    
+    def get_price_in_vendor_currency(self):
+        """
+        Get the price in vendor's original currency using locked rate.
+        
+        Returns:
+            Decimal: Price in vendor's currency
+        """
+        from decimal import Decimal as D
+        
+        if self.vendor_currency_amount:
+            return self.vendor_currency_amount
+        
+        # Fallback: calculate using locked rate
+        if self.locked_exchange_rate:
+            return self.price / D(str(self.locked_exchange_rate))
+        
+        # Final fallback: use part's current price
+        return self.part.price
+    
+    def get_display_price_in_currency(self, currency_code='USD'):
+        """
+        Get item price in specified currency using locked rates.
+        
+        Args:
+            currency_code (str): ISO currency code for display
+            
+        Returns:
+            str: Formatted price string in requested currency
+        """
+        from core.models import Currency, ExchangeRate
+        from decimal import Decimal as D
+        
+        try:
+            display_currency = Currency.objects.get(code=currency_code, is_active=True)
+        except Currency.DoesNotExist:
+            # Fallback to USD
+            try:
+                display_currency = Currency.objects.get(is_base=True)
+            except Currency.DoesNotExist:
+                return f"${self.price}"
+        
+        # Use locked rate if available
+        if self.locked_exchange_rate:
+            # Price is already in USD (locked rate was vendor_currency → USD)
+            item_price_usd = self.price
+        else:
+            # Fallback to current conversion
+            original_curr_code = getattr(self.part, 'original_currency', 'USD') or 'USD'
+            if original_curr_code != 'USD':
+                current_rate = ExchangeRate.get_current_rate(original_curr_code, 'USD')
+                item_price_usd = self.part.price * D(str(current_rate))
+            else:
+                item_price_usd = self.part.price
+        
+        # Convert from USD to display currency
+        if display_currency.code != 'USD':
+            display_rate = ExchangeRate.get_current_rate('USD', display_currency.code)
+            display_price = item_price_usd * D(str(display_rate))
+        else:
+            display_price = item_price_usd
+        
+        return display_currency.format_price(display_price)
 
 
 class Review(models.Model):
@@ -1724,7 +1889,7 @@ class InventoryTransaction(models.Model):
 
 
 class Cart(models.Model):
-    """Model for user shopping cart."""
+    """Model for user shopping cart with multi-currency rate locking."""
     
     user = models.OneToOneField(
         User,
@@ -1733,6 +1898,18 @@ class Cart(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Multi-currency rate locking metadata
+    currency_code = models.CharField(
+        max_length=3,
+        default='USD',
+        help_text="Currency code used for display and locking"
+    )
+    rate_lock_refreshed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When cart rates were last validated/refreshed"
+    )
     
     class Meta:
         verbose_name = "Cart"
@@ -1746,6 +1923,52 @@ class Cart(models.Model):
         return sum(item.quantity for item in self.items.all())
     
     @property
+    def requires_rate_refresh(self):
+        """Check if cart rates need refresh (15-minute soft lock window)."""
+        from django.utils import timezone
+        if not self.rate_lock_refreshed_at:
+            return True
+        return (timezone.now() - self.rate_lock_refreshed_at).total_seconds() > 900  # 15 minutes
+    
+    def refresh_rate_locks(self, commit=True):
+        """Refresh all cart item rate locks to current market rates."""
+        from django.utils import timezone
+        from core.models import ExchangeRate
+        from decimal import Decimal as D
+        
+        for item in self.items.all():
+            if item.part.original_currency != 'USD':
+                # Get current rate from vendor currency to USD
+                current_rate = ExchangeRate.get_current_rate(
+                    item.part.original_currency, 
+                    'USD'
+                )
+                item.locked_exchange_rate = D(str(current_rate))
+            item.rate_lock_timestamp = timezone.now()
+            item.rate_valid_until = timezone.now() + timezone.timedelta(minutes=15)
+            if commit:
+                item.save()
+        
+        self.rate_lock_refreshed_at = timezone.now()
+        if commit:
+            self.save()
+    
+    def validate_rate_locks(self):
+        """Validate all cart item rate locks are still valid."""
+        from django.utils import timezone
+        
+        valid_items = []
+        expired_items = []
+        
+        for item in self.items.all():
+            if item.rate_valid_until and item.rate_valid_until > timezone.now():
+                valid_items.append(item)
+            else:
+                expired_items.append(item)
+        
+        return valid_items, expired_items
+    
+    @property
     def total_price(self):
         return sum(item.total_price for item in self.items.all())
     
@@ -1755,7 +1978,7 @@ class Cart(models.Model):
 
 
 class CartItem(models.Model):
-    """Model for items in shopping cart."""
+    """Model for items in shopping cart with multi-currency rate locking."""
     
     cart = models.ForeignKey(
         Cart,
@@ -1774,6 +1997,32 @@ class CartItem(models.Model):
     added_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Multi-currency rate locking metadata
+    locked_exchange_rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Exchange rate locked at time of adding to cart (vendor_currency → USD)"
+    )
+    rate_lock_timestamp = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this item's exchange rate was locked"
+    )
+    rate_valid_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Until when the locked rate is valid (15 minutes from lock)"
+    )
+    vendor_currency_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Price in vendor's original currency at time of locking"
+    )
+    
     class Meta:
         verbose_name = "Cart Item"
         verbose_name_plural = "Cart Items"
@@ -1786,6 +2035,77 @@ class CartItem(models.Model):
     @property
     def total_price(self):
         return self.part.price * self.quantity
+    
+    @property
+    def total_price_vendor_currency(self):
+        """Total price in vendor's original currency using locked rate."""
+        if self.vendor_currency_amount:
+            return self.vendor_currency_amount * self.quantity
+        return self.part.price * self.quantity
+    
+    @property
+    def is_rate_lock_valid(self):
+        """Check if the rate lock is still valid (15-minute window)."""
+        from django.utils import timezone
+        return self.rate_valid_until and self.rate_valid_until > timezone.now()
+    
+    @property
+    def rate_lock_status(self):
+        """Get human-readable rate lock status."""
+        from django.utils import timezone
+        from django.utils.timesince import timesince
+        
+        if not self.rate_valid_until:
+            return "No rate lock"
+        
+        if self.is_rate_lock_valid:
+            time_remaining = self.rate_valid_until - timezone.now()
+            minutes_remaining = int(time_remaining.total_seconds() / 60)
+            return f"Locked ({minutes_remaining} min remaining)"
+        else:
+            return "Rate lock expired"
+    
+    def lock_exchange_rate(self, commit=True):
+        """Lock the exchange rate for this cart item (15-minute validity)."""
+        from django.utils import timezone
+        from core.models import ExchangeRate
+        from decimal import Decimal as D
+        
+        # Store vendor currency amount
+        self.vendor_currency_amount = self.part.price
+        
+        # Lock exchange rate if not USD
+        if self.part.original_currency != 'USD':
+            current_rate = ExchangeRate.get_current_rate(
+                self.part.original_currency, 
+                'USD'
+            )
+            self.locked_exchange_rate = D(str(current_rate))
+        
+        self.rate_lock_timestamp = timezone.now()
+        self.rate_valid_until = timezone.now() + timezone.timedelta(minutes=15)
+        
+        if commit:
+            self.save()
+    
+    def refresh_rate_lock(self, commit=True):
+        """Refresh the rate lock with current market rates."""
+        from django.utils import timezone
+        from core.models import ExchangeRate
+        from decimal import Decimal as D
+        
+        if self.part.original_currency != 'USD':
+            current_rate = ExchangeRate.get_current_rate(
+                self.part.original_currency, 
+                'USD'
+            )
+            self.locked_exchange_rate = D(str(current_rate))
+        
+        self.rate_lock_timestamp = timezone.now()
+        self.rate_valid_until = timezone.now() + timezone.timedelta(minutes=15)
+        
+        if commit:
+            self.save()
     
     def clean(self):
         """Validate that quantity doesn't exceed available stock."""
@@ -1875,29 +2195,52 @@ class DiscountCode(models.Model):
         return discount
 
 
-class SaudiCity(models.Model):
-    """Model for Saudi Arabian cities."""
+class Country(models.Model):
+    """Model for countries."""
     
-    name = models.CharField(max_length=100, unique=True)
+    code = models.CharField(max_length=2, unique=True, primary_key=True)
+    name = models.CharField(max_length=100)
     name_ar = models.CharField(max_length=100, blank=True, null=True)
-    region = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = "Country"
+        verbose_name_plural = "Countries"
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+
+
+class City(models.Model):
+    """Model for cities across all countries."""
+    
+    country = models.ForeignKey(
+        Country,
+        on_delete=models.CASCADE,
+        related_name='cities'
+    )
+    name = models.CharField(max_length=100)
+    name_ar = models.CharField(max_length=100, blank=True, null=True)
+    region = models.CharField(max_length=100, blank=True, null=True)
     region_ar = models.CharField(max_length=100, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     
     class Meta:
-        verbose_name = "Saudi City"
-        verbose_name_plural = "Saudi Cities"
+        verbose_name = "City"
+        verbose_name_plural = "Cities"
+        unique_together = ['country', 'name']
         ordering = ['name']
     
     def __str__(self):
-        return f"{self.name} ({self.region})"
+        return f"{self.name}, {self.country.name}"
 
 
 class CityArea(models.Model):
     """Model for city areas/districts."""
     
     city = models.ForeignKey(
-        SaudiCity,
+        City,
         on_delete=models.CASCADE,
         related_name='areas'
     )
@@ -1919,7 +2262,7 @@ class ShippingRate(models.Model):
     """Model for shipping rates based on location."""
     
     city = models.ForeignKey(
-        SaudiCity,
+        City,
         on_delete=models.CASCADE,
         related_name='shipping_rates'
     )
@@ -1981,7 +2324,7 @@ class OrderShipping(models.Model):
     
     # Shipping Address
     city = models.ForeignKey(
-        SaudiCity,
+        City,
         on_delete=models.PROTECT,
         related_name='order_shipments'
     )

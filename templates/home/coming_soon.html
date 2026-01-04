@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if status_code == 404 %}Page Not Found{% elif status_code == 500 %}Server Error{% else %}Coming Soon{% endif %} | Corporate Dock</title>
+    <title>{% if status_code == 404 %}Page Not Found{% elif status_code == 500 %}Server Error{% else %}Coming Soon{% endif %} | CarSyncro</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon-cs.png' %}">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
@@ -208,7 +209,7 @@
     <header class="navbar-top-header">
         <div class="navbar-logo">
             <a href="{% url 'home' %}">
-                <img src="{% static 'images/logo.png' %}" alt="Corporate Dock Logo">
+                <img src="{% static 'images/car-syncro.png' %}" alt="CarSyncro Logo" class="h-10 w-auto object-contain">
             </a>
         </div>
     </header>

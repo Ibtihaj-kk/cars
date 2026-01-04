@@ -1,5 +1,5 @@
 """
-Role-based access control (RBAC) decorators for CorporateDock admin panel.
+Role-based access control (RBAC) decorators for CarSyncro admin panel.
 Provides fine-grained permission control for different admin functions.
 """
 import logging

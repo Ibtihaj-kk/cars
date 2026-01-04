@@ -2264,10 +2264,10 @@ def add_user_view(request):
         # Send welcome email
         try:
             send_mail(
-                subject='Welcome to Corporate Dock',
+                subject='Welcome to CarSyncro',
                 message=f'''Hi {first_name},
 
-Your account has been created on Corporate Dock.
+Your account has been created on CarSyncro.
 
 Email: {email}
 Role: {role.title()}
@@ -2277,7 +2277,7 @@ You can login at: {settings.SITE_URL if hasattr(settings, 'SITE_URL') else 'the 
 Please change your password after your first login.
 
 Best regards,
-Corporate Dock Team''',
+CarSyncro Team''',
                 from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else None,
                 recipient_list=[email],
                 fail_silently=True,

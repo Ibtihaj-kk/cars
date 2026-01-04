@@ -173,12 +173,13 @@ class VendorDocument(models.Model):
     
     def generate_document_number(self):
         """Generate a unique document number"""
-        from django.utils import timezone
         year = timezone.now().year
-        count = VendorDocument.objects.filter(
-            uploaded_at__year=year
-        ).count() + 1
-        return f"VDOC-{year}-{count:06d}"
+        prefix = f"VDOC-{year}-"
+        for _ in range(5):
+            candidate = f"{prefix}{uuid.uuid4().hex[:8].upper()}"
+            if not VendorDocument.objects.filter(document_number=candidate).exists():
+                return candidate
+        return f"{prefix}{uuid.uuid4().hex.upper()}"
     
     def calculate_file_hash(self):
         """Calculate SHA-256 hash of the file"""
