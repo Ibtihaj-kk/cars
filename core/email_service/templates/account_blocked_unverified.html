@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Blocked - CarSyncro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid #dc3545;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #dc3545;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #ddd;
+        }
+        .alert {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">CarSyncro</div>
+            <h2>Account Blocked</h2>
+        </div>
+        
+        <div class="content">
+            <p>Hello {{ user.first_name|default:user.username }},</p>
+            
+            <div class="alert">
+                <strong>Important Notice:</strong> Your CarSyncro account has been <strong>blocked</strong> because you did not verify your email address within the required 3-day period.
+            </div>
+            
+            <p>Your account was blocked on <strong>{{ blocked_at|date:"F j, Y \a\t g:i A" }}</strong> for security reasons.</p>
+            
+            <h3>What You Need to Do:</h3>
+            <ol>
+                <li>Contact our support team at <a href="mailto:{{ support_email }}">{{ support_email }}</a></li>
+                <li>Provide your account email address</li>
+                <li>Request account reactivation</li>
+                <li>Complete the email verification process</li>
+            </ol>
+            
+            <p>Our support team will guide you through the reactivation process and help you get your account back online.</p>
+            
+            <p>We take account security seriously to protect both our users and our platform. This automated blocking helps prevent unauthorized account creation.</p>
+            
+            <p>If you believe this is an error, please contact us immediately.</p>
+            
+            <p>Best regards,<br>The CarSyncro Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>© 2024 CarSyncro. All rights reserved.</p>
+            <p>Support: <a href="mailto:{{ support_email }}">{{ support_email }}</a></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -503,15 +503,15 @@ def vendor_settings_view(request):
     # Get documents from VendorDocument model (collected during registration)
     from business_partners.document_models import VendorDocument
     registration_documents = VendorDocument.objects.filter(
-        business_partner=business_partner,
-        status='verified'
-    ).select_related('category')
+        business_partner=business_partner
+    ).select_related('category').order_by('-uploaded_at')
     
     # Create a dictionary of registration documents for easy access
     registration_docs_dict = {}
     for doc in registration_documents:
         category_name = doc.category.name.lower().replace(' ', '_')
-        registration_docs_dict[category_name] = doc
+        if category_name not in registration_docs_dict:
+            registration_docs_dict[category_name] = doc
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -528,6 +528,10 @@ def vendor_settings_view(request):
             messages.success(request, 'Business settings updated successfully.')
             return redirect('business_partners:vendor_settings')
         else:
+            # Log form errors for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"VendorSettingsForm validation errors: {form.errors}")
             messages.error(request, 'Please correct the errors below.')
     else:
         form = VendorSettingsForm(business_partner=business_partner)

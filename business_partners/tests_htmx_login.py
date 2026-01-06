@@ -55,7 +55,7 @@ class VendorLoginStatusTests(TestCase):
             data = json.loads(response.content)
             self.assertTrue(data['is_authenticated'])
             self.assertFalse(data['is_vendor'])
-            self.assertEqual(data['redirect_url'], '/')
+            self.assertEqual(data['redirect_url'], '/api/users/dashboard/')
 
     def test_authenticated_vendor_approved(self):
         request = self.factory.get('/business-partners/htmx/login/status/')

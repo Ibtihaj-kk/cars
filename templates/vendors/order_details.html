@@ -163,7 +163,7 @@
                             <div class="flex justify-between mb-1">
                                 <h4 class="font-bold text-gray-900">{{ item_data.item.part.name }}</h4>
                                 <div class="text-right">
-                                    <span class="font-bold text-gray-900">{% vendor_currency_value item_data.item.price %}</span>
+                                    <span class="font-bold text-gray-900">{% vendor_currency_value item_data.line_subtotal_usd %}</span>
                                     {% if item_data.tax_amount > 0 %}
                                     <p class="text-xs text-gray-500">+ {% vendor_currency_value item_data.tax_amount %} Tax ({{ item_data.tax_rate_display }})</p>
                                     {% else %}

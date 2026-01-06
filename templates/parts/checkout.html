@@ -508,11 +508,11 @@
                 </div>
                 <div class="price-row">
                     <span>Shipping</span>
-                    <span style="font-size:12px;">{{ shipping_cost|floatformat:2 }} ر.س.</span>
+                    <span style="font-size:12px;">{% vendor_currency shipping_cost %}</span>
                 </div>
                 <div class="price-row">
                     <span>Tax (VAT)</span>
-                    <span>{{ tax_amount|floatformat:2 }} ر.س.</span>
+                    <span>{% vendor_currency tax_amount %}</span>
                 </div>
 
                 <div class="price-row total">

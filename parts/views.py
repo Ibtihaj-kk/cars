@@ -220,17 +220,17 @@ class PartListView(ListView):
         min_price = self.request.GET.get('min_price')
         max_price = self.request.GET.get('max_price')
         if min_price:
-            queryset = queryset.filter(price__gte=min_price)
+            queryset = queryset.filter(standard_price__gte=min_price)
         if max_price:
-            queryset = queryset.filter(price__lte=max_price)
+            queryset = queryset.filter(standard_price__lte=max_price)
         
         # Price range filter from template (price_min/price_max)
         price_min = self.request.GET.get('price_min')
         price_max = self.request.GET.get('price_max')
         if price_min:
-            queryset = queryset.filter(price__gte=price_min)
+            queryset = queryset.filter(standard_price__gte=price_min)
         if price_max:
-            queryset = queryset.filter(price__lte=price_max)
+            queryset = queryset.filter(standard_price__lte=price_max)
         
         # Enhanced stock filter
         stock_filter = self.request.GET.get('stock_availability')
@@ -380,7 +380,22 @@ class PartListView(ListView):
         
         # Sorting
         sort_by = self.request.GET.get('sort') or '-created_at'
-        if sort_by in ['name', '-name', 'price', '-price', 'created_at', '-created_at', 'vendor_rating', '-vendor_rating']:
+        
+        # Map template sort values to model fields
+        sort_mapping = {
+            'price': 'standard_price',
+            '-price': '-standard_price',
+            'name': 'name',
+            '-name': '-name',
+            'created_at': 'created_at',
+            '-created_at': '-created_at',
+            'vendor_rating': 'vendor_rating',
+            '-vendor_rating': '-vendor_rating'
+        }
+        
+        if sort_by in sort_mapping:
+            queryset = queryset.order_by(sort_mapping[sort_by])
+        elif sort_by in ['name', '-name', 'created_at', '-created_at', 'vendor_rating', '-vendor_rating', 'standard_price', '-standard_price']:
             queryset = queryset.order_by(sort_by)
         
         return queryset
@@ -1126,6 +1141,14 @@ def buy_now(request):
             # Session Cart
             cart = request.session.get('cart', {})
             part_id_str = str(part_id)
+            
+            # Convert price to USD for storage
+            from core.models import ExchangeRate
+            price_in_usd = part.standard_price
+            if part.original_currency != 'USD':
+                rate = ExchangeRate.get_current_rate(part.original_currency, 'USD')
+                price_in_usd = part.standard_price * Decimal(str(rate))
+            
             if part_id_str in cart:
                 new_quantity = cart[part_id_str]['quantity'] + qty
                 if part.quantity < new_quantity:
@@ -1138,7 +1161,9 @@ def buy_now(request):
                 cart[part_id_str] = {
                     'quantity': qty,
                     'name': part.name,
-                    'price': float(part.price),
+                    'price': float(price_in_usd),
+                    'original_price': float(part.standard_price),
+                    'original_currency': part.original_currency,
                     'sku': part.sku,
                     'image_url': part.image.url if part.image else (part.image_url or ''),
                 }
@@ -1693,7 +1718,7 @@ class CSVUploadView(DealerAdminRequiredMixin, FormView):
                                 continue
                             elif update_existing:
                                 # Update existing part
-                                existing_part.price = price
+                                existing_part.standard_price = price
                                 existing_part.original_currency = original_currency
                                 existing_part.quantity = quantity
                                 if description:
@@ -1911,8 +1936,8 @@ def process_api_data(api_data, user, integration_source, bulk_log):
                     if existing_part:
                         # Update existing part if needed
                         updated = False
-                        if existing_part.price != price:
-                            existing_part.price = price
+                        if existing_part.standard_price != price:
+                            existing_part.standard_price = price
                             updated = True
                         if existing_part.quantity != quantity:
                             existing_part.quantity = quantity
@@ -2034,11 +2059,22 @@ def get_cart_total(request):
         cart = get_cart(request)
         total = 0
         for item_id, item_data in cart.items():
-            try:
-                part = Part.objects.get(id=item_id, is_active=True)
-                total += float(part.price) * item_data['quantity']
-            except Part.DoesNotExist:
-                continue
+            # Use the stored price in USD from the session cart
+            if 'price' in item_data:
+                total += float(item_data['price']) * item_data['quantity']
+            else:
+                # Fallback to part price with conversion if price not in session
+                try:
+                    part = Part.objects.get(id=item_id, is_active=True)
+                    price_in_usd = part.standard_price
+                    if part.original_currency != 'USD':
+                        from core.models import ExchangeRate
+                        from decimal import Decimal
+                        rate = ExchangeRate.get_current_rate(part.original_currency, 'USD')
+                        price_in_usd = part.standard_price * Decimal(str(rate))
+                    total += float(price_in_usd) * item_data['quantity']
+                except Part.DoesNotExist:
+                    continue
         return total
 
 
@@ -2102,6 +2138,14 @@ def add_to_cart(request, part_id):
                 else:
                     # Session Cart for Anonymous Users
                     cart = request.session.get('cart', {})
+                    
+                    # Convert price to USD for storage
+                    from core.models import ExchangeRate
+                    price_in_usd = part.standard_price
+                    if part.original_currency != 'USD':
+                        rate = ExchangeRate.get_current_rate(part.original_currency, 'USD')
+                        price_in_usd = part.standard_price * Decimal(str(rate))
+                    
                     if str(part_id) in cart:
                         new_quantity = cart[str(part_id)]['quantity'] + quantity
                         if available_stock < new_quantity:
@@ -2111,7 +2155,9 @@ def add_to_cart(request, part_id):
                         cart[str(part_id)] = {
                             'quantity': quantity,
                             'name': part.name,
-                            'price': float(part.price),
+                            'price': float(price_in_usd),
+                            'original_price': float(part.standard_price),
+                            'original_currency': part.original_currency,
                             'sku': part.sku,
                             'image_url': part.image.url if part.image else (part.image_url or ''),
                         }
@@ -2208,21 +2254,34 @@ def cart_view(request):
 def hx_update_cart_quantity(request, item_id):
     """HTMX view to update cart item quantity."""
     try:
-        change = int(request.POST.get('change', 0))
-        if change == 0:
-             return JsonResponse({'error': 'Invalid change'}, status=400)
+        quantity_raw = request.POST.get('quantity')
+        change_raw = request.POST.get('change')
 
         if request.user.is_authenticated:
             cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
-            new_quantity = cart_item.quantity + change
             part = cart_item.part
             available_stock = part.quantity
-            
+            effective_max = max(available_stock, cart_item.quantity, 1)
+
+            if quantity_raw is not None:
+                try:
+                    new_quantity = int(quantity_raw)
+                except (TypeError, ValueError):
+                    new_quantity = 1
+            else:
+                try:
+                    change = int(change_raw or 0)
+                except (TypeError, ValueError):
+                    change = 0
+                if change == 0:
+                    return JsonResponse({'error': 'Invalid change'}, status=400)
+                new_quantity = cart_item.quantity + change
+
             if new_quantity < 1:
                 new_quantity = 1
-            elif new_quantity > available_stock:
-                new_quantity = available_stock
-            
+            elif new_quantity > effective_max:
+                new_quantity = effective_max
+
             cart_item.quantity = new_quantity
             cart_item.save()
         else:
@@ -2231,21 +2290,34 @@ def hx_update_cart_quantity(request, item_id):
             part_id = str(item_id)
             
             if part_id in cart:
-                current_qty = cart[part_id]['quantity']
-                new_quantity = current_qty + change
-                
                 # Check stock
                 try:
                     part = Part.objects.get(id=part_id)
                     available_stock = part.quantity
                 except Part.DoesNotExist:
                     available_stock = 999
-                
+                current_qty = cart[part_id]['quantity']
+                effective_max = max(available_stock, current_qty, 1)
+
+                if quantity_raw is not None:
+                    try:
+                        new_quantity = int(quantity_raw)
+                    except (TypeError, ValueError):
+                        new_quantity = 1
+                else:
+                    try:
+                        change = int(change_raw or 0)
+                    except (TypeError, ValueError):
+                        change = 0
+                    if change == 0:
+                        return JsonResponse({'error': 'Invalid change'}, status=400)
+                    new_quantity = current_qty + change
+
                 if new_quantity < 1:
                     new_quantity = 1
-                elif new_quantity > available_stock:
-                    new_quantity = available_stock
-                
+                elif new_quantity > effective_max:
+                    new_quantity = effective_max
+
                 cart[part_id]['quantity'] = new_quantity
                 request.session['cart'] = cart
                 request.session.modified = True
@@ -2507,7 +2579,18 @@ def checkout_view(request):
         for part_id, item_data in cart.items():
             try:
                 part = Part.objects.get(id=part_id, is_active=True)
-                item_total = part.price * item_data['quantity']
+                
+                # Use session price (USD) if available, else convert
+                if 'price' in item_data:
+                    item_price_usd = Decimal(str(item_data['price']))
+                else:
+                    item_price_usd = part.standard_price
+                    if part.original_currency != 'USD':
+                        from core.models import ExchangeRate
+                        rate = ExchangeRate.get_current_rate(part.original_currency, 'USD')
+                        item_price_usd = part.standard_price * Decimal(str(rate))
+                
+                item_total = item_price_usd * item_data['quantity']
                 
                 # Create mock object
                 class MockItem:
@@ -2611,7 +2694,7 @@ def checkout_view(request):
                             order=order,
                             part=item.part,
                             quantity=item.quantity,
-                            price=item.part.price
+                            price=item.part.standard_price
                         )
                     
                     # Deduct inventory using the robust model method
@@ -2901,7 +2984,7 @@ def cart_view(request):
                 cart[str(item.part.id)] = {
                     'id': item.id,  # CartItem ID for updates/removal
                     'name': item.part.name,
-                    'price': item.part.price,
+                    'price': item.part.standard_price,
                     'quantity': item.quantity,
                     'image': item.part.image,
                     'image_url': item.part.image_url,
@@ -2923,10 +3006,10 @@ def cart_view(request):
         for part_id, item_data in cart.items():
             try:
                 part = Part.objects.get(id=part_id, is_active=True)
-                item_total = part.price * item_data['quantity']
+                item_total = part.standard_price * item_data['quantity']
                 cart[part_id].update({
                     'name': part.name,
-                    'price': part.price,
+                    'price': part.standard_price,
                     'image': part.image,
                     'image_url': part.image_url,
                     'sku': part.sku,
@@ -3022,7 +3105,7 @@ def checkout_view(request):
         for part_id, item_data in cart.items():
             try:
                 part = Part.objects.get(id=part_id, is_active=True)
-                item_total = part.price * item_data['quantity']
+                item_total = part.standard_price * item_data['quantity']
                 
                 # Create mock object
                 class MockItem:
@@ -3136,7 +3219,7 @@ def checkout_view(request):
                             order=order,
                             part=part,
                             quantity=item.quantity,
-                            price=part.price
+                            price=part.standard_price
                         )
                         # Update Stock
                         part.quantity -= item.quantity
@@ -3287,14 +3370,14 @@ def checkout_step1_order_summary(request):
         for item_id, item_data in cart.items():
             try:
                 part = Part.objects.get(id=item_id, is_active=True)
-                item_total = part.price * item_data['quantity']
+                item_total = part.standard_price * item_data['quantity']
                 items_total += item_total
                 
                 # Create a mock cart item object for template compatibility
                 cart_items_data.append({
                     'part': part,
                     'quantity': item_data['quantity'],
-                    'price': part.price,
+                    'price': part.standard_price,
                     'total_price': item_total,
                     'get_total_price': lambda: item_total,  # For template compatibility
                 })
@@ -3573,7 +3656,7 @@ def checkout_step2_shipping_info(request):
                                         item_tax_rate = Decimal('0.00')
                                     elif item.part.tax_classification_material == 'EXEMPT':
                                         item_tax_rate = Decimal('0.00')
-                                tax_amount += item.quantity * item.part.price * item_tax_rate
+                                tax_amount += item.quantity * item.part.standard_price * item_tax_rate
                         except Cart.DoesNotExist:
                             tax_amount = (items_total + shipping_cost - discount_amount) * tax_rate
                     else:
@@ -3591,7 +3674,7 @@ def checkout_step2_shipping_info(request):
                                             item_tax_rate = Decimal('0.00')
                                         elif part.tax_classification_material == 'EXEMPT':
                                             item_tax_rate = Decimal('0.00')
-                                    tax_amount += item_data['quantity'] * part.price * item_tax_rate
+                                    tax_amount += item_data['quantity'] * part.standard_price * item_tax_rate
                                 except Part.DoesNotExist:
                                     continue
                         else:
@@ -3786,7 +3869,7 @@ def checkout_step3_payment_method(request):
                                 if cart:
                                     for cart_item in cart.items.all():
                                         # Use locked exchange rate if available, otherwise fallback to current price
-                                        locked_price = cart_item.get_price_in_user_currency() if hasattr(cart_item, 'get_price_in_user_currency') else cart_item.part.price
+                                        locked_price = cart_item.get_price_in_user_currency() if hasattr(cart_item, 'get_price_in_user_currency') else cart_item.part.standard_price
                                         
                                         OrderItem.objects.create(
                                             order=order,
@@ -3808,7 +3891,7 @@ def checkout_step3_payment_method(request):
                                                 order=order,
                                                 part=part,
                                                 quantity=item_data['quantity'],
-                                                price=part.price
+                                                price=part.standard_price
                                             )
                                         except Part.DoesNotExist:
                                             logger.warning(f"Part {part_id} not found for guest cart item")
@@ -3925,15 +4008,33 @@ def order_confirmation(request, order_number):
                 elif item.part.tax_classification_material == 'EXEMPT':
                     tax_rate = Decimal('0.00')
                     tax_rate_display = 'Exempt'
-            
-            item_tax = item.quantity * item.price * tax_rate
+
+            unit_price_usd = item.price
+            if item.locked_exchange_rate and item.vendor_currency_amount:
+                unit_price_usd = item.vendor_currency_amount * item.locked_exchange_rate
+            else:
+                original_currency_code = (item.original_currency_code or getattr(item.part, 'original_currency', None) or 'USD').upper()
+                if original_currency_code != 'USD':
+                    try:
+                        from core.models import ExchangeRate
+                        from decimal import Decimal as D
+
+                        rate_to_usd = ExchangeRate.get_current_rate(original_currency_code, 'USD')
+                        unit_price_usd = item.part.standard_price * D(str(rate_to_usd))
+                    except Exception:
+                        unit_price_usd = item.price
+
+            line_subtotal_usd = unit_price_usd * item.quantity
+            item_tax = line_subtotal_usd * tax_rate
             
             enhanced_items.append({
                 'item': item,
+                'unit_price_usd': unit_price_usd,
+                'line_subtotal_usd': line_subtotal_usd,
                 'tax_rate': tax_rate,
                 'tax_rate_display': tax_rate_display,
                 'tax_amount': item_tax,
-                'total_with_tax': (item.quantity * item.price) + item_tax
+                'total_with_tax': line_subtotal_usd + item_tax
             })
 
         context = {

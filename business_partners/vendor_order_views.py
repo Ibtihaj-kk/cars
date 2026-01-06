@@ -66,14 +66,6 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
                 Q(guest_email__icontains=search)
             )
         
-        # Annotate with vendor-specific total
-        qs = qs.annotate(
-            vendor_total=Sum(
-                F('items__quantity') * F('items__price'),
-                filter=Q(items__part__vendor=vendor_profile.business_partner)
-            )
-        )
-
         return qs.select_related(
             'customer', 'shipping_info'
         ).prefetch_related(
@@ -91,10 +83,11 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
         vendor_profile = get_vendor_profile(self.request.user)
         if vendor_profile:
             context['vendor_profile'] = vendor_profile
+            vendor_partner = vendor_profile.business_partner
             
             # Base queryset for counts (unfiltered by status/search)
             base_qs = Order.objects.filter(
-                items__part__vendor=vendor_profile.business_partner
+                items__part__vendor=vendor_partner
             ).distinct()
             
             context['total_orders'] = base_qs.count()
@@ -116,7 +109,7 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
             
             # Revenue statistics (Vendor Specific)
             context['total_revenue'] = OrderItem.objects.filter(
-                part__vendor=vendor_profile.business_partner,
+                part__vendor=vendor_partner,
                 order__status__in=['delivered', 'shipped']
             ).aggregate(
                 total=Sum(F('quantity') * F('price'))
@@ -136,6 +129,64 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
             context['date_to'] = self.request.GET.get('date_to', '')
             context['min_amount'] = self.request.GET.get('min_amount', '')
             context['max_amount'] = self.request.GET.get('max_amount', '')
+
+            orders_page = context.get('orders')
+            if orders_page:
+                try:
+                    from core.models import ExchangeRate
+                    from decimal import Decimal as D
+                except Exception:
+                    ExchangeRate = None
+                    D = Decimal
+
+                currency_rates_to_usd = {}
+                for order in orders_page:
+                    vendor_total_usd = Decimal('0.00')
+                    vendor_tax_total_usd = Decimal('0.00')
+                    for item in getattr(order, 'items', []).all():
+                        if not item.part_id or getattr(item.part, 'vendor_id', None) != vendor_partner.id:
+                            continue
+
+                        unit_price_usd = None
+                        if getattr(item, 'vendor_currency_amount', None):
+                            vendor_amount = item.vendor_currency_amount
+                            original_currency_code = (getattr(item, 'original_currency_code', None) or getattr(item.part, 'original_currency', None) or 'USD').upper()
+                            if getattr(item, 'locked_exchange_rate', None):
+                                if original_currency_code == 'USD':
+                                    unit_price_usd = vendor_amount
+                                else:
+                                    unit_price_usd = vendor_amount * item.locked_exchange_rate
+                            else:
+                                if original_currency_code == 'USD':
+                                    unit_price_usd = vendor_amount
+                                elif ExchangeRate:
+                                    if original_currency_code not in currency_rates_to_usd:
+                                        currency_rates_to_usd[original_currency_code] = D(str(ExchangeRate.get_current_rate(original_currency_code, 'USD')))
+                                    unit_price_usd = vendor_amount * currency_rates_to_usd[original_currency_code]
+                        if unit_price_usd is None:
+                            original_currency_code = (getattr(item, 'original_currency_code', None) or getattr(item.part, 'original_currency', None) or 'USD').upper()
+                            if original_currency_code == 'USD':
+                                unit_price_usd = item.part.standard_price
+                            elif ExchangeRate:
+                                if original_currency_code not in currency_rates_to_usd:
+                                    currency_rates_to_usd[original_currency_code] = D(str(ExchangeRate.get_current_rate(original_currency_code, 'USD')))
+                                unit_price_usd = item.part.standard_price * currency_rates_to_usd[original_currency_code]
+                            else:
+                                unit_price_usd = item.price
+
+                        line_subtotal_usd = (unit_price_usd or Decimal('0.00')) * item.quantity
+
+                        tax_rate = Decimal('0.15')
+                        tax_classification = getattr(item.part, 'tax_classification_material', None)
+                        if tax_classification == 'VAT_5':
+                            tax_rate = Decimal('0.05')
+                        elif tax_classification in ('ZERO', 'EXEMPT'):
+                            tax_rate = Decimal('0.00')
+
+                        vendor_total_usd += line_subtotal_usd
+                        vendor_tax_total_usd += line_subtotal_usd * tax_rate
+
+                    order.vendor_total = vendor_total_usd + vendor_tax_total_usd
         
         return context
 
@@ -224,8 +275,39 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
                     tax_rate = Decimal('0.00')
                     tax_rate_display = 'Exempt'
             
-            item_tax = item.quantity * item.price * tax_rate
-            item_total_with_tax = (item.quantity * item.price) + item_tax
+            try:
+                from core.models import ExchangeRate
+                from decimal import Decimal as D
+            except Exception:
+                ExchangeRate = None
+                D = Decimal
+
+            unit_price_usd = None
+            if getattr(item, 'vendor_currency_amount', None):
+                original_currency_code = (getattr(item, 'original_currency_code', None) or getattr(item.part, 'original_currency', None) or 'USD').upper()
+                if getattr(item, 'locked_exchange_rate', None):
+                    if original_currency_code == 'USD':
+                        unit_price_usd = item.vendor_currency_amount
+                    else:
+                        unit_price_usd = item.vendor_currency_amount * item.locked_exchange_rate
+                else:
+                    if original_currency_code == 'USD':
+                        unit_price_usd = item.vendor_currency_amount
+                    elif ExchangeRate:
+                        unit_price_usd = item.vendor_currency_amount * D(str(ExchangeRate.get_current_rate(original_currency_code, 'USD')))
+
+            if unit_price_usd is None:
+                original_currency_code = (getattr(item, 'original_currency_code', None) or getattr(item.part, 'original_currency', None) or 'USD').upper()
+                if original_currency_code == 'USD':
+                    unit_price_usd = item.part.standard_price
+                elif ExchangeRate:
+                    unit_price_usd = item.part.standard_price * D(str(ExchangeRate.get_current_rate(original_currency_code, 'USD')))
+                else:
+                    unit_price_usd = item.price
+
+            line_subtotal_usd = unit_price_usd * item.quantity
+            item_tax = line_subtotal_usd * tax_rate
+            item_total_with_tax = line_subtotal_usd + item_tax
             
             # Get vendor currency amounts using locked exchange rates
             vendor_currency_amount = None
@@ -240,10 +322,9 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
                 vendor_currency_total = item.quantity * vendor_currency_amount
                 vendor_currency_tax = vendor_currency_total * tax_rate
                 vendor_currency_grand_total = vendor_currency_total + vendor_currency_tax
-            elif hasattr(item.part, 'vendor') and item.part.vendor and item.part.vendor.currency:
-                # Fallback: calculate using current exchange rates if locked rates not available
-                vendor_currency_code = item.part.vendor.currency.code
-                vendor_currency_amount = item.part.get_price_in_vendor_currency()
+            else:
+                vendor_currency_code = (getattr(item.part, 'original_currency', None) or getattr(item, 'original_currency_code', None) or 'USD').upper()
+                vendor_currency_amount = item.part.standard_price
                 vendor_currency_total = item.quantity * vendor_currency_amount
                 vendor_currency_tax = vendor_currency_total * tax_rate
                 vendor_currency_grand_total = vendor_currency_total + vendor_currency_tax
@@ -255,6 +336,8 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
                 'status_display': status_display,
                 'tracking_number': vendor_status_obj.tracking_number if vendor_status_obj else None,
                 'status_updated_at': vendor_status_obj.updated_at if vendor_status_obj else None,
+                'unit_price_usd': unit_price_usd,
+                'line_subtotal_usd': line_subtotal_usd,
                 'tax_rate': tax_rate,
                 'tax_rate_display': tax_rate_display,
                 'tax_amount': item_tax,
@@ -314,7 +397,7 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
         vendor_tax_total = Decimal('0.00')
         
         for item_data in enhanced_vendor_items:
-            vendor_items_total += item_data['item'].quantity * item_data['item'].price
+            vendor_items_total += item_data.get('line_subtotal_usd') or Decimal('0.00')
             vendor_tax_total += item_data['tax_amount']
             
         context['vendor_items_total'] = vendor_items_total

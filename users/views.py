@@ -99,36 +99,61 @@ class UserRegistrationView(generics.CreateAPIView):
         }, status=status.HTTP_201_CREATED)
     
     def send_verification_email(self, user):
-        """Send verification email to the user."""
+        """Send verification email to the user using centralized email service."""
         verification_url = f"{settings.FRONTEND_URL}/verify-email/{user.email_verification_token}/"
         
-        # In a real app, you would use a template and send a proper HTML email
-        subject = 'Verify your email address'
-        html_message = f'''
-        <html>
-            <body>
-                <h2>Welcome to CarSyncro!</h2>
-                <p>Thank you for registering. Please click the link below to verify your email address:</p>
-                <p><a href="{verification_url}">Verify Email</a></p>
-                <p>This link will expire in 24 hours.</p>
-                <p>If you did not register for a CarSyncro account, please ignore this email.</p>
-            </body>
-        </html>
-        '''
-        plain_message = strip_tags(html_message)
-        
         try:
-            send_mail(
-                subject,
-                plain_message,
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                html_message=html_message,
-                fail_silently=False,
+            from core.email_service.orchestrator import send_email
+            
+            email_id = send_email(
+                email_type='verification',
+                to_email=user.email,
+                template_name='email_verification',
+                context={
+                    'user': user,
+                    'verification_url': verification_url,
+                    'expiration_hours': 24
+                },
+                priority='high'
             )
+            
+            # Log successful email queuing
+            import logging
+            logger = logging.getLogger('email_notifications')
+            logger.info(f"Verification email queued for {user.email} with ID: {email_id}")
+            
         except Exception as e:
             # Log the error but don't prevent user registration
-            pass
+            import logging
+            logger = logging.getLogger('email_notifications')
+            logger.error(f"Failed to queue verification email for {user.email}: {e}")
+            
+            # Fallback to direct sending if orchestrator fails
+            try:
+                subject = 'Verify your email address'
+                html_message = f'''
+                <html>
+                    <body>
+                        <h2>Welcome to CarSyncro!</h2>
+                        <p>Thank you for registering. Please click the link below to verify your email address:</p>
+                        <p><a href="{verification_url}">Verify Email</a></p>
+                        <p>This link will expire in 24 hours.</p>
+                        <p>If you did not register for a CarSyncro account, please ignore this email.</p>
+                    </body>
+                </html>
+                '''
+                plain_message = strip_tags(html_message)
+                
+                send_mail(
+                    subject,
+                    plain_message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    html_message=html_message,
+                    fail_silently=False,
+                )
+            except Exception as fallback_error:
+                logger.error(f"Fallback email sending also failed for {user.email}: {fallback_error}")
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -437,11 +462,13 @@ def register_page(request):
     if request.method == 'POST':
         email = request.POST.get('email')
         password = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
         address = request.POST.get('address')
         city_id = request.POST.get('city_id')
         city_area_id = request.POST.get('city_area_id')
         country = request.POST.get('country')
         phone = request.POST.get('phone')
+        terms_accepted = bool(request.POST.get('terms_accepted'))
         
         # Resolve city name from ID
         city_name = ""
@@ -480,6 +507,28 @@ def register_page(request):
         # Basic validation
         if not email or not password or not first_name or not last_name:
             messages.error(request, 'Please fill in all required fields.')
+            return render(request, 'user/registration.html', {'cities': cities})
+
+        if password != confirm_password:
+            messages.error(request, 'Passwords do not match.')
+            return render(request, 'user/registration.html', {'cities': cities})
+
+        if not terms_accepted:
+            messages.error(request, 'Please accept the Terms & Conditions to continue.')
+            return render(request, 'user/registration.html', {'cities': cities})
+
+        try:
+            from django.contrib.auth.password_validation import validate_password
+            from django.core.exceptions import ValidationError
+            validate_password(password)
+        except Exception as e:
+            try:
+                if isinstance(e, ValidationError):
+                    messages.error(request, " ".join(e.messages))
+                else:
+                    messages.error(request, 'Password does not meet the required rules.')
+            except Exception:
+                messages.error(request, 'Password does not meet the required rules.')
             return render(request, 'user/registration.html', {'cities': cities})
 
         if User.objects.filter(email=email).exists():

@@ -132,4 +132,14 @@ urlpatterns = [
     path('api/stats/', views.api_dashboard_stats, name='api_dashboard_stats'),
     path('api/recent-activity/', views.api_recent_activity, name='api_recent_activity'),
     
+    # Email Console
+    path('email-console/', views.email_console, name='admin_email_console'),
+    path('email-queue/', views.email_queue, name='admin_email_queue'),
+    path('email-analytics/', views.email_analytics, name='admin_email_analytics'),
+    path('send-manual-email/', views.send_manual_email, name='send_manual_email'),
+    path('send-bulk-email/', views.send_bulk_email, name='send_bulk_email'),
+    path('retry-email/<uuid:email_id>/', views.retry_failed_email, name='retry_email'),
+    path('cancel-email/<uuid:email_id>/', views.cancel_email, name='cancel_email'),
+    path('clear-email-queue/', views.clear_email_queue, name='clear_email_queue'),
+    
 ]

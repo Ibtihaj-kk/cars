@@ -10,45 +10,85 @@
 
 {% block extra_css %}
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111; }
         
         /* Modern Input Styling */
         .modern-input {
             width: 100%;
-            padding: 0.75rem 1rem;
-            background-color: #f9fafb; /* gray-50 */
-            border: 1px solid #e5e7eb; /* gray-200 */
-            border-radius: 0.5rem;
+            padding: 12px 16px;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #111;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             outline: none;
-            transition: all 0.2s ease-in-out;
-            color: #1f2937;
+            line-height: 0rem!important;
         }
         .modern-input:focus {
-            background-color: #ffffff;
             border-color: #000000;
-            box-shadow: 0 0 0 4px rgba(0,0,0,0.05);
+            box-shadow: 0 0 0 1px #000000;
         }
         .input-label {
             display: block;
-            font-size: 0.875rem;
+            font-size: 12px;
             font-weight: 600;
-            color: #374151;
-            margin-bottom: 0.5rem;
+            color: #4b5563;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
         }
 
-        /* Step 3 Service Pills - White to Grey Gradient */
+        /* Service Pills */
         .service-pill {
-            background: linear-gradient(180deg, #ffffff 0%, #e5e7eb 100%);
-            border: 1px solid #d1d5db;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
             color: #374151;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        .service-pill:active { transform: scale(0.98); } /* Mobile tap effect */
+        .service-pill:hover {
+            border-color: #9ca3af;
+            transform: translateY(-1px);
+        }
         .service-pill.selected {
-            background: #1f2937;
-            color: white;
-            border-color: #1f2937;
+            background: #000000;
+            border-color: #000000;
+            color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
         }
+
+        .terms-scroll::-webkit-scrollbar { width: 6px; }
+        .terms-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .terms-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        .terms-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        .nav-item.active { color: #000; font-weight: 700; position: relative; }
+        .nav-item.active::before {
+            content: ''; position: absolute; left: -24px; top: 50%; transform: translateY(-50%);
+            width: 4px; height: 100%; background: black; border-radius: 0 4px 4px 0;
+        }
+        .nav-item { position: relative; }
+
+        .password-toggle-btn {
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            background: #ffffff;
+            color: #6b7280;
+        }
+        .password-toggle-btn:hover { border-color: #9ca3af; color: #111; }
+        #passwordInput, #confirmPasswordInput { padding-right: 52px; }
 
         /* Animation */
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
@@ -63,31 +103,38 @@
     <!-- Wrapper div replacing body -->
     <div class="bg-white min-h-screen flex flex-col md:flex-row text-gray-800">
     
-    <aside class="w-full md:w-1/3 md:max-w-sm border-b p-6 md:p-10 md:h-screen md:sticky md:top-0 flex flex-col justify-between z-10">
+    <aside class="w-full md:w-1/3 md:max-w-xs border-r border-gray-100 bg-gray-50/50 p-8 md:h-screen md:sticky md:top-0 flex flex-col justify-between z-20">
         
-        <div class="flex justify-between items-center md:block">
-            <a href="{% url 'home' %}">
-            <img src="{% static 'images/car-syncro.png' %}" alt="Logo-Image" class="h-12 md:h-14 w-auto object-contain"></a>
-            <div class="md:hidden text-sm font-bold text-gray-400">
-                Step <span id="mobile-step-count">1</span>/3
+        <div class="mb-10">
+            <a href="{% url 'home' %}" class="block">
+                <div class="flex items-center gap-3 mb-2">
+                    <img src="{% static 'images/car-syncro.png' %}" alt="Logo-Image" class="h-9 w-auto object-contain">
+                </div>
+                <div class="md:hidden text-xs font-bold text-gray-400 uppercase tracking-wide">
+                    Step <span id="mobile-step-count">1</span> of 3
+                </div>
+            </a>
+        </div>
+
+        <div class="flex-1 flex flex-row md:flex-col justify-between md:justify-center gap-6 overflow-x-auto md:overflow-visible pb-4 md:pb-0">
+            <div id="tab-1" class="nav-item active text-sm md:text-lg text-gray-400 cursor-pointer whitespace-nowrap transition-colors" onclick="goToStep(1)">
+                Account Creation
+            </div>
+            <div id="tab-2" class="nav-item text-sm md:text-lg text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(2)">
+                Personal Info
+            </div>
+            <div id="tab-3" class="nav-item text-sm md:text-lg text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(3)">
+                Final Review
             </div>
         </div>
 
-        <div class="flex-1 flex flex-row md:flex-col justify-between md:justify-center gap-4 md:gap-10 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-            <div id="tab-1" class="nav-item text-sm md:text-2xl font-bold text-gray-900 cursor-pointer whitespace-nowrap transition-colors" onclick="goToStep(1)">
-                Account Creation
-            </div>
-            <div id="tab-2" class="nav-item text-sm md:text-2xl font-medium text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(2)">
-                Personal Info
-            </div>
-            <div id="tab-3" class="nav-item text-sm md:text-2xl font-medium text-gray-400 cursor-pointer whitespace-nowrap transition-colors hover:text-gray-600" onclick="goToStep(3)">
-                Finish
-            </div>
+        <div class="hidden md:block text-xs text-gray-400 mt-auto">
+            &copy; 2024 CarSyncro Inc.
         </div>
         
     </aside>
 
-    <main class="flex-1 mt-20 w-full p-6 md:p-16 lg:p-24 flex flex-col items-center">
+    <main class="flex-1 w-full p-6 md:p-12 lg:p-16 flex flex-col items-center">
         
         {% if messages %}
         <div class="w-full max-w-lg mb-6">
@@ -104,8 +151,8 @@
             <input type="hidden" name="services" id="services-input">
             
             <section id="step-1" class="step-content w-full max-w-lg text-center fade-in">
-                <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4 mt-8 md:mt-0">Create your Account</h1>
-                <p class="text-gray-500 mb-10">Sign up to get started with CarSyncro</p>
+                <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">Start Your Journey</h1>
+                <p class="text-gray-500 text-lg mb-10">Create your account to access the marketplace.</p>
                 
                 <div class="flex flex-col items-center space-y-5 w-full">
                     <div class="w-full text-left">
@@ -116,8 +163,24 @@
                     
                     <div class="w-full text-left">
                         <label class="input-label ml-1">Password</label>
-                        <input type="password" name="password" id="passwordInput" placeholder="Create a password" class="modern-input py-3 md:py-4 text-lg text-center" required>
+                        <div class="relative">
+                            <input type="password" name="password" id="passwordInput" placeholder="Create a password" class="modern-input py-3 md:py-4 text-lg text-center" required>
+                            <button type="button" class="password-toggle-btn" data-toggle-password="#passwordInput" aria-label="Toggle password visibility">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
                         <p id="passwordError" class="text-red-500 text-sm mt-1 hidden"></p>
+                    </div>
+
+                    <div class="w-full text-left">
+                        <label class="input-label ml-1">Confirm Password</label>
+                        <div class="relative">
+                            <input type="password" name="confirm_password" id="confirmPasswordInput" placeholder="Confirm your password" class="modern-input py-3 md:py-4 text-lg text-center" required>
+                            <button type="button" class="password-toggle-btn" data-toggle-password="#confirmPasswordInput" aria-label="Toggle confirm password visibility">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
+                        <p id="confirmPasswordError" class="text-red-500 text-sm mt-1 hidden"></p>
                     </div>
                     
                     <button type="button" onclick="goToStep(2)" class="w-full bg-black text-white py-4 text-lg font-bold rounded-lg shadow-md hover:bg-gray-800 hover:shadow-lg transition-all transform hover:-translate-y-1">
@@ -221,36 +284,52 @@
                 </div>
             </section>
 
-            <section id="step-3" class="step-content w-full max-w-2xl hidden text-center fade-in pb-10">
-                <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4 mt-8 md:mt-0">Almost Finished</h1>
-                <p class="text-gray-500 text-lg mb-10">Select the Services you want to use</p>
-                
-                <div class="flex flex-col items-center w-full">
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 w-full mb-8">
-                        <button type="button" class="service-pill py-4 md:py-5 rounded-full text-lg font-bold shadow-sm" onclick="toggleSelect(this)">
-                            Car
+            <section id="step-3" class="step-content w-full max-w-3xl hidden fade-in pb-10">
+                <div class="mb-8 text-center">
+                    <h1 class="text-2xl font-bold text-gray-900">Finalize Registration</h1>
+                    <p class="text-gray-500 text-sm mt-1">Select your services and review terms.</p>
+                </div>
+
+                <div class="bg-white border border-gray-200 rounded-2xl p-8 mb-6 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wide">Services Provided</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <button type="button" class="service-pill px-4 py-3 rounded-xl text-sm text-center flex items-center justify-center gap-2" data-service="Cars" onclick="toggleSelect(this)">
+                            <span>🚗 Cars</span>
                         </button>
-                        <button type="button" class="service-pill py-4 md:py-5 rounded-full text-lg font-bold shadow-sm" onclick="toggleSelect(this)">
-                            Parts
+                        <button type="button" class="service-pill px-4 py-3 rounded-xl text-sm text-center flex items-center justify-center gap-2" data-service="Parts" onclick="toggleSelect(this)">
+                            <span>⚙️ Parts</span>
                         </button>
-                        <button type="button" class="service-pill py-4 md:py-5 rounded-full text-lg font-bold shadow-sm" onclick="toggleSelect(this)">
-                            Service
+                        <button type="button" class="service-pill px-4 py-3 rounded-xl text-sm text-center flex items-center justify-center gap-2" data-service="Service" onclick="toggleSelect(this)">
+                            <span>🔧 Service</span>
                         </button>
-                        <button type="button" class="service-pill py-4 md:py-5 rounded-full text-lg font-bold shadow-sm" onclick="toggleSelect(this)">
-                            Rent & Leasing
+                        <button type="button" class="service-pill px-4 py-3 rounded-xl text-sm text-center flex items-center justify-center gap-2" data-service="Rent & Leasing" onclick="toggleSelect(this)">
+                            <span>🔑 Renting</span>
                         </button>
                     </div>
+                </div>
 
-                    <div class="flex items-center mb-8">
-                        <input id="terms-checkbox" name="terms" type="checkbox" class="w-5 h-5 text-black border-gray-300 rounded focus:ring-black cursor-pointer" required>
-                        <label for="terms-checkbox" class="ml-2 text-sm text-gray-600 cursor-pointer">
-                            I accept the <a href="#" class="text-black font-bold hover:underline">Terms & Conditions</a> and <a href="#" class="text-black font-bold hover:underline">Privacy Policy</a>
-                        </label>
+                <div class="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100 text-left">
+                    <h3 class="font-bold text-gray-900 mb-3 text-sm uppercase tracking-wide">Terms & Conditions</h3>
+                    <div class="bg-white rounded-xl p-4 h-32 overflow-y-auto text-xs text-gray-500 mb-4 border border-gray-200 terms-scroll leading-relaxed">
+                        <p class="mb-2"><strong>1. Acceptance of Terms:</strong> By registering on CarSyncro, you agree to these terms...</p>
+                        <p class="mb-2"><strong>2. Account Responsibilities:</strong> You agree to provide accurate information and keep it updated...</p>
+                        <p class="mb-2"><strong>3. Fees & Payments:</strong> If applicable, platform fees and charges may apply based on usage...</p>
+                        <p><strong>4. Termination:</strong> CarSyncro may suspend accounts violating policies...</p>
                     </div>
+                    <label class="flex items-start space-x-3 cursor-pointer p-2 hover:bg-gray-100 rounded-lg transition">
+                        <div class="flex items-center h-5">
+                            <input id="terms-checkbox" name="terms_accepted" type="checkbox" class="w-4 h-4 text-black border-gray-300 rounded focus:ring-black cursor-pointer" required>
+                        </div>
+                        <span class="text-sm text-gray-600">I confirm that I have read and agree to the <a href="#" class="text-black font-bold hover:underline">Terms & Conditions</a> and <a href="#" class="text-black font-bold hover:underline">Privacy Policy</a>.</span>
+                    </label>
+                </div>
 
-                    <button id="finish-btn" type="submit" class="w-full md:w-3/4 bg-gradient-to-r from-green-500 to-green-600 text-white text-xl font-bold py-4 md:py-5 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 uppercase tracking-wide opacity-50 cursor-not-allowed" disabled>
-                        Click to Finish
+                <div class="flex justify-between items-center w-full pt-4">
+                    <button type="button" onclick="goToStep(2)" class="px-6 py-2.5 text-gray-500 hover:text-black font-semibold transition-colors text-sm">
+                        ← Back
+                    </button>
+                    <button id="finish-btn" type="submit" class="w-full max-w-xs bg-gradient-to-r from-green-600 to-green-500 text-white text-lg font-bold py-4 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 opacity-50 cursor-not-allowed" disabled>
+                        Complete Registration
                     </button>
                 </div>
             </section>
@@ -264,6 +343,31 @@
     <script>
         let isEmailValid = false;
 
+        function validatePassword(password) {
+            if (!password || password.length < 8) return 'Password must be at least 8 characters';
+            if (!/[a-z]/.test(password)) return 'Password must include a lowercase letter';
+            if (!/[A-Z]/.test(password)) return 'Password must include an uppercase letter';
+            if (!/[0-9]/.test(password)) return 'Password must include a number';
+            if (!/[^A-Za-z0-9]/.test(password)) return 'Password must include a special character';
+            return null;
+        }
+
+        function setupPasswordToggles() {
+            document.querySelectorAll('[data-toggle-password]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const targetSelector = this.getAttribute('data-toggle-password');
+                    const input = document.querySelector(targetSelector);
+                    if (!input) return;
+                    input.type = input.type === 'password' ? 'text' : 'password';
+                    const icon = this.querySelector('i');
+                    if (icon) {
+                        icon.classList.toggle('fa-eye');
+                        icon.classList.toggle('fa-eye-slash');
+                    }
+                });
+            });
+        }
+
         function goToStep(stepNumber) {
             // Reset all errors first
             document.querySelectorAll('.text-red-500').forEach(el => el.classList.add('hidden'));
@@ -272,6 +376,7 @@
             if (stepNumber === 2) {
                 const email = document.getElementById('emailInput').value;
                 const password = document.getElementById('passwordInput').value;
+                const confirmPassword = document.getElementById('confirmPasswordInput') ? document.getElementById('confirmPasswordInput').value : '';
                 let hasError = false;
 
                 if (!email) {
@@ -285,6 +390,32 @@
                     const passwordError = document.getElementById('passwordError');
                     passwordError.textContent = 'Password is required';
                     passwordError.classList.remove('hidden');
+                    hasError = true;
+                }
+
+                if (password) {
+                    const passwordValidationMessage = validatePassword(password);
+                    if (passwordValidationMessage) {
+                        const passwordError = document.getElementById('passwordError');
+                        passwordError.textContent = passwordValidationMessage;
+                        passwordError.classList.remove('hidden');
+                        hasError = true;
+                    }
+                }
+
+                if (!confirmPassword) {
+                    const confirmPasswordError = document.getElementById('confirmPasswordError');
+                    if (confirmPasswordError) {
+                        confirmPasswordError.textContent = 'Confirm password is required';
+                        confirmPasswordError.classList.remove('hidden');
+                    }
+                    hasError = true;
+                } else if (password && password !== confirmPassword) {
+                    const confirmPasswordError = document.getElementById('confirmPasswordError');
+                    if (confirmPasswordError) {
+                        confirmPasswordError.textContent = 'Passwords do not match';
+                        confirmPasswordError.classList.remove('hidden');
+                    }
                     hasError = true;
                 }
                 
@@ -388,13 +519,13 @@
             document.getElementById(`step-${stepNumber}`).classList.remove('hidden');
 
             document.querySelectorAll('.nav-item').forEach(el => {
-                el.classList.remove('text-gray-900', 'font-bold');
-                el.classList.add('text-gray-400', 'font-medium');
+                el.classList.remove('active', 'text-black', 'font-bold');
+                el.classList.add('text-gray-400');
             });
 
             const activeTab = document.getElementById(`tab-${stepNumber}`);
-            activeTab.classList.remove('text-gray-400', 'font-medium');
-            activeTab.classList.add('text-gray-900', 'font-bold');
+            activeTab.classList.remove('text-gray-400');
+            activeTab.classList.add('active', 'text-black', 'font-bold');
 
             const mobileCounter = document.getElementById('mobile-step-count');
             if(mobileCounter) mobileCounter.innerText = stepNumber;
@@ -407,7 +538,7 @@
 
         function updateServicesInput() {
             const selected = Array.from(document.querySelectorAll('.service-pill.selected'))
-                .map(el => el.innerText.trim());
+                .map(el => (el.dataset && el.dataset.service) ? el.dataset.service : el.innerText.trim());
             document.getElementById('services-input').value = JSON.stringify(selected);
         }
 
@@ -446,12 +577,14 @@
             }
 
             clearErrorOnInput('passwordInput', 'passwordError');
+            clearErrorOnInput('confirmPasswordInput', 'confirmPasswordError');
             clearErrorOnInput('firstNameInput', 'firstNameError');
             clearErrorOnInput('lastNameInput', 'lastNameError');
             clearErrorOnInput('addressInput', 'addressError');
             clearErrorOnInput('postalCodeInput', 'postalCodeError');
             clearErrorOnInput('phoneInput', 'phoneError');
             clearErrorOnInput('nationalIdInput', 'nationalIdError');
+            setupPasswordToggles();
             
             const citySelectElement = document.getElementById('regCitySelect');
             if (citySelectElement) {

@@ -42,6 +42,13 @@ from .decorators import (
 from .session_manager import require_valid_admin_session
 from .audit_logger import AdminAuditLogger, audit_admin_action
 
+# Import email views for URL routing
+from .email_views import (
+    email_console, email_queue, email_analytics,
+    send_manual_email, send_bulk_email, retry_failed_email,
+    cancel_email, clear_email_queue
+)
+
 
 def is_admin_user(user):
     """Check if user is admin or staff."""

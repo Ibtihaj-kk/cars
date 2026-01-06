@@ -1,0 +1,19 @@
+Test Email from CarSyncro Robust System
+===========================================
+
+Hello,
+
+{{ message }}
+
+System Information:
+{{ system_info }}
+
+This email was sent from our robust centralized email system with:
+- Automatic queuing and retry mechanisms
+- Priority-based processing  
+- Comprehensive tracking and analytics
+- Template-based email generation
+
+---
+© 2026 CarSyncro - Automotive Platform
+This is an automated message. Please do not reply to this email.

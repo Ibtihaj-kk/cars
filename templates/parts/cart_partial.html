@@ -45,7 +45,21 @@
                             hx-target="#cart-content" hx-swap="outerHTML" {% if item.quantity <= 1 %} disabled
                             {%endif%}>-</button>
 
-                        <input type="number" class="qty-input" value="{{ item.quantity }}" min="1" readonly>
+                        <input type="number"
+                               name="quantity"
+                               class="qty-input"
+                               value="{{ item.quantity }}"
+                               min="1"
+                               {% if item.available_stock > item.quantity %}
+                               max="{{ item.available_stock }}"
+                               {% else %}
+                               max="{{ item.quantity }}"
+                               {% endif %}
+                               hx-post="{% url 'parts:hx_update_cart_quantity' item.id %}"
+                               hx-trigger="change"
+                               hx-include="closest .qty-wrapper"
+                               hx-target="#cart-content"
+                               hx-swap="outerHTML">
 
                         <button class="qty-btn" hx-post="{% url 'parts:hx_update_cart_quantity' item.id %}" hx-vals='{"change": 1}' hx-target="#cart-content" hx-swap="outerHTML" {% if item.quantity >= item.available_stock %} disabled {%endif%} >+</button>
                     </div>

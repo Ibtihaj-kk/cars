@@ -21,9 +21,145 @@ from datetime import timedelta
 from decimal import Decimal
 import json
 import csv
+import os
+import io
 from io import StringIO
+import openpyxl
 
 from .models import BusinessPartner, VendorProfile, ReorderNotification
+
+
+def estimate_record_count(file_obj):
+    """
+    Estimate number of records in file without loading everything.
+    Returns approximate record count for processing mode decision.
+    """
+    if not hasattr(file_obj, 'name'):
+        return 1000  # Default estimate for unknown files
+    
+    file_name = getattr(file_obj, 'name', '')
+    ext = os.path.splitext(file_name)[1].lower()
+    
+    try:
+        if ext == '.csv':
+            # Sample first 1000 lines to estimate CSV record count
+            file_obj.seek(0)
+            sample_lines = 1000
+            line_count = 0
+            
+            # Try to detect encoding
+            raw_data = file_obj.read(10000)
+            file_obj.seek(0)
+            
+            # Use simple line counting for estimation
+            for _ in file_obj:
+                line_count += 1
+                if line_count >= sample_lines:
+                    break
+            
+            file_obj.seek(0)
+            return max(0, line_count - 1)  # Subtract header row
+            
+        elif ext in ['.xlsx', '.xls']:
+            # Excel row count estimation
+            file_obj.seek(0)
+            if ext == '.xlsx':
+                workbook = openpyxl.load_workbook(file_obj, read_only=True)
+            else:
+                # For .xls files, we'll use a simpler approach
+                workbook = openpyxl.load_workbook(file_obj, read_only=True)
+            
+            worksheet = workbook.active
+            row_count = worksheet.max_row - 1  # Subtract header row
+            workbook.close()
+            file_obj.seek(0)
+            return max(0, row_count)
+            
+        else:
+            # Unknown file type, use file size estimation
+            file_size_mb = file_obj.size / (1024 * 1024)
+            # Estimate ~1000 records per MB for typical CSV data
+            return int(file_size_mb * 1000)
+            
+    except Exception:
+        # Fallback estimation based on file size
+        file_size_mb = file_obj.size / (1024 * 1024)
+        return int(file_size_mb * 1000)
+
+
+def should_process_synchronously(file_obj, max_sync_records=10000, max_sync_size_mb=2):
+    """
+    Determine if file should be processed synchronously based on size and record count.
+    """
+    file_size_mb = file_obj.size / (1024 * 1024)
+    
+    # If file is very small, process synchronously
+    if file_size_mb <= 0.1:  # Less than 100KB
+        return True
+    
+    # If file exceeds size threshold, process asynchronously
+    if file_size_mb > max_sync_size_mb:
+        return False
+    
+    # Estimate record count for medium-sized files
+    estimated_records = estimate_record_count(file_obj)
+    
+    # Process synchronously if within record limit
+    return estimated_records <= max_sync_records
+
+
+def process_import_file_sync(import_file, business_partner, import_status, update_existing, validate_only, chunk_size=5000):
+    """
+    Synchronous version of process_import_file for small batches.
+    Processes file immediately and returns results.
+    """
+    from parts.models import BulkUploadLog
+    
+    # Create upload log for tracking
+    upload_log = BulkUploadLog.objects.create(
+        user=business_partner.user if hasattr(business_partner, 'user') else None,
+        file_name=getattr(import_file, 'name', 'import.csv'),
+        file_size=import_file.size,
+        status='processing',
+        success_message='Processing synchronously'
+    )
+    
+    try:
+        # Process using the existing function
+        results = process_import_file(
+            import_file=import_file,
+            business_partner=business_partner,
+            import_status=import_status,
+            update_existing=update_existing,
+            validate_only=validate_only,
+            upload_log_id=upload_log.id,
+            chunk_size=chunk_size
+        )
+        
+        # Update upload log with results
+        upload_log.status = 'completed' if results['error_count'] == 0 else 'partial'
+        upload_log.total_records = results['total_rows']
+        upload_log.successful_records = results['created_count'] + results['updated_count']
+        upload_log.failed_records = results['error_count']
+        upload_log.success_message = (
+            f'Synchronous processing complete: '
+            f'{upload_log.successful_records} processed, '
+            f'{upload_log.failed_records} errors'
+        )
+        upload_log.completed_at = timezone.now()
+        upload_log.save()
+        
+        return results
+        
+    except Exception as e:
+        # Handle any processing errors
+        upload_log.status = 'failed'
+        upload_log.success_message = f'Synchronous processing failed: {str(e)}'
+        upload_log.completed_at = timezone.now()
+        upload_log.save()
+        
+        # Re-raise the exception for proper error handling
+        raise
 from admin_panel.payment_models import VendorBalance, VendorPayment, PaymentStatus, PaymentBatch, CommissionRule
 from .forms import (
     VendorPartForm, 
@@ -103,11 +239,11 @@ def vendor_dashboard(request):
     
     # Calculate total inventory value (corrected calculation)
     total_value = parts_queryset.aggregate(
-        total=Sum(F('price') * F('quantity'))
+        total=Sum(F('standard_price') * F('quantity'))
     )['total'] or 0
     
     # Get average price
-    avg_price = parts_queryset.aggregate(avg=Avg('price'))['avg'] or 0
+    avg_price = parts_queryset.aggregate(avg=Avg('standard_price'))['avg'] or 0
     
     # Get inventory health metrics
     total_active_parts = parts_queryset.filter(is_active=True).count()
@@ -1185,37 +1321,88 @@ def vendor_invoices(request):
     business_partner = vendor_profile.business_partner
     
     # Import Order here to avoid circular imports if any
-    from parts.models import Order
+    from parts.models import Order, OrderItem
     
     # Get all orders containing items from this vendor
     # We treat these Orders as "Invoices" for the purpose of this view
     orders = Order.objects.filter(
         items__part__vendor=business_partner
     ).distinct().order_by('-created_at')
+
+    try:
+        from core.models import ExchangeRate
+        from decimal import Decimal as D
+    except Exception:
+        ExchangeRate = None
+        D = Decimal
+
+    def _unit_price_usd(order_item):
+        original_currency_code = (getattr(order_item, 'original_currency_code', None) or getattr(order_item.part, 'original_currency', None) or 'USD').upper()
+        if getattr(order_item, 'vendor_currency_amount', None):
+            vendor_amount = order_item.vendor_currency_amount
+            if getattr(order_item, 'locked_exchange_rate', None):
+                if original_currency_code == 'USD':
+                    return vendor_amount
+                return vendor_amount * order_item.locked_exchange_rate
+            if original_currency_code == 'USD':
+                return vendor_amount
+            if ExchangeRate:
+                return vendor_amount * D(str(ExchangeRate.get_current_rate(original_currency_code, 'USD')))
+            return order_item.price
+
+        if original_currency_code == 'USD':
+            return order_item.part.standard_price
+        if ExchangeRate:
+            return order_item.part.standard_price * D(str(ExchangeRate.get_current_rate(original_currency_code, 'USD')))
+        return order_item.price
+
+    def _tax_rate(order_item):
+        tax_rate = Decimal('0.15')
+        tax_classification = getattr(order_item.part, 'tax_classification_material', None)
+        if tax_classification == 'VAT_5':
+            return Decimal('0.05')
+        if tax_classification in ('ZERO', 'EXEMPT'):
+            return Decimal('0.00')
+        return tax_rate
+
+    def _sum_items_usd(items_qs):
+        total = Decimal('0.00')
+        for item in items_qs:
+            line_subtotal = (_unit_price_usd(item) or Decimal('0.00')) * item.quantity
+            total += line_subtotal + (line_subtotal * _tax_rate(item))
+        return total
     
     # --- Statistics ---
     
     # Total Due: Orders that are not paid yet (payment_status != completed)
     # This might be simplistic, but it's a starting point.
-    total_due = orders.exclude(
-        payment_status='completed'
-    ).aggregate(total=Sum('total_price'))['total'] or 0
+    total_due = _sum_items_usd(
+        OrderItem.objects.filter(
+            part__vendor=business_partner
+        ).exclude(order__payment_status='completed').select_related('part')
+    )
     
     # Paid (This Month): Orders paid in the current month
     today = timezone.now()
-    paid_this_month = orders.filter(
-        payment_status='completed',
-        updated_at__year=today.year,
-        updated_at__month=today.month
-    ).aggregate(total=Sum('total_price'))['total'] or 0
+    paid_this_month = _sum_items_usd(
+        OrderItem.objects.filter(
+            part__vendor=business_partner,
+            order__payment_status='completed',
+            order__updated_at__year=today.year,
+            order__updated_at__month=today.month
+        ).select_related('part')
+    )
     
     # Overdue: For now, let's assume 'failed' payments or pending for > 30 days are "overdue"
     # Or just use a placeholder if business logic is not defined
     overdue_date = today - timedelta(days=30)
-    overdue_amount = orders.filter(
-        payment_status='pending',
-        created_at__lt=overdue_date
-    ).aggregate(total=Sum('total_price'))['total'] or 0
+    overdue_amount = _sum_items_usd(
+        OrderItem.objects.filter(
+            part__vendor=business_partner,
+            order__payment_status='pending',
+            order__created_at__lt=overdue_date
+        ).select_related('part')
+    )
     
     # --- Filtering ---
     search_query = request.GET.get('search', '')
@@ -1251,6 +1438,14 @@ def vendor_invoices(request):
     paginator = Paginator(orders, 10) # 10 invoices per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+
+    for invoice in page_obj:
+        invoice.vendor_total = _sum_items_usd(
+            OrderItem.objects.filter(
+                order=invoice,
+                part__vendor=business_partner
+            ).select_related('part')
+        )
     
     context = {
         'vendor_profile': vendor_profile,
@@ -2249,6 +2444,8 @@ def vendor_parts_import(request):
     """
     vendor_profile = get_vendor_profile(request.user)
     if not vendor_profile:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': 'You do not have vendor access.'}, status=403)
         messages.error(request, 'You do not have vendor access.')
         return redirect('home')
     
@@ -2256,6 +2453,19 @@ def vendor_parts_import(request):
     
     if request.method == 'POST':
         form = VendorPartBulkImportForm(request.POST, request.FILES)
+        
+        # Handle AJAX requests for invalid forms
+        if not form.is_valid() and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            errors = {}
+            for field, field_errors in form.errors.items():
+                errors[field] = [str(error) for error in field_errors]
+            
+            return JsonResponse({
+                'success': False,
+                'message': 'Form validation failed',
+                'errors': errors
+            }, status=400)
+        
         if form.is_valid():
             import_file = form.cleaned_data['file']
             import_status = form.cleaned_data.get('import_status') or 'published'
@@ -2273,6 +2483,14 @@ def vendor_parts_import(request):
                             update_existing,
                             validate_only=True,
                         )
+                        
+                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                            return JsonResponse({
+                                'success': True,
+                                'message': f'Validation complete. {results["valid_count"]} valid rows, {results["error_count"]} errors.',
+                                'results': results
+                            })
+                        
                         messages.info(
                             request,
                             f'Validation complete. {results["valid_count"]} valid rows, {results["error_count"]} errors.',
@@ -2282,50 +2500,44 @@ def vendor_parts_import(request):
                     request.session['import_results'] = results
                     return redirect('business_partners:vendor_parts_import_results')
 
-                import os
-                import uuid
-                from django.core.files.storage import default_storage
-                from parts.models import BulkUploadLog
-                from parts.tasks import process_vendor_parts_import
-
-                upload_log = BulkUploadLog.objects.create(
-                    user=request.user,
-                    file_name=import_file.name,
-                    file_size=import_file.size,
-                    status='processing',
+                # Force synchronous processing to avoid Celery/Redis issues
+                # Synchronous processing for all batches
+                results = process_import_file_sync(
+                    import_file=import_file,
+                    business_partner=business_partner,
+                    import_status=import_status,
+                    update_existing=update_existing,
+                    validate_only=False,
+                    chunk_size=chunk_size
                 )
-                upload_log.success_message = 'Queued'
-                upload_log.save(update_fields=['success_message'])
-
-                safe_name = os.path.basename(import_file.name or 'import.csv')
-                storage_path = default_storage.save(
-                    f'tmp/vendor_imports/{uuid.uuid4().hex}_{safe_name}',
-                    import_file,
+                
+                # Store results in session for results page
+                request.session['import_results'] = results
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    messages.success(request, f'Import completed! {results["created_count"]} created, {results["updated_count"]} updated, {results["error_count"]} errors.')
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Import completed! {results["created_count"]} created, {results["updated_count"]} updated, {results["error_count"]} errors.',
+                        'results': results
+                    })
+                
+                messages.success(request, 
+                    f'Import completed! {results["created_count"]} created, '
+                    f'{results["updated_count"]} updated, {results["error_count"]} errors.'
                 )
-
-                async_result = process_vendor_parts_import.apply_async(
-                    kwargs={
-                        'upload_log_id': upload_log.id,
-                        'storage_path': storage_path,
-                        'business_partner_id': business_partner.id,
-                        'import_status': import_status,
-                        'update_existing': update_existing,
-                        'chunk_size': chunk_size,
-                    },
-                    queue='celery',
-                )
-                try:
-                    upload_log.success_message = f'Queued ({async_result.id})'
-                    upload_log.save(update_fields=['success_message'])
-                except Exception:
-                    pass
-
-                messages.info(request, 'Import started in background. This page will update when finished.')
-                return redirect(f'{reverse_lazy("business_partners:vendor_parts_import_results")}?job={upload_log.id}')
+                return redirect('business_partners:vendor_parts_import_results')
                 
             except Exception as e:
                 import traceback
                 print(traceback.format_exc())
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'System Error during import: {str(e)}'
+                    }, status=500)
+                
                 messages.error(request, f'System Error during import: {str(e)}')
     else:
         form = VendorPartBulkImportForm()
@@ -2335,7 +2547,7 @@ def vendor_parts_import(request):
         'form': form,
     }
     
-    return render(request, 'business_partners/vendor_parts_import.html', context)
+    return render(request, 'business_partners/bulk_import.html', context)
 
 
 @login_required
@@ -2805,65 +3017,113 @@ def process_import_file(
                 buffered_rows.clear()
                 return
 
-            parts_numbers = [item['validated_data']['parts_number'] for item in buffered_rows if item['validated_data'].get('parts_number')]
-            existing_by_parts_number = {}
-            if parts_numbers:
-                for p in Part.objects.filter(vendor=business_partner, parts_number__in=parts_numbers):
-                    existing_by_parts_number[p.parts_number] = p
+            try:
+                parts_numbers = [item['validated_data']['parts_number'] for item in buffered_rows if item['validated_data'].get('parts_number')]
+                existing_by_parts_number = {}
+                if parts_numbers:
+                    for p in Part.objects.filter(vendor=business_partner, parts_number__in=parts_numbers):
+                        existing_by_parts_number[p.parts_number] = p
 
-            to_create = []
-            to_update = []
-            update_fields = set()
+                to_create = []
+                to_update = []
+                update_fields = set()
 
-            for item in buffered_rows:
-                row_num = item['row_num']
-                validated_data = item['validated_data']
+                for item in buffered_rows:
+                    row_num = item['row_num']
+                    validated_data = item['validated_data']
 
-                parts_number = validated_data.get('parts_number')
-                if not parts_number:
-                    continue
+                    parts_number = validated_data.get('parts_number')
+                    if not parts_number:
+                        continue
 
-                existing_part = existing_by_parts_number.get(parts_number)
-                if existing_part and not update_existing:
-                    add_limited(results['warnings'], [f"Row {row_num}: Part {parts_number} already exists (skipped)"], max_warnings_to_keep)
-                    continue
+                    existing_part = existing_by_parts_number.get(parts_number)
+                    if existing_part and not update_existing:
+                        add_limited(results['warnings'], [f"Row {row_num}: Part {parts_number} already exists (skipped)"], max_warnings_to_keep)
+                        continue
 
-                status_value = validated_data.get('status')
-                if status_value not in ['draft', 'published', 'archived']:
-                    validated_data['status'] = 'published'
+                    status_value = validated_data.get('status')
+                    if status_value not in ['draft', 'published', 'archived']:
+                        validated_data['status'] = 'published'
 
-                if existing_part:
-                    for key, value in validated_data.items():
-                        if key in ['id', 'vendor', 'parts_number', 'slug']:
+                    if existing_part:
+                        for key, value in validated_data.items():
+                            if key in ['id', 'vendor', 'parts_number', 'slug']:
+                                continue
+                            setattr(existing_part, key, value)
+                            update_fields.add(key)
+                        existing_part.updated_at = timezone.now()
+                        update_fields.add('updated_at')
+                        to_update.append(existing_part)
+                        results['updated_count'] += 1
+                    else:
+                        material_desc = validated_data.get('material_description') or ''
+                        validated_data.setdefault('name', material_desc)
+                        validated_data.setdefault('sku', parts_number)
+                        validated_data.setdefault('description', material_desc)
+                        validated_data['slug'] = make_part_slug(business_partner.id, parts_number)
+                        to_create.append(Part(**validated_data))
+                        results['created_count'] += 1
+
+                if to_create:
+                    Part.objects.bulk_create(to_create, batch_size=min(len(to_create), chunk_size))
+                if to_update and update_fields:
+                    Part.objects.bulk_update(to_update, fields=sorted(update_fields), batch_size=min(len(to_update), chunk_size))
+
+                buffered_rows.clear()
+                if upload_log:
+                    BulkUploadLog.objects.filter(id=upload_log.id).update(
+                        total_records=results['total_rows'],
+                        successful_records=results['created_count'] + results['updated_count'],
+                        failed_records=results['error_count'],
+                        success_message=f'Writing ({results["created_count"] + results["updated_count"]} saved)',
+                    )
+            
+            except Exception as e:
+                # Handle errors in the final batch processing
+                error_msg = f"Error processing final batch: {str(e)}"
+                add_limited(results['errors'], [error_msg], max_errors_to_keep)
+                results['error_count'] += 1
+                
+                # Try to process rows individually to identify the problematic row
+                for item in buffered_rows:
+                    try:
+                        row_num = item['row_num']
+                        validated_data = item['validated_data']
+                        
+                        parts_number = validated_data.get('parts_number')
+                        if not parts_number:
                             continue
-                        setattr(existing_part, key, value)
-                        update_fields.add(key)
-                    existing_part.updated_at = timezone.now()
-                    update_fields.add('updated_at')
-                    to_update.append(existing_part)
-                    results['updated_count'] += 1
-                else:
-                    material_desc = validated_data.get('material_description') or ''
-                    validated_data.setdefault('name', material_desc)
-                    validated_data.setdefault('sku', parts_number)
-                    validated_data.setdefault('description', material_desc)
-                    validated_data['slug'] = make_part_slug(business_partner.id, parts_number)
-                    to_create.append(Part(**validated_data))
-                    results['created_count'] += 1
-
-            if to_create:
-                Part.objects.bulk_create(to_create, batch_size=chunk_size)
-            if to_update and update_fields:
-                Part.objects.bulk_update(to_update, fields=sorted(update_fields), batch_size=chunk_size)
-
-            buffered_rows.clear()
-            if upload_log:
-                BulkUploadLog.objects.filter(id=upload_log.id).update(
-                    total_records=results['total_rows'],
-                    successful_records=results['created_count'] + results['updated_count'],
-                    failed_records=results['error_count'],
-                    success_message=f'Writing ({results["created_count"] + results["updated_count"]} saved)',
-                )
+                        
+                        # Try to create/update individual part
+                        existing_part = Part.objects.filter(vendor=business_partner, parts_number=parts_number).first()
+                        
+                        if existing_part and not update_existing:
+                            add_limited(results['warnings'], [f"Row {row_num}: Part {parts_number} already exists (skipped)"], max_warnings_to_keep)
+                            continue
+                        
+                        if existing_part:
+                            for key, value in validated_data.items():
+                                if key in ['id', 'vendor', 'parts_number', 'slug']:
+                                    continue
+                                setattr(existing_part, key, value)
+                            existing_part.updated_at = timezone.now()
+                            existing_part.save()
+                            results['updated_count'] += 1
+                        else:
+                            material_desc = validated_data.get('material_description') or ''
+                            validated_data.setdefault('name', material_desc)
+                            validated_data.setdefault('sku', parts_number)
+                            validated_data.setdefault('description', material_desc)
+                            validated_data['slug'] = make_part_slug(business_partner.id, parts_number)
+                            Part.objects.create(**validated_data)
+                            results['created_count'] += 1
+                            
+                    except Exception as row_error:
+                        error_msg = f"Row {row_num}: Failed to process - {str(row_error)}"
+                        add_limited(results['errors'], [error_msg], max_errors_to_keep)
+                        results['error_count'] += 1
+                
+                buffered_rows.clear()
 
         for row_num, row in enumerate(iter_normalized_rows(import_file), start=2):
             row_errors = []

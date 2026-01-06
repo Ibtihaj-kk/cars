@@ -1017,20 +1017,51 @@ class VendorSettingsForm(forms.Form):
                             self.fields['account_number'].initial = line.replace('Account Number:', '').strip()
                         elif line.startswith('IBAN:'):
                             self.fields['iban'].initial = line.replace('IBAN:', '').strip()
+                
+                # Initialize document fields with existing files
+                document_fields = [
+                    'cr_document', 'business_license', 'vat_certificate',
+                    'commercial_invoice_sample', 'quality_certificate',
+                    'insurance_certificate', 'supplier_certification'
+                ]
+                for field_name in document_fields:
+                    document_file = getattr(vendor_profile, field_name, None)
+                    if document_file:
+                        # For file fields, we need to set the initial value to show existing file
+                        self.fields[field_name].initial = document_file
 
         try:
             from core.models import Currency
 
             active_currencies = Currency.objects.filter(is_active=True).order_by('code')
-            currency_choices = [(currency.code, currency.code) for currency in active_currencies]
+            currency_choices = [(currency.code, f"{currency.code} - {currency.name}") for currency in active_currencies]
 
             initial_currency = self.fields['preferred_currency'].initial
             if initial_currency and initial_currency not in dict(currency_choices):
-                currency_choices = [(initial_currency, initial_currency)] + currency_choices
+                # Find the currency object to get full name for initial currency
+                try:
+                    initial_currency_obj = Currency.objects.get(code=initial_currency)
+                    initial_display = f"{initial_currency_obj.code} - {initial_currency_obj.name}"
+                except Currency.DoesNotExist:
+                    initial_display = initial_currency
+                currency_choices = [(initial_currency, initial_display)] + currency_choices
 
             self.fields['preferred_currency'].choices = currency_choices
-        except Exception:
-            pass
+        except ImportError:
+            # Fallback to 6 common currencies if core app is not available
+            self.fields['preferred_currency'].choices = [
+                ('USD', 'US Dollar (USD)'), ('EUR', 'Euro (EUR)'), ('GBP', 'British Pound (GBP)'),
+                ('AED', 'UAE Dirham (AED)'), ('SAR', 'Saudi Riyal (SAR)'), ('KWD', 'Kuwaiti Dinar (KWD)')
+            ]
+        except Exception as e:
+            # Log the error and provide fallback currencies
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error loading currency choices: {e}")
+            self.fields['preferred_currency'].choices = [
+                ('USD', 'US Dollar (USD)'), ('EUR', 'Euro (EUR)'), ('GBP', 'British Pound (GBP)'),
+                ('AED', 'UAE Dirham (AED)'), ('SAR', 'Saudi Riyal (SAR)'), ('KWD', 'Kuwaiti Dinar (KWD)')
+            ]
 
     def save(self):
         if not self.business_partner:

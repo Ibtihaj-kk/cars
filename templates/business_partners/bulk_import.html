@@ -1,4 +1,4 @@
-{% extends 'vendor/base.html' %}
+{% extends 'vendors/base.html' %}
 {% load static %}
 
 {% block title %}Bulk Import | CarSyncro{% endblock %}
@@ -19,6 +19,46 @@
         background-color: #fff;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
+    
+    /* Processing Mode Indicators */
+    .processing-mode {
+        border-left: 4px solid transparent;
+        transition: all 0.3s ease;
+    }
+    .processing-mode.sync {
+        border-left-color: #10b981;
+        background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, rgba(255, 255, 255, 1) 100%);
+    }
+    .processing-mode.async {
+        border-left-color: #3b82f6;
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, rgba(255, 255, 255, 1) 100%);
+    }
+    
+    /* Progress Animation */
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.3); }
+        50% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.6); }
+    }
+    
+    .pulse-glow {
+        animation: pulse-glow 2s infinite;
+    }
+    
+    /* Status Badges */
+    .status-badge {
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* File Info Cards */
+    .file-info-card {
+        border-left: 3px solid #3b82f6;
+        background: #f8fafc;
+    }
 </style>
 {% endblock %}
 
@@ -27,12 +67,51 @@
     
     <div class="lg:col-span-2 space-y-6">
         
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <!-- Processing Mode Indicator -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 processing-mode" id="processingModeIndicator">
             <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
                 <span class="w-6 h-6 bg-black text-white rounded-full flex items-center justify-center text-xs mr-2">1</span>
+                Processing Mode
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 border border-gray-200 rounded-lg bg-green-50 border-green-200" id="syncModeCard">
+                    <div class="flex items-center mb-2">
+                        <i class="fas fa-bolt text-green-600 mr-2"></i>
+                        <span class="text-sm font-bold text-green-800">Synchronous Processing</span>
+                    </div>
+                    <p class="text-xs text-green-600">
+                        <span class="font-bold">≤10,000 records</span><br>
+                        Immediate results • No waiting
+                    </p>
+                </div>
+                
+                <div class="p-4 border border-gray-200 rounded-lg bg-blue-50 border-blue-200" id="asyncModeCard">
+                    <div class="flex items-center mb-2">
+                        <i class="fas fa-database text-blue-600 mr-2"></i>
+                        <span class="text-sm font-bold text-blue-800">Async Processing</span>
+                    </div>
+                    <p class="text-xs text-blue-600">
+                        <span class="font-bold">>10,000 records</span><br>
+                        Background processing • Email notification
+                    </p>
+                </div>
+            </div>
+            
+            <div class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200" id="modeEstimation">
+                <p class="text-xs text-gray-600 text-center">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Mode will be automatically selected based on file size and record count
+                </p>
+            </div>
+        </div>
+
+        <!-- Import Type Selection -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <span class="w-6 h-6 bg-black text-white rounded-full flex items-center justify-center text-xs mr-2">2</span>
                 Select Import Type
             </h3>
-            <form method="POST" enctype="multipart/form-data" id="importForm">
+            <form method="POST" enctype="multipart/form-data" id="importForm" action="{% url 'business_partners:vendor_parts_import' %}">
                 {% csrf_token %}
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <label class="cursor-pointer">
@@ -42,58 +121,135 @@
                             <div class="text-sm font-bold">New Products</div>
                         </div>
                     </label>
-                    <label class="cursor-pointer">
-                        <input type="radio" name="import_type" value="stock" class="peer sr-only">
-                        <div class="p-4 border border-gray-200 rounded-lg hover:border-black peer-checked:bg-black peer-checked:text-white peer-checked:border-black transition-all text-center">
-                            <i class="fas fa-cubes mb-2 text-xl"></i>
-                            <div class="text-sm font-bold">Stock Update</div>
+                    <label class="cursor-not-allowed opacity-60">
+                        <input type="radio" name="import_type" value="stock" class="peer sr-only" disabled>
+                        <div class="p-4 border border-gray-200 rounded-lg bg-gray-50 text-center relative overflow-hidden">
+                            <div class="absolute top-2 right-2">
+                                <span class="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Coming Soon</span>
+                            </div>
+                            <i class="fas fa-cubes mb-2 text-xl text-gray-400"></i>
+                            <div class="text-sm font-bold text-gray-500">Stock Update</div>
                         </div>
                     </label>
-                    <label class="cursor-pointer">
-                        <input type="radio" name="import_type" value="price" class="peer sr-only">
-                        <div class="p-4 border border-gray-200 rounded-lg hover:border-black peer-checked:bg-black peer-checked:text-white peer-checked:border-black transition-all text-center">
-                            <i class="fas fa-tag mb-2 text-xl"></i>
-                            <div class="text-sm font-bold">Price Update</div>
+                    <label class="cursor-not-allowed opacity-60">
+                        <input type="radio" name="import_type" value="price" class="peer sr-only" disabled>
+                        <div class="p-4 border border-gray-200 rounded-lg bg-gray-50 text-center relative overflow-hidden">
+                            <div class="absolute top-2 right-2">
+                                <span class="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Coming Soon</span>
+                            </div>
+                            <i class="fas fa-tag mb-2 text-xl text-gray-400"></i>
+                            <div class="text-sm font-bold text-gray-500">Price Update</div>
                         </div>
                     </label>
+                </div>
+
+                <div class="mt-6">
+                    <label for="id_import_status" class="block text-sm font-bold text-gray-700 mb-2">New products status</label>
+                    <select id="id_import_status" name="import_status" class="block w-full px-3 py-2.5 border border-gray-300 bg-white rounded-lg focus:ring-black focus:border-black sm:text-sm">
+                        <option value="published" selected>Publish</option>
+                        <option value="draft">Stock</option>
+                    </select>
+                    {% if form.import_status.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.import_status.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Advanced Options -->
+                <div class="mt-6 border-t border-gray-200 pt-4">
+                    <button type="button" onclick="toggleAdvancedOptions()" class="text-sm text-gray-600 hover:text-black flex items-center">
+                        <i class="fas fa-cog mr-2"></i>
+                        Advanced Options
+                        <i class="fas fa-chevron-down ml-2 text-xs" id="advancedToggleIcon"></i>
+                    </button>
+                    
+                    <div id="advancedOptions" class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="update_existing" class="mr-2">
+                            <span class="text-sm text-gray-700">Update existing products</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="validate_only" class="mr-2">
+                            <span class="text-sm text-gray-700">Validate only (no import)</span>
+                        </label>
+                    </div>
                 </div>
             </form>
         </div>
 
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                <span class="w-6 h-6 bg-black text-white rounded-full flex items-center justify-center text-xs mr-2">2</span>
-                Download Template
-            </h3>
-            <div class="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <div>
-                    <p class="text-sm font-bold text-gray-900">Standard Product Template.csv</p>
-                    <p class="text-xs text-gray-500">Includes columns for SKU, Name, Price, and Stock.</p>
-                </div>
-                <a href="#" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-100 flex items-center gap-2 transition">
-                    <i class="fas fa-download"></i> Download
-                </a>
-            </div>
-        </div>
-
+        <!-- File Upload Section -->
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
                 <span class="w-6 h-6 bg-black text-white rounded-full flex items-center justify-center text-xs mr-2">3</span>
                 Upload File
             </h3>
             
-            <div class="dropzone rounded-xl p-10 text-center cursor-pointer relative" id="dropzone">
-                <input type="file" name="import_file" form="importForm" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="updateFileName(this)">
+            <div class="dropzone rounded-xl p-10 text-center cursor-pointer relative" id="dropzone" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+                <input type="file" name="file" form="importForm" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(this)" accept=".csv,.xls,.xlsx">
                 <i class="fas fa-cloud-upload-alt text-4xl text-gray-300 mb-3"></i>
                 <p class="text-sm font-bold text-gray-900" id="file-label">Drag & Drop your file here</p>
                 <p class="text-xs text-gray-500 mt-1">or click to browse</p>
-                <p class="text-xs text-gray-400 mt-4 uppercase font-bold tracking-wide">Supported: CSV, XLS, XLSX</p>
+                <p class="text-xs text-gray-400 mt-4 uppercase font-bold tracking-wide">Supported: CSV, XLS, XLSX (Max 25MB)</p>
             </div>
 
-            <div class="mt-6 flex justify-end">
-                <button type="submit" form="importForm" class="px-8 py-3 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-900 shadow-lg flex items-center gap-2 transition transform hover:-translate-y-0.5">
+            <!-- File Info Display -->
+            <div id="fileInfo" class="mt-4 hidden">
+                <div class="file-info-card p-4 rounded-lg">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-bold text-gray-900" id="fileName"></span>
+                        <span class="text-xs text-gray-500" id="fileSize"></span>
+                    </div>
+                    <div class="text-xs text-gray-600" id="fileEstimate"></div>
+                    <div class="mt-2 text-xs text-green-600 font-bold" id="processingEstimate"></div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-between items-center">
+                <a href="/media/parts/part_import_template.xlsx" class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-200 flex items-center gap-2 transition">
+                    <i class="fas fa-download"></i> Download Template
+                </a>
+                
+                <button type="submit" form="importForm" class="px-8 py-3 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-900 shadow-lg flex items-center gap-2 transition transform hover:-translate-y-0.5 pulse-glow" id="submitButton" disabled>
                     <i class="fas fa-play"></i> Start Import
                 </button>
+            </div>
+        </div>
+
+        <!-- Progress Tracking Section -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6" id="progressSection" style="display: none;">
+            <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-spinner fa-spin mr-2 text-blue-600"></i>
+                Processing Status
+            </h3>
+            
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-medium text-gray-700">Progress</span>
+                    <span class="text-sm text-gray-500" id="progressPercentage">0%</span>
+                </div>
+                
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" id="progressBar" style="width: 0%"></div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <div class="text-2xl font-bold text-gray-900" id="processedCount">0</div>
+                        <div class="text-xs text-gray-500">Processed</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-green-600" id="successCount">0</div>
+                        <div class="text-xs text-gray-500">Successful</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-red-600" id="errorCount">0</div>
+                        <div class="text-xs text-gray-500">Errors</div>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <p class="text-sm text-gray-600" id="statusMessage">Preparing to process your file...</p>
+                    <p class="text-xs text-gray-400" id="timeEstimate"></p>
+                </div>
             </div>
         </div>
 
@@ -101,57 +257,120 @@
 
     <div class="lg:col-span-1 space-y-6">
         
+        <!-- System Information -->
         <div class="bg-blue-50 border border-blue-100 rounded-xl p-6">
             <h3 class="text-blue-800 font-bold mb-3 flex items-center gap-2">
-                <i class="fas fa-info-circle"></i> Guidelines
+                <i class="fas fa-rocket"></i>
+                System Information
             </h3>
-            <ul class="text-sm text-blue-700 space-y-2 list-disc list-inside">
-                <li>File size must not exceed <strong>25MB</strong>.</li>
-                <li>Ensure SKU is unique for new products.</li>
-                <li>Date format should be <strong>YYYY-MM-DD</strong>.</li>
-                <li>Do not reorder columns in the template.</li>
+            <div class="text-sm text-blue-700 space-y-3">
+                <div class="flex justify-between">
+                    <span class="font-medium">Processing Engine:</span>
+                    <span class="font-bold text-green-700">Django Native</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">External Services:</span>
+                    <span class="font-bold text-green-700">None Required</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">Max File Size:</span>
+                    <span class="font-bold">25 MB</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">Sync Threshold:</span>
+                    <span class="font-bold">≤10,000 records</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">Processing Speed:</span>
+                    <span class="font-bold">~1,500 rows/sec</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Guidelines -->
+        <div class="bg-green-50 border border-green-100 rounded-xl p-6">
+            <h3 class="text-green-800 font-bold mb-3 flex items-center gap-2">
+                <i class="fas fa-lightbulb"></i>
+                Best Practices
+            </h3>
+            <ul class="text-sm text-green-700 space-y-2">
+                <li class="flex items-start">
+                    <span class="w-4 h-4 bg-green-200 text-green-800 rounded-full flex items-center justify-center text-xs mr-2 mt-0.5">✓</span>
+                    <span>Use the provided template for best results</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="w-4 h-4 bg-green-200 text-green-800 rounded-full flex items-center justify-center text-xs mr-2 mt-0.5">✓</span>
+                    <span>Keep files under 10k records for instant processing</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="w-4 h-4 bg-green-200 text-green-800 rounded-full flex items-center justify-center text-xs mr-2 mt-0.5">✓</span>
+                    <span>Validate files before full import</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="w-4 h-4 bg-green-200 text-green-800 rounded-full flex items-center justify-center text-xs mr-2 mt-0.5">✓</span>
+                    <span>Large files process automatically in background</span>
+                </li>
             </ul>
         </div>
 
+        <!-- Recent History -->
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div class="p-4 border-b border-gray-100 flex justify-between items-center">
-                <h3 class="font-bold text-gray-900">Recent History</h3>
+                <h3 class="font-bold text-gray-900">Recent Imports</h3>
                 <a href="#" class="text-xs text-gray-500 hover:text-black">View All</a>
             </div>
-            <div class="divide-y divide-gray-100">
-                
+            <div class="divide-y divide-gray-100" id="recentImports">
+                {% for upload in recent_uploads|slice:":3" %}
                 <div class="p-4 hover:bg-gray-50 transition">
                     <div class="flex justify-between items-start mb-1">
-                        <span class="text-sm font-bold text-gray-900">stock_update_nov.csv</span>
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 uppercase">Success</span>
+                        <span class="text-sm font-bold text-gray-900">{{ upload.file_name|truncatechars:20 }}</span>
+                        <span class="status-badge {% if upload.status == 'completed' %}bg-green-100 text-green-700{% elif upload.status == 'processing' %}bg-yellow-100 text-yellow-700{% elif upload.status == 'failed' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ upload.status|title }}
+                        </span>
                     </div>
-                    <p class="text-xs text-gray-500 mb-2">Nov 28, 2024 • 142 Records</p>
-                    <div class="w-full bg-gray-100 rounded-full h-1.5 mb-1">
-                        <div class="bg-green-500 h-1.5 rounded-full" style="width: 100%"></div>
-                    </div>
-                </div>
-
-                <div class="p-4 hover:bg-gray-50 transition">
-                    <div class="flex justify-between items-start mb-1">
-                        <span class="text-sm font-bold text-gray-900">new_products_v2.xlsx</span>
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 uppercase">Processing</span>
-                    </div>
-                    <p class="text-xs text-gray-500 mb-2">Just Now • Est. 5 mins</p>
+                    <p class="text-xs text-gray-500 mb-2">
+                        {{ upload.created_at|date:"M d, Y" }} • 
+                        {% if upload.total_records %}{{ upload.total_records }} records{% else %}Processing{% endif %}
+                    </p>
+                    {% if upload.status == 'processing' %}
                     <div class="w-full bg-gray-100 rounded-full h-1.5 mb-1 animate-pulse">
                         <div class="bg-yellow-500 h-1.5 rounded-full" style="width: 45%"></div>
                     </div>
-                </div>
-
-                <div class="p-4 hover:bg-gray-50 transition">
-                    <div class="flex justify-between items-start mb-1">
-                        <span class="text-sm font-bold text-gray-900">price_list_Q4.csv</span>
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 uppercase">Failed</span>
+                    {% elif upload.status == 'completed' %}
+                    <div class="w-full bg-gray-100 rounded-full h-1.5 mb-1">
+                        <div class="bg-green-500 h-1.5 rounded-full" style="width: 100%"></div>
                     </div>
-                    <p class="text-xs text-gray-500 mb-2">Oct 15, 2024 • Format Error</p>
-                    <a href="#" class="text-xs text-red-600 font-bold hover:underline">View Report</a>
+                    {% endif %}
                 </div>
+                {% empty %}
+                <div class="p-4 text-center text-gray-500">
+                    <i class="fas fa-inbox text-2xl mb-2"></i>
+                    <p class="text-sm">No import history yet</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
 
-                </div>
+        <!-- Support Links -->
+        <div class="bg-gray-50 border border-gray-200 rounded-xl p-6">
+            <h3 class="text-gray-800 font-bold mb-3 flex items-center gap-2">
+                <i class="fas fa-life-ring"></i>
+                Need Help?
+            </h3>
+            <div class="space-y-2 text-sm">
+                <a href="#" class="flex items-center text-gray-600 hover:text-black transition">
+                    <i class="fas fa-book mr-2"></i>
+                    Import Documentation
+                </a>
+                <a href="#" class="flex items-center text-gray-600 hover:text-black transition">
+                    <i class="fas fa-video mr-2"></i>
+                    Video Tutorials
+                </a>
+                <a href="#" class="flex items-center text-gray-600 hover:text-black transition">
+                    <i class="fas fa-headset mr-2"></i>
+                    Contact Support
+                </a>
+            </div>
         </div>
 
     </div>
@@ -160,15 +379,318 @@
 
 {% block extra_js %}
 <script>
-    function updateFileName(input) {
-        const label = document.getElementById('file-label');
-        if (input.files && input.files.length > 0) {
-            label.textContent = input.files[0].name;
-            label.classList.add('text-green-600');
+    // Global variables
+    let currentFile = null;
+    let progressInterval = null;
+    let estimatedRows = 0;
+    const SYNC_THRESHOLD = 10000; // 10,000 records for synchronous processing
+    const ROWS_PER_MB = 12000; // Estimated rows per MB for CSV files
+    
+    // Toggle advanced options
+    function toggleAdvancedOptions() {
+        const options = document.getElementById('advancedOptions');
+        const icon = document.getElementById('advancedToggleIcon');
+        
+        if (options.classList.contains('hidden')) {
+            options.classList.remove('hidden');
+            icon.classList.remove('fa-chevron-down');
+            icon.classList.add('fa-chevron-up');
         } else {
-            label.textContent = "Drag & Drop your file here";
-            label.classList.remove('text-green-600');
+            options.classList.add('hidden');
+            icon.classList.remove('fa-chevron-up');
+            icon.classList.add('fa-chevron-down');
         }
     }
+    
+    // Handle file selection
+    function handleFileSelect(input) {
+        if (input.files && input.files.length > 0) {
+            const file = input.files[0];
+            currentFile = file;
+            updateFileInfo(file);
+            estimateProcessingMode(file);
+            document.getElementById('submitButton').disabled = false;
+        }
+    }
+    
+    // Handle drag and drop
+    function handleDragOver(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.classList.add('dragover');
+    }
+    
+    function handleDrop(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.classList.remove('dragover');
+        
+        const files = event.dataTransfer.files;
+        if (files.length > 0) {
+            const fileInput = document.querySelector('input[name="file"]');
+            fileInput.files = files;
+            handleFileSelect(fileInput);
+        }
+    }
+    
+    // Update file information display
+    function updateFileInfo(file) {
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const fileLabel = document.getElementById('file-label');
+        const fileInfo = document.getElementById('fileInfo');
+        
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileLabel.textContent = file.name;
+        fileLabel.classList.add('text-green-600');
+        fileInfo.classList.remove('hidden');
+    }
+    
+    // Estimate processing mode based on file
+    function estimateProcessingMode(file) {
+        const fileEstimate = document.getElementById('fileEstimate');
+        const processingEstimate = document.getElementById('processingEstimate');
+        const syncModeCard = document.getElementById('syncModeCard');
+        const asyncModeCard = document.getElementById('asyncModeCard');
+        const modeIndicator = document.getElementById('processingModeIndicator');
+        
+        // Simple estimation: ~5000 rows per MB for CSV files
+        estimatedRows = Math.round((file.size / (1024 * 1024)) * ROWS_PER_MB);
+        
+        fileEstimate.textContent = `Estimated records: ${estimatedRows.toLocaleString()}`;
+        
+        if (estimatedRows <= SYNC_THRESHOLD) {
+            // Synchronous mode
+            processingEstimate.textContent = `✓ Will process immediately (synchronous mode)`;
+            syncModeCard.classList.add('ring-2', 'ring-green-500');
+            asyncModeCard.classList.remove('ring-2', 'ring-blue-500');
+            modeIndicator.classList.add('sync');
+            modeIndicator.classList.remove('async');
+        } else {
+            // Async mode
+            const estimatedTime = Math.ceil(estimatedRows / 1500); // ~1500 rows/second
+            processingEstimate.textContent = `✓ Will process in background (async mode, ~${estimatedTime}s)`;
+            asyncModeCard.classList.add('ring-2', 'ring-blue-500');
+            syncModeCard.classList.remove('ring-2', 'ring-green-500');
+            modeIndicator.classList.add('async');
+            modeIndicator.classList.remove('sync');
+        }
+    }
+    
+    // Format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Start progress tracking (simulated for demo)
+    function startProgressTracking() {
+        const progressSection = document.getElementById('progressSection');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercentage = document.getElementById('progressPercentage');
+        const processedCount = document.getElementById('processedCount');
+        const successCount = document.getElementById('successCount');
+        const errorCount = document.getElementById('errorCount');
+        const statusMessage = document.getElementById('statusMessage');
+        const timeEstimate = document.getElementById('timeEstimate');
+        
+        progressSection.style.display = 'block';
+        
+        let progress = 0;
+        let processed = 0;
+        const total = estimatedRows || 1000;
+        
+        progressInterval = setInterval(() => {
+            // Slow down as we approach 95%
+            let increment = 2;
+            if (progress > 80) increment = 0.5;
+            if (progress > 90) increment = 0.1;
+            
+            progress += increment;
+            if (progress > 95) progress = 95; // Wait at 95% for actual response
+            
+            processed = Math.floor((progress / 100) * total);
+            
+            progressBar.style.width = progress + '%';
+            progressPercentage.textContent = Math.round(progress) + '%';
+            processedCount.textContent = processed.toLocaleString();
+            successCount.textContent = processed.toLocaleString(); // Assume all success during simulation
+            errorCount.textContent = '0';
+            
+            statusMessage.textContent = getStatusMessage(progress);
+            timeEstimate.textContent = getTimeEstimate(progress);
+            
+        }, 300);
+    }
+    
+    function getStatusMessage(progress) {
+        if (progress < 25) return 'Reading file structure...';
+        if (progress < 50) return 'Validating data...';
+        if (progress < 75) return 'Processing records...';
+        return 'Finalizing import...';
+    }
+    
+    function getTimeEstimate(progress) {
+        const remaining = 100 - progress;
+        const seconds = Math.ceil(remaining / 2); // 2% per second
+        return seconds > 0 ? `Estimated time remaining: ${seconds}s` : '';
+    }
+    
+    // Form submission handler
+    document.getElementById('importForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Disable submit button
+        document.getElementById('submitButton').disabled = true;
+        document.getElementById('submitButton').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        
+        // Start progress tracking
+        startProgressTracking();
+        
+        // Submit form via AJAX for better UX
+        const formData = new FormData(this);
+        
+        // Manually add the file input since it's outside the form
+        const fileInput = document.querySelector('input[name="file"]');
+        if (fileInput && fileInput.files.length > 0) {
+            formData.append('file', fileInput.files[0]);
+        }
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => {
+            console.log('Response status:', response.status, response.statusText);
+            
+            // Check if response is JSON (even for error status codes)
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json().then(data => {
+                    if (response.ok && data.success) {
+                        // Update UI with actual results
+                        updateProgressWithRealData(data);
+                    } else {
+                        // Handle errors - including form validation errors (400 status)
+                        if (data.errors) {
+                            // Show form validation errors
+                            showFormErrors(data.errors);
+                        } else {
+                            showError(data.message || 'Import failed');
+                        }
+                    }
+                });
+            } else {
+                // Handle non-JSON responses (HTML error pages, etc.)
+                return response.text().then(text => {
+                    console.error('Non-JSON response:', text.substring(0, 200));
+                    showError('Server returned unexpected response. Check console for details.');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            showError('Network error occurred: ' + error.message);
+        });
+    });
+    
+    function updateProgressWithRealData(data) {
+        // Clear simulated interval
+        if (typeof progressInterval !== 'undefined') {
+            clearInterval(progressInterval);
+        }
+        
+        const progressBar = document.getElementById('progressBar');
+        const progressPercentage = document.getElementById('progressPercentage');
+        const processedCount = document.getElementById('processedCount');
+        const successCount = document.getElementById('successCount');
+        const errorCount = document.getElementById('errorCount');
+        const statusMessage = document.getElementById('statusMessage');
+        const timeEstimate = document.getElementById('timeEstimate');
+        const submitButton = document.getElementById('submitButton');
+        const statusIcon = document.querySelector('#progressSection h3 i');
+        
+        // Update with actual results
+        const results = data.results || {};
+        const total = results.total_rows || 0;
+        const success = (results.created_count || 0) + (results.updated_count || 0);
+        const errors = results.error_count || 0;
+        
+        progressBar.style.width = '100%';
+        progressPercentage.textContent = '100%';
+        processedCount.textContent = total.toLocaleString();
+        successCount.textContent = success.toLocaleString();
+        errorCount.textContent = errors.toLocaleString();
+        
+        statusMessage.textContent = data.message || 'Import completed!';
+        statusMessage.classList.remove('text-blue-600');
+        statusMessage.classList.add('text-green-600');
+        timeEstimate.textContent = '';
+        
+        // Stop icon spin
+        if (statusIcon) {
+            statusIcon.classList.remove('fa-spinner', 'fa-spin', 'text-blue-600');
+            statusIcon.classList.add('fa-check-circle', 'text-green-600');
+        }
+        
+        // Reset button
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-play"></i> Start Import';
+        
+        // Redirect after a short delay to allow user to see the result
+        setTimeout(() => {
+            window.location.href = "{% url 'business_partners:vendor_inventory_list' %}";
+        }, 3000);
+    }
+    
+    function showError(message) {
+        alert('Error: ' + message);
+        document.getElementById('submitButton').disabled = false;
+        document.getElementById('submitButton').innerHTML = '<i class="fas fa-play"></i> Start Import';
+        clearInterval(progressInterval);
+    }
+    
+    function showFormErrors(errors) {
+        console.log('Form validation errors:', errors);
+        
+        // Build error message
+        let errorMessages = [];
+        for (const [field, fieldErrors] of Object.entries(errors)) {
+            fieldErrors.forEach(error => {
+                errorMessages.push(`${field}: ${error}`);
+            });
+        }
+        
+        const errorMessage = errorMessages.join('\n') || 'Form validation failed';
+        
+        // Show error alert
+        alert('Form validation errors:\n\n' + errorMessage);
+        
+        // Re-enable submit button
+        document.getElementById('submitButton').disabled = false;
+        document.getElementById('submitButton').innerHTML = '<i class="fas fa-play"></i> Start Import';
+        clearInterval(progressInterval);
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add event listeners for drag and drop
+        const dropzone = document.getElementById('dropzone');
+        if (dropzone) {
+            dropzone.addEventListener('dragover', handleDragOver);
+            dropzone.addEventListener('drop', handleDrop);
+            dropzone.addEventListener('dragleave', function(e) {
+                e.currentTarget.classList.remove('dragover');
+            });
+        }
+    });
 </script>
 {% endblock %}

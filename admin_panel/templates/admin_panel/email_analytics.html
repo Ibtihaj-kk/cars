@@ -1,0 +1,220 @@
+{% extends "admin_panel/base.html" %}
+{% load static humanize %}
+
+{% block title %}Email Analytics - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Email Analytics</h1>
+        <div class="btn-group">
+            <a href="{% url 'admin_panel:admin_email_console' %}" class="btn btn-outline-primary">
+                <i class="fas fa-envelope"></i> Email Console
+            </a>
+            <a href="{% url 'admin_panel:admin_email_queue' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-list"></i> Email Queue
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">{{ total_emails|intcomma }}</h5>
+                    <p class="card-text">Total Emails</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">{{ sent_emails|intcomma }}</h5>
+                    <p class="card-text">Sent Emails</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">{{ failed_emails|intcomma }}</h5>
+                    <p class="card-text">Failed Emails</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">{{ success_rate|floatformat:1 }}%</h5>
+                    <p class="card-text">Success Rate</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Stats Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Daily Email Statistics (Last 30 Days)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="dailyStatsChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Type Distribution -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Email Type Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="typeDistributionChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Email Type Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Email Type</th>
+                                    <th>Total</th>
+                                    <th>Sent</th>
+                                    <th>Failed</th>
+                                    <th>Success Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in type_stats %}
+                                <tr>
+                                    <td>{{ stat.email_type }}</td>
+                                    <td>{{ stat.count }}</td>
+                                    <td>{{ stat.sent }}</td>
+                                    <td>{{ stat.failed }}</td>
+                                    <td>
+                                        {% if stat.count > 0 %}
+                                            {{ stat.sent|floatformat:1 }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Daily Stats Chart
+const dailyCtx = document.getElementById('dailyStatsChart').getContext('2d');
+const dailyChart = new Chart(dailyCtx, {
+    type: 'line',
+    data: {
+        labels: [
+            {% for stat in daily_stats %}
+                '{{ stat.date|date:"M j" }}'{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [
+            {
+                label: 'Total Emails',
+                data: [
+                    {% for stat in daily_stats %}
+                        {{ stat.total }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: 'rgb(54, 162, 235)',
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                tension: 0.1
+            },
+            {
+                label: 'Sent Emails',
+                data: [
+                    {% for stat in daily_stats %}
+                        {{ stat.sent }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.1
+            },
+            {
+                label: 'Failed Emails',
+                data: [
+                    {% for stat in daily_stats %}
+                        {{ stat.failed }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                tension: 0.1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Daily Email Activity'
+            }
+        }
+    }
+});
+
+// Type Distribution Chart
+const typeCtx = document.getElementById('typeDistributionChart').getContext('2d');
+const typeChart = new Chart(typeCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [
+            {% for stat in type_stats %}
+                '{{ stat.email_type }}'{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        datasets: [{
+            data: [
+                {% for stat in type_stats %}
+                    {{ stat.count }}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            backgroundColor: [
+                '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
+                '#858796', '#f8f9fc', '#5a5c69', '#2e59d9', '#17a673'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'right',
+            },
+            title: {
+                display: true,
+                text: 'Email Type Distribution'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

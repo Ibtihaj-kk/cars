@@ -56,13 +56,26 @@ def parts_list_htmx(request):
         parts = parts.filter(category_id=category_id)
 
     if price_min:
-        parts = parts.filter(price__gte=price_min)
+        parts = parts.filter(standard_price__gte=price_min)
 
     if price_max:
-        parts = parts.filter(price__lte=price_max)
+        parts = parts.filter(standard_price__lte=price_max)
 
     # Apply sorting
-    parts = parts.order_by(sort_by)
+    # Map template sort values to model fields
+    sort_mapping = {
+        'price': 'standard_price',
+        '-price': '-standard_price',
+        'name': 'name',
+        '-name': '-name',
+        'created_at': 'created_at',
+        '-created_at': '-created_at'
+    }
+
+    if sort_by in sort_mapping:
+        parts = parts.order_by(sort_mapping[sort_by])
+    else:
+        parts = parts.order_by(sort_by)
 
     # Pagination
     page = int(request.GET.get('page', 1))

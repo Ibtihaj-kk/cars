@@ -581,15 +581,15 @@
 
                     <div class="summary-row">
                         <span>Subtotal</span>
-                        <span style="font-weight:700;">{{ cart_total|floatformat:2 }} ر.س.</span>
+                        <span style="font-weight:700;">{% vendor_currency cart_total %}</span>
                     </div>
                     <div class="summary-row">
                         <span>Shipping Estimate</span>
                         <span>Free</span>
                     </div>
                     <div class="summary-row">
-                        <span>Tax (15%)</span>
-                        <span>{{ cart_tax|floatformat:2 }} ر.س.</span>
+                        <span>Tax (VAT)</span>
+                        <span>{% vendor_currency cart_tax %}</span>
                     </div>
 
                     <div class="promo-code">

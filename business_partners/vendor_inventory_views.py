@@ -65,7 +65,7 @@ def vendor_inventory_overview(request):
     inventory_value = Part.objects.filter(
         vendor=business_partner
     ).aggregate(
-        total=Sum(F('price') * F('quantity'))
+        total=Sum(F('standard_price') * F('quantity'))
     )['total'] or 0
     
     context = {
@@ -146,22 +146,26 @@ def vendor_inventory_list(request):
     price_min = request.GET.get('price_min', '')
     price_max = request.GET.get('price_max', '')
     if price_min:
-        parts_queryset = parts_queryset.filter(price__gte=price_min)
+        parts_queryset = parts_queryset.filter(standard_price__gte=price_min)
     if price_max:
-        parts_queryset = parts_queryset.filter(price__lte=price_max)
+        parts_queryset = parts_queryset.filter(standard_price__lte=price_max)
     
     # Sorting
     sort_by = request.GET.get('sort', '-created_at')
     valid_sort_fields = [
         'parts_number', '-parts_number',
         'material_description', '-material_description',
-        'price', '-price',
+        'standard_price', '-standard_price',
         'quantity', '-quantity',
         'created_at', '-created_at',
         'updated_at', '-updated_at'
     ]
     if sort_by in valid_sort_fields:
         parts_queryset = parts_queryset.order_by(sort_by)
+    elif sort_by == 'price':
+        parts_queryset = parts_queryset.order_by('standard_price')
+    elif sort_by == '-price':
+        parts_queryset = parts_queryset.order_by('-standard_price')
     else:
         sort_by = '-created_at'
         parts_queryset = parts_queryset.order_by(sort_by)
@@ -195,7 +199,7 @@ def vendor_inventory_list(request):
     # Calculate inventory statistics
     total_parts = parts_queryset.count()
     total_value = parts_queryset.aggregate(
-        total=Sum(F('price') * F('quantity'))
+        total=Sum(F('standard_price') * F('quantity'))
     )['total'] or 0
     
     # Stock status breakdown
@@ -671,8 +675,8 @@ def vendor_inventory_export(request):
             part.quantity,
             inventory.reorder_level if inventory else 10,
             part.safety_stock or '',
-            part.price or 0,
-            (part.price or 0) * part.quantity,
+            part.standard_price or 0,
+            (part.standard_price or 0) * part.quantity,
             stock_status,
             inventory.last_restock_date.strftime('%Y-%m-%d') if inventory and inventory.last_restock_date else ''
         ])

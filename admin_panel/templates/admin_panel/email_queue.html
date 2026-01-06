@@ -1,0 +1,221 @@
+{% extends "admin_panel/base.html" %}
+{% load static %}
+
+{% block title %}Email Queue - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Email Queue</h1>
+        <div class="btn-group">
+            <a href="{% url 'admin_panel:admin_email_console' %}" class="btn btn-outline-primary">
+                <i class="fas fa-tachometer-alt"></i> Console
+            </a>
+            <a href="{% url 'admin_panel:admin_email_analytics' %}" class="btn btn-outline-info">
+                <i class="fas fa-chart-bar"></i> Analytics
+            </a>
+            <form method="post" action="{% url 'admin_panel:clear_email_queue' %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger" 
+                        onclick="return confirm('Are you sure you want to clear old emails from queue?')">
+                    <i class="fas fa-trash"></i> Clear Old Emails
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status" onchange="this.form.submit()">
+                        <option value="">All Statuses</option>
+                        {% for value, label in status_choices.items %}
+                            <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Search</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="q" 
+                               placeholder="Search by email, subject, or type..." 
+                               value="{{ search_query }}">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <a href="{% url 'admin_panel:admin_email_queue' %}" class="btn btn-outline-secondary w-100">
+                        Clear Filters
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Email Queue Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Message ID</th>
+                            <th>To Email</th>
+                            <th>Subject</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for email in page_obj %}
+                        <tr>
+                            <td><small class="text-muted">{{ email.message_id|truncatechars:8 }}</small></td>
+                            <td>{{ email.to_email }}</td>
+                            <td>{{ email.subject|truncatewords:4 }}</td>
+                            <td><span class="badge bg-secondary">{{ email.email_type }}</span></td>
+                            <td>
+                                <span class="badge {% if email.status == 'sent' %}bg-success{% elif email.status == 'failed' %}bg-danger{% elif email.status == 'queued' %}bg-warning{% elif email.status == 'processing' %}bg-info{% else %}bg-secondary{% endif %}">
+                                    {{ email.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {% if email.priority == 'high' %}bg-danger{% elif email.priority == 'critical' %}bg-dark{% elif email.priority == 'low' %}bg-secondary{% else %}bg-primary{% endif %}">
+                                    {{ email.priority }}
+                                </span>
+                            </td>
+                            <td>{{ email.created_at|date:"M j, Y H:i" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if email.status == 'failed' and email.can_retry %}
+                                        <a href="{% url 'admin_panel:retry_email' email.message_id %}" 
+                                           class="btn btn-outline-success"
+                                           title="Retry Email">
+                                            <i class="fas fa-redo"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% if email.status == 'queued' %}
+                                        <a href="{% url 'admin_panel:cancel_email' email.message_id %}" 
+                                           class="btn btn-outline-danger"
+                                           onclick="return confirm('Are you sure you want to cancel this email?')"
+                                           title="Cancel Email">
+                                            <i class="fas fa-times"></i>
+                                        </a>
+                                    {% endif %}
+                                    <button class="btn btn-outline-info"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#emailDetailModal" 
+                                            data-email-id="{{ email.message_id }}"
+                                            title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">
+                                No emails found matching your criteria
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Email queue pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Email Detail Modal -->
+<div class="modal fade" id="emailDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Email Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="emailDetailContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load email details in modal
+$('#emailDetailModal').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+    var emailId = button.data('email-id');
+    var modal = $(this);
+    
+    // Load email details via AJAX
+    $.ajax({
+        url: '/admin/api/email/' + emailId + '/',
+        method: 'GET',
+        success: function(data) {
+            $('#emailDetailContent').html(data);
+        },
+        error: function() {
+            $('#emailDetailContent').html('<div class="alert alert-danger">Failed to load email details</div>');
+        }
+    });
+});
+</script>
+{% endblock %}

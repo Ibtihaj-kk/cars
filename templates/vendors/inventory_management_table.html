@@ -125,8 +125,19 @@
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">{{ part.warehouse_number|default:"--" }}</div>
-                        <div class="text-xs text-gray-500">Bin {{ part.storage_bin|default:"--" }}</div>
+                        {% if part.plant or part.warehouse_number or part.storage_bin %}
+                            <div class="text-xs font-medium text-gray-900">
+                                {% if part.plant %}{{ part.plant }}{% endif %}
+                                {% if part.warehouse_number %}
+                                    {% if part.plant %} - {% endif %}{{ part.warehouse_number }}
+                                {% endif %}
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                {% if part.storage_bin %}Bin {{ part.storage_bin }}{% else %}--{% endif %}
+                            </div>
+                        {% else %}
+                            <div class="text-sm text-gray-400">--</div>
+                        {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-center">
                         <div class="flex items-center justify-center gap-2">

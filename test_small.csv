@@ -1,0 +1,6 @@
+parts_number,category_name,brand_name,manufacturer_part_number,manufacturer_oem_number,material_description,price,quantity
+TEST001,Engine Parts,Toyota,12345,67890,Spark Plug,25.50,100
+TEST002,Brakes,Bosch,54321,09876,Brake Pad,45.75,50
+TEST003,Filters,Mann,11111,22222,Oil Filter,15.25,200
+TEST004,Suspension,Monroe,33333,44444,Shock Absorber,89.99,30
+TEST005,Electrical,Denso,55555,66666,Alternator,120.00,25

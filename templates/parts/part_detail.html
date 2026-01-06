@@ -545,7 +545,7 @@
                         <input type="hidden" name="part_id" value="{{ part.pk }}">
                         <div class="qty-selector">
                             <button type="button" class="q-btn" onclick="updateQty(-1)">-</button>
-                            <input type="text" class="q-input" id="qtyInput" name="quantity" value="1" readonly>
+                            <input type="number" class="q-input" id="qtyInput" name="quantity" value="1" min="1" max="{{ part.quantity }}" step="1">
                             <button type="button" class="q-btn" onclick="updateQty(1)">+</button>
                         </div>
 
@@ -932,13 +932,29 @@
         }
     }
 
+    function normalizeQtyValue(value) {
+        const maxQty = Number({{ part.quantity|default:0 }}) || 0;
+        let n = parseInt(value, 10);
+        if (!Number.isFinite(n)) n = 1;
+        if (n < 1) n = 1;
+        if (maxQty > 0 && n > maxQty) n = maxQty;
+        return n;
+    }
+
     function updateQty(change) {
         const input = document.getElementById('qtyInput');
-        let currentVal = parseInt(input.value);
-        if (currentVal + change >= 1) {
-            input.value = currentVal + change;
-        }
+        if (!input) return;
+        const currentVal = normalizeQtyValue(input.value);
+        input.value = normalizeQtyValue(currentVal + change);
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('qtyInput');
+        if (!input) return;
+        input.addEventListener('blur', function() {
+            input.value = normalizeQtyValue(input.value);
+        });
+    });
 
     function copyShareLink() {
         const btn = document.getElementById('copyShareLinkBtn');

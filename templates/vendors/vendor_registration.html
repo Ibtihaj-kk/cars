@@ -321,12 +321,9 @@
                             <div class="relative">
                                 <select name="currency" class="modern-input appearance-none cursor-pointer bg-white" required>
                                     <option value="" disabled selected>Select Currency</option>
-                                    <option value="AED">AED - UAE Dirham</option>
-                                    <option value="SAR">SAR - Saudi Riyal</option>
-                                    <option value="QAR">QAR - Qatari Riyal</option>
-                                    <option value="OMR">OMR - Omani Rial</option>
-                                    <option value="BHD">BHD - Bahraini Dinar</option>
-                                    <option value="PKR">PKR - Pakistani Rupee</option>
+                                    {% for currency in available_currencies %}
+                                    <option value="{{ currency.code }}">{{ currency.code }} - {{ currency.name }}</option>
+                                    {% endfor %}
                                 </select>
                                 <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>

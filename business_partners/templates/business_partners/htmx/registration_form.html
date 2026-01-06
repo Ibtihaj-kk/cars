@@ -149,12 +149,17 @@
                                 hx-target="#preferred-currency-validation"
                                 hx-swap="outerHTML">
                             <option value="" disabled selected>Select Currency</option>
+                            {% for currency in available_currencies %}
+                            <option value="{{ currency.code }}">{{ currency.code }} - {{ currency.name }}</option>
+                            {% endfor %}
+                            {% if not available_currencies %}
                             <option value="USD">USD - US Dollar</option>
                             <option value="EUR">EUR - Euro</option>
                             <option value="GBP">GBP - British Pound</option>
                             <option value="PKR">PKR - Pakistani Rupee</option>
                             <option value="AED">AED - UAE Dirham</option>
                             <option value="SAR">SAR - Saudi Riyal</option>
+                            {% endif %}
                         </select>
                         <div id="preferred-currency-validation"></div>
                     </div>

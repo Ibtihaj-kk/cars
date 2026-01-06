@@ -1321,6 +1321,7 @@ Please review the application in the admin panel.
         # Update VendorProfile approval status
         if hasattr(business_partner, 'vendor_profile'):
             business_partner.vendor_profile.is_approved = True
+            business_partner.vendor_profile.approval_state = 'APPROVED'
             business_partner.vendor_profile.save()
             
         # Update application status
@@ -1331,14 +1332,40 @@ Please review the application in the admin panel.
         self.approved_at = timezone.now()
         self.save()
         
-        # Send welcome email
+        # Send welcome email using centralized email service
         if self.user and self.user.email:
             try:
-                from django.core.mail import send_mail
+                from core.email_service.orchestrator import send_email
                 from django.conf import settings
                 
-                subject = 'Welcome to CarSyncro - Application Approved'
-                message = f"""
+                email_id = send_email(
+                    email_type='vendor_approval',
+                    to_email=self.user.email,
+                    template_name='vendor_application_approved',
+                    context={
+                        'contact_person_name': self.contact_person_name,
+                        'company_name': self.company_name,
+                        'login_url': f"{getattr(settings, 'SITE_URL', 'http://localhost:8000')}/business-partners/vendor/login/",
+                        'dashboard_url': f"{getattr(settings, 'SITE_URL', 'http://localhost:8000')}/vendor/dashboard/"
+                    },
+                    priority='high'
+                )
+                
+                # Log successful email queuing
+                import logging
+                logger = logging.getLogger('email_notifications')
+                logger.info(f"Vendor approval email queued for {self.user.email} with ID: {email_id}")
+                
+            except Exception as e:
+                # Log the error but don't fail the approval
+                import logging
+                logger = logging.getLogger('email_notifications')
+                logger.error(f"Failed to queue vendor approval email for {self.user.email}: {e}")
+                
+                # Fallback to direct sending if orchestrator fails
+                try:
+                    subject = 'Welcome to CarSyncro - Application Approved'
+                    message = f"""
 Dear {self.contact_person_name},
 
 Congratulations! Your vendor application for {self.company_name} has been approved.
@@ -1353,18 +1380,17 @@ You can log in here: {getattr(settings, 'SITE_URL', 'http://localhost:8000')}/bu
 
 Best regards,
 CarSyncro Team
-                """.strip()
-                
-                send_mail(
-                    subject,
-                    message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [self.user.email],
-                    fail_silently=True,
-                )
-            except Exception as e:
-                # Log error but don't fail the approval
-                print(f"Failed to send approval email: {e}")
+                    """.strip()
+                    
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [self.user.email],
+                        fail_silently=True,
+                    )
+                except Exception as fallback_error:
+                    logger.error(f"Fallback email sending also failed for {self.user.email}: {fallback_error}")
         
         return business_partner
     
@@ -1379,14 +1405,42 @@ CarSyncro Team
         self.reviewed_at = timezone.now()
         self.save()
         
-        # Notify vendor
+        # Notify vendor using centralized email service
         if self.user and self.user.email:
             try:
-                from django.core.mail import send_mail
+                from core.email_service.orchestrator import send_email
                 from django.conf import settings
                 
-                subject = 'Update on your Vendor Application - CarSyncro'
-                message = f"""
+                email_id = send_email(
+                    email_type='vendor_rejection',
+                    to_email=self.user.email,
+                    template_name='vendor_application_rejected',
+                    context={
+                        'contact_person_name': self.contact_person_name,
+                        'company_name': self.company_name,
+                        'rejection_reason': reason,
+                        'additional_notes': notes if notes else '',
+                        'support_url': f"{getattr(settings, 'SITE_URL', 'http://localhost:8000')}/support/",
+                        'reapply_url': f"{getattr(settings, 'SITE_URL', 'http://localhost:8000')}/business-partners/registration/reapply/"
+                    },
+                    priority='medium'
+                )
+                
+                # Log successful email queuing
+                import logging
+                logger = logging.getLogger('email_notifications')
+                logger.info(f"Vendor rejection email queued for {self.user.email} with ID: {email_id}")
+                
+            except Exception as e:
+                # Log the error but don't fail the rejection
+                import logging
+                logger = logging.getLogger('email_notifications')
+                logger.error(f"Failed to queue vendor rejection email for {self.user.email}: {e}")
+                
+                # Fallback to direct sending if orchestrator fails
+                try:
+                    subject = 'Update on your Vendor Application - CarSyncro'
+                    message = f"""
 Dear {self.contact_person_name},
 
 Your vendor application for {self.company_name} has been reviewed.
@@ -1401,17 +1455,17 @@ Please contact support if you have any questions.
 
 Best regards,
 CarSyncro Team
-                """.strip()
-                
-                send_mail(
-                    subject,
-                    message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [self.user.email],
-                    fail_silently=True,
-                )
-            except Exception as e:
-                print(f"Failed to send rejection email: {e}")
+                    """.strip()
+                    
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [self.user.email],
+                        fail_silently=True,
+                    )
+                except Exception as fallback_error:
+                    logger.error(f"Fallback email sending also failed for {self.user.email}: {fallback_error}")
     
     def request_changes(self, admin_user, reason, notes=None):
         """Request changes to the vendor application."""

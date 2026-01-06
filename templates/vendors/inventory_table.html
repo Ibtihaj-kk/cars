@@ -80,7 +80,7 @@
                             {% endif %}
                         </div>
                     </td>
-                    <td class="px-4 py-4 font-bold whitespace-nowrap">{% vendor_currency_value part.price %}</td>
+                    <td class="px-4 py-4 font-bold whitespace-nowrap">{% vendor_currency_part_field part 'standard_price' %}</td>
                     <td class="px-4 py-4 whitespace-nowrap">
                         <div class="flex flex-col gap-1">
                             <!-- Publication Status -->
@@ -174,8 +174,7 @@
         <div class="flex-1 flex items-center justify-between">
             <p class="text-sm text-gray-700">
                 Showing <span class="font-medium">{{ parts.start_index|default:"0" }}</span> to <span
-                    class="font-medium">{{ parts.end_index|default:"0" }}</span> of <span class="font-medium">{{
-                    parts.paginator.count|default:"0" }}</span> results
+                    class="font-medium">{{ parts.end_index|default:"0" }}</span> of <span class="font-medium">{{ parts.paginator.count|default:"0" }}</span> results
             </p>
             {% if parts.paginator.num_pages > 1 %}
             <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
@@ -188,8 +187,7 @@
                 </a>
                 {% endif %}
 
-                <span
-                    class="z-10 bg-black border-black text-white relative inline-flex items-center px-4 py-2 border text-sm font-medium">
+                <span class="z-10 bg-black border-black text-white relative inline-flex items-center px-4 py-2 border text-sm font-medium">
                     Page {{ parts.number }} of {{ parts.paginator.num_pages }}
                 </span>
 

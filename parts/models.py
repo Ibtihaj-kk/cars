@@ -767,7 +767,7 @@ class Part(models.Model):
         from decimal import Decimal as D
         
         # Handle null/zero price
-        if not self.price:
+        if not self.standard_price:
             return "Price not available"
         
         try:
@@ -779,7 +779,7 @@ class Part(models.Model):
                 display_currency = Currency.objects.get(is_base=True)
             except Currency.DoesNotExist:
                 # Last resort: return price without formatting
-                return f"${self.price}"
+                return f"${self.standard_price}"
         
         try:
             # Step 1: Convert from original currency to USD (base currency)
@@ -787,12 +787,12 @@ class Part(models.Model):
             
             if original_curr_code == 'USD':
                 # Price is already in USD (base currency)
-                price_in_usd = self.price
+                price_in_usd = self.standard_price
             else:
                 # Convert from original currency to USD
                 # Example: GBP → USD (if vendor entered £100, we convert to ~$130)
                 rate_to_usd = ExchangeRate.get_current_rate(original_curr_code, 'USD')
-                price_in_usd = self.price * D(str(rate_to_usd))
+                price_in_usd = self.standard_price * D(str(rate_to_usd))
             
             # Step 2: Convert from USD to display currency
             if display_currency.code == 'USD':
@@ -811,9 +811,9 @@ class Part(models.Model):
             # If conversion fails, return price in original currency with basic formatting
             try:
                 original_currency_obj = Currency.objects.get(code=original_curr_code)
-                return original_currency_obj.format_price(self.price)
+                return original_currency_obj.format_price(self.standard_price)
             except:
-                return f"{self.price} {original_curr_code}"
+                return f"{self.standard_price} {original_curr_code}"
     
 
     def user_visible_fields(self):
@@ -844,7 +844,7 @@ class Part(models.Model):
                 'name': self.brand.name,
                 'logo': self.brand.logo.url if self.brand.logo else None,
             } if self.brand else None,
-            'price': self.price,
+            'price': self.standard_price,
             'quantity': self.quantity,
             'image': self.image.url if self.image else self.image_url,
             'warranty_period': self.warranty_period,
@@ -1280,13 +1280,13 @@ class Order(models.Model):
 
     @property
     def gross_price_val(self):
-        """Calculate gross price (Total - Tax)."""
-        return self.total_price - self.tax_amount
+        """Calculate gross price (Invoice Value - VAT - Shipping)."""
+        return self.total_price - self.tax_amount - self.shipping_cost
 
     @property
     def part_price_val(self):
-        """Calculate part price (Gross + Discount - Shipping)."""
-        return self.gross_price_val + self.discount_amount_val - self.shipping_cost
+        """Calculate part price (Gross + Discount)."""
+        return self.gross_price_val + self.discount_amount_val
 
     @property
     def tax_percentage(self):
@@ -1449,7 +1449,7 @@ class Order(models.Model):
         # Lock rates for each order item
         for item in self.items.all():
             # Store vendor currency amount
-            item.vendor_currency_amount = item.part.price
+            item.vendor_currency_amount = item.part.standard_price
             item.original_currency_code = getattr(item.part, 'original_currency', 'USD') or 'USD'
             
             # Lock exchange rate if not USD
@@ -1509,9 +1509,9 @@ class Order(models.Model):
                 original_curr_code = getattr(item.part, 'original_currency', 'USD') or 'USD'
                 if original_curr_code != 'USD':
                     current_rate = ExchangeRate.get_current_rate(original_curr_code, 'USD')
-                    item_price_usd = item.part.price * D(str(current_rate))
+                    item_price_usd = item.part.standard_price * D(str(current_rate))
                 else:
-                    item_price_usd = item.part.price
+                    item_price_usd = item.part.standard_price
             
             # Convert from USD to display currency
             if display_currency.code != 'USD':
@@ -1556,6 +1556,28 @@ class OrderItem(models.Model):
         help_text="Price at the time of order"
     )
     
+    # Multi-currency rate locking metadata
+    locked_exchange_rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        help_text="Exchange rate locked at time of order (vendor_currency -> USD)"
+    )
+    vendor_currency_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Price in vendor's original currency at time of order"
+    )
+    original_currency_code = models.CharField(
+        max_length=3,
+        null=True,
+        blank=True,
+        help_text="Currency code the vendor used when setting the price"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -1574,6 +1596,11 @@ class OrderItem(models.Model):
             return self.quantity * self.price
         return 0
     
+    @property
+    def item_total(self):
+        """Alias for total_price for template compatibility."""
+        return self.total_price
+    
     def get_price_in_vendor_currency(self):
         """
         Get the price in vendor's original currency using locked rate.
@@ -1591,7 +1618,7 @@ class OrderItem(models.Model):
             return self.price / D(str(self.locked_exchange_rate))
         
         # Final fallback: use part's current price
-        return self.part.price
+        return self.part.standard_price
     
     def get_display_price_in_currency(self, currency_code='USD'):
         """
@@ -1624,9 +1651,9 @@ class OrderItem(models.Model):
             original_curr_code = getattr(self.part, 'original_currency', 'USD') or 'USD'
             if original_curr_code != 'USD':
                 current_rate = ExchangeRate.get_current_rate(original_curr_code, 'USD')
-                item_price_usd = self.part.price * D(str(current_rate))
+                item_price_usd = self.part.standard_price * D(str(current_rate))
             else:
-                item_price_usd = self.part.price
+                item_price_usd = self.part.standard_price
         
         # Convert from USD to display currency
         if display_currency.code != 'USD':
@@ -1675,10 +1702,17 @@ class BulkUploadLog(models.Model):
     """Model for tracking bulk upload operations."""
     
     STATUS_CHOICES = [
+        ('queued', 'Queued'),
         ('processing', 'Processing'),
         ('completed', 'Completed'),
         ('failed', 'Failed'),
         ('partial', 'Partially Completed'),
+    ]
+    
+    PROCESSING_MODE_CHOICES = [
+        ('sync', 'Synchronous'),
+        ('async_celery', 'Async (Celery)'),
+        ('async_db', 'Async (Database Queue)'),
     ]
     
     user = models.ForeignKey(
@@ -1695,7 +1729,8 @@ class BulkUploadLog(models.Model):
     failed_records = models.PositiveIntegerField(default=0)
     
     # Status and Logs
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='processing')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='queued')
+    processing_mode = models.CharField(max_length=20, choices=PROCESSING_MODE_CHOICES, default='async_celery')
     error_log = models.TextField(blank=True, null=True)
     success_message = models.TextField(blank=True, null=True)
     
@@ -2034,14 +2069,46 @@ class CartItem(models.Model):
     
     @property
     def total_price(self):
-        return self.part.price * self.quantity
+        """Total price in USD (base currency) using locked or current rate."""
+        from core.models import ExchangeRate
+        from decimal import Decimal as D
+
+        base_price = self.part.standard_price
+        if base_price is None:
+            base_price = getattr(self.part, 'price', None)
+        if base_price is None:
+            base_price = D('0.00')
+        
+        # Use locked rate if valid (locked rate is vendor_currency -> USD)
+        if self.locked_exchange_rate and self.is_rate_lock_valid:
+            vendor_amount = self.vendor_currency_amount if self.vendor_currency_amount is not None else base_price
+            return (vendor_amount * self.locked_exchange_rate) * self.quantity
+            
+        # Fallback to current rate
+        original_curr_code = getattr(self.part, 'original_currency', 'USD') or 'USD'
+        if original_curr_code == 'USD':
+            return base_price * self.quantity
+            
+        rate = ExchangeRate.get_current_rate(original_curr_code, 'USD')
+        return (base_price * D(str(rate))) * self.quantity
+    
+    @property
+    def item_total(self):
+        """Alias for total_price for template compatibility."""
+        return self.total_price
     
     @property
     def total_price_vendor_currency(self):
         """Total price in vendor's original currency using locked rate."""
         if self.vendor_currency_amount:
             return self.vendor_currency_amount * self.quantity
-        return self.part.price * self.quantity
+        from decimal import Decimal as D
+        base_price = self.part.standard_price
+        if base_price is None:
+            base_price = getattr(self.part, 'price', None)
+        if base_price is None:
+            base_price = D('0.00')
+        return base_price * self.quantity
     
     @property
     def is_rate_lock_valid(self):
@@ -2072,7 +2139,12 @@ class CartItem(models.Model):
         from decimal import Decimal as D
         
         # Store vendor currency amount
-        self.vendor_currency_amount = self.part.price
+        base_price = self.part.standard_price
+        if base_price is None:
+            base_price = getattr(self.part, 'price', None)
+        if base_price is None:
+            base_price = D('0.00')
+        self.vendor_currency_amount = base_price
         
         # Lock exchange rate if not USD
         if self.part.original_currency != 'USD':
@@ -2158,7 +2230,7 @@ class DiscountCode(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.code} - {self.discount_value}{'%' if self.discount_type == 'percentage' else ' SAR'}"
+        return f"{self.code} - {self.discount_value}{'%' if self.discount_type == 'percentage' else ''}"
     
     def is_valid(self):
         """Check if discount code is valid."""
@@ -2291,7 +2363,13 @@ class ShippingRate(models.Model):
         unique_together = ['city']
     
     def __str__(self):
-        return f"{self.city.name} - {self.base_rate} SAR"
+        # Local import to avoid circular dependency
+        try:
+            from business_partners.utils import get_currency_for_country
+            currency = get_currency_for_country(self.city.country.name)
+        except ImportError:
+            currency = "SAR" # Fallback
+        return f"{self.city.name} - {self.base_rate} {currency}"
     
     def calculate_shipping_cost(self, order_amount, total_weight=None):
         """Calculate shipping cost for given order."""

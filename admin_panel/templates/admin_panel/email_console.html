@@ -1,0 +1,204 @@
+{% extends "admin_panel/base.html" %}
+{% load static %}
+
+{% block title %}Email Console - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Email Console</h1>
+        <div class="btn-group">
+            <a href="{% url 'admin_panel:admin_email_queue' %}" class="btn btn-outline-primary">
+                <i class="fas fa-inbox"></i> Email Queue
+            </a>
+            <a href="{% url 'admin_panel:admin_email_analytics' %}" class="btn btn-outline-info">
+                <i class="fas fa-chart-bar"></i> Analytics
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">{{ email_stats.total_emails }}</h5>
+                    <p class="card-text">Total Emails</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">{{ email_stats.sent_emails }}</h5>
+                    <p class="card-text">Sent Emails</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5 class="card-title">{{ email_stats.queued_emails }}</h5>
+                    <p class="card-text">Queued Emails</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">{{ email_stats.failed_emails }}</h5>
+                    <p class="card-text">Failed Emails</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Send Manual Email -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Send Manual Email</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'admin_panel:send_manual_email' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Recipient Emails</label>
+                            <textarea class="form-control" name="recipient_emails" 
+                                      rows="3" placeholder="Enter email addresses, separated by commas" required></textarea>
+                            <small class="form-text text-muted">Multiple emails: email1@example.com, email2@example.com</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Email Template</label>
+                            <select class="form-select" name="template_name" required>
+                                <option value="">Select Template</option>
+                                {% for template in templates %}
+                                    <option value="{{ template.name }}">{{ template.name }}</option>
+                                {% endfor %}
+                                <option value="custom">Custom Message</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Subject</label>
+                            <input type="text" class="form-control" name="subject" 
+                                   placeholder="Email subject" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Message Content</label>
+                            <textarea class="form-control" name="message_content" 
+                                      rows="5" placeholder="Enter your message content..."></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Send Email
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Send Bulk Email -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Send Bulk Email</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'admin_panel:send_bulk_email' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Target Group</label>
+                            <select class="form-select" name="target_group" required>
+                                <option value="">Select Target Group</option>
+                                <option value="all_users">All Users ({{ user_counts.total_users }})</option>
+                                <option value="verified_users">Verified Users ({{ user_counts.verified_users }})</option>
+                                <option value="unverified_users">Unverified Users ({{ user_counts.total_users|add:user_counts.verified_users|add:"-" }})</option>
+                                <option value="vendors">Vendors ({{ user_counts.vendors }})</option>
+                                <option value="customers">Customers ({{ user_counts.customers }})</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Email Template</label>
+                            <select class="form-select" name="template_name" required>
+                                <option value="">Select Template</option>
+                                {% for template in templates %}
+                                    <option value="{{ template.name }}">{{ template.name }}</option>
+                                {% endfor %}
+                                <option value="custom">Custom Message</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Subject</label>
+                            <input type="text" class="form-control" name="subject" 
+                                   placeholder="Email subject" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Message Content</label>
+                            <textarea class="form-control" name="message_content" 
+                                      rows="5" placeholder="Enter your message content..."></textarea>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Warning:</strong> This will send emails to all users in the selected group.
+                            Use with caution.
+                        </div>
+                        
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-bullhorn"></i> Send Bulk Email
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Emails -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Recent Emails</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>To</th>
+                            <th>Subject</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Sent At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for email in email_stats.recent_emails %}
+                        <tr>
+                            <td>{{ email.to_email }}</td>
+                            <td>{{ email.subject|truncatewords:5 }}</td>
+                            <td><span class="badge bg-secondary">{{ email.email_type }}</span></td>
+                            <td>
+                                <span class="badge {% if email.status == 'sent' %}bg-success{% elif email.status == 'failed' %}bg-danger{% elif email.status == 'queued' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                    {{ email.status }}
+                                </span>
+                            </td>
+                            <td>{{ email.created_at|date:"M j, Y H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No emails sent yet</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

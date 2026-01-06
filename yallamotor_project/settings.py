@@ -439,17 +439,37 @@ REDOC_SETTINGS = {
     'PATH_IN_MIDDLE': True,
 }
 
-# Email settings - Default to SMTP for production readiness
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'carsyncro.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False') == 'True'
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'info@carsyncro.com')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'Ibtihaj12345$@')
+# # Email settings - Default to SMTP for production readiness
+# EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+# EMAIL_HOST = os.environ.get('EMAIL_HOST', 'carsyncro.com')
+# EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+# EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+# EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False') == 'True'
+# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'info@carsyncro.com')
+# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'Ibtihaj12345$@')
 
-# Default from email
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL') or EMAIL_HOST_USER or 'noreply@carsyncro.com'
+# # Default from email
+# DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL') or EMAIL_HOST_USER or 'noreply@carsyncro.com'
+
+# Email Service Configuration
+EMAIL_SERVICE_CONFIG = {
+    'ENABLED': os.environ.get('EMAIL_SERVICE_ENABLED', 'True') == 'True',
+    'PROVIDER': os.environ.get('EMAIL_PROVIDER', 'smtp'),
+    'QUEUE_PROCESSING_INTERVAL': int(os.environ.get('EMAIL_QUEUE_PROCESSING_INTERVAL', 300)),
+    'MAX_RETRIES': int(os.environ.get('EMAIL_MAX_RETRIES', 3)),
+    'RETRY_DELAY': int(os.environ.get('EMAIL_RETRY_DELAY', 300)),
+    'BATCH_SIZE': int(os.environ.get('EMAIL_BATCH_SIZE', 50)),
+}
+
+# Fallback to Django's email settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'carsyncro.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 465))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True') == 'True'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@carsyncro.com')
+
 
 # Email notification settings
 ENABLE_INQUIRY_EMAIL_NOTIFICATIONS = os.environ.get('ENABLE_INQUIRY_EMAIL_NOTIFICATIONS', 'True') == 'True'
