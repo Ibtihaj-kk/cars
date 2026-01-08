@@ -19,7 +19,12 @@ CURRENCY_SYMBOLS = {
 }
 
 def _format_amount_without_symbol(currency, amount):
-    rounded_amount = round(float(amount), currency.decimal_places)
+    if amount is None:
+        return ""
+    try:
+        rounded_amount = round(float(amount), currency.decimal_places)
+    except (ValueError, TypeError):
+        return str(amount) if amount is not None else ""
 
     if currency.decimal_places > 0:
         formatted_amount = f"{rounded_amount:,.{currency.decimal_places}f}"
@@ -92,6 +97,26 @@ def _compact_number(value):
 def compact_number(value):
     return _compact_number(value)
 
+@register.filter
+def replace(value, args):
+    """
+    Replaces a string with another string.
+    Usage: {{ value|replace:"old,new" }}
+    """
+    try:
+        old, new = args.split(',')
+        return str(value).replace(old, new)
+    except (ValueError, AttributeError):
+        return value
+
+@register.filter
+def abs_val(value):
+    """Returns the absolute value of the input."""
+    try:
+        return abs(float(value))
+    except (ValueError, TypeError):
+        return value
+
 @register.simple_tag(takes_context=True)
 def vendor_currency(context, amount):
     """
@@ -112,13 +137,22 @@ def vendor_currency(context, amount):
     if not currency_code and request and hasattr(request, 'user') and request.user.is_authenticated:
         currency_code = get_user_currency(request.user)
 
-    currency_code = (currency_code or 'USD').upper()
+    currency_code = (currency_code or 'SAR').upper()
 
     if hasattr(amount, 'get_display_price') and callable(getattr(amount, 'get_display_price', None)):
         try:
             return amount.get_display_price(currency_code)
         except Exception:
             pass
+    
+    # If it's a model instance but doesn't have get_display_price, try to get price field
+    if hasattr(amount, 'standard_price'):
+        amount = amount.standard_price
+    elif hasattr(amount, 'price'):
+        amount = amount.price
+    
+    if amount is None:
+        return ""
 
     try:
         amount = float(amount)
@@ -158,7 +192,7 @@ def vendor_currency_value(context, amount):
     if not currency_code and request and hasattr(request, 'user') and request.user.is_authenticated:
         currency_code = get_user_currency(request.user)
 
-    currency_code = (currency_code or 'USD').upper()
+    currency_code = (currency_code or 'SAR').upper()
 
     if hasattr(amount, 'get_display_price') and callable(getattr(amount, 'get_display_price', None)):
         try:
@@ -167,6 +201,15 @@ def vendor_currency_value(context, amount):
                 return displayed
         except Exception:
             pass
+
+    # If it's a model instance but doesn't have get_display_price, try to get price field
+    if hasattr(amount, 'standard_price'):
+        amount = amount.standard_price
+    elif hasattr(amount, 'price'):
+        amount = amount.price
+        
+    if amount is None:
+        return ""
 
     try:
         amount = float(amount)
@@ -208,7 +251,7 @@ def vendor_currency_part_field(context, part, field_name):
     if not currency_code and request and hasattr(request, 'user') and request.user.is_authenticated:
         currency_code = get_user_currency(request.user)
 
-    currency_code = (currency_code or 'USD').upper()
+    currency_code = (currency_code or 'SAR').upper()
 
     try:
         from core.models import Currency, ExchangeRate

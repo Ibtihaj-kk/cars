@@ -286,6 +286,8 @@ def vendor_dashboard(request):
     # Get all orders that contain items from this vendor's parts
     from parts.models import Order, OrderItem
     
+    today = timezone.now()
+    
     # Get order items for this vendor's parts
     vendor_order_items = OrderItem.objects.filter(
         part__vendor=business_partner,
@@ -295,15 +297,48 @@ def vendor_dashboard(request):
     # Total orders count
     total_orders = vendor_order_items.values('order').distinct().count()
     
+    # Calculate order growth (vs last week)
+    last_week = today - timedelta(days=7)
+    previous_week = today - timedelta(days=14)
+    
+    orders_this_week = vendor_order_items.filter(
+        order__created_at__gte=last_week
+    ).values('order').distinct().count()
+    
+    orders_last_week = vendor_order_items.filter(
+        order__created_at__gte=previous_week,
+        order__created_at__lt=last_week
+    ).values('order').distinct().count()
+    
+    if orders_last_week > 0:
+        order_growth = ((orders_this_week - orders_last_week) / orders_last_week) * 100
+    else:
+        order_growth = 100 if orders_this_week > 0 else 0
+    
     # Monthly sales calculation (last 30 days)
     last_30_days = timezone.now() - timedelta(days=30)
+    previous_30_days = timezone.now() - timedelta(days=60)
+    
     monthly_sales_data = vendor_order_items.filter(
         order__created_at__gte=last_30_days
     ).aggregate(
         total_sales=Sum(F('price') * F('quantity'))
     )
     
+    prev_monthly_sales_data = vendor_order_items.filter(
+        order__created_at__gte=previous_30_days,
+        order__created_at__lt=last_30_days
+    ).aggregate(
+        total_sales=Sum(F('price') * F('quantity'))
+    )
+    
     monthly_sales = monthly_sales_data['total_sales'] or 0
+    prev_monthly_sales = prev_monthly_sales_data['total_sales'] or 0
+    
+    if prev_monthly_sales > 0:
+        sales_growth = ((float(monthly_sales) - float(prev_monthly_sales)) / float(prev_monthly_sales)) * 100
+    else:
+        sales_growth = 100 if monthly_sales > 0 else 0
     
     # Format monthly sales for display (e.g., 1.2M)
     if monthly_sales >= 1000000:
@@ -331,7 +366,6 @@ def vendor_dashboard(request):
     # Revenue Chart Data (Last 6 months)
     revenue_labels = []
     revenue_data = []
-    today = timezone.now()
     
     for i in range(6):
         month_target = today.month - i
@@ -383,8 +417,10 @@ def vendor_dashboard(request):
             'critical_notifications': critical_notifications,
             'overdue_notifications': overdue_notifications,
             'total_orders': total_orders,
+            'order_growth': round(order_growth, 1),
             'monthly_sales': monthly_sales_display,
             'monthly_sales_raw': monthly_sales,
+            'sales_growth': round(sales_growth, 1),
             'pending_actions': pending_actions,
             'revenue_labels': json.dumps(revenue_labels),
             'revenue_data': json.dumps(revenue_data),
@@ -2437,6 +2473,74 @@ def vendor_inventory_alerts(request):
     return render(request, 'business_partners/vendor_inventory_alerts.html', context)
 
 
+@vendor_required
+@login_required
+def vendor_parts_import_template(request):
+    """
+    Generate a CSV template for bulk part import.
+    """
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="vendor_parts_import_template.csv"'
+    
+    writer = csv.writer(response)
+    # Headers based on requested fields and order
+    headers = [
+        'Part Number',
+        'Manufacturer Part Number',
+        'OEM Number',
+        'Material Description',
+        'Arabic Description',
+        'Category',
+        'Make(Brand)',
+        'PurChase Price',
+        'Retail Price',
+        'Whole Sale Price',
+        'Base Unit',
+        'Quantity',
+        'Plant',
+        'Warehouse',
+        'Bin',
+        'Safety Stock',
+        'Reorder Point',
+        'Active',
+        'Featured',
+        'Gross Weight',
+        'Net Weight',
+        'Dimensions',
+        'Image URL',
+    ]
+    writer.writerow(headers)
+    
+    # Add a sample row
+    writer.writerow([
+        'PART-001',
+        'MFG-123',
+        'OEM-456',
+        'Brake Pad Front',
+        'تيل فرامل أمامي',
+        'Brakes',
+        'Toyota',
+        '100.00',
+        '150.00',
+        '120.00',
+        'EA',
+        '50',
+        'PLANT1',
+        'WH01',
+        'BIN-A1',
+        '10',
+        '5',
+        'Yes',
+        'No',
+        '1.5',
+        '1.4',
+        '20x10x5',
+        'https://example.com/image.jpg'
+    ])
+    
+    return response
+
+
 @login_required
 def vendor_parts_import(request):
     """
@@ -2708,56 +2812,70 @@ def process_import_file(
     HEADER_MAPPINGS = {
         'Part Number': 'parts_number',
         'Part No': 'parts_number',
-        'Material Description': 'material_description',
-        'Description': 'material_description',  # Alias
-        'Arabic Description': 'material_description_ar',
-        'Category': 'category_name',
-        'Brand': 'brand_name',
-        'Price': 'price',
-        'Quantity': 'quantity',
-        'Qty': 'quantity',
-        'Stock': 'quantity',  # Alias
-        'Base Unit': 'base_unit_of_measure',
-        'Unit': 'base_unit_of_measure',  # Alias
-        'UOM': 'base_unit_of_measure',
-        'Image URL': 'image_url',
-        'Image': 'image_url',
         'Manufacturer Part Number': 'manufacturer_part_number',
         'MPN': 'manufacturer_part_number',
         'OEM Number': 'manufacturer_oem_number',
         'OEM': 'manufacturer_oem_number',
-        'Weight': 'gross_weight',
-        'Gross Weight': 'gross_weight',
-        'Net Weight': 'net_weight',
-        'Dimensions': 'size_dimensions',
-        'Size': 'size_dimensions',
+        'Material Description': 'material_description',
+        'Description': 'material_description',
+        'Arabic Description': 'material_description_ar',
+        'Category': 'category_name',
+        'Make': 'brand_name',
+        'Make(Brand)': 'brand_name',
+        'Brand': 'brand_name',
+        'Purchase Price': 'moving_average_price',
+        'PurChase Price': 'moving_average_price',
+        'Retail Price': 'standard_price',
+        'Whole Sale Price': 'price',
+        'Wholesale Price': 'price',
+        'Price': 'price',
+        'Base Unit': 'base_unit_of_measure',
+        'Unit': 'base_unit_of_measure',
+        'UOM': 'base_unit_of_measure',
+        'Quantity': 'quantity',
+        'Qty': 'quantity',
+        'Stock': 'quantity',
+        'Plant': 'plant',
+        'Warehouse': 'warehouse_number',
+        'Bin': 'storage_bin',
         'Safety Stock': 'safety_stock',
         'Reorder Point': 'reorder_point',
         'Active': 'is_active',
-        'Featured': 'is_featured'
+        'Featured': 'is_featured',
+        'Gross Weight': 'gross_weight',
+        'Weight': 'gross_weight',
+        'Net Weight': 'net_weight',
+        'Dimensions': 'size_dimensions',
+        'Size': 'size_dimensions',
+        'Image URL': 'image_url',
+        'Image': 'image_url',
     }
     
     FIELD_MAPPINGS = {
         'parts_number': 'parts_number',
         'material_description': 'material_description',
         'material_description_ar': 'material_description_ar',
-        'image_url': 'image_url'
+        'image_url': 'image_url',
+        'size_dimensions': 'size_dimensions',
+        'price': 'price',
+        'moving_average_price': 'moving_average_price',
+        'standard_price': 'standard_price',
     }
     
     NUMERIC_FIELDS = {
-        'price': {'min': 0, 'max': 999999.99, 'decimal_places': 2},
-        'quantity': {'min': 0, 'max': 999999, 'decimal_places': 0},
-        'safety_stock': {'min': 0, 'max': 999999, 'decimal_places': 0},
-        'minimum_safety_stock': {'min': 0, 'max': 999999, 'decimal_places': 0},
-        'reorder_point': {'min': 0, 'max': 999999, 'decimal_places': 0},
-        'minimum_order_quantity': {'min': 1, 'max': 999999, 'decimal_places': 0},
+        'price': {'min': 0, 'max': 99999999.99, 'decimal_places': 2},
+        'standard_price': {'min': 0, 'max': 99999999.99, 'decimal_places': 2},
+        'moving_average_price': {'min': 0, 'max': 99999999.99, 'decimal_places': 2},
+        'quantity': {'min': 0, 'max': 9999999, 'decimal_places': 0},
+        'safety_stock': {'min': 0, 'max': 9999999, 'decimal_places': 3},
+        'reorder_point': {'min': 0, 'max': 9999999, 'decimal_places': 3},
         'gross_weight': {'min': 0, 'max': 99999.999, 'decimal_places': 3},
         'net_weight': {'min': 0, 'max': 99999.999, 'decimal_places': 3},
+        'minimum_safety_stock': {'min': 0, 'max': 9999999, 'decimal_places': 3},
+        'minimum_order_quantity': {'min': 0, 'max': 9999999, 'decimal_places': 3},
         'planned_delivery_time_days': {'min': 0, 'max': 365, 'decimal_places': 0},
         'goods_receipt_processing_time_days': {'min': 0, 'max': 30, 'decimal_places': 0},
         'warranty_period': {'min': 0, 'max': 120, 'decimal_places': 0},
-        'standard_price': {'min': 0, 'max': 999999.99, 'decimal_places': 2},
-        'moving_average_price': {'min': 0, 'max': 999999.99, 'decimal_places': 2},
         'price_unit_peinh': {'min': 1, 'max': 99999, 'decimal_places': 0}
     }
     
@@ -2770,21 +2888,21 @@ def process_import_file(
         'manufacturer_part_number': {'max_length': 40},
         'manufacturer_oem_number': {'max_length': 50},
         'material_type': {'max_length': 50},
-        'plant': {'max_length': 50},
-        'storage_location': {'max_length': 50},
-        'warehouse_number': {'max_length': 50},
-        'storage_bin': {'max_length': 50},
-        'material_group': {'max_length': 50},
-        'division': {'max_length': 50},
+        'plant': {'max_length': 10},
+        'storage_location': {'max_length': 10},
+        'warehouse_number': {'max_length': 10},
+        'storage_bin': {'max_length': 20},
+        'material_group': {'max_length': 20},
+        'division': {'max_length': 10},
         'old_material_number': {'max_length': 50},
-        'external_material_group': {'max_length': 50},
+        'external_material_group': {'max_length': 20},
         'abc_indicator': {'max_length': 1, 'choices': ['A', 'B', 'C']},
         'mrp_type': {'max_length': 10},
         'mrp_group': {'max_length': 10},
         'mrp_controller': {'max_length': 10},
-        'valuation_class': {'max_length': 50},
-        'price_control_indicator': {'max_length': 10},
-        'storage_location_code': {'max_length': 50}
+        'valuation_class': {'max_length': 10},
+        'price_control_indicator': {'max_length': 1},
+        'storage_location_code': {'max_length': 10}
     }
     
     BOOLEAN_FIELDS = ['is_active', 'is_featured']
@@ -3177,7 +3295,13 @@ def process_import_file(
                     category_val = validated_data['category_name']
                     cache_key = str(category_val).strip().lower()
                     if cache_key not in category_cache:
-                        category_cache[cache_key] = Category.objects.filter(name__iexact=category_val).first()
+                        category = Category.objects.filter(name__iexact=category_val).first()
+                        # If multiple categories exist with same name (unlikely but possible), 
+                        # we should try to be as exact as possible.
+                        if not category:
+                            # Fallback to a more broad search or handle error
+                            category = Category.objects.filter(name__icontains=category_val).first()
+                        category_cache[cache_key] = category
                     category = category_cache[cache_key]
                     if category:
                         validated_data['category'] = category
@@ -3210,6 +3334,7 @@ def process_import_file(
                 
                 # Add vendor to validated data
                 validated_data['vendor'] = business_partner
+                validated_data['original_currency'] = getattr(getattr(business_partner, 'vendor_profile', None), 'preferred_currency', None) or 'USD'
                 if import_status in ['draft', 'published', 'archived']:
                     validated_data['status'] = import_status
                 

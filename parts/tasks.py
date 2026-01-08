@@ -1,9 +1,11 @@
 """
-Celery tasks for the Parts module.
+Tasks for the Parts module.
 Handles background processing for CSV imports, API imports, and cache management.
 """
 
-from celery import shared_task
+import uuid
+from typing import Any, Callable
+
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
@@ -14,13 +16,273 @@ import requests
 from decimal import Decimal
 import logging
 from django.db.utils import OperationalError
-from celery.exceptions import MaxRetriesExceededError
 
 from .models import Part, Category, Brand, BulkUploadLog, IntegrationSource, Cart
 from .cache import warm_cache, invalidate_part_cache, get_cached_popular_parts
 from users.models import User
 
 logger = logging.getLogger(__name__)
+
+class MaxRetriesExceededError(Exception):
+    pass
+
+
+class _EagerResult:
+    def __init__(self, result: Any = None):
+        self.id = uuid.uuid4().hex
+        self.result = result
+
+
+class _EagerTask:
+    def __init__(self, func: Callable[..., Any], *, bind: bool):
+        self._func = func
+        self._bind = bind
+        self.__name__ = getattr(func, "__name__", self.__class__.__name__)
+        self.__qualname__ = getattr(func, "__qualname__", self.__class__.__name__)
+        self.__module__ = getattr(func, "__module__", __name__)
+        self.__doc__ = getattr(func, "__doc__", None)
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return self._call(*args, **kwargs)
+
+    def delay(self, *args: Any, **kwargs: Any) -> _EagerResult:
+        return _EagerResult(self._call(*args, **kwargs))
+
+    def _call(self, *args: Any, **kwargs: Any) -> Any:
+        if not self._bind:
+            return self._func(*args, **kwargs)
+
+        class _TaskContext:
+            def retry(self, exc=None, countdown=None, max_retries=None):
+                raise MaxRetriesExceededError(str(exc) if exc else "Retry requested")
+
+        return self._func(_TaskContext(), *args, **kwargs)
+
+
+def shared_task(*dargs, **dkwargs):
+    bind = bool(dkwargs.get("bind", False))
+
+    if dargs and callable(dargs[0]) and not dkwargs:
+        return _EagerTask(dargs[0], bind=False)
+
+    def decorator(func):
+        return _EagerTask(func, bind=bind)
+
+    return decorator
+
+
+def process_catalog_bulk_upload_file(file_obj, file_name, *, upload_log_id=None):
+    import io
+    import uuid
+    from django.db import IntegrityError, transaction
+
+    from business_partners.catalog_models import CatalogItem
+    from business_partners.models import BusinessPartner
+    from .models import Category, Brand, BulkUploadLog
+
+    def normalize_header(value):
+        value = (value or "").strip().lower()
+        return "".join(ch for ch in value if ch.isalnum())
+
+    def normalize_value(value):
+        return (value or "").strip()
+
+    def normalize_catalog_part(value: str) -> str:
+        return "".join(ch for ch in (value or "").strip().upper() if ch.isalnum())
+
+    def build_catalog_part_number(category, make: str, model: str | None, year: int | None) -> str:
+        cat = normalize_catalog_part(getattr(category, "name", ""))[:10] if category else "CAT"
+        mk = normalize_catalog_part(make)[:10] or "MAKE"
+        mdl = normalize_catalog_part(model or "")[:10] or "MODEL"
+        yr = str(year) if year else "NA"
+        suffix = uuid.uuid4().hex[:6].upper()
+        return f"{cat}-{yr}-{mk}-{mdl}-{suffix}"[:100]
+
+    def build_catalog_description(
+        category, make: str, model: str | None, year: int | None, trim: str | None, engine: str | None
+    ) -> str:
+        cat = getattr(category, "name", None) or "Catalog item"
+        vehicle_parts = [make, (model or "").strip()]
+        vehicle = " ".join([p for p in vehicle_parts if p]).strip()
+        if year:
+            vehicle = f"{vehicle} ({year})" if vehicle else f"({year})"
+        base = f"{cat} for {vehicle or make}"
+        extra = []
+        if trim:
+            extra.append(f"Trim: {trim}")
+        if engine:
+            extra.append(f"Engine: {engine}")
+        if extra:
+            return f"{base}\n" + "\n".join(extra)
+        return base
+
+    vendor = (
+        BusinessPartner.objects.filter(roles__role_type="vendor")
+        .distinct()
+        .order_by("id")
+        .first()
+    )
+    if not vendor:
+        raise ValueError("At least one vendor must exist to add catalog items.")
+
+    header_map = {
+        "category": "category",
+        "year": "year",
+        "make": "make",
+        "brand": "make",
+        "model": "model",
+        "trim": "trim",
+        "engine": "engine",
+    }
+
+    required_fields = ["category"]
+
+    def build_row_dict(headers, values):
+        row = {}
+        for idx, header in enumerate(headers):
+            key = header_map.get(normalize_header(header))
+            if not key:
+                continue
+            row[key] = "" if idx >= len(values) or values[idx] is None else str(values[idx]).strip()
+        return row
+
+    def process_rows(headers, row_values_iter):
+        header_keys = {}
+        for header in headers:
+            normalized = normalize_header(header)
+            canonical = header_map.get(normalized)
+            if canonical and canonical not in header_keys:
+                header_keys[canonical] = header
+
+        missing = [field for field in required_fields if field not in header_keys]
+        if missing:
+            raise ValueError(f"Missing required columns: {', '.join(missing)}")
+
+        total_records = 0
+        successful_records = 0
+        errors = []
+
+        with transaction.atomic():
+            for row_index, values in enumerate(row_values_iter, start=2):
+                if not any(v is not None and str(v).strip() for v in values):
+                    continue
+
+                total_records += 1
+                row = build_row_dict(headers, values)
+
+                category_value = normalize_value(row.get("category"))
+                year_value_raw = normalize_value(row.get("year"))
+                make_value_raw = normalize_value(row.get("make"))
+                model_value = normalize_value(row.get("model")) or None
+                trim_value = normalize_value(row.get("trim")) or None
+                engine_value = normalize_value(row.get("engine")) or None
+
+                if not category_value:
+                    errors.append(f"Row {row_index}: Category is required.")
+                    continue
+
+                year_value = None
+                if year_value_raw:
+                    try:
+                        year_int = int(float(year_value_raw))
+                        if year_int < 1900 or year_int > 2100:
+                            errors.append(f"Row {row_index}: Please enter a valid year.")
+                            continue
+                        year_value = year_int
+                    except ValueError:
+                        errors.append(f"Row {row_index}: Year must be a number.")
+                        continue
+
+                make_value = make_value_raw or "Unknown"
+                if make_value_raw:
+                    existing_make = Brand.objects.filter(name__iexact=make_value_raw).first()
+                    if existing_make:
+                        make_value = existing_make.name
+                    else:
+                        try:
+                            created_make = Brand.objects.create(name=make_value_raw, is_active=True)
+                            make_value = created_make.name
+                        except IntegrityError:
+                            existing_make = Brand.objects.filter(name__iexact=make_value_raw).first()
+                            if existing_make:
+                                make_value = existing_make.name
+
+                try:
+                    category = None
+                    try:
+                        category_id = int(category_value)
+                        category = Category.objects.get(pk=category_id)
+                    except (TypeError, ValueError):
+                        category, _ = Category.objects.get_or_create(name=category_value)
+                    except Category.DoesNotExist:
+                        category, _ = Category.objects.get_or_create(name=category_value)
+
+                    part_number = build_catalog_part_number(category, make_value, model_value, year_value)
+                    description = build_catalog_description(
+                        category, make_value, model_value, year_value, trim_value, engine_value
+                    )
+
+                    CatalogItem.objects.update_or_create(
+                        vendor=vendor,
+                        category=category,
+                        make=make_value,
+                        model=model_value,
+                        year=year_value,
+                        trim=trim_value,
+                        engine=engine_value,
+                        defaults={
+                            "part_number": part_number,
+                            "description": description,
+                        },
+                    )
+                    successful_records += 1
+                except Exception as exc:
+                    errors.append(f"Row {row_index}: {str(exc)}")
+
+        failed_records = total_records - successful_records
+
+        if upload_log_id:
+            BulkUploadLog.objects.filter(id=upload_log_id).update(
+                total_records=total_records,
+                successful_records=successful_records,
+                failed_records=failed_records,
+            )
+
+        return total_records, successful_records, failed_records, errors
+
+    file_name_lower = (file_name or "").lower()
+
+    if file_name_lower.endswith(".csv"):
+        file_obj.seek(0)
+        raw = file_obj.read()
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = raw.decode("utf-8")
+
+        reader = csv.reader(io.StringIO(text))
+        headers = next(reader, None)
+        if not headers:
+            raise ValueError("Empty CSV file")
+        return process_rows(headers, reader)
+
+    if file_name_lower.endswith(".xlsx"):
+        import openpyxl
+
+        file_obj.seek(0)
+        workbook = openpyxl.load_workbook(file_obj, read_only=True, data_only=True)
+        sheet = workbook.active
+        rows_iter = sheet.iter_rows(values_only=True)
+        headers = next(rows_iter, None)
+        if not headers:
+            raise ValueError("Empty Excel file")
+        headers = ["" if h is None else str(h) for h in headers]
+        return process_rows(headers, rows_iter)
+
+    if file_name_lower.endswith(".xls"):
+        raise ValueError("XLS files are not supported. Please save as .xlsx.")
+
+    raise ValueError("Unsupported file type. Please upload a CSV or XLSX file.")
 
 
 @shared_task(bind=True, soft_time_limit=3600, time_limit=7200)
@@ -111,16 +373,81 @@ def process_vendor_parts_import(
         except Exception:
             pass
         try:
-            raise self.retry(exc=e, countdown=10, max_retries=3)
-        except MaxRetriesExceededError:
-            try:
-                upload_log.status = 'failed'
-                upload_log.error_log = str(e)
-                upload_log.completed_at = timezone.now()
-                upload_log.save(update_fields=['status', 'error_log', 'completed_at'])
-            except Exception:
-                pass
-            raise
+            upload_log.status = 'failed'
+            upload_log.error_log = str(e)
+            upload_log.completed_at = timezone.now()
+            upload_log.save(update_fields=['status', 'error_log', 'completed_at'])
+        except Exception:
+            pass
+        return {'success': False, 'error': str(e)}
+    except Exception as e:
+        upload_log.status = 'failed'
+        upload_log.error_log = str(e)
+        upload_log.completed_at = timezone.now()
+        upload_log.save(update_fields=['status', 'error_log', 'completed_at'])
+        return {'success': False, 'error': str(e)}
+    finally:
+        try:
+            default_storage.delete(storage_path)
+        except Exception:
+            pass
+
+
+@shared_task(bind=True, soft_time_limit=3600, time_limit=7200)
+def process_catalog_parts_import(self, upload_log_id, storage_path):
+    from django.core.files.storage import default_storage
+    from django.utils import timezone
+
+    upload_log = BulkUploadLog.objects.filter(id=upload_log_id).first()
+    if not upload_log:
+        return {'success': False, 'error': 'Upload log not found'}
+
+    upload_log.status = 'processing'
+    upload_log.success_message = 'Processing'
+    upload_log.save(update_fields=['status', 'success_message'])
+
+    try:
+        with default_storage.open(storage_path, 'rb') as f:
+            total, successful, failed, errors = process_catalog_bulk_upload_file(
+                f,
+                upload_log.file_name,
+                upload_log_id=upload_log.id,
+            )
+
+        upload_log.total_records = total
+        upload_log.successful_records = successful
+        upload_log.failed_records = failed
+        upload_log.completed_at = timezone.now()
+        upload_log.error_log = "\n".join(errors) if errors else ""
+        if failed:
+            upload_log.status = "failed"
+            upload_log.success_message = ""
+        else:
+            upload_log.status = "completed"
+            upload_log.success_message = f"Successfully processed {successful} records."
+        upload_log.save(
+            update_fields=[
+                'total_records',
+                'successful_records',
+                'failed_records',
+                'status',
+                'success_message',
+                'error_log',
+                'completed_at',
+            ]
+        )
+
+        try:
+            warm_cache()
+        except Exception:
+            pass
+
+        return {
+            'success': failed == 0,
+            'total_records': total,
+            'successful_records': successful,
+            'failed_records': failed,
+        }
     except Exception as e:
         upload_log.status = 'failed'
         upload_log.error_log = str(e)

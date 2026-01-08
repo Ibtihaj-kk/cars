@@ -935,20 +935,16 @@
 
             <div class="row">
                 <div class="col-lg-3">
-                    <div class="filters-sidebar">
-                        <div class="sidebar-header d-flex justify-content-between align-items-center">
-                            <h5 class="filter-title mb-0" style="font-size:16px;">Filter Sets</h5>
+                        <div class="filters-sidebar">
+                            <div class="sidebar-header d-flex justify-content-between align-items-center">
+                                <h5 class="filter-title mb-0" style="font-size:16px;">Filter Sets</h5>
                             <button type="button" class="btn btn-sm text-muted"
-                                onclick="document.getElementById('filterForm').reset();"
-                                hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results" hx-push-url="true"
-                                hx-indicator="#loading-indicator">
+                                onclick="window.location.href='{% url 'parts:part_list' %}'">
                                 Reset
                             </button>
                         </div>
 
-                        <form method="GET" id="filterForm" hx-get="{% url 'parts:part_list' %}"
-                            hx-target="#parts-results" hx-push-url="true" hx-indicator="#loading-indicator"
-                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect" hx-vals='{"page":1}'>
+                        <form method="GET" id="filterForm">
                             <div class="sidebar-scroll-area">
 
                                 <div class="filter-section">
@@ -964,6 +960,25 @@
                                             hx-trigger="input changed delay:300ms"
                                             hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
                                             hx-vals='{"page":1}'>
+                                    </div>
+                                </div>
+
+                                <div class="filter-section">
+                                    <div class="filter-header" onclick="toggleFilter(this)">
+                                        <span>Make</span>
+                                        <i class="fas fa-chevron-down chevron"></i>
+                                    </div>
+                                    <div class="filter-body">
+                                        <select class="form-select form-select-sm" id="makeFilter" name="make"
+                                            hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
+                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change"
+                                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
+                                            hx-vals='{"page":1}'>
+                                            <option value="">Select Make</option>
+                                            {% for make in catalog_makes %}
+                                            <option value="{{ make.id }}" {% if current_make == make.id|stringformat:"s" or current_make == make.name %} selected {% endif %}>{{ make.name }}</option>
+                                            {% endfor %}
+                                        </select>
                                     </div>
                                 </div>
 
@@ -988,37 +1003,18 @@
 
                                 <div class="filter-section">
                                     <div class="filter-header" onclick="toggleFilter(this)">
-                                        <span>Make</span>
-                                        <i class="fas fa-chevron-down chevron"></i>
-                                    </div>
-                                    <div class="filter-body">
-                                        <select class="form-select form-select-sm" name="brand"
-                                            hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
-                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change"
-                                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
-                                            hx-vals='{"page":1}'>
-                                            <option value="">Select Make</option>
-                                            {% for brand in brands %}
-                                            <option value="{{ brand.id }}" {% if current_brand|add:0 == brand.id %} selected {%endif%} >{{ brand.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="filter-section">
-                                    <div class="filter-header" onclick="toggleFilter(this)">
                                         <span>Model</span>
                                         <i class="fas fa-chevron-down chevron"></i>
                                     </div>
                                     <div class="filter-body">
-                                        <select class="form-select form-select-sm" name="vehicle_model"
+                                        <select class="form-select form-select-sm" name="model"
                                             hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
                                             hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change"
                                             hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
                                             hx-vals='{"page":1}'>
                                             <option value="">Select Model</option>
-                                            {% for model in vehicle_models %}
-                                            <option value="{{ model.id }}" {% if current_vehicle_model|add:0 == model.id %} selected {%endif%} >{{ model.make.name }} {{ model.name }}</option>
+                                            {% for model in catalog_models %}
+                                            <option value="{{ model }}" {% if current_model == model %} selected {% endif %}>{{ model }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
@@ -1113,10 +1109,7 @@
                                     </div>
                                     <div class="filter-body">
                                         <select class="form-select form-select-sm" name="seller" id="sellerSelect"
-                                            hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results"
-                                            hx-push-url="true" hx-indicator="#loading-indicator" hx-trigger="change"
-                                            hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect"
-                                            hx-vals='{"page":1}'>
+                                            onchange="this.form.submit()">
                                             <option value="">All Sellers</option>
                                             {% for seller in seller_options %}
                                             <option value="{{ seller.value }}" {% if current_seller == seller.value %} selected {% endif %}>{{ seller.label }}</option>
@@ -1151,7 +1144,7 @@
                                     style="width: 110px; font-size: 13px; border-color: #dddddd;"
                                     hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results" hx-push-url="true"
                                     hx-indicator="#loading-indicator" hx-trigger="change"
-                                    hx-include="input[name], select[name]" hx-vals='{"page":1}'>
+                                    hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect" hx-vals='{"page":1}'>
                                     <option value="12" {% if current_per_page|add:0 == 12 %} selected {% endif %}>12</option>
                                     <option value="24" {% if current_per_page|add:0 == 24 %} selected {% endif %}>24</option>
                                     <option value="48" {% if current_per_page|add:0 == 48 %} selected {% endif %}>48</option>
@@ -1166,7 +1159,7 @@
                                     style="width: 160px; font-size: 13px; border-color: #dddddd;"
                                     hx-get="{% url 'parts:part_list' %}" hx-target="#parts-results" hx-push-url="true"
                                     hx-indicator="#loading-indicator" hx-trigger="change"
-                                    hx-include="input[name], select[name]" hx-vals='{"page":1}'>
+                                    hx-include="#filterForm, #searchForm, #sortSelect, #perPageSelect" hx-vals='{"page":1}'>
                                     <option value="" {% if current_sort == '' %} selected {%endif%}>Relevance
                                     </option>
                                     <option value="-created_at" {% if current_sort == '-created_at' %} selected

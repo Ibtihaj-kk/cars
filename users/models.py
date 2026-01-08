@@ -303,7 +303,7 @@ class UserProfile(models.Model):
     postal_code = models.CharField(max_length=20, blank=True, null=True)
     national_id = models.CharField(max_length=50, blank=True, null=True)
     tax_id = models.CharField(max_length=50, blank=True, null=True)
-    preferred_currency = models.CharField(max_length=3, default='AED', help_text=_('Preferred currency for display'))
+    preferred_currency = models.CharField(max_length=3, default='SAR', help_text=_('Preferred currency for display'))
     selected_services = models.JSONField(default=list, blank=True, null=True)
     bio = models.TextField(blank=True, null=True)
     website = models.URLField(blank=True, null=True)

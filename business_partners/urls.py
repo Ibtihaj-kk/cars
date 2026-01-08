@@ -250,6 +250,10 @@ urlpatterns = [
          vendor_inventory_views.vendor_part_status_update,
          name='vendor_part_status_update'),
 
+    path('vendor/parts/<int:part_id>/toggle-active/',
+         vendor_inventory_views.vendor_part_toggle_active,
+         name='vendor_part_toggle_active'),
+
     path('vendor/parts/status/bulk/',
          vendor_inventory_views.vendor_parts_bulk_status_update,
          name='vendor_parts_bulk_status_update'),
@@ -262,6 +266,10 @@ urlpatterns = [
          vendor_views.vendor_parts_bulk_action, 
          name='vendor_parts_bulk_action'),
     
+    path('vendor/parts/import/template/', 
+         vendor_views.vendor_parts_import_template, 
+         name='vendor_parts_import_template'),
+         
     path('vendor/parts/import/', 
          vendor_views.vendor_parts_import, 
          name='vendor_parts_import'),

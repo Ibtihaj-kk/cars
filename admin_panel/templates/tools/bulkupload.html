@@ -1,12 +1,12 @@
 {% extends 'admin_panel/base.html' %}
-{% block header_title %}Bulk Upload{% endblock %}
+{% block header_title %}Catalog Bulk Upload{% endblock %}
 
 {% block content %}
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     <!-- Upload Form -->
     <div class="lg:col-span-2">
         <div class="bg-white rounded-2xl border shadow-sm p-6">
-            <h3 class="font-bold text-lg mb-6">Upload Files</h3>
+            <h3 class="font-bold text-lg mb-6">Upload Catalog File</h3>
 
             <form method="POST" action="{% url 'admin_panel:process_bulk_upload' %}" enctype="multipart/form-data">
                 {% csrf_token %}
@@ -34,6 +34,14 @@
                     </div>
                 </div>
 
+                <div class="mt-6">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Processing Mode</label>
+                    <select name="processing_mode" class="w-full border rounded-xl px-4 py-3 text-sm">
+                        <option value="sync" selected>Sync (process immediately)</option>
+                        <option value="async">Async (background)</option>
+                    </select>
+                </div>
+
                 <div class="mt-6 flex gap-3">
                     <button type="submit"
                         class="flex-1 bg-black text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-gray-800 disabled:opacity-50"
@@ -43,37 +51,46 @@
                     <a href="{% url 'admin_panel:bulk_upload_template' %}" class="px-6 py-3 border rounded-xl text-sm font-medium hover:bg-gray-50" download>
                         <i class="fas fa-download mr-2"></i> Download Template
                     </a>
+                    <a href="{% url 'admin_panel:catalog_add' %}" class="px-6 py-3 border rounded-xl text-sm font-medium hover:bg-gray-50">
+                        <i class="fas fa-plus mr-2"></i> Add Manually
+                    </a>
                 </div>
             </form>
         </div>
 
         <!-- Column Mapping Info -->
         <div class="bg-white rounded-2xl border shadow-sm p-6 mt-6">
-            <h3 class="font-bold text-lg mb-4">Required Columns</h3>
+            <h3 class="font-bold text-lg mb-4">Template Columns</h3>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <div class="p-3 bg-gray-50 rounded-lg">
                     <p class="text-xs text-gray-500">Column 1</p>
-                    <p class="font-bold text-sm">Part Number</p>
+                    <p class="font-bold text-sm">Category</p>
+                    <p class="text-xs text-gray-500 mt-1">Required</p>
                 </div>
                 <div class="p-3 bg-gray-50 rounded-lg">
                     <p class="text-xs text-gray-500">Column 2</p>
-                    <p class="font-bold text-sm">Name / Description</p>
+                    <p class="font-bold text-sm">Year</p>
+                    <p class="text-xs text-gray-500 mt-1">Optional</p>
                 </div>
                 <div class="p-3 bg-gray-50 rounded-lg">
                     <p class="text-xs text-gray-500">Column 3</p>
-                    <p class="font-bold text-sm">Category</p>
+                    <p class="font-bold text-sm">Make</p>
+                    <p class="text-xs text-gray-500 mt-1">Optional</p>
                 </div>
                 <div class="p-3 bg-gray-50 rounded-lg">
                     <p class="text-xs text-gray-500">Column 4</p>
-                    <p class="font-bold text-sm">Price</p>
+                    <p class="font-bold text-sm">Model</p>
+                    <p class="text-xs text-gray-500 mt-1">Optional</p>
                 </div>
                 <div class="p-3 bg-gray-50 rounded-lg">
                     <p class="text-xs text-gray-500">Column 5</p>
-                    <p class="font-bold text-sm">Quantity</p>
+                    <p class="font-bold text-sm">Trim</p>
+                    <p class="text-xs text-gray-500 mt-1">Optional</p>
                 </div>
                 <div class="p-3 bg-gray-50 rounded-lg">
                     <p class="text-xs text-gray-500">Column 6</p>
-                    <p class="font-bold text-sm">Brand / Make</p>
+                    <p class="font-bold text-sm">Engine</p>
+                    <p class="text-xs text-gray-500 mt-1">Optional</p>
                 </div>
             </div>
         </div>

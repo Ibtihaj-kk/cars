@@ -9,12 +9,21 @@
     <title>CarSyncro - Vendor Portal</title>
     <link rel="icon" type="image/png" href="{% static 'images/favicon-cs.png' %}">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f9fafb;
+            color: #1f2937;
+        }
+
         /* Custom scrollbar */
         ::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
+            height: 6px;
         }
 
         ::-webkit-scrollbar-track {
@@ -22,21 +31,60 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #888;
+            background: #d1d5db;
             border-radius: 4px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: #555;
+            background: #9ca3af;
         }
 
-        /* Smooth transitions */
+        /* Sidebar Transitions */
         #sidebar {
-            transition: all 0.3s ease-in-out;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .nav-text {
-            transition: opacity 0.2s ease;
+        #sidebar.collapsed {
+            width: 80px;
+        }
+
+        #sidebar.collapsed .nav-text,
+        #sidebar.collapsed .logo-text,
+        #sidebar.collapsed .section-label {
+            display: none;
+            opacity: 0;
+        }
+
+        #sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        #sidebar.collapsed .nav-link i {
+            margin-right: 0;
+            font-size: 1.25rem;
+        }
+
+        .nav-link {
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background-color: #f3f4f6;
+            color: #000;
+        }
+
+        .nav-link.active {
+            background-color: #000;
+            color: #fff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: 0.75rem;
+        }
+
+        .nav-link.active i {
+            color: #fff;
         }
 
         /* Profile completion progress bar styles */
@@ -73,21 +121,18 @@
     <div id="view-dashboard" class="flex h-screen bg-gray-100 overflow-hidden">
 
         <aside id="sidebar"
-            class="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 shadow-sm z-50 h-full transition-all duration-300">
+            class="bg-white border-r border-gray-200 flex flex-col w-72 fixed md:relative z-30 h-full hidden md:flex transition-all duration-300">
 
-            <div
-                class="h-16 flex items-center justify-between px-4 border-b border-gray-100 flex-shrink-0 transition-all duration-300">
-
-                <div class="flex items-center gap-3 overflow-hidden">
+            <div class="h-16 flex items-center px-6 border-b border-gray-100 overflow-hidden">
+                <div class="flex items-center gap-3">
                     {% if user.business_partners.first.logo %}
                     <img src="{{ user.business_partners.first.logo.url }}" alt="Vendor Logo"
-                        class="h-10 w-auto object-contain flex-shrink-0">
+                        class="h-8 w-auto object-contain flex-shrink-0">
                     {% else %}
-                    <img src="{% static 'images/car-syncro.png' %}" alt="CarSyncro"
-                        class="h-10 w-auto object-contain flex-shrink-0">
+                    <img src="{% static 'images/favicon-cs.png' %}" alt="Vendor Logo"
+                        class="h-8 w-auto object-contain flex-shrink-0">
                     {% endif %}
-
-                    <span id="brand-text" class="text-xl font-bold text-gray-800 whitespace-nowrap tracking-tight">
+                    <span class="logo-text text-lg font-extrabold tracking-tight">
                         {% if user.business_partners.first.name %}
                         {{ user.business_partners.first.name }}
                         {% else %}
@@ -97,147 +142,167 @@
                 </div>
 
                 <button onclick="toggleMobileMenu()"
-                    class="md:hidden p-2 rounded-lg text-red-500 hover:bg-red-50 focus:outline-none">
+                    class="md:hidden p-2 rounded-lg text-red-500 hover:bg-red-50 focus:outline-none ml-auto">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <nav class="flex-1 px-2 py-6 space-y-1 overflow-y-auto overflow-x-hidden">
+            <nav class="flex-1 overflow-y-auto py-6 px-4">
 
-                <div class="sidebar-section">
-                    <button type="button" onclick="toggleSidebarSection('main')"
-                        class="section-label w-full flex items-center justify-between px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 whitespace-nowrap transition-opacity duration-200">
+                <div class="mb-6">
+                    <button type="button"
+                        class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full"
+                        onclick="toggleSidebarSection('main')">
                         <span>Main</span>
-                        <i id="sidebar-section-icon-main"
-                            class="fas fa-chevron-down text-[10px] transition-transform"></i>
+                        <i id="sidebar-section-icon-main" class="fas fa-chevron-down text-[10px] text-gray-400"></i>
                     </button>
 
-                    <div id="sidebar-section-main" class="sidebar-section-body space-y-1">
+                    <div id="sidebar-section-main" class="space-y-1">
                         <a href="{% url 'business_partners:vendor_dashboard' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-tachometer-alt w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span
-                                class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Dashboard</span>
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-th-large w-6 text-center"></i>
+                            <span class="nav-text ml-3">Dashboard</span>
                         </a>
+                    </div>
+                </div>
 
+                <div class="mb-6">
+                    <button type="button"
+                        class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full"
+                        onclick="toggleSidebarSection('parts')">
+                        <span>Parts</span>
+                        <i id="sidebar-section-icon-parts" class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                    </button>
+
+                    <div id="sidebar-section-parts" class="space-y-1 hidden">
                         <a href="{% url 'business_partners:vendor_inventory_overview' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-box w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Stock
-                                & Source</span>
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-box w-6 text-center"></i>
+                            <span class="nav-text ml-3">Stock & Source</span>
                         </a>
+                    </div>
+                </div>
 
+                <div class="mb-6">
+                    <button type="button"
+                        class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full"
+                        onclick="toggleSidebarSection('sales')">
+                        <span>Sales</span>
+                        <i id="sidebar-section-icon-sales" class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                    </button>
+
+                    <div id="sidebar-section-sales" class="space-y-1 hidden">
                         <a href="{% url 'business_partners:vendor_orders_list' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-shopping-cart w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span
-                                class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Orders</span>
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-shopping-cart w-6 text-center"></i>
+                            <span class="nav-text ml-3">Orders</span>
                             {% if stats.pending_processing_count > 0 %}
                             <span
                                 class="nav-text ml-auto bg-red-500 text-white py-0.5 px-2 rounded-full text-xs font-bold">{{ stats.pending_processing_count }}</span>
                             {% endif %}
                         </a>
 
-                        <a href="{% url 'business_partners:vendor_customers_list' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-users w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span
-                                class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Customers</span>
+                        <a href="{% url 'business_partners:vendor_order_analytics' %}"
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-chart-bar w-6 text-center"></i>
+                            <span class="nav-text ml-3">Order Analytics</span>
                         </a>
                     </div>
                 </div>
 
-                <div class="sidebar-section mt-6">
-                    <button type="button" onclick="toggleSidebarSection('finance')"
-                        class="section-label w-full flex items-center justify-between px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 whitespace-nowrap transition-opacity duration-200">
-                        <span>Finance</span>
-                        <i id="sidebar-section-icon-finance"
-                            class="fas fa-chevron-down text-[10px] transition-transform"></i>
+                <div class="mb-6">
+                    <button type="button"
+                        class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full"
+                        onclick="toggleSidebarSection('users')">
+                        <span>Users</span>
+                        <i id="sidebar-section-icon-users" class="fas fa-chevron-down text-[10px] text-gray-400"></i>
                     </button>
 
-                    <div id="sidebar-section-finance" class="sidebar-section-body space-y-1">
+                    <div id="sidebar-section-users" class="space-y-1 hidden">
+                        <a href="{% url 'business_partners:vendor_customers_list' %}"
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-users w-6 text-center"></i>
+                            <span class="nav-text ml-3">Customers</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <button type="button"
+                        class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full"
+                        onclick="toggleSidebarSection('finance')">
+                        <span>Finance</span>
+                        <i id="sidebar-section-icon-finance" class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                    </button>
+
+                    <div id="sidebar-section-finance" class="space-y-1 hidden">
                         <a href="{% url 'business_partners:vendor_finance_dashboard' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-chart-line w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span
-                                class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Finance
-                                Dashboard</span>
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-chart-line w-6 text-center"></i>
+                            <span class="nav-text ml-3">Finance Dashboard</span>
                         </a>
 
                         <a href="{% url 'business_partners:vendor_settlement_statements' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-receipt w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span
-                                class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Settlements</span>
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-receipt w-6 text-center"></i>
+                            <span class="nav-text ml-3">Settlements</span>
                         </a>
 
                         <a href="{% url 'business_partners:vendor_payout_tracking' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-university w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span
-                                class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Payouts</span>
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-university w-6 text-center"></i>
+                            <span class="nav-text ml-3">Payouts</span>
                         </a>
 
                         <a href="{% url 'business_partners:vendor_commission_breakdown' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-percent w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span
-                                class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Commissions</span>
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-percent w-6 text-center"></i>
+                            <span class="nav-text ml-3">Commissions</span>
                         </a>
 
                         <a href="{% url 'business_partners:vendor_tax_summary' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-file-invoice w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span
-                                class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Taxes</span>
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-file-invoice w-6 text-center"></i>
+                            <span class="nav-text ml-3">Taxes</span>
                         </a>
 
                         <a href="{% url 'business_partners:vendor_finance_ledger' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-book w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span
-                                class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Ledger</span>
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-book w-6 text-center"></i>
+                            <span class="nav-text ml-3">Ledger</span>
                         </a>
 
                         <a href="{% url 'business_partners:vendor_bank_setup' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-university w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Bank
-                                Setup</span>
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-university w-6 text-center"></i>
+                            <span class="nav-text ml-3">Bank Setup</span>
                         </a>
 
                         <a href="{% url 'business_partners:vendor_earnings' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-wallet w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span
-                                class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Earnings</span>
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-wallet w-6 text-center"></i>
+                            <span class="nav-text ml-3">Earnings</span>
                         </a>
 
                         <a href="{% url 'business_partners:vendor_invoices' %}"
-                            class="sidebar-link flex items-center px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-black rounded-lg transition group">
-                            <i
-                                class="fas fa-file-invoice-dollar w-6 text-center text-lg text-gray-400 group-hover:text-black transition-colors"></i>
-                            <span
-                                class="nav-text font-medium ml-3 whitespace-nowrap transition-all duration-200">Invoices</span>
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-file-invoice-dollar w-6 text-center"></i>
+                            <span class="nav-text ml-3">Invoices</span>
                         </a>
                     </div>
                 </div>
             </nav>
+
+            <!-- Sidebar Footer -->
+            <div class="p-4 border-t border-gray-100">
+                <button onclick="toggleSidebar()"
+                    class="flex items-center justify-center w-full py-2 text-gray-500 hover:text-black hover:bg-gray-50 rounded-lg transition-colors">
+                    <i class="fas fa-indent text-lg" id="collapse-icon"></i>
+                </button>
+            </div>
         </aside>
 
-        <main class="flex-1 flex flex-col overflow-hidden relative w-full">
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative w-full">
 
             <header
                 class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-2 shadow-sm z-10">
@@ -332,7 +397,7 @@
                 {% if user.business_partners.first.logo %}
                 <img src="{{ user.business_partners.first.logo.url }}" alt="Profile" class="w-full h-full object-cover">
                 {% else %}
-                {{ user.username|slice:":2"|upper|default:"AP" }}
+                <img src="{% static 'images/favicon-cs.png' %}" alt="Profile" class="w-full h-full object-cover">
                 {% endif %}
             </div>
             <i class="fas fa-chevron-down ml-2 text-xs text-gray-400"></i>
@@ -427,31 +492,37 @@
         // ==========================================
         // 2. DESKTOP COLLAPSE LOGIC
         // ==========================================
+        const sidebarSectionKeys = ['main', 'parts', 'sales', 'users', 'finance'];
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
-            const brandText = document.getElementById('brand-text');
+            const logoText = document.querySelector('.logo-text');
             const navTexts = document.querySelectorAll('.nav-text');
             const sectionLabels = document.querySelectorAll('.section-label');
-            const sectionBodies = document.querySelectorAll('.sidebar-section-body');
+            const collapseIcon = document.getElementById('collapse-icon');
 
-            if (sidebar.classList.contains('w-64')) {
-                sidebar.classList.remove('w-64');
-                sidebar.classList.add('w-20');
-                brandText.classList.add('hidden');
+            if (sidebar.classList.contains('w-72')) {
+                sidebar.classList.remove('w-72');
+                sidebar.classList.add('w-20', 'collapsed');
+                if (logoText) logoText.classList.add('hidden');
                 navTexts.forEach(text => text.classList.add('hidden'));
                 sectionLabels.forEach(label => label.classList.add('hidden'));
-                sectionBodies.forEach(body => body.classList.remove('hidden'));
-                // Save collapsed state
+                if (collapseIcon) {
+                    collapseIcon.classList.remove('fa-indent');
+                    collapseIcon.classList.add('fa-outdent');
+                }
                 localStorage.setItem('vendorSidebarCollapsed', 'true');
             } else {
-                sidebar.classList.remove('w-20');
-                sidebar.classList.add('w-64');
-                brandText.classList.remove('hidden');
+                sidebar.classList.remove('w-20', 'collapsed');
+                sidebar.classList.add('w-72');
+                if (logoText) logoText.classList.remove('hidden');
                 navTexts.forEach(text => text.classList.remove('hidden'));
                 sectionLabels.forEach(label => label.classList.remove('hidden'));
-                applySidebarSectionState('main');
-                applySidebarSectionState('finance');
-                // Save expanded state
+                if (collapseIcon) {
+                    collapseIcon.classList.remove('fa-outdent');
+                    collapseIcon.classList.add('fa-indent');
+                }
+                sidebarSectionKeys.forEach(applySidebarSectionState);
                 localStorage.setItem('vendorSidebarCollapsed', 'false');
             }
         }
@@ -462,7 +533,7 @@
             const icon = document.getElementById(`sidebar-section-icon-${sectionKey}`);
             if (!body || !icon) return;
 
-            if (sidebar && sidebar.classList.contains('w-20')) {
+            if (sidebar && sidebar.classList.contains('collapsed')) {
                 return;
             }
 
@@ -483,7 +554,8 @@
             const icon = document.getElementById(`sidebar-section-icon-${sectionKey}`);
             if (!body || !icon) return;
 
-            const state = localStorage.getItem(`vendorSidebarSection.${sectionKey}`) || 'expanded';
+            const defaultState = sectionKey === 'main' ? 'expanded' : 'collapsed';
+            const state = localStorage.getItem(`vendorSidebarSection.${sectionKey}`) || defaultState;
             if (state === 'collapsed') {
                 body.classList.add('hidden');
                 icon.classList.remove('rotate-180');
@@ -522,17 +594,20 @@
             const isCollapsed = localStorage.getItem('vendorSidebarCollapsed') === 'true';
             if (isCollapsed) {
                 const sidebar = document.getElementById('sidebar');
-                const brandText = document.getElementById('brand-text');
+                const logoText = document.querySelector('.logo-text');
                 const navTexts = document.querySelectorAll('.nav-text');
                 const sectionLabels = document.querySelectorAll('.section-label');
-                const sectionBodies = document.querySelectorAll('.sidebar-section-body');
+                const collapseIcon = document.getElementById('collapse-icon');
 
-                sidebar.classList.remove('w-64');
-                sidebar.classList.add('w-20');
-                brandText.classList.add('hidden');
+                sidebar.classList.remove('w-72');
+                sidebar.classList.add('w-20', 'collapsed');
+                if (logoText) logoText.classList.add('hidden');
                 navTexts.forEach(text => text.classList.add('hidden'));
                 sectionLabels.forEach(label => label.classList.add('hidden'));
-                sectionBodies.forEach(body => body.classList.remove('hidden'));
+                if (collapseIcon) {
+                    collapseIcon.classList.remove('fa-indent');
+                    collapseIcon.classList.add('fa-outdent');
+                }
             }
         }
 
@@ -540,50 +615,38 @@
             // Restore sidebar state first
             restoreSidebarState();
 
-            applySidebarSectionState('main');
-            applySidebarSectionState('finance');
+            const sidebar = document.getElementById('sidebar');
+            const isSidebarCollapsed = sidebar && sidebar.classList.contains('collapsed');
+            if (!isSidebarCollapsed) {
+                sidebarSectionKeys.forEach(applySidebarSectionState);
+            }
 
-            // Get current path (e.g. "/dashboard/" or "/inventory/")
+            // Get current path
             const currentPath = window.location.pathname;
 
-            const sidebarLinks = document.querySelectorAll('.sidebar-link');
+            const sidebarLinks = document.querySelectorAll('.nav-link');
 
             sidebarLinks.forEach(link => {
-                const linkHref = link.getAttribute('href'); // e.g. "/inventory/"
+                const linkHref = link.getAttribute('href');
 
-                // Check if current path starts with the link href 
-                // (Using startsWith helps if you have nested urls like /inventory/edit/1)
-                // We avoid checking "/" to prevent highlighting everything
                 if (linkHref !== '/' && currentPath.includes(linkHref)) {
-
-                    // == APPLY ACTIVE STYLES ==
-                    link.classList.add('bg-black', 'text-white', 'shadow-md');
-                    link.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:text-black');
-
-                    const icon = link.querySelector('i');
-                    if (icon) {
-                        icon.classList.remove('text-gray-400', 'group-hover:text-black');
-                    }
+                    link.classList.add('active');
                 }
-                // Specific check for strict Home/Dashboard if needed
-                else if (linkHref === '/dashboard/' && currentPath === '/dashboard/') {
-                    link.classList.add('bg-black', 'text-white', 'shadow-md');
-                    link.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:text-black');
+                else if (linkHref === '/business-partners/vendor/dashboard/' && currentPath === '/business-partners/vendor/dashboard/') {
+                    link.classList.add('active');
                 }
             });
 
-            const activeLink = document.querySelector('.sidebar-link.bg-black.text-white');
+            const activeLink = document.querySelector('.nav-link.active');
             if (activeLink) {
-                const mainBody = document.getElementById('sidebar-section-main');
-                const financeBody = document.getElementById('sidebar-section-finance');
-                if (mainBody && mainBody.contains(activeLink)) {
-                    mainBody.classList.remove('hidden');
-                    const icon = document.getElementById('sidebar-section-icon-main');
-                    if (icon) icon.classList.add('rotate-180');
-                } else if (financeBody && financeBody.contains(activeLink)) {
-                    financeBody.classList.remove('hidden');
-                    const icon = document.getElementById('sidebar-section-icon-finance');
-                    if (icon) icon.classList.add('rotate-180');
+                for (const sectionKey of sidebarSectionKeys) {
+                    const body = document.getElementById(`sidebar-section-${sectionKey}`);
+                    if (body && body.contains(activeLink)) {
+                        body.classList.remove('hidden');
+                        const icon = document.getElementById(`sidebar-section-icon-${sectionKey}`);
+                        if (icon) icon.classList.add('rotate-180');
+                        break;
+                    }
                 }
             }
         });

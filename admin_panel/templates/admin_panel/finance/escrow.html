@@ -1,0 +1,106 @@
+{% extends 'admin_panel/base.html' %}
+{% load vendor_currency %}
+
+{% block title %}Escrow Management | CarSyncro Admin{% endblock %}
+{% block header_title %}Escrow Management{% endblock %}
+
+{% block content %}
+<!-- Summary Header -->
+<div class="mb-8">
+    <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">Escrow Funds</h2>
+    <p class="text-sm text-gray-500 mt-1">Tracking funds waiting for release to vendor available balances.</p>
+</div>
+
+<!-- Main Content Card -->
+<div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50/50">
+        <h3 class="font-bold text-lg text-gray-900">Pending Releases</h3>
+        
+        <div class="flex gap-3">
+            <div class="relative">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                <input type="text" id="escrowSearch" placeholder="Search escrow..." 
+                       class="bg-white border border-gray-200 text-sm py-2 pl-9 pr-4 rounded-xl focus:ring-2 focus:ring-black/5 outline-none w-64">
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500 border-b">
+                <tr>
+                    <th class="px-6 py-4">Wallet Owner</th>
+                    <th class="px-6 py-4">Amount</th>
+                    <th class="px-6 py-4">Original Transaction</th>
+                    <th class="px-6 py-4">Release Date</th>
+                    <th class="px-6 py-4 text-right">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for entry in escrow_entries %}
+                <tr class="hover:bg-gray-50/80 transition">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center text-black font-bold text-xs">
+                                {{ entry.wallet.owner|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <p class="font-bold text-gray-900">{{ entry.wallet.owner }}</p>
+                                <p class="text-xs text-gray-400">ID: #{{ entry.wallet.id }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="font-extrabold text-gray-900">{% vendor_currency_value entry.amount %}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">TXN #{{ entry.transaction.id }}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col">
+                            <span class="font-medium text-gray-700">{{ entry.release_date|date:"M d, Y" }}</span>
+                            <span class="text-[10px] text-gray-400 font-bold uppercase">{{ entry.release_date|time:"H:i" }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        {% if entry.release_date < now %}
+                            <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-green-100 text-green-700">
+                                Ready for Release
+                            </span>
+                        {% else %}
+                            <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-100 text-blue-700">
+                                <i class="fas fa-lock mr-1"></i> Locked
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center">
+                        <div class="flex flex-col items-center">
+                            <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                                <i class="fas fa-clock text-2xl text-gray-300"></i>
+                            </div>
+                            <p class="text-gray-500 font-medium">No pending escrow releases found.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Simple client-side search for the table
+    document.getElementById('escrowSearch').addEventListener('keyup', function() {
+        let filter = this.value.toUpperCase();
+        let rows = document.querySelector("tbody").rows;
+        
+        for (let i = 0; i < rows.length; i++) {
+            let text = rows[i].textContent.toUpperCase();
+            rows[i].style.display = text.includes(filter) ? "" : "none";
+        }
+    });
+</script>
+{% endblock %}

@@ -1,476 +1,389 @@
+{% extends 'base.html' %}
 {% load static %}
 {% load vendor_currency %}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ part.name }} | CarSyncro</title>
-    <link rel="icon" type="image/png" href="{% static 'images/favicon-cs.png' %}">
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-    <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet"/>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 
-    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+{% block title %}{{ part.name }} | CarSyncro{% endblock %}
 
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/navbar.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/parts.css' %}">
-    
-    <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet"/>
+<style>
+    :root {
+        --primary-color: #000000;
+        --text-main: #111111;
+        --text-light: #666666;
+        --bg-grey: #f8f9fa;
+        --border-color: #e5e5e5;
+    }
 
-    <style>
-        /* --- THEME VARIABLES --- */
-        :root {
-            --primary-color: #000000;
-            --text-main: #111111;
-            --text-light: #666666;
-            --bg-grey: #f8f9fa;
-            --border-color: #e5e5e5;
-        }
+    /* Breadcrumb Customization */
+    .breadcrumb-item + .breadcrumb-item::before { content: "/"; color: #ddd; }
 
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: white;
-            color: var(--text-main);
-        }
+    /* Gallery Styles */
+    .thumb {
+        transition: all 0.2s;
+    }
+    .thumb.active, .thumb:hover {
+        border-color: black;
+        box-shadow: 0 0 0 1px black;
+    }
 
-        .container-custom {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-            margin-top: 100px !important; 
-        }
+    .main-image-container:hover img { 
+        transform: scale(1.1); 
+        cursor: zoom-in; 
+    }
 
-        /* --- BREADCRUMB --- */
-        .breadcrumb {
-            background: transparent;
-            padding: 0;
-            margin-bottom: 20px;
-            font-size: 13px;
-            color: #888;
-        }
-        .breadcrumb a { color: #888; text-decoration: none; }
-        .breadcrumb a:hover, .breadcrumb .active { color: black; font-weight: 700; }
-        .breadcrumb-item + .breadcrumb-item::before { content: "/"; color: #ddd; }
+    /* Tab Styles */
+    .tab-btn {
+        transition: all 0.2s;
+    }
+    .tab-btn.active {
+        background: white;
+        color: black;
+        font-weight: 800;
+        border-bottom: 2px solid black;
+    }
+    .tab-pane {
+        display: none;
+    }
+    .tab-pane.active {
+        display: block;
+    }
 
-        /* --- PRODUCT WRAPPER (3 COLUMNS) --- */
-        .product-detail-wrapper {
-            display: grid;
-            /* Gallery | Details | Buy Box */
-            grid-template-columns: 1fr 1.2fr 0.8fr; 
-            gap: 30px;
-            margin-bottom: 50px;
-            align-items: start;
-        }
+    /* Similar Products */
+    .comp-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}
 
-        /* --- COL 1: GALLERY --- */
-        .gallery-container {
-            display: flex;
-            gap: 15px;
-        }
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Breadcrumb -->
+    <nav class="mb-6" aria-label="breadcrumb">
+        <ol class="flex flex-wrap list-none text-sm text-gray-500">
+            <li class="flex items-center">
+                <a href="{% url 'home' %}" class="hover:text-black">Home</a>
+                <span class="mx-2 text-gray-300">/</span>
+            </li>
+            <li class="flex items-center">
+                <a href="{% url 'parts:part_list' %}" class="hover:text-black">Parts</a>
+                <span class="mx-2 text-gray-300">/</span>
+            </li>
+            {% if part.category %}
+            <li class="flex items-center">
+                <a href="#" class="hover:text-black">{{ part.category.name }}</a>
+                <span class="mx-2 text-gray-300">/</span>
+            </li>
+            {% endif %}
+            <li class="font-bold text-black truncate max-w-[200px] md:max-w-none" aria-current="page">{{ part.name }}</li>
+        </ol>
+    </nav>
 
-        .thumbs-col {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            width: 70px;
-        }
-
-        .thumb {
-            width: 70px;
-            height: 70px;
-            border: 1px solid #eee;
-            border-radius: 4px;
-            cursor: pointer;
-            object-fit: contain;
-            padding: 5px;
-            transition: all 0.2s;
-        }
-        .thumb.active, .thumb:hover {
-            border-color: black;
-            box-shadow: 0 0 0 1px black;
-        }
-
-        .main-image-col {
-            flex: 1;
-            background-color: #fff;
-            border: 1px solid #eee;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-            aspect-ratio: 1/1;
-        }
-        .main-image-col img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            transition: transform 0.3s;
-        }
-        .main-image-col:hover img { transform: scale(1.1); cursor: zoom-in; }
-
-        /* --- COL 2: CENTER DETAILS --- */
-        .product-center-info { padding-right: 20px; }
-
-        .product-title {
-            font-size: 22px;
-            font-weight: 700;
-            color: #000;
-            line-height: 1.3;
-            margin-bottom: 15px;
-        }
-
-        .product-summary {
-            font-size: 14px;
-            color: #555;
-            line-height: 1.6;
-            margin-bottom: 20px;
-        }
-
-        /* Key Specs List */
-        .key-specs {
-            font-size: 14px;
-            line-height: 2;
-        }
-        .spec-line {
-            display: flex;
-            gap: 5px;
-        }
-        .k-label { font-weight: 800; color: black; }
-        .k-val { color: #333; }
-
-        /* --- COL 3: BUY BOX --- */
-        .buy-box {
-            border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 20px;
-            background: white;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-        }
-
-        .price-row { margin-bottom: 15px; }
-        .discount { color: #d32f2f; font-size: 18px; margin-right: 5px; }
-        .final-price { font-size: 26px; font-weight: 900; color: black; }
-        .list-price { font-size: 12px; color: #888; display: block; }
-        .returns-info { font-size: 13px; margin-top: 5px; color: #555; }
-
-        .qty-selector {
-            display: flex;
-            align-items: center;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            width: fit-content;
-            margin-bottom: 15px;
-        }
-        .q-btn { width: 30px; height: 30px; border: none; background: #f9f9f9; font-weight: bold; cursor: pointer; }
-        .q-input { width: 40px; text-align: center; border: none; font-weight: bold; }
-
-        /* Actions */
-        .btn-buy {
-            width: 100%;
-            background: black;
-            color: white;
-            padding: 12px;
-            border-radius: 4px;
-            font-weight: 700;
-            border: none;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            font-size: 14px;
-        }
-        .btn-buy:hover { background: #333; }
-
-        .btn-cart {
-            width: 100%;
-            background: white;
-            color: black;
-            padding: 12px;
-            border-radius: 4px;
-            font-weight: 700;
-            border: 1px solid black;
-            text-transform: uppercase;
-            font-size: 14px;
-        }
-        .btn-cart:hover { background: #f0f0f0; }
-
-        /* Seller Info */
-        .seller-details {
-            margin-top: 20px;
-            font-size: 13px;
-            color: #333;
-            line-height: 1.6;
-        }
-        .rating-stars { color: #000; font-size: 12px; margin-bottom: 5px; display: block;}
-
-        .share-section {
-            margin-top: 15px;
-        }
-
-        .share-title {
-            font-size: 12px;
-            font-weight: 800;
-            color: #111;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
-        }
-
-        .share-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .share-btn {
-            width: 38px;
-            height: 38px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid #e5e5e5;
-            border-radius: 8px;
-            background: #fff;
-            color: #111;
-            text-decoration: none;
-            transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-        }
-
-        .share-btn:hover {
-            background: #f6f6f6;
-            border-color: #d5d5d5;
-            color: #000;
-            transform: translateY(-1px);
-        }
-
-        .share-btn:active {
-            transform: translateY(0);
-        }
-
-        .share-status {
-            font-size: 12px;
-            color: #555;
-            margin-top: 10px;
-            display: none;
-        }
-
-        /* --- TABS SECTION --- */
-        .tabs-container { margin-bottom: 60px; border: 1px solid #eee; border-radius: 4px; }
-        .tabs-header { display: flex; background: #f9f9f9; border-bottom: 1px solid #eee; }
-        .tab-btn {
-            flex: 1; padding: 15px; border: none; background: none; border-right: 1px solid #eee;
-            font-weight: 600; color: #666; cursor: pointer;
-        }
-        .tab-btn.active { background: white; color: black; font-weight: 800; border-bottom: 2px solid black; }
-        .tab-content-area { padding: 30px; background: white; }
-        .tab-pane { display: none; }
-        .tab-pane.active { display: block; }
-
-        /* Similar Products */
-        .companion-section { margin-bottom: 60px; }
-        .sec-title { font-size: 24px; font-weight: 800; margin-bottom: 20px; }
-        .comp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-        .comp-card { border: 1px solid #eee; padding: 15px; border-radius: 8px; transition: 0.2s; }
-        .comp-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
-        .comp-img { width: 100%; height: 150px; object-fit: contain; margin-bottom: 10px; }
-        .comp-title { font-size: 14px; font-weight: 700; height: 40px; overflow: hidden; margin-bottom: 5px; }
-        .comp-price { font-size: 18px; font-weight: 900; }
-
-        @media (max-width: 992px) {
-            .product-detail-wrapper { grid-template-columns: 1fr; }
-            .comp-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-
-        /* Signup Modal Styles (Required) */
-        .signup-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 10000; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; }
-        .signup-modal-overlay.active { display: flex; opacity: 1; }
-        .signup-modal-content { background: white; padding: 40px; border-radius: 24px; width: 100%; max-width: 450px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; transform: scale(0.95); transition: transform 0.3s ease; border: 1px solid #f3f4f6; }
-        .signup-modal-overlay.active .signup-modal-content { transform: scale(1); }
-        .signup-close-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; color: #6b7280; cursor: pointer; padding: 8px; border-radius: 50%; transition: background 0.2s; }
-        .signup-close-btn:hover { background: #f3f4f6; }
-        .signup-title { text-align: center; font-size: 1.875rem; font-weight: 800; color: #111827; margin-bottom: 0.75rem; }
-        .signup-subtitle { text-align: center; color: #6b7280; margin-bottom: 2rem; }
-        .signup-options { display: flex; flex-direction: column; gap: 1rem; }
-        .signup-option { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 1.25rem 1.5rem; border-radius: 1rem; text-decoration: none; transition: all 0.3s ease; border: 2px solid; }
-        .signup-option.individual { border-color: black; background: white; color: black; }
-        .signup-option.individual:hover { background: black; color: white; }
-        .signup-option.individual .icon-box { background: #f3f4f6; color: black; }
-        .signup-option.individual:hover .icon-box { background: #374151; color: white; }
-        .signup-option.business { border-color: black; background: black; color: white; }
-        .signup-option.business:hover { background: white; color: black; border-color: black; }
-        .signup-option.business .icon-box { background: #1f2937; color: white; }
-        .signup-option.business:hover .icon-box { background: #f3f4f6; color: black; }
-        .signup-option .left-content { display: flex; align-items: center; gap: 1rem; }
-        .icon-box { padding: 0.5rem; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; }
-        .option-text { font-weight: 700; font-size: 1.125rem; }
-        .signup-option .arrow-icon { width: 20px; height: 20px; transition: transform 0.3s; }
-        .signup-option:hover .arrow-icon { transform: translateX(4px); }
-    </style>
-  </head>
-  <body>
-
-    <!-- Django Messages Display -->
-    {% if messages %}
-    <div id="message-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;">
-        {% for message in messages %}
-            <div class="toast show align-items-center border-0 mb-2 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body border-start border-4 {% if message.tags == 'info' %}border-info{% elif message.tags == 'success' %}border-success{% elif message.tags == 'error' %}border-danger{% else %}border-secondary{% endif %} bg-white rounded-end w-100">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-shrink-0 me-2">
-                                {% if message.tags == 'info' %}
-                                    <i class="fas fa-info-circle text-info fs-5"></i>
-                                {% elif message.tags == 'success' %}
-                                    <i class="fas fa-check-circle text-success fs-5"></i>
-                                {% elif message.tags == 'error' %}
-                                    <i class="fas fa-exclamation-circle text-danger fs-5"></i>
-                                {% else %}
-                                    <i class="fas fa-bell text-secondary fs-5"></i>
-                                {% endif %}
-                            </div>
-                            <div class="text-dark">
-                                {{ message }}
-                            </div>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close" onclick="this.closest('.toast').remove()"></button>
+    <!-- Product Top Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+        
+        <!-- Column 1: Gallery (4/12) -->
+        <div class="lg:col-span-5">
+            <div class="flex gap-4">
+                <!-- Thumbnails -->
+                <div class="flex flex-col gap-3 w-20 flex-shrink-0">
+                    {% if part.image %}
+                    <img src="{{ part.image.url }}" class="thumb active w-20 h-20 object-contain p-1 border border-gray-200 rounded-lg cursor-pointer" onclick="changeImage(this.src)">
+                    {% else %}
+                    <img src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=500&q=60" class="thumb active w-20 h-20 object-contain p-1 border border-gray-200 rounded-lg cursor-pointer" onclick="changeImage(this.src)">
+                    {% endif %}
+                    <img src="https://images.unsplash.com/photo-1613214150384-14921ff659b2?q=80&w=1470&auto=format&fit=crop" class="thumb w-20 h-20 object-contain p-1 border border-gray-200 rounded-lg cursor-pointer" onclick="changeImage(this.src)">
+                    <img src="https://plus.unsplash.com/premium_photo-1664303847960-586318f59035?auto=format&fit=crop&w=500&q=60" class="thumb w-20 h-20 object-contain p-1 border border-gray-200 rounded-lg cursor-pointer" onclick="changeImage(this.src)">
+                </div>
+                
+                <!-- Main Image -->
+                <div class="flex-grow bg-white border border-gray-100 rounded-2xl overflow-hidden aspect-square flex items-center justify-center relative group main-image-container">
+                    {% if part.image %}
+                    <img src="{{ part.image.url }}" id="mainImage" class="max-w-full max-h-full object-contain transition-transform duration-500" alt="{{ part.name }}">
+                    {% else %}
+                    <img src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=800&q=80" id="mainImage" class="max-w-full max-h-full object-contain transition-transform duration-500" alt="Placeholder Image">
+                    {% endif %}
                 </div>
             </div>
-        {% endfor %}
-    </div>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                const messages = document.querySelectorAll('.toast');
-                messages.forEach(function(message) {
-                    message.classList.remove('show');
-                    setTimeout(function() {
-                        message.remove();
-                    }, 300);
-                });
-            }, 5000);
-        });
-    </script>
-    {% endif %}
-
-    <button class="mobile-menu-toggle" id="mobileMenuToggle"><span></span><span></span><span></span></button>
-    <div class="navbar-top-header" style="justify-content: flex-start !important;">
-      <div class="navbar-logo">
-        <a href="{% url 'home' %}">
-          <img src="{% static 'images/car-syncro.png' %}" alt="CarSyncro Logo"/>
-        </a>
-      </div>
-      
-      <!-- Currency Dropdown - Moved left after logo -->
-      <div class="navbar-currency-selector" style="display: flex; align-items: center; margin-left: 30px; margin-right: auto;">
-        <span class="deliver-to-label" style="font-size: 12px; color: #666; margin-right: 8px;">Deliver To</span>
-        <form method="get" action="{% url 'parts:set_country_currency' %}" style="display:flex; align-items:center; gap:6px;">
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <select name="currency" onchange="this.form.submit()" style="border:1px solid #ddd; border-radius:6px; padding:4px 8px 4px 30px; font-size:12px; background:#fff; background-position: 8px center; background-repeat: no-repeat; background-size: 16px;">
-            <option value="" data-flag="">Currency</option>
-            {% for currency in available_currencies %}
-            <option value="{{ currency.code }}" 
-                    {% if current_currency and current_currency.code == currency.code %}selected{% endif %}
-                    data-flag="/static/flags/{{ currency.code|lower }}.svg">
-              {{ currency.code }} - {{ currency.name }}
-            </option>
-            {% endfor %}
-          </select>
-        </form>
-      </div>
-      
-      <div class="navbar-right-info">
-        <span class="navbar-phone-info">
-          <i class="fa-solid fa-phone"></i>
-          <span class="navbar-phone-number">+92-333-3610109</span>
-        </span>
-        <span class="navbar-divider">|</span>
-        {% if request.user.is_authenticated %}
-        <a href="{% url 'parts:cart_view' %}" class="navbar-cart position-relative">
-        {% else %}
-        <a href="{% url 'users:register_page' %}?next={% url 'parts:cart_view' %}&msg=Please login to view your cart" class="navbar-cart position-relative">
-        {% endif %}
-            <ion-icon name="cart"></ion-icon>
-            <span id="cart-badge" class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle" style="font-size: 0.6rem; padding: 0.3em 0.6em;">
-               {{ cart_count|default:0 }}
-            </span>
-        </a>
-        
-        <!-- Toast Container for HTMX messages -->
-        <div id="messages-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1050"></div>
-
-        <div class="navbar-user-profile-dropdown">
-          <div class="navbar-profile-trigger">
-            <div class="navbar-profile-icon">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <i class="fa-solid fa-chevron-down navbar-dropdown-arrow"></i>
-          </div>
-          <div class="navbar-dropdown-menu">
-              {% if user.is_authenticated %}
-                {% if user.is_admin or user.is_staff_member %}
-                  <a href="{% url 'admin_panel:dashboard' %}" class="navbar-dropdown-link">Admin Dashboard</a>
-                  <span class="navbar-dropdown-divider">|</span>
-                  <a href="{% url 'admin_panel:settings' %}" class="navbar-dropdown-link">Settings</a>
-                {% elif user.vendor_profiles.exists or user.is_seller or user_has_vendor_access %}
-                  <a href="{% url 'business_partners:vendor_dashboard' %}" class="navbar-dropdown-link">Vendor Dashboard</a>
-                  <span class="navbar-dropdown-divider">|</span>
-                  <a href="{% url 'business_partners:vendor_profile' %}" class="navbar-dropdown-link">My Profile</a>
-                {% else %}
-                  <a href="{% url 'users:user-dashboard' %}" class="navbar-dropdown-link">User Dashboard</a>
-                  <span class="navbar-dropdown-divider">|</span>
-                  <a href="{% url 'users:user-profile' %}" class="navbar-dropdown-link">My Profile</a>
-                {% endif %}
-                <span class="navbar-dropdown-divider">|</span>
-                <a href="{% url 'users:logout' %}" class="navbar-dropdown-link">Logout</a>
-              {% else %}
-                <a href="{% url 'login' %}" class="navbar-dropdown-link">Login</a>
-                <span class="navbar-dropdown-divider">|</span>
-                <a href="#" class="navbar-dropdown-link" onclick="openSignupModal(); return false;">Signup</a>
-              {% endif %}
-          </div>
         </div>
-      </div>
-    </div>
 
-    <div class="mobile-menu-overlay" id="mobileMenuOverlay">
-      <div class="mobile-menu-content">
-        <div class="mobile-menu-header">
-          <div class="mobile-logo">
-            <a href="{% url 'home' %}">
-                <img src="{% static 'images/car-syncro.png' %}" alt="CarSyncro Logo"/>
-            </a>
-          </div>
-          <button class="mobile-menu-close" id="mobileMenuClose"></button>
-        </div>
-        <div class="mobile-menu-items"></div>
-      </div>
-    </div>
-
-    <main>
-        <div class="container-custom">
+        <!-- Column 2: Product Info (4/12) -->
+        <div class="lg:col-span-4">
+            <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 leading-tight mb-4">
+                {{ part.name }}
+            </h1>
             
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'parts:part_list' %}">Parts</a></li>
-                    {% if part.category %}
-                    <li class="breadcrumb-item"><a href="#">{{ part.category.name }}</a></li>
-                    {% endif %}
-                    <li class="breadcrumb-item active" aria-current="page">{{ part.name }}</li>
-                </ol>
-            </nav>
+            <div class="flex items-center gap-2 mb-6">
+                <div class="flex text-yellow-400 text-sm">
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star-half-alt"></i>
+                </div>
+                <span class="text-sm text-gray-500 font-medium">({{ review_count|default:12 }} Reviews)</span>
+            </div>
 
-            <div class="product-detail-wrapper">
-                
+            <div class="prose prose-sm text-gray-600 mb-8 max-w-none">
+                <p>{{ part.description|truncatewords:40 }}</p>
+            </div>
+
+            <div class="space-y-3 border-t border-gray-100 pt-6">
+                <div class="flex justify-between text-sm">
+                    <span class="font-bold text-gray-400 uppercase tracking-wider">Part #:</span>
+                    <span class="font-bold text-gray-900">{{ part.parts_number|default:part.sku }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="font-bold text-gray-400 uppercase tracking-wider">OEM #:</span>
+                    <span class="font-bold text-gray-900">{{ part.manufacturer_part_number|default:"N/A" }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="font-bold text-gray-400 uppercase tracking-wider">Make:</span>
+                    <span class="font-bold text-gray-900">{{ part.brand.name|default:"Universal" }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="font-bold text-gray-400 uppercase tracking-wider">Category:</span>
+                    <span class="font-bold text-gray-900">{{ part.category.name|default:"Uncategorized" }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="font-bold text-gray-400 uppercase tracking-wider">Stock:</span>
+                    {% if part.quantity > 0 %}
+                    <span class="font-bold text-green-600">In Stock ({{ part.quantity }})</span>
+                    {% else %}
+                    <span class="font-bold text-red-600">Out of Stock</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Column 3: Buy Box (3/12) -->
+        <div class="lg:col-span-3">
+            <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm sticky top-8">
+                <div class="mb-6">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-red-600 font-extrabold text-lg">-20%</span>
+                        <span class="text-3xl font-black text-gray-900">
+                            {{ part.standard_price|vendor_currency:request }}
+                        </span>
+                    </div>
+                    <div class="text-xs text-gray-400">
+                        List Price: <span class="line-through">{{ part.standard_price|add:20|vendor_currency:request }}</span>
+                    </div>
+                    <div class="mt-2 text-xs text-green-600 font-bold flex items-center gap-1">
+                        <i class="fas fa-undo"></i> FREE Returns
+                    </div>
+                </div>
+
+                <div class="flex items-center border border-gray-200 rounded-xl w-fit mb-6 overflow-hidden">
+                    <button class="px-4 py-2 bg-gray-50 hover:bg-gray-100 font-bold" onclick="updateQty(-1)">-</button>
+                    <input type="text" id="qtyInput" value="1" readonly class="w-12 text-center font-bold bg-transparent outline-none">
+                    <button class="px-4 py-2 bg-gray-50 hover:bg-gray-100 font-bold" onclick="updateQty(1)">+</button>
+                </div>
+
+                <div class="space-y-3 mb-6">
+                    <form hx-post="{% url 'parts:add_to_cart' part.id %}" hx-swap="none" hx-indicator="#loading-indicator">
+                        {% csrf_token %}
+                        <input type="hidden" name="quantity" id="htmxQtyInput" value="1">
+                        <button type="submit" class="w-full bg-black text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-gray-800 transition-all shadow-lg shadow-black/10">
+                            Add To Cart
+                        </button>
+                    </form>
+                    <button class="w-full bg-white text-black border-2 border-black py-4 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-gray-50 transition-all">
+                        Buy Now
+                    </button>
+                </div>
+
+                <div class="space-y-4 pt-6 border-t border-gray-50">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-store text-gray-400"></i>
+                        </div>
+                        <div class="text-sm">
+                            <p class="text-gray-400 font-medium">Sold By</p>
+                            <p class="font-bold text-gray-900">{{ part.vendor.name|default:part.dealer.get_full_name|default:"CarSyncro Direct" }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-truck text-gray-400"></i>
+                        </div>
+                        <div class="text-sm">
+                            <p class="text-gray-400 font-medium">Delivered By</p>
+                            <p class="font-bold text-gray-900">Aramex / DHL</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Share Section -->
+                <div class="mt-8 pt-6 border-t border-gray-50">
+                    <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Share This Part</h4>
+                    <div class="flex gap-2">
+                        <a href="#" onclick="sharePart('copy')" class="w-10 h-10 border border-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-colors" title="Copy Link">
+                            <i class="fas fa-link text-sm"></i>
+                        </a>
+                        <a href="#" onclick="sharePart('whatsapp')" class="w-10 h-10 border border-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-colors" title="Share on WhatsApp">
+                            <i class="fab fa-whatsapp text-sm"></i>
+                        </a>
+                        <a href="#" onclick="sharePart('facebook')" class="w-10 h-10 border border-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-colors" title="Share on Facebook">
+                            <i class="fab fa-facebook-f text-sm"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs Section -->
+    <div class="mb-16">
+        <div class="flex border-b border-gray-100 mb-8">
+            <button class="tab-btn active px-8 py-4 text-sm font-bold uppercase tracking-widest text-gray-400" onclick="openTab(event, 'details')">Description</button>
+            <button class="tab-btn px-8 py-4 text-sm font-bold uppercase tracking-widest text-gray-400" onclick="openTab(event, 'specs')">Specifications</button>
+            <button class="tab-btn px-8 py-4 text-sm font-bold uppercase tracking-widest text-gray-400" onclick="openTab(event, 'warranty')">Warranty</button>
+        </div>
+
+        <div id="details" class="tab-pane active animate-fadeIn">
+            <div class="max-w-4xl">
+                <h3 class="text-xl font-bold mb-4">Product Overview</h3>
+                <p class="text-gray-600 leading-relaxed mb-6">
+                    {{ part.description|linebreaksbr }}
+                </p>
+                <div class="bg-red-50 p-4 rounded-xl border border-red-100 flex gap-4">
+                    <i class="fas fa-exclamation-triangle text-red-500 mt-1"></i>
+                    <p class="text-sm text-red-800 font-medium">
+                        WARNING: Professional installation is highly recommended for this component to ensure vehicle safety and performance.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div id="specs" class="tab-pane animate-fadeIn">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 max-w-4xl">
+                {% if part.manufacturer_part_number %}
+                <div class="flex justify-between py-3 border-b border-gray-50">
+                    <span class="text-gray-400 font-medium">Manufacturer PN</span>
+                    <span class="font-bold">{{ part.manufacturer_part_number }}</span>
+                </div>
+                {% endif %}
+                <div class="flex justify-between py-3 border-b border-gray-50">
+                    <span class="text-gray-400 font-medium">SKU</span>
+                    <span class="font-bold">{{ part.sku }}</span>
+                </div>
+                <div class="flex justify-between py-3 border-b border-gray-50">
+                    <span class="text-gray-400 font-medium">Condition</span>
+                    <span class="font-bold text-green-600">Brand New</span>
+                </div>
+                <div class="flex justify-between py-3 border-b border-gray-50">
+                    <span class="text-gray-400 font-medium">Warranty</span>
+                    <span class="font-bold">12 Months</span>
+                </div>
+                {% if part.material_type %}
+                <div class="flex justify-between py-3 border-b border-gray-50">
+                    <span class="text-gray-400 font-medium">Material Type</span>
+                    <span class="font-bold">{{ part.material_type }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="warranty" class="tab-pane animate-fadeIn">
+            <div class="max-w-4xl">
+                <h3 class="text-xl font-bold mb-4">Warranty Information</h3>
+                <p class="text-gray-600 leading-relaxed">
+                    This part is covered by a standard 12-month limited warranty against manufacturing defects. The warranty does not cover damage resulting from improper installation, racing use, or normal wear and tear.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Products -->
+    {% if related_parts %}
+    <div class="mb-12">
+        <h2 class="text-2xl font-black mb-8">Related Products</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {% for rel_part in related_parts %}
+            <a href="{% url 'parts:part_detail' rel_part.id %}" class="comp-card group bg-white border border-gray-100 rounded-2xl p-4 transition-all duration-300 hover:shadow-xl hover:shadow-black/5">
+                <div class="aspect-square mb-4 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden">
+                    {% if rel_part.image %}
+                    <img src="{{ rel_part.image.url }}" class="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-500" alt="{{ rel_part.name }}">
+                    {% else %}
+                    <img src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=400&q=80" class="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-500" alt="Placeholder">
+                    {% endif %}
+                </div>
+                <h4 class="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-black transition-colors">{{ rel_part.name }}</h4>
+                <div class="text-lg font-black text-black">
+                    {{ rel_part.standard_price|vendor_currency:request }}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Loading Indicator for HTMX -->
+<div id="loading-indicator" class="htmx-indicator fixed inset-0 z-[100] flex items-center justify-center bg-white/50 backdrop-blur-[2px]">
+    <div class="animate-spin rounded-full h-12 w-12 border-4 border-black border-t-transparent"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function changeImage(src) {
+        document.getElementById('mainImage').src = src;
+        // Update active thumb
+        document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+
+    function updateQty(change) {
+        const input = document.getElementById('qtyInput');
+        const htmxInput = document.getElementById('htmxQtyInput');
+        let val = parseInt(input.value) + change;
+        if (val < 1) val = 1;
+        input.value = val;
+        if (htmxInput) htmxInput.value = val;
+    }
+
+    function openTab(evt, tabName) {
+        let i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-pane");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].classList.remove("active");
+        }
+        tablinks = document.getElementsByClassName("tab-btn");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    function sharePart(platform) {
+        const url = window.location.href;
+        const title = "{{ part.name }}";
+        
+        if (platform === 'copy') {
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Link copied to clipboard!');
+            });
+        } else if (platform === 'whatsapp') {
+            window.open(`https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`);
+        } else if (platform === 'facebook') {
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`);
+        }
+    }
+
+    // HTMX after swap handling for cart updates
+    document.addEventListener('htmx:afterOnRequest', function(evt) {
+        if (evt.detail.successful) {
+            // Optional: Show a success toast or update cart badge manually if not done by server response
+            console.log('Added to cart successfully');
+        }
+    });
+</script>
+{% endblock %}
+
                 <div class="gallery-container">
                     <div class="thumbs-col">
                         {% if part.image %}

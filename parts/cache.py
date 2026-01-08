@@ -26,6 +26,22 @@ def make_cache_key(*args, **kwargs):
     return hashlib.md5(key_string.encode()).hexdigest()
 
 
+def _coerce_float(value):
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _part_price_value(part):
+    value = getattr(part, 'standard_price', None)
+    if value is None:
+        value = getattr(part, 'price', None)
+    return _coerce_float(value)
+
+
 def get_cached_categories():
     """
     Get cached list of all active categories with part counts.
@@ -105,7 +121,7 @@ def get_cached_popular_parts(limit=10):
                 'id': part.id,
                 'name': part.name,
                 'slug': part.slug,
-                'price': float(part.price),
+                'price': _part_price_value(part),
                 'image_url': part.image.url if part.image else part.image_url,
                 'category': part.category.name,
                 'brand': part.brand.name,
@@ -145,7 +161,7 @@ def get_cached_featured_parts(limit=8):
                 'id': part.id,
                 'name': part.name,
                 'slug': part.slug,
-                'price': float(part.price),
+                'price': _part_price_value(part),
                 'image_url': part.image.url if part.image else part.image_url,
                 'category': part.category.name,
                 'brand': part.brand.name,
@@ -186,7 +202,7 @@ def get_cached_part_detail(part_id):
                 'slug': part.slug,
                 'description': part.description,
                 'sku': part.sku,
-                'price': float(part.price),
+                'price': _part_price_value(part),
                 'quantity': part.quantity,
                 'image_url': part.image.url if part.image else part.image_url,
                 'weight': float(part.weight) if part.weight else None,
@@ -270,7 +286,7 @@ def get_cached_search_results(query, filters=None, limit=50):
                 'id': part.id,
                 'name': part.name,
                 'slug': part.slug,
-                'price': float(part.price),
+                'price': _part_price_value(part),
                 'image_url': part.image.url if part.image else part.image_url,
                 'category': part.category.name,
                 'brand': part.brand.name,

@@ -1,0 +1,93 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title %}Edit Make | Admin{% endblock %}
+{% block header_title %}Edit Make{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-extrabold text-gray-900">Edit Make</h1>
+            <p class="text-sm text-gray-500">Update master vehicle make</p>
+        </div>
+        <a href="{% url 'admin_panel:catalog_makes' %}" class="text-sm font-bold text-gray-600 hover:text-black transition">
+            Back to Makes
+        </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 gap-5">
+            <div>
+                <label for="name" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Name <span class="text-red-600">*</span>
+                </label>
+                <input type="text" id="name" name="name" required value="{{ request.POST.name|default:make.name }}"
+                    class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black">
+            </div>
+
+            <div>
+                <label for="description" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Description
+                </label>
+                <textarea id="description" name="description" rows="3"
+                    class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black">{{ request.POST.description|default:make.description|default:'' }}</textarea>
+            </div>
+
+            <div>
+                <label for="website" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Website
+                </label>
+                <input type="url" id="website" name="website" value="{{ request.POST.website|default:make.website|default:'' }}"
+                    class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Current Logo
+                </label>
+                <div class="flex items-center gap-4">
+                    {% if make.logo %}
+                    <img src="{{ make.logo.url }}" alt="{{ make.name }}" class="h-14 w-14 rounded-xl object-contain bg-white border border-gray-200">
+                    {% else %}
+                    <div class="h-14 w-14 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-500">
+                        <i class="fas fa-car-side text-xl"></i>
+                    </div>
+                    {% endif %}
+                    <div class="flex-1">
+                        <label for="logo" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                            Replace Logo
+                        </label>
+                        <input type="file" id="logo" name="logo" accept="image/*"
+                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <input type="checkbox" id="is_active" name="is_active"
+                    {% if request.method == "POST" %}
+                        {% if request.POST.is_active == "on" %}checked{% endif %}
+                    {% else %}
+                        {% if make.is_active %}checked{% endif %}
+                    {% endif %}
+                    class="h-4 w-4 rounded border-gray-300 text-black focus:ring-black/20">
+                <label for="is_active" class="text-sm font-semibold text-gray-700">Active</label>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+                <button type="submit"
+                    class="px-4 py-2 bg-black text-white text-sm font-bold rounded-lg hover:bg-gray-800 shadow-md transition">
+                    Save Changes
+                </button>
+                <a href="{% url 'admin_panel:catalog_makes' %}"
+                    class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-bold rounded-lg hover:border-black transition">
+                    Cancel
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

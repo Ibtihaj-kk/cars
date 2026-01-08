@@ -1,0 +1,26 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title %}Catalog Categories | Admin{% endblock %}
+{% block header_title %}Catalog Categories{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    {% for category in categories %}
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex justify-between items-center group hover:border-black transition-all hover:shadow-md">
+        <div class="flex items-center gap-4">
+            <div class="h-14 w-14 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600 group-hover:bg-black group-hover:text-white transition-colors">
+                <i class="fas fa-cogs text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-gray-900">{{ category.name }}</h3>
+                <p class="text-xs text-gray-500 mt-1">{{ category.parts_count|default:"0" }} Catalog Items • {{ category.subcategories_count|default:"0" }} Sub-categories</p>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-span-2 text-center py-10 text-gray-500">No categories found.</div>
+    {% endfor %}
+</div>
+{% endblock %}
+

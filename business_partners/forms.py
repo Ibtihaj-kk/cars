@@ -739,27 +739,9 @@ class VendorPartForm(forms.ModelForm):
         self.fields['category'].required = True
         self.fields['brand'].required = True
 
-        if self.vendor:
-            category_ids = list(
-                CatalogItem.objects.filter(vendor=self.vendor, category__isnull=False)
-                .values_list('category_id', flat=True)
-                .distinct()
-            )
-            if category_ids:
-                self.fields['category'].queryset = Category.objects.filter(id__in=category_ids).order_by('name')
-
-            make_names = list(
-                CatalogItem.objects.filter(vendor=self.vendor)
-                .exclude(make__isnull=True)
-                .exclude(make__exact='')
-                .values_list('make', flat=True)
-                .distinct()
-            )
-            if make_names:
-                normalized_names = sorted({str(name).strip() for name in make_names if str(name).strip()})
-                for name in normalized_names:
-                    Brand.objects.get_or_create(name=name)
-                self.fields['brand'].queryset = Brand.objects.filter(name__in=normalized_names).order_by('name')
+        # Always show all active brands and all categories
+        self.fields['category'].queryset = Category.objects.all().order_by('name')
+        self.fields['brand'].queryset = Brand.objects.filter(is_active=True).order_by('name')
 
         if hasattr(self.fields['category'], 'empty_label'):
             self.fields['category'].empty_label = "Select Category"
@@ -774,6 +756,12 @@ class VendorPartForm(forms.ModelForm):
         instance = super().save(commit=False)
         if self.vendor:
             instance.vendor = self.vendor
+            preferred_currency = getattr(getattr(self.vendor, 'vendor_profile', None), 'preferred_currency', None)
+            submitted_currency = None
+            if hasattr(self, 'cleaned_data'):
+                submitted_currency = self.cleaned_data.get('original_currency')
+            if not submitted_currency and preferred_currency:
+                instance.original_currency = preferred_currency
         if commit:
             instance.save()
         return instance

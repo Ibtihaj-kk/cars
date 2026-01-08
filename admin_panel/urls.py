@@ -50,11 +50,20 @@ urlpatterns = [
     path('orders/', views.orders_management_view, name='orders'),
     path('orders/<int:order_id>/', views.order_detail_view, name='order_detail'),
     path('orders/<int:order_id>/update-status/', views.update_order_status_view, name='update_order_status'),
-    
-    # Inventory Management
-    path('inventory/', views.inventory_management_view, name='inventory'),
-    path('inventory/<int:inventory_id>/update/', views.update_inventory_view, name='update_inventory'),
-    path('inventory/bulk-status-update/', views.inventory_bulk_status_update_view, name='inventory_bulk_status_update'),
+
+    # Catalog
+    path('catalog/', views.catalog_management_view, name='catalog_management'),
+    path('catalog/list/', views.catalog_list_view, name='catalog_list'),
+    path('catalog/categories/', views.catalog_categories_view, name='catalog_categories'),
+    path('catalog/makes/', views.catalog_makes_view, name='catalog_makes'),
+    path('catalog/makes/add/', views.catalog_make_add_view, name='catalog_make_add'),
+    path('catalog/makes/<int:pk>/edit/', views.catalog_make_edit_view, name='catalog_make_edit'),
+    path('catalog/makes/<int:pk>/delete/', views.catalog_make_delete_view, name='catalog_make_delete'),
+    path('catalog/add/', views.catalog_add_view, name='catalog_add'),
+    path('catalog/inventory/', views.catalog_inventory_view, name='catalog_inventory'),
+    path('catalog/<int:pk>/', views.catalog_detail_view, name='catalog_detail'),
+    path('catalog/<int:pk>/edit/', views.catalog_edit_view, name='catalog_edit'),
+    path('catalog/<int:pk>/delete/', views.catalog_delete_view, name='catalog_delete'),
     
     # Reviews Management
     path('reviews/', views.reviews_management_view, name='reviews'),
@@ -69,6 +78,11 @@ urlpatterns = [
     # Invoices & Finance
     path('invoices/', views.invoices_view, name='invoices'),
     path('invoices/<int:order_id>/', views.invoice_detail_view, name='invoice_detail'),
+    
+    # Centralized Finance (New)
+    path('finance/ledger/', views.finance_ledger_view, name='finance_ledger'),
+    path('finance/wallets/', views.wallets_management_view, name='finance_wallets'),
+    path('finance/escrow/', views.escrow_management_view, name='finance_escrow'),
     
     # Tax Rules
     path('taxes/', views.taxes_view, name='taxes'),

@@ -23,10 +23,13 @@
                             class="rounded border-gray-300 text-black focus:ring-black"></th>
                     <th class="px-4 py-4 font-medium">Product Details</th>
                     <th class="px-4 py-4 font-medium hidden lg:table-cell">SKU</th>
+                    <th class="px-4 py-4 font-medium hidden lg:table-cell">MPN</th>
                     <th class="px-4 py-4 font-medium hidden xl:table-cell">Make</th>
                     <th class="px-4 py-4 font-medium">Stock</th>
-                    <th class="px-4 py-4 font-medium relative pr-8">Price <span class="absolute top-2 right-2 text-[10px] font-extrabold text-gray-400">{% vendor_currency_symbol %}</span></th>
+                    <th class="px-4 py-4 font-medium relative pr-8">Retail <span class="absolute top-2 right-2 text-[10px] font-extrabold text-gray-400">{% vendor_currency_symbol %}</span></th>
+                    <th class="px-4 py-4 font-medium relative pr-8">Wholesale <span class="absolute top-2 right-2 text-[10px] font-extrabold text-gray-400">{% vendor_currency_symbol %}</span></th>
                     <th class="px-4 py-4 font-medium">Status</th>
+                    <th class="px-4 py-4 font-medium">Active</th>
                     <th class="px-4 py-4 font-medium text-right">Actions</th>
                 </tr>
             </thead>
@@ -50,6 +53,7 @@
                     </td>
 
                     <td class="px-4 py-4 font-mono text-gray-600 hidden lg:table-cell">{{ part.parts_number }}</td>
+                    <td class="px-4 py-4 font-mono text-gray-600 hidden lg:table-cell">{{ part.manufacturer_part_number|default:"-" }}</td>
 
                     <td class="px-4 py-4 hidden xl:table-cell max-w-[150px]">
                         {% if part.brand %}
@@ -81,13 +85,14 @@
                         </div>
                     </td>
                     <td class="px-4 py-4 font-bold whitespace-nowrap">{% vendor_currency_part_field part 'standard_price' %}</td>
+                    <td class="px-4 py-4 font-bold whitespace-nowrap text-gray-600">{% vendor_currency_part_field part 'price' %}</td>
                     <td class="px-4 py-4 whitespace-nowrap">
                         <div class="flex flex-col gap-1">
                             <!-- Publication Status -->
                             {% if part.status == 'draft' %}
                             <span
                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 w-fit">
-                                Draft
+                                Stock
                             </span>
                             {% elif part.status == 'archived' %}
                             <span
@@ -119,6 +124,17 @@
                             </span>
                             {% endif %}
                         </div>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <form method="POST" action="{% url 'business_partners:vendor_part_status_update' part.id %}" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <input type="hidden" name="toggle_is_active" value="1">
+                            <button type="submit" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 {% if part.is_active %}bg-green-500{% else %}bg-gray-300{% endif %}">
+                                <span class="sr-only">Toggle Active Status</span>
+                                <span aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {% if part.is_active %}translate-x-5{% else %}translate-x-0{% endif %}"></span>
+                            </button>
+                        </form>
                     </td>
                     <td class="px-4 py-4 text-right whitespace-nowrap">
                         <a href="{% url 'business_partners:vendor_part_detail' part.id %}"
@@ -159,7 +175,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                    <td colspan="10" class="px-4 py-8 text-center text-gray-500">
                         <i class="fas fa-box-open text-4xl text-gray-300 mb-4"></i>
                         <p class="text-lg font-medium">No inventory items found</p>
                         <p class="text-sm">Try adjusting your search or filter criteria</p>

@@ -354,6 +354,11 @@
                 brandTextEl.value = item.make || '';
             }
 
+            const categoryEl = document.querySelector('[name="category"]');
+            if (categoryEl && item.category__name) {
+                setSelectByText(categoryEl, item.category__name);
+            }
+
             if (descriptionEl && descriptionEl.dataset.userEdited !== '1') {
                 const fitment = [
                     item.make ? `Make: ${item.make}` : null,

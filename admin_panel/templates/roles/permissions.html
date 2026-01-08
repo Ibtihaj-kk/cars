@@ -8,8 +8,10 @@
         <div class="bg-white rounded-2xl border shadow-sm p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="font-bold text-lg">Roles</h3>
+                {% if allow_custom_roles %}
                 <button type="button" onclick="openAddRoleModal()" class="text-sm text-blue-600 hover:underline">+
                     Add</button>
+                {% endif %}
             </div>
             <div class="space-y-2" id="rolesList">
                 {% for group in groups %}
@@ -21,6 +23,7 @@
                             <span class="font-bold">{{ group.name|title }}</span>
                             <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{{ group.permissions.count }}</span>
                         </div>
+                        {% if allow_custom_roles %}
                         <div class="flex items-center gap-1">
                             <button type="button"
                                 onclick="openEditRoleModal({{ group.id }}, '{{ group.name|escapejs }}')"
@@ -33,12 +36,13 @@
                                 <i class="fas fa-trash text-xs"></i>
                             </button>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% empty %}
                 <div class="text-center py-6 text-gray-500">
                     <p class="text-sm">No roles defined</p>
-                    <p class="text-xs mt-1">Create Django groups to manage permissions</p>
+                    <p class="text-xs mt-1">System roles will appear after RBAC initialization</p>
                 </div>
                 {% endfor %}
             </div>
@@ -63,8 +67,8 @@
                         <tr>
                             <th class="px-4 py-3 text-left">Page / Module</th>
                             <th class="px-4 py-3 text-center">View</th>
-                            <th class="px-4 py-3 text-center">Add</th>
-                            <th class="px-4 py-3 text-center">Edit</th>
+                            <th class="px-4 py-3 text-center">Create</th>
+                            <th class="px-4 py-3 text-center">Update</th>
                             <th class="px-4 py-3 text-center text-red-600">Delete</th>
                         </tr>
                     </thead>
@@ -97,7 +101,7 @@
                                         class="w-4 h-4 rounded border-gray-300 text-black focus:ring-black permission-checkbox"
                                         data-perm-id="{{ perm.id }}"
                                         data-module="{{ module.key }}"
-                                        data-action="{% if forloop.counter0 == 0 %}view{% elif forloop.counter0 == 1 %}add{% elif forloop.counter0 == 2 %}change{% else %}delete{% endif %}"
+                                        data-action="{% if forloop.counter0 == 0 %}view{% elif forloop.counter0 == 1 %}create{% elif forloop.counter0 == 2 %}update{% else %}delete{% endif %}"
                                         {% if perm.id in current_permissions %}checked{% endif %}>
                                     {% else %}
                                     <span class="text-gray-300">—</span>

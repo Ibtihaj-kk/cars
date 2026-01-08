@@ -8,20 +8,27 @@
             <span class="absolute top-4 right-4 text-md font-extrabold text-gray-400 z-10">{% vendor_currency_symbol %}</span>
             <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency_compact_value stats.total_revenue %}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Total Revenue</p>
+            <div class="mt-2 text-[10px] text-gray-400 font-bold">Lifetime earnings</div>
         </a>
         <a href="{% url 'business_partners:vendor_order_analytics' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition">
             <h3 class="text-2xl font-extrabold text-gray-900">{{ stats.total_units|default:"0"|compact_number }}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Units Sold</p>
+            <div class="mt-2 text-[10px] text-gray-400 font-bold">Across all orders</div>
         </a>
         <a href="{% url 'business_partners:vendor_order_analytics' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition relative">
             <span class="absolute top-4 right-4 text-md font-extrabold text-gray-400 z-10">{% vendor_currency_symbol %}</span>
             <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency_compact_value stats.monthly_sales %}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Monthly Sales</p>
+            <div class="mt-2 flex items-center justify-center text-[10px] {% if stats.sales_growth >= 0 %}text-green-600{% else %}text-red-600{% endif %} font-bold">
+                <i class="fas {% if stats.sales_growth >= 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %} mr-1"></i> 
+                {{ stats.sales_growth|abs_val }}% vs last month
+            </div>
         </a>
         <a href="{% url 'business_partners:vendor_inventory_list' %}" class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center hover:shadow-md hover:border-gray-200 transition relative">
             <span class="absolute top-4 right-4 text-md font-extrabold text-gray-400 z-10">{% vendor_currency_symbol %}</span>
             <h3 class="text-2xl font-extrabold text-gray-900">{% vendor_currency_compact_value stats.inventory_value %}</h3>
             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mt-1">Inventory Value</p>
+            <div class="mt-2 text-[10px] text-gray-400 font-bold">{{ stats.active_parts_count|default:"0"|compact_number }} active SKUs</div>
         </a>
     </div>
 
@@ -45,11 +52,11 @@
                 <span class="inline-block mt-3 text-[10px] font-bold uppercase tracking-wider text-gray-600 bg-gray-100 px-3 py-1 rounded-full">Coming soon</span>
             </div>
 
-            <a href="{% url 'business_partners:vendor_catalog_management' %}" class="action-card bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40 group cursor-pointer">
+            <a href="{% url 'business_partners:vendor_parts_list' %}" class="action-card bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-40 group cursor-pointer">
                 <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-black group-hover:text-white transition-colors">
                     <i class="fas fa-book-open text-xl text-gray-600 group-hover:text-white"></i>
                 </div>
-                <h3 class="text-lg font-bold text-gray-800 group-hover:text-black">Catalog Management</h3>
+                <h3 class="text-lg font-bold text-gray-800 group-hover:text-black">Product Management</h3>
                 <p class="text-xs text-gray-500 mt-1">Manage product listings</p>
             </a>
 

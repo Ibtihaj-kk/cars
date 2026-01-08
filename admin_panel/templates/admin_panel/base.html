@@ -168,20 +168,32 @@
                 <button type="button"
                     class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6 flex items-center justify-between w-full"
                     data-section-toggle="parts">
-                    <span>Inventory</span>
+                    <span>Catalog</span>
                     <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
                 </button>
                 <div id="sidebar-section-parts" data-section-content="parts" class="space-y-1">
-                    <a href="{% url 'admin_panel:categories' %}"
+                    <a href="{% url 'admin_panel:catalog_makes' %}"
                         class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
-                        <i class="fas fa-folder-tree w-6 text-center"></i>
-                        <span class="nav-text ml-3">Categories</span>
+                        <i class="fas fa-car-side w-6 text-center"></i>
+                        <span class="nav-text ml-3">Makes</span>
                     </a>
-                    <a href="{% url 'admin_panel:inventory' %}"
+
+                    <a href="{% url 'admin_panel:catalog_management' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-book w-6 text-center"></i>
+                        <span class="nav-text ml-3">Catalog</span>
+                    </a>
+                    <a href="{% url 'admin_panel:catalog_inventory' %}"
                         class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
                         <i class="fas fa-warehouse w-6 text-center"></i>
                         <span class="nav-text ml-3">Inventory</span>
                     </a>
+                    <!-- <a href="{% url 'admin_panel:catalog_categories' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-folder-tree w-6 text-center"></i>
+                        <span class="nav-text ml-3">Catalog Categories</span>
+                    </a> -->
+                    
                     <a href="{% url 'admin_panel:bulk_upload' %}"
                         class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
                         <i class="fas fa-cloud-upload-alt w-6 text-center"></i>
@@ -214,30 +226,31 @@
                     <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
                 </button>
                 <div id="sidebar-section-finance" data-section-content="finance" class="space-y-1">
-                    <a href="{% url 'admin_panel:payment_management' %}"
-                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
-                        <i class="fas fa-credit-card w-6 text-center"></i>
-                        <span class="nav-text ml-3">Payments</span>
-                    </a>
-                    <a href="{% url 'admin_panel:commission_management' %}"
-                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
-                        <i class="fas fa-hand-holding-usd w-6 text-center"></i>
-                        <span class="nav-text ml-3">Commissions</span>
-                    </a>
-                    <a href="{% url 'admin_panel:invoices' %}"
+                    <a href="{% url 'admin_panel:finance_ledger' %}"
                         class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
                         <i class="fas fa-file-invoice-dollar w-6 text-center"></i>
+                        <span class="nav-text ml-3">Finance Ledger</span>
+                    </a>
+                    <a href="{% url 'admin_panel:finance_wallets' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-wallet w-6 text-center"></i>
+                        <span class="nav-text ml-3">Wallets</span>
+                    </a>
+                    <a href="{% url 'admin_panel:finance_escrow' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-lock w-6 text-center"></i>
+                        <span class="nav-text ml-3">Escrow</span>
+                    </a>
+                    <hr class="border-gray-100 my-1">
+                    <a href="{% url 'admin_panel:invoices' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-receipt w-6 text-center"></i>
                         <span class="nav-text ml-3">Invoices</span>
                     </a>
                     <a href="{% url 'admin_panel:taxes' %}"
                         class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
                         <i class="fas fa-percent w-6 text-center"></i>
                         <span class="nav-text ml-3">Tax Rules</span>
-                    </a>
-                    <a href="{% url 'admin_panel:reviews' %}"
-                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
-                        <i class="fas fa-star w-6 text-center"></i>
-                        <span class="nav-text ml-3">Reviews</span>
                     </a>
                 </div>
             </div>
@@ -322,6 +335,28 @@
         </header>
 
         <div class="flex-1 overflow-y-auto p-8" onclick="closeDropdowns()">
+            {% if messages %}
+            <div class="mb-6 space-y-4">
+                {% for message in messages %}
+                <div class="p-4 rounded-xl flex items-center justify-between {% if message.tags == 'success' %}bg-green-50 text-green-800 border border-green-100{% elif message.tags == 'error' %}bg-red-50 text-red-800 border border-red-100{% else %}bg-blue-50 text-blue-800 border border-blue-100{% endif %}">
+                    <div class="flex items-center">
+                        {% if message.tags == 'success' %}
+                        <i class="fas fa-check-circle mr-3"></i>
+                        {% elif message.tags == 'error' %}
+                        <i class="fas fa-exclamation-circle mr-3"></i>
+                        {% else %}
+                        <i class="fas fa-info-circle mr-3"></i>
+                        {% endif %}
+                        <span class="text-sm font-medium">{{ message }}</span>
+                    </div>
+                    <button type="button" onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
             {% block content %}{% endblock %}
         </div>
     </main>

@@ -1,0 +1,187 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title %}Catalog Management | CarSyncro{% endblock %}
+{% block header_title %}Catalog Management{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-extrabold text-gray-900">Catalog Management</h1>
+        <p class="text-sm text-gray-500">Manage your product listings and catalog data</p>
+    </div>
+    <div class="flex gap-2">
+        <a href="{% url 'admin_panel:catalog_add' %}"
+            class="flex items-center px-4 py-2 bg-gray-700 text-white text-sm font-bold rounded-lg hover:bg-gray-600 shadow-md transition">
+            <i class="fas fa-book mr-2"></i> Add Catalog
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-500 uppercase">Items</p>
+                <h3 class="text-xl font-extrabold text-gray-900 mt-1">{{ total_items|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-gray-100 rounded-lg text-gray-600"><i class="fas fa-boxes"></i></div>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-500 uppercase">Make</p>
+                <h3 class="text-xl font-extrabold text-gray-900 mt-1">{{ make_count|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-gray-100 rounded-lg text-gray-600"><i class="fas fa-industry"></i></div>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-500 uppercase">Models</p>
+                <h3 class="text-xl font-extrabold text-gray-900 mt-1">{{ model_count|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-gray-100 rounded-lg text-gray-600"><i class="fas fa-tags"></i></div>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-xs font-bold text-gray-500 uppercase">Years</p>
+                <h3 class="text-xl font-extrabold text-gray-900 mt-1">{{ year_count|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-gray-100 rounded-lg text-gray-600"><i class="fas fa-cubes"></i></div>
+        </div>
+    </div>
+</div>
+
+<form method="get"
+    class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
+    <div class="relative w-full sm:w-96">
+        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i
+                class="fas fa-search"></i></span>
+        <input type="text" name="search" value="{{ search_query|default:'' }}"
+            class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+            placeholder="Search by category, make, model...">
+    </div>
+
+    <div class="flex gap-3 w-full sm:w-auto overflow-x-auto">
+        <select name="category"
+            class="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 focus:border-black outline-none">
+            <option value="">Category: All</option>
+            {% for c in categories %}
+            <option value="{{ c.id }}" {% if category_filter == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="make"
+            class="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 focus:border-black outline-none">
+            <option value="">Make: All</option>
+            {% for make in makes %}
+            <option value="{{ make }}" {% if make_filter == make %}selected{% endif %}>{{ make }}</option>
+            {% endfor %}
+        </select>
+        <select name="model"
+            class="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 focus:border-black outline-none">
+            <option value="">Model: All</option>
+            {% for m in models %}
+            <option value="{{ m }}" {% if model_filter == m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+        </select>
+        <select name="year"
+            class="px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 focus:border-black outline-none">
+            <option value="">Year: All</option>
+            {% for y in years %}
+            <option value="{{ y }}" {% if year_filter == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit"
+            class="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 flex items-center gap-2 whitespace-nowrap">
+            <i class="fas fa-filter"></i> Filter
+        </button>
+    </div>
+</form>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-extrabold text-gray-900">Existing Categories</h2>
+            <span class="text-xs font-bold text-gray-500">{{ categories|length }}</span>
+        </div>
+        <div class="flex flex-wrap gap-2 max-h-32 overflow-auto">
+            {% for c in categories %}
+            <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded-full">{{ c.name }}</span>
+            {% empty %}
+            <span class="text-sm text-gray-500">No categories yet.</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-extrabold text-gray-900">Existing Makes</h2>
+            <span class="text-xs font-bold text-gray-500">{{ makes|length }}</span>
+        </div>
+        <div class="flex flex-wrap gap-2 max-h-32 overflow-auto">
+            {% for make in makes %}
+            <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded-full">{{ make }}</span>
+            {% empty %}
+            <span class="text-sm text-gray-500">No makes yet.</span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    {% with product_list=catalog_items %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Category</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Year</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Make</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Model</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Trim</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Engine</th>
+                    <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for product in product_list %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">{% firstof product.category.name "-" %}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{% firstof product.year "-" %}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{% firstof product.make "-" %}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{% firstof product.model "-" %}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{% firstof product.trim "-" %}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">{% firstof product.engine "-" %}</td>
+                    <td class="px-6 py-4 text-right">
+                        <a href="{% url 'admin_panel:catalog_detail' product.id %}"
+                            class="text-gray-400 hover:text-blue-600 transition mr-3" title="View">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="{% url 'admin_panel:catalog_edit' product.id %}"
+                            class="text-gray-400 hover:text-yellow-600 transition mr-3" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <form method="post" action="{% url 'admin_panel:catalog_delete' product.id %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-gray-400 hover:text-red-600 transition" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-10 text-center text-gray-500">No catalog items found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endwith %}
+</div>
+{% endblock %}

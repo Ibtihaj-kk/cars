@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     'core',
     'parts',
     'analytics',
+    'finance',
 ]
 
 MIDDLEWARE = [
@@ -150,44 +151,13 @@ DATABASES = {
 }
 
 # Cache Configuration
-# Try Redis first, fallback to dummy cache if Redis is not available
-import redis
-import logging
-logger = logging.getLogger(__name__)
-
-try:
-    # Test Redis connection
-    redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'))
-    redis_client.ping()
-    
-    # Redis is available, use it
-    CACHES = {
-        'default': {
-            'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-                'SERIALIZER': 'django_redis.serializers.json.JSONSerializer',
-                'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
-                'CONNECTION_POOL_KWARGS': {
-                    'max_connections': 50,
-                    'retry_on_timeout': True,
-                },
-            },
-            'KEY_PREFIX': 'carsyncro',
-            'TIMEOUT': 300,  # 5 minutes default timeout
-        }
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'carsyncro-locmem',
+        'TIMEOUT': 300,
     }
-    logger.info("✅ Redis cache connected successfully")
-except (redis.ConnectionError, redis.TimeoutError, Exception) as e:
-    # Redis is not available, use dummy cache for development
-    logger.warning(f"⚠️  Redis cache unavailable: {e}. Falling back to DummyCache. "
-                   "Performance will be degraded. Install and start Redis for production.")
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-        }
-    }
+}
 
 # Cache timeouts for different data types
 CACHE_TIMEOUTS = {
@@ -240,6 +210,16 @@ USE_TZ = True
 STATIC_URL = os.environ.get('STATIC_URL', '/static/')
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+# Celery Configuration
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
 
 # Asset versioning for cache busting in production
 # This adds content hashes to static file names (e.g., style.a1b2c3.css)
@@ -633,35 +613,6 @@ THUMBNAIL_SIZES = {
 # WebP Settings
 WEBP_QUALITY = 80  # WebP quality for better compression
 ENABLE_WEBP = True  # Enable WebP format generation
-
-# Celery Configuration
-CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-
-# Celery task settings
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
-
-# Celery task routing
-CELERY_TASK_ROUTES = {
-    'parts.tasks.*': {'queue': 'parts'},
-    'orders.tasks.*': {'queue': 'orders'},
-    'notifications.tasks.*': {'queue': 'notifications'},
-}
-
-# Celery worker settings
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-CELERY_TASK_ACKS_LATE = True
-CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
-
-# Celery beat settings
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
-
-# Task time limits
-CELERY_TASK_SOFT_TIME_LIMIT = 300  # 5 minutes
-CELERY_TASK_TIME_LIMIT = 600  # 10 minutes
 
 # Crispy Forms Configuration
 CRISPY_TEMPLATE_PACK = 'bootstrap4'

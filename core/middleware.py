@@ -8,7 +8,7 @@ import requests
 from django.core.cache import cache
 from django.utils.deprecation import MiddlewareMixin
 
-from business_partners.utils import get_user_currency
+from business_partners.utils import get_user_currency, get_vendor_profile
 from core.models import Currency
 
 _CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
@@ -245,10 +245,14 @@ class CurrencyMiddleware(MiddlewareMixin):
 
             if not currency_code and hasattr(request, "user") and getattr(request.user, "is_authenticated", False):
                 preferred = None
-                profile = getattr(request.user, "profile", None)
-                preferred = _normalize_allowed_currency_code(getattr(profile, "preferred_currency", None)) if profile else None
-                if not preferred:
-                    preferred = _normalize_allowed_currency_code(get_user_currency(request.user))
+                vendor_profile = get_vendor_profile(request.user)
+                if vendor_profile:
+                    preferred = _normalize_allowed_currency_code(getattr(vendor_profile, "preferred_currency", None))
+                else:
+                    profile = getattr(request.user, "profile", None)
+                    preferred = _normalize_allowed_currency_code(getattr(profile, "preferred_currency", None)) if profile else None
+                    if not preferred:
+                        preferred = _normalize_allowed_currency_code(get_user_currency(request.user))
                 preferred_currency = _get_active_currency(preferred)
                 if preferred_currency:
                     currency_code = preferred_currency.code
@@ -308,7 +312,7 @@ class CurrencyMiddleware(MiddlewareMixin):
                         source = "locale"
 
             if not currency_code:
-                currency_code = "AED"
+                currency_code = "SAR"
                 source = "default"
 
             currency_obj = _get_active_currency(currency_code)

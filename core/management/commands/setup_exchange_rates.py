@@ -14,15 +14,29 @@ class Command(BaseCommand):
     help = 'Setup initial exchange rates for Middle East currencies'
 
     def handle(self, *args, **options):
-        # Get USD as base currency
-        try:
-            usd = Currency.objects.get(code='USD', is_base=True)
-        except Currency.DoesNotExist:
-            self.stdout.write(
-                self.style.ERROR('USD base currency not found. Please load currencies first.')
-            )
-            return
-        
+        currency_defaults = {
+            "USD": {"name": "US Dollar", "symbol": "$", "symbol_position": "left", "decimal_places": 2, "is_base": True},
+            "SAR": {"name": "Saudi Riyal", "symbol": "﷼", "symbol_position": "right", "decimal_places": 2},
+            "AED": {"name": "UAE Dirham", "symbol": "د.إ", "symbol_position": "right", "decimal_places": 2},
+            "QAR": {"name": "Qatari Riyal", "symbol": "ر.ق", "symbol_position": "right", "decimal_places": 2},
+            "OMR": {"name": "Omani Rial", "symbol": "ر.ع.", "symbol_position": "right", "decimal_places": 3},
+            "BHD": {"name": "Bahraini Dinar", "symbol": ".د.ب", "symbol_position": "right", "decimal_places": 3},
+            "PKR": {"name": "Pakistani Rupee", "symbol": "₨", "symbol_position": "left", "decimal_places": 2},
+        }
+
+        usd, _ = Currency.objects.get_or_create(
+            code="USD",
+            defaults={
+                **currency_defaults["USD"],
+                "is_active": True,
+                "thousands_separator": ",",
+                "decimal_separator": ".",
+            },
+        )
+        if not usd.is_base:
+            usd.is_base = True
+            usd.save(update_fields=["is_base"])
+
         # Current approximate rates (as of December 2024)
         # Source: https://www.xe.com (rates are approximate and should be updated via API in production)
         rates = {
@@ -38,40 +52,45 @@ class Command(BaseCommand):
         updated_count = 0
         
         for code, rate in rates.items():
-            try:
-                currency = Currency.objects.get(code=code)
-                
-                # Check if rate already exists
-                existing = ExchangeRate.objects.filter(
-                    base_currency=usd,
-                    target_currency=currency,
-                    is_active=True,
-                    valid_to__isnull=True
-                ).first()
-                
-                if existing:
-                    self.stdout.write(
-                        self.style.WARNING(f'Rate already exists: 1 USD = {existing.rate} {code}, skipping')
-                    )
-                    continue
-                
-                # Create new exchange rate
-                ExchangeRate.objects.create(
-                    base_currency=usd,
-                    target_currency=currency,
-                    rate=rate,
-                    is_active=True,
-                    source='manual'
-                )
-                created_count += 1
+            defaults = currency_defaults.get(code) or {"name": code, "symbol": code, "symbol_position": "left", "decimal_places": 2}
+            currency, _ = Currency.objects.get_or_create(
+                code=code,
+                defaults={
+                    **defaults,
+                    "is_active": True,
+                    "is_base": False,
+                    "thousands_separator": ",",
+                    "decimal_separator": ".",
+                },
+            )
+            if not currency.is_active:
+                currency.is_active = True
+                currency.save(update_fields=["is_active"])
+
+            existing = ExchangeRate.objects.filter(
+                base_currency=usd,
+                target_currency=currency,
+                is_active=True,
+                valid_to__isnull=True
+            ).first()
+            
+            if existing:
                 self.stdout.write(
-                    self.style.SUCCESS(f'✓ Created rate: 1 USD = {rate} {code}')
+                    self.style.WARNING(f'Rate already exists: 1 USD = {existing.rate} {code}, skipping')
                 )
-                
-            except Currency.DoesNotExist:
-                self.stdout.write(
-                    self.style.WARNING(f'✗ Currency {code} not found, skipping')
-                )
+                continue
+            
+            ExchangeRate.objects.create(
+                base_currency=usd,
+                target_currency=currency,
+                rate=rate,
+                is_active=True,
+                source='manual'
+            )
+            created_count += 1
+            self.stdout.write(
+                self.style.SUCCESS(f'✓ Created rate: 1 USD = {rate} {code}')
+            )
         
         self.stdout.write('')
         self.stdout.write(

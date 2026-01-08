@@ -55,18 +55,35 @@ def vendor_inventory_overview(request):
     
     # 3. Monthly Sales (Revenue last 30 days)
     last_30_days = timezone.now() - timedelta(days=30)
-    monthly_sales = order_items.filter(
+    previous_30_days = timezone.now() - timedelta(days=60)
+    
+    monthly_sales_items = order_items.filter(
         order__created_at__gte=last_30_days
+    )
+    
+    monthly_sales = monthly_sales_items.aggregate(
+        total=Sum(F('price') * F('quantity'))
+    )['total'] or 0
+    
+    prev_monthly_sales = order_items.filter(
+        order__created_at__gte=previous_30_days,
+        order__created_at__lt=last_30_days
     ).aggregate(
         total=Sum(F('price') * F('quantity'))
     )['total'] or 0
     
+    if prev_monthly_sales > 0:
+        sales_growth = ((float(monthly_sales) - float(prev_monthly_sales)) / float(prev_monthly_sales)) * 100
+    else:
+        sales_growth = 100 if monthly_sales > 0 else 0
+    
     # 4. Inventory Value (Current stock value)
-    inventory_value = Part.objects.filter(
-        vendor=business_partner
-    ).aggregate(
+    vendor_parts = Part.objects.filter(vendor=business_partner)
+    inventory_value = vendor_parts.aggregate(
         total=Sum(F('standard_price') * F('quantity'))
     )['total'] or 0
+    
+    active_parts_count = vendor_parts.filter(is_active=True).count()
     
     context = {
         'vendor_profile': vendor_profile,
@@ -75,7 +92,9 @@ def vendor_inventory_overview(request):
             'total_revenue': total_revenue,
             'total_units': total_units,
             'monthly_sales': monthly_sales,
+            'sales_growth': round(sales_growth, 1),
             'inventory_value': inventory_value,
+            'active_parts_count': active_parts_count,
         }
     }
     return render(request, 'vendors/inventory_feature.html', context)
@@ -818,7 +837,7 @@ def add_part(request):
     vendor_catalog_items = list(
         CatalogItem.objects.filter(vendor=business_partner)
         .order_by('part_number')
-        .values('part_number', 'description', 'make', 'model', 'year', 'trim', 'engine')
+        .values('part_number', 'description', 'make', 'model', 'year', 'trim', 'engine', 'category_id', 'category__name')
     )
     
     if request.method == 'POST':
@@ -885,7 +904,7 @@ def add_part_htmx(request):
     vendor_catalog_items = list(
         CatalogItem.objects.filter(vendor=business_partner)
         .order_by('part_number')
-        .values('part_number', 'description', 'make', 'model', 'year', 'trim', 'engine')
+        .values('part_number', 'description', 'make', 'model', 'year', 'trim', 'engine', 'category_id', 'category__name')
     )
     
     if request.method == 'POST':
@@ -947,19 +966,46 @@ def vendor_part_status_update(request, part_id):
         return redirect('home')
     
     business_partner = vendor_profile.business_partner
+    part = get_object_or_404(Part, id=part_id, vendor=business_partner)
+
+    if request.POST.get('toggle_is_active') == '1':
+        part.is_active = not part.is_active
+        part.save(update_fields=['is_active', 'updated_at'])
+        state = 'active' if part.is_active else 'inactive'
+        messages.success(request, f'Part "{part.material_description}" is now {state}.')
+        return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('business_partners:vendor_inventory_list'))
+
     new_status = request.POST.get('status')
     
     if new_status not in ['draft', 'published', 'archived']:
         messages.error(request, 'Invalid status.')
         return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('business_partners:vendor_inventory_list'))
     
-    part = get_object_or_404(Part, id=part_id, vendor=business_partner)
-    
     if part.status != new_status:
         part.status = new_status
         part.save(update_fields=['status', 'updated_at'])
     
     messages.success(request, f'Part "{part.material_description}" status updated to {new_status}.')
+    return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('business_partners:vendor_inventory_list'))
+
+
+@login_required
+@vendor_required
+@require_http_methods(["POST"])
+def vendor_part_toggle_active(request, part_id):
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'You do not have vendor access.')
+        return redirect('home')
+
+    business_partner = vendor_profile.business_partner
+    part = get_object_or_404(Part, id=part_id, vendor=business_partner)
+
+    part.is_active = not part.is_active
+    part.save(update_fields=['is_active', 'updated_at'])
+
+    state = 'active' if part.is_active else 'inactive'
+    messages.success(request, f'Part "{part.material_description}" is now {state}.')
     return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('business_partners:vendor_inventory_list'))
 
 

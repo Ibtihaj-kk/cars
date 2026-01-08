@@ -89,10 +89,12 @@
                             class="w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black cursor-pointer">
                     </th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Product</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">PLant</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Location</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Bin</th>
                     <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Available</th>
-                    <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Committed</th>
-                    <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Incoming</th>
+                    <!-- <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Committed</th>
+                    <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Incoming</th> -->
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
                     <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Actions</th>
                 </tr>
@@ -106,7 +108,7 @@
                             class="part-checkbox w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black cursor-pointer"
                             data-part-id="{{ part.id }}" onchange="updateBulkActionBar()">
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-6 py-4 whitespace-nowrap text-xs">
                         <div class="flex items-center">
                             <div class="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-md border border-gray-200 p-0.5">
                                 {% if part.image %}
@@ -124,7 +126,10 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-6 py-4 whitespace-nowrap text-xs">{% if part.plant %}{{ part.plant }}{% else %}--{% endif %}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-xs">{% if part.warehouse_number %}{{ part.warehouse_number }}{% else %}--{% endif %}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-xs">{% if part.storage_bin %}{{ part.storage_bin }}{% else %}--{% endif %}</td> 
+                    <!-- <td class="px-6 py-4 whitespace-nowrap">
                         {% if part.plant or part.warehouse_number or part.storage_bin %}
                             <div class="text-xs font-medium text-gray-900">
                                 {% if part.plant %}{{ part.plant }}{% endif %}
@@ -138,8 +143,8 @@
                         {% else %}
                             <div class="text-sm text-gray-400">--</div>
                         {% endif %}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                    </td> -->
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
                         <div class="flex items-center justify-center gap-2">
                             <!-- Decrement Button -->
                             <form method="POST"
@@ -155,7 +160,7 @@
                                         class="fas fa-minus"></i></button>
                             </form>
 
-                            <span class="font-bold text-gray-900 w-8 text-center">{{ part.quantity }}</span>
+                            <span class="font-bold text-gray-900 w-8 text-center text-sm">{{ part.quantity }}</span>
 
                             <!-- Increment Button -->
                             <form method="POST"
@@ -172,8 +177,8 @@
                             </form>
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">--</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-blue-600 font-bold">--</td>
+                    <!-- <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">--</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-blue-600 font-bold">--</td> -->
                     <td class="px-6 py-4 whitespace-nowrap">
                         <!-- Publish Status Badge -->
                         <div class="mb-2">
@@ -185,7 +190,7 @@
                             {% elif part.status == 'draft' %}
                             <span
                                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700">
-                                <i class="fas fa-file text-[10px]"></i> Draft
+                                <i class="fas fa-file text-[10px]"></i> Stock
                             </span>
                             {% elif part.status == 'archived' %}
                             <span

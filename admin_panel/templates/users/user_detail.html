@@ -1,0 +1,96 @@
+{% extends 'admin_panel/base.html' %}
+{% block header_title %}User Details{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-extrabold text-gray-900">{{ user_obj.get_full_name|default:user_obj.email }}</h1>
+            <p class="text-sm text-gray-500">{{ user_obj.email }}</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'admin_panel:users' %}"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-arrow-left"></i>
+                Back
+            </a>
+            <form method="POST" action="{% url 'admin_panel:toggle_user_status' user_obj.id %}">
+                {% csrf_token %}
+                <button type="submit"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold {% if user_obj.is_active %}bg-red-600 hover:bg-red-700 text-white{% else %}bg-green-600 hover:bg-green-700 text-white{% endif %}">
+                    {% if user_obj.is_active %}
+                    <i class="fas fa-user-slash"></i> Deactivate
+                    {% else %}
+                    <i class="fas fa-user-check"></i> Activate
+                    {% endif %}
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-lg font-extrabold text-gray-900">Profile</h2>
+        </div>
+
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-1">
+                <p class="text-xs font-bold text-gray-400 uppercase">Status</p>
+                <span class="inline-flex px-2 py-1 rounded text-xs font-bold {% if user_obj.is_active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                    {% if user_obj.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+            </div>
+            <div class="space-y-1">
+                <p class="text-xs font-bold text-gray-400 uppercase">Joined</p>
+                <p class="text-sm font-bold text-gray-900">{{ user_obj.date_joined|date:"M d, Y H:i" }}</p>
+            </div>
+            <div class="space-y-1">
+                <p class="text-xs font-bold text-gray-400 uppercase">Staff</p>
+                <p class="text-sm font-bold text-gray-900">{% if user_obj.is_staff %}Yes{% else %}No{% endif %}</p>
+            </div>
+            <div class="space-y-1">
+                <p class="text-xs font-bold text-gray-400 uppercase">Superuser</p>
+                <p class="text-sm font-bold text-gray-900">{% if user_obj.is_superuser %}Yes{% else %}No{% endif %}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mt-6">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-lg font-extrabold text-gray-900">Update</h2>
+        </div>
+
+        <form method="POST" action="{% url 'admin_panel:update_user' user_obj.id %}">
+            {% csrf_token %}
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">First Name</label>
+                    <input type="text" name="first_name" value="{{ user_obj.first_name|default:'' }}"
+                        class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-black focus:border-black">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Last Name</label>
+                    <input type="text" name="last_name" value="{{ user_obj.last_name|default:'' }}"
+                        class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-black focus:border-black">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Role</label>
+                    <select name="role"
+                        class="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:ring-black focus:border-black">
+                        {% for key, label in role_choices %}
+                        <option value="{{ key }}" {% if user_obj.role == key %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
+                <button type="submit"
+                    class="bg-black text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-gray-800 inline-flex items-center gap-2">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

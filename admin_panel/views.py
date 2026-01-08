@@ -36,7 +36,7 @@ from .utils import (
     log_status_change_activity, log_feature_toggle_activity
 )
 from .decorators import (
-    admin_required, staff_required, can_manage_listings, 
+    admin_required, staff_required, superuser_required, can_manage_listings, 
     can_view_analytics, can_view_audit_logs, ajax_admin_required
 )
 from .session_manager import require_valid_admin_session
@@ -663,65 +663,75 @@ def delete_commission_rule_view(request, rule_id):
         return JsonResponse({'success': False, 'message': str(e)})
 
 
+from finance.models import Wallet, Transaction, EscrowEntry
+from finance.services import FinanceService
+from django.db.models import Sum, Q
+
 @login_required
-@require_POST
-def adjust_vendor_balance_view(request, vendor_id):
-    """Adjust vendor balance"""
-    try:
-        vendor = get_object_or_404(Vendor, id=vendor_id)
-        adjustment_type = request.POST.get('adjustment_type')
-        amount = float(request.POST.get('amount', 0))
-        reason = request.POST.get('reason', '')
+def finance_ledger_view(request):
+    """
+    Centralized Finance Ledger for MasterAdmin.
+    """
+    transactions = Transaction.objects.all().select_related('source_wallet', 'destination_wallet')
+    
+    # Filters
+    txn_type = request.GET.get('type')
+    if txn_type:
+        transactions = transactions.filter(transaction_type=txn_type)
         
-        if amount <= 0:
-            return JsonResponse({'success': False, 'message': 'Amount must be greater than 0'})
+    date_from = request.GET.get('date_from')
+    if date_from:
+        transactions = transactions.filter(created_at__date__gte=date_from)
         
-        # Get or create vendor balance
-        balance, created = VendorBalance.objects.get_or_create(
-            vendor=vendor,
-            defaults={'current_balance': 0, 'total_earned': 0, 'total_withdrawn': 0}
-        )
-        
-        # Apply adjustment
-        if adjustment_type == 'credit':
-            balance.current_balance += amount
-            balance.total_earned += amount
-            transaction_type = 'balance_adjustment_credit'
-        else:  # debit
-            if balance.current_balance < amount:
-                return JsonResponse({'success': False, 'message': 'Insufficient balance'})
-            balance.current_balance -= amount
-            balance.total_withdrawn += amount
-            transaction_type = 'balance_adjustment_debit'
-        
-        balance.save()
-        
-        # Create transaction history
-        PaymentHistory.objects.create(
-            vendor=vendor,
-            transaction_type=transaction_type,
-            amount=amount if adjustment_type == 'credit' else -amount,
-            description=f'Balance adjustment: {reason}',
-            balance_after=balance.current_balance,
-            changed_by=request.user
-        )
-        
-        # Create activity log
-        ActivityLog.objects.create(
-            user=request.user,
-            action='vendor_balance_adjusted',
-            description=f'Adjusted {vendor.business_name} balance by ${amount} ({adjustment_type})',
-            vendor=vendor
-        )
-        
-        return JsonResponse({
-            'success': True, 
-            'message': f'Balance adjusted successfully. New balance: ${balance.current_balance}',
-            'new_balance': balance.current_balance
-        })
-        
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
+    date_to = request.GET.get('date_to')
+    if date_to:
+        transactions = transactions.filter(created_at__date__lte=date_to)
+
+    # Summary Stats
+    platform_wallet = FinanceService.get_platform_wallet()
+    stats = {
+        'total_revenue': platform_wallet.available_balance,
+        'escrow_total': Wallet.objects.aggregate(total=Sum('escrow_balance'))['total'] or 0,
+        'liability_total': Wallet.objects.aggregate(total=Sum('liability_balance'))['total'] or 0,
+    }
+
+    context = {
+        'transactions': transactions,
+        'stats': stats,
+        'txn_types': Transaction.TYPES,
+    }
+    return render(request, 'admin_panel/finance/ledger.html', context)
+
+@login_required
+def wallets_management_view(request):
+    """
+    Manage all wallets (Vendors, Admin).
+    """
+    wallets = Wallet.objects.all().order_by('-available_balance')
+    
+    # Search
+    query = request.GET.get('q')
+    if query:
+        # Since it's a GenericForeignKey, searching by owner name is tricky with pure SQL
+        # In production, we'd use a search index or more complex query.
+        pass
+
+    context = {
+        'wallets': wallets,
+    }
+    return render(request, 'admin_panel/finance/wallets.html', context)
+
+@login_required
+def escrow_management_view(request):
+    """
+    Manage escrow releases.
+    """
+    escrow_entries = EscrowEntry.objects.filter(is_released=False).order_by('release_date')
+    
+    context = {
+        'escrow_entries': escrow_entries,
+    }
+    return render(request, 'admin_panel/finance/escrow.html', context)
 
 
 @can_manage_listings
@@ -1101,7 +1111,7 @@ def update_vendor_status(request, vendor_id):
     # Map BusinessPartner status to VendorApplication status
     application_status_map = {
         'active': 'approved',
-        'rejected': 'rejected',
+        'inactive': 'rejected',
         'suspended': 'rejected',
     }
     
@@ -1122,12 +1132,15 @@ def update_vendor_status(request, vendor_id):
     # Also update VendorProfile.is_approved (this controls vendor dashboard display)
     try:
         vendor_profile = vendor.vendor_profile
-        if new_status == 'active':
-            vendor_profile.is_approved = True
-            vendor_profile.save(update_fields=['is_approved'])
-        elif new_status in ['rejected', 'suspended']:
-            vendor_profile.is_approved = False
-            vendor_profile.save(update_fields=['is_approved'])
+        approval_state_map = {
+            'active': 'APPROVED',
+            'inactive': 'REJECTED',
+            'suspended': 'SUSPENDED',
+            'pending': 'PENDING',
+        }
+        if new_status in approval_state_map:
+            vendor_profile.approval_state = approval_state_map[new_status]
+            vendor_profile.save()
     except Exception:
         pass  # VendorProfile may not exist
     
@@ -1610,6 +1623,52 @@ def vendor_balance_view(request, vendor_id):
     }
     
     return render(request, 'admin_panel/vendor_balance.html', context)
+
+
+@login_required
+@staff_required
+@require_POST
+def adjust_vendor_balance_view(request, vendor_id):
+    """Manually adjust a vendor's balance."""
+    vendor = get_object_or_404(BusinessPartner, id=vendor_id)
+    balance, created = VendorBalance.objects.get_or_create(vendor=vendor)
+    
+    try:
+        amount = float(request.POST.get('amount', 0))
+        adjustment_type = request.POST.get('type', 'credit')  # credit or debit
+        reason = request.POST.get('reason', 'Manual adjustment')
+        
+        if adjustment_type == 'debit':
+            amount = -abs(amount)
+        else:
+            amount = abs(amount)
+            
+        old_balance = balance.current_balance
+        balance.current_balance += amount
+        balance.save()
+        
+        # Log the adjustment
+        log_activity(
+            user=request.user,
+            action_type=ActivityLogType.UPDATE,
+            description=f"Adjusted balance for {vendor.business_name}: {amount} (Old: {old_balance}, New: {balance.current_balance}). Reason: {reason}",
+            content_object=vendor,
+            request=request,
+            data={
+                'amount': amount,
+                'old_balance': float(old_balance),
+                'new_balance': float(balance.current_balance),
+                'reason': reason,
+                'type': adjustment_type
+            }
+        )
+        
+        messages.success(request, f"Successfully adjusted balance for {vendor.business_name} by {amount}")
+        
+    except (ValueError, TypeError):
+        messages.error(request, "Invalid amount provided for adjustment.")
+    
+    return redirect('admin_panel:vendor_balance', vendor_id=vendor_id)
 
 
 @login_required
@@ -2157,6 +2216,7 @@ def vendor_communication_view(request, vendor_id):
 @staff_required
 def users_management_view(request):
     """User management view with filtering and search."""
+    from users.models import UserRole
     
     search = request.GET.get('search', '')
     role_filter = request.GET.get('role', '')
@@ -2184,18 +2244,13 @@ def users_management_view(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Get Django Groups for dynamic role selection
-    from django.contrib.auth.models import Group
-    groups = Group.objects.all().order_by('name')
-    
     context = {
         'page_obj': page_obj,
         'users': page_obj,
         'search': search,
         'role_filter': role_filter,
         'status_filter': status_filter,
-        'role_choices': User.ROLE_CHOICES if hasattr(User, 'ROLE_CHOICES') else [],
-        'groups': groups,
+        'role_choices': UserRole.choices,
         'total_users': User.objects.count(),
         'active_users': User.objects.filter(is_active=True).count(),
         'per_page': per_page,
@@ -2204,7 +2259,7 @@ def users_management_view(request):
         'preserved_query_params': get_preserved_query_params(request),
     }
     
-    return render(request, './users/users.html', context)
+    return render(request, 'users/users.html', context)
 
 
 @login_required
@@ -2214,6 +2269,7 @@ def add_user_view(request):
     """Add a new user."""
     from django.core.mail import send_mail
     from django.conf import settings
+    from users.models import UserRole
     
     email = request.POST.get('email', '').strip()
     first_name = request.POST.get('first_name', '').strip()
@@ -2237,6 +2293,10 @@ def add_user_view(request):
     
     if User.objects.filter(email=email).exists():
         messages.error(request, 'A user with this email already exists.')
+        return redirect('admin_panel:users')
+
+    if role not in set(UserRole.values):
+        messages.error(request, 'Invalid role selected.')
         return redirect('admin_panel:users')
     
     try:
@@ -2305,9 +2365,14 @@ CarSyncro Team''',
 @staff_required
 def user_detail_view(request, user_id):
     """View user details."""
+    from users.models import UserRole
+
     user = get_object_or_404(User, id=user_id)
-    context = {'user_obj': user}
-    return render(request, './users/user_detail.html', context)
+    context = {
+        'user_obj': user,
+        'role_choices': UserRole.choices,
+    }
+    return render(request, 'users/user_detail.html', context)
 
 
 @login_required
@@ -2353,108 +2418,131 @@ def toggle_user_status_view(request, user_id):
 def roles_permissions_view(request):
     """View and manage roles and permissions."""
     from collections import defaultdict
-    from django.contrib.auth.models import Permission, Group
-    from django.contrib.contenttypes.models import ContentType
+    from django.db.models import Case, When, IntegerField
+    from core.rbac_models import Role, Permission
+    from core.rbac_permissions import create_system_permissions, create_system_roles, assign_role_permissions
+    from users.models import UserRole
 
-    groups = Group.objects.prefetch_related('permissions').order_by('name')
+    if not Permission.objects.exists() or not Role.objects.exists():
+        create_system_permissions()
+        create_system_roles()
+        assign_role_permissions()
 
-    permissions = (
-        Permission.objects.select_related('content_type')
-        .filter(codename__regex=r'^(view|add|change|delete)_')
-        .order_by('content_type__app_label', 'content_type__model', 'codename')
+    allowed_role_names = [label for _, label in UserRole.choices]
+    role_type_by_name = {
+        UserRole.ADMIN.label: 'admin',
+        UserRole.STAFF.label: 'staff',
+        UserRole.SELLER.label: 'custom',
+        UserRole.CLIENT.label: 'custom',
+        UserRole.USER.label: 'custom',
+    }
+    for role_name in allowed_role_names:
+        Role.objects.get_or_create(
+            name=role_name,
+            defaults={
+                'role_type': role_type_by_name.get(role_name, 'custom'),
+                'is_system': False,
+                'is_active': True,
+                'created_by': request.user,
+            },
+        )
+
+    ordering = Case(
+        *[When(name=name, then=pos) for pos, name in enumerate(allowed_role_names)],
+        output_field=IntegerField(),
+    )
+    roles = (
+        Role.objects.prefetch_related('permissions')
+        .filter(is_active=True, name__in=allowed_role_names)
+        .order_by(ordering)
     )
 
-    perms_by_ct = defaultdict(dict)
-    for perm in permissions:
-        action = perm.codename.split('_', 1)[0]
-        if action in {'view', 'add', 'change', 'delete'}:
-            perms_by_ct[perm.content_type_id][action] = perm
-
-    content_types = ContentType.objects.filter(id__in=perms_by_ct.keys()).order_by('app_label', 'model')
-    module_groups = [
-        {'key': 'admin_panel', 'label': 'Admin Panel'},
-        {'key': 'vendors', 'label': 'Vendors'},
-        {'key': 'business-partners', 'label': 'Business Partners'},
-        {'key': 'customer', 'label': 'Customer'},
-        {'key': 'users', 'label': 'Users'},
-        {'key': 'parts', 'label': 'Parts'},
+    module_label_map = dict(Permission._meta.get_field('module').choices)
+    module_order = [
+        'admin',
+        'users',
+        'business_partners',
+        'parts',
+        'inventory',
+        'orders',
+        'analytics',
+        'system',
     ]
-    permission_modules_by_key = {
-        g['key']: {'key': g['key'], 'label': g['label'], 'pages': []}
-        for g in module_groups
-    }
+    action_to_index = {'view': 0, 'create': 1, 'update': 2, 'delete': 3}
 
-    def get_group_key(ct):
-        if ct.app_label == 'admin_panel':
-            return 'admin_panel'
-        if ct.app_label == 'parts':
-            return 'parts'
-        if ct.app_label in {'users', 'auth'}:
-            return 'users'
-        if ct.app_label == 'business_partners':
-            model = ct.model or ''
-            if 'vendor' in model:
-                return 'vendors'
-            if 'customer' in model:
-                return 'customer'
-            return 'business-partners'
-        return None
+    permissions = (
+        Permission.objects.filter(action__in=list(action_to_index.keys()))
+        .order_by('module', 'codename', 'action')
+    )
 
-    for ct in content_types:
-        module_key = get_group_key(ct)
-        if not module_key or module_key not in permission_modules_by_key:
+    pages_by_module = defaultdict(lambda: defaultdict(lambda: [None, None, None, None]))
+
+    def extract_resource_key(perm_codename):
+        right = perm_codename.split('.', 1)[1] if '.' in perm_codename else perm_codename
+        for prefix in ('view_', 'create_', 'update_', 'delete_'):
+            if right.startswith(prefix):
+                return right[len(prefix):]
+        return right
+
+    for perm in permissions:
+        idx = action_to_index.get(perm.action)
+        if idx is None:
             continue
+        resource_key = extract_resource_key(perm.codename)
+        pages_by_module[perm.module][resource_key][idx] = perm
 
-        page_label = ct.model.replace('_', ' ').title()
-        permission_modules_by_key[module_key]['pages'].append({
-            'key': f'{ct.app_label}.{ct.model}',
-            'label': page_label,
-            'perms': [
-                perms_by_ct[ct.id].get('view'),
-                perms_by_ct[ct.id].get('add'),
-                perms_by_ct[ct.id].get('change'),
-                perms_by_ct[ct.id].get('delete'),
-            ],
+    permission_modules = []
+    for module_key in module_order:
+        resources = pages_by_module.get(module_key)
+        if not resources:
+            continue
+        pages = []
+        for resource_key, perms in resources.items():
+            pages.append({
+                'key': f'{module_key}.{resource_key}',
+                'label': resource_key.replace('_', ' ').title(),
+                'perms': perms,
+            })
+        pages.sort(key=lambda p: p['label'])
+        permission_modules.append({
+            'key': module_key,
+            'label': module_label_map.get(module_key, module_key.replace('_', ' ').title()),
+            'pages': pages,
         })
 
-    permission_modules = [
-        permission_modules_by_key[g['key']]
-        for g in module_groups
-        if permission_modules_by_key[g['key']]['pages']
-    ]
-
-    selected_group = groups.first()
+    selected_role = roles.first()
     current_permissions = set()
-    if selected_group:
-        current_permissions = set(selected_group.permissions.values_list('id', flat=True))
+    if selected_role:
+        current_permissions = set(selected_role.permissions.values_list('id', flat=True))
 
     context = {
-        'groups': groups,
+        'groups': roles,
         'permission_modules': permission_modules,
         'current_permissions': current_permissions,
-        'selected_group_id': selected_group.id if selected_group else None,
+        'selected_group_id': selected_role.id if selected_role else None,
+        'allow_custom_roles': False,
     }
 
-    return render(request, './roles/permissions.html', context)
+    return render(request, 'roles/permissions.html', context)
 
 
 @login_required
 @staff_required
 @require_POST
 def add_role_view(request):
-    """Add a new role (Django Group)."""
-    from django.contrib.auth.models import Group
-    
+    """Add a new RBAC role."""
+    from core.rbac_models import Role
+
     name = request.POST.get('name', '').strip()
     
     if not name:
         return JsonResponse({'success': False, 'message': 'Role name is required.'})
     
-    if Group.objects.filter(name__iexact=name).exists():
+    if Role.objects.filter(name__iexact=name).exists():
         return JsonResponse({'success': False, 'message': 'A role with this name already exists.'})
     
     try:
-        group = Group.objects.create(name=name)
+        role = Role.objects.create(name=name, role_type='custom', created_by=request.user)
         
         # Log activity
         ActivityLog.objects.create(
@@ -2463,7 +2551,7 @@ def add_role_view(request):
             description=f'Created new role: {name}'
         )
         
-        return JsonResponse({'success': True, 'message': f'Role "{name}" created successfully.', 'role_id': group.id})
+        return JsonResponse({'success': True, 'message': f'Role "{name}" created successfully.', 'role_id': role.id})
     
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
@@ -2473,24 +2561,26 @@ def add_role_view(request):
 @staff_required
 @require_POST
 def update_role_view(request, role_id):
-    """Update a role (Django Group) name."""
-    from django.contrib.auth.models import Group
-    
+    """Update an RBAC role name."""
+    from core.rbac_models import Role
+
     name = request.POST.get('name', '').strip()
     
     if not name:
         return JsonResponse({'success': False, 'message': 'Role name is required.'})
     
     try:
-        group = get_object_or_404(Group, id=role_id)
-        old_name = group.name
+        role = get_object_or_404(Role, id=role_id)
+        if role.is_system:
+            return JsonResponse({'success': False, 'message': 'System roles cannot be renamed.'})
+        old_name = role.name
         
-        # Check if another group with this name exists
-        if Group.objects.filter(name__iexact=name).exclude(id=role_id).exists():
+        # Check if another role with this name exists
+        if Role.objects.filter(name__iexact=name).exclude(id=role_id).exists():
             return JsonResponse({'success': False, 'message': 'A role with this name already exists.'})
         
-        group.name = name
-        group.save()
+        role.name = name
+        role.save()
         
         # Log activity
         ActivityLog.objects.create(
@@ -2509,15 +2599,16 @@ def update_role_view(request, role_id):
 @staff_required
 @require_POST
 def delete_role_view(request, role_id):
-    """Delete a role (Django Group)."""
-    from django.contrib.auth.models import Group
-    
+    """Delete an RBAC role."""
+    from core.rbac_models import Role
+
     try:
-        group = get_object_or_404(Group, id=role_id)
-        role_name = group.name
+        role = get_object_or_404(Role, id=role_id)
+        if role.is_system:
+            return JsonResponse({'success': False, 'message': 'System roles cannot be deleted.'})
+        role_name = role.name
         
-        # Delete the group
-        group.delete()
+        role.delete()
         
         # Log activity
         ActivityLog.objects.create(
@@ -2537,20 +2628,22 @@ def delete_role_view(request, role_id):
 @require_POST
 def update_role_permissions_view(request):
     """Update role permissions."""
-    from django.contrib.auth.models import Group
+    from core.rbac_models import Role
     
     try:
         data = json.loads(request.body)
         group_id = data.get('group_id')
         permission_ids = data.get('permissions', [])
         
-        group = get_object_or_404(Group, id=group_id)
-        group.permissions.set(permission_ids)
+        role = get_object_or_404(Role, id=group_id)
+        if role.is_system:
+            return JsonResponse({'success': False, 'message': 'System role permissions cannot be changed.'})
+        role.permissions.set(permission_ids)
 
         ActivityLog.objects.create(
             user=request.user,
             action_type=ActivityLogType.UPDATE,
-            description=f'Updated permissions for role: {group.name}'
+            description=f'Updated permissions for role: {role.name}'
         )
         
         return JsonResponse({'success': True, 'message': 'Permissions updated successfully'})
@@ -2561,11 +2654,11 @@ def update_role_permissions_view(request):
 @login_required
 @staff_required
 def get_role_permissions_view(request, role_id):
-    from django.contrib.auth.models import Group
+    from core.rbac_models import Role
 
-    group = get_object_or_404(Group, id=role_id)
-    permission_ids = list(group.permissions.values_list('id', flat=True))
-    return JsonResponse({'success': True, 'group_id': group.id, 'permissions': permission_ids})
+    role = get_object_or_404(Role, id=role_id)
+    permission_ids = list(role.permissions.values_list('id', flat=True))
+    return JsonResponse({'success': True, 'group_id': role.id, 'permissions': permission_ids})
 
 
 # ==================== PARTS MANAGEMENT VIEWS ====================
@@ -2974,113 +3067,540 @@ def update_order_status_view(request, order_id):
     return redirect('admin_panel:order_detail', order_id=order_id)
 
 
-# ==================== INVENTORY MANAGEMENT VIEWS ====================
+def _normalize_catalog_part(value: str) -> str:
+    return "".join(ch for ch in (value or "").strip().upper() if ch.isalnum())
+
+
+def _build_catalog_part_number(category, make: str, model: str | None, year: int | None) -> str:
+    import uuid
+
+    cat = _normalize_catalog_part(getattr(category, "name", ""))[:10] if category else "CAT"
+    mk = _normalize_catalog_part(make)[:10] or "MAKE"
+    mdl = _normalize_catalog_part(model or "")[:10] or "MODEL"
+    yr = str(year) if year else "NA"
+    suffix = uuid.uuid4().hex[:6].upper()
+    return f"{cat}-{yr}-{mk}-{mdl}-{suffix}"[:100]
+
+
+def _build_catalog_description(category, make: str, model: str | None, year: int | None, trim: str | None, engine: str | None) -> str:
+    cat = getattr(category, "name", None) or "Catalog item"
+    vehicle_parts = [make, (model or "").strip()]
+    vehicle = " ".join([p for p in vehicle_parts if p]).strip()
+    if year:
+        vehicle = f"{vehicle} ({year})" if vehicle else f"({year})"
+    base = f"{cat} for {vehicle or make}"
+    extra = []
+    if trim:
+        extra.append(f"Trim: {trim}")
+    if engine:
+        extra.append(f"Engine: {engine}")
+    if extra:
+        return f"{base}\n" + "\n".join(extra)
+    return base
+
 
 @login_required
 @staff_required
-def inventory_management_view(request):
-    """Inventory management with stock levels."""
-    from parts.models import Inventory, Part
-    
-    search = request.GET.get('search', '')
-    status_filter = request.GET.get('status', '')
-    
-    inventory = Inventory.objects.select_related('part', 'part__category').all()
-    
-    if search:
-        inventory = inventory.filter(
-            Q(part__name__icontains=search) |
-            Q(part__parts_number__icontains=search) |
-            Q(part__sku__icontains=search)
-        )
-    
-    if status_filter == 'low':
-        inventory = inventory.filter(stock__lte=models.F('reorder_level'))
-    elif status_filter == 'out':
-        inventory = inventory.filter(stock=0)
-    elif status_filter == 'in_stock':
-        inventory = inventory.filter(stock__gt=models.F('reorder_level'))
-    
-    inventory = inventory.order_by('stock')
-    
-    per_page = get_per_page_param(request, 25)
-    paginator = Paginator(inventory, per_page)
-    page_number = request.GET.get('page')
+def catalog_list_view(request):
+    from business_partners.catalog_models import CatalogItem
+
+    catalog_items = (
+        CatalogItem.objects.select_related("category", "vendor")
+        .prefetch_related("images")
+        .order_by("-created_at")
+    )
+
+    paginator = Paginator(catalog_items, 10)
+    page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
-    
-    # Statistics
-    inventory_stats = {
-        'total_items': Inventory.objects.count(),
-        'low_stock': Inventory.objects.filter(stock__lte=models.F('reorder_level')).count(),
-        'out_of_stock': Inventory.objects.filter(stock=0).count(),
-        'total_stock_value': 0,  # Calculate if needed
-    }
-    
+
     context = {
-        'page_obj': page_obj,
-        'inventory': page_obj,
-        'inventory_stats': inventory_stats,
-        'search': search,
-        'status_filter': status_filter,
-        'per_page': per_page,
-        'per_page_options': PER_PAGE_OPTIONS,
-        'query_string': get_pagination_query_string(request),
-        'preserved_query_params': get_preserved_query_params(request),
+        "catalog_items": page_obj,
+        "page_obj": page_obj,
+        "total_items": catalog_items.count(),
     }
-    
-    return render(request, './catalog/inventory.html', context)
+    return render(request, "catalog/catalog_list.html", context)
 
 
 @login_required
 @staff_required
-@require_POST
-def update_inventory_view(request, inventory_id):
-    """Update inventory stock."""
-    from parts.models import Inventory
-    inventory = get_object_or_404(Inventory, id=inventory_id)
-    
-    if request.POST.get('stock'):
-        inventory.stock = int(request.POST.get('stock'))
-    if request.POST.get('reorder_level'):
-        inventory.reorder_level = int(request.POST.get('reorder_level'))
-    
-    inventory.save()
-    messages.success(request, 'Inventory updated successfully.')
-    return redirect('admin_panel:inventory')
+def catalog_detail_view(request, pk):
+    from business_partners.catalog_models import CatalogItem
+
+    catalog_item = get_object_or_404(
+        CatalogItem.objects.select_related("category", "vendor").prefetch_related("images"),
+        pk=pk,
+    )
+    return render(request, "catalog/catalog_detail.html", {"catalog_item": catalog_item})
+
+
+@login_required
+@staff_required
+def catalog_add_view(request):
+    from business_partners.catalog_models import CatalogItem
+    from parts.models import Category
+    from business_partners.models import BusinessPartner
+    from parts.models import Brand
+
+    if request.method == "POST":
+        category_value = (request.POST.get("category") or "").strip()
+        make = request.POST.get("make", "").strip()
+        model = request.POST.get("model", "").strip() or None
+        year = request.POST.get("year", "").strip()
+        trim = request.POST.get("trim", "").strip() or None
+        engine = request.POST.get("engine", "").strip() or None
+
+        errors = []
+
+        vendor = (
+            BusinessPartner.objects.filter(roles__role_type="vendor")
+            .distinct()
+            .order_by("id")
+            .first()
+        )
+        if not vendor:
+            errors.append("At least one vendor must exist to add catalog items.")
+
+        category = None
+        if not category_value:
+            errors.append("Category is required.")
+        else:
+            try:
+                category_id = int(category_value)
+                category = Category.objects.get(pk=category_id)
+            except (TypeError, ValueError):
+                category, _ = Category.objects.get_or_create(name=category_value)
+            except Category.DoesNotExist:
+                category, _ = Category.objects.get_or_create(name=category_value)
+
+        if make:
+            existing_make = Brand.objects.filter(name__iexact=make, is_active=True).first()
+            if not existing_make:
+                errors.append("Please select a valid Make from the master list.")
+            else:
+                make = existing_make.name
+        else:
+            make = "-"
+
+        year_value = None
+        if year:
+            try:
+                year_int = int(year)
+                if year_int < 1900 or year_int > 2100:
+                    errors.append("Please enter a valid year.")
+                else:
+                    year_value = year_int
+            except ValueError:
+                errors.append("Year must be a number.")
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        else:
+            catalog_item = CatalogItem.objects.create(
+                vendor=vendor,
+                category=category,
+                make=make,
+                model=model,
+                year=year_value,
+                trim=trim,
+                engine=engine,
+                part_number=_build_catalog_part_number(category, make, model, year_value),
+                description=_build_catalog_description(category, make, model, year_value, trim, engine),
+            )
+            messages.success(request, f'Catalog item "{catalog_item.part_number}" has been added successfully.')
+            return redirect("admin_panel:catalog_management")
+
+    current_year = timezone.now().year
+    context = {
+        "current_year": current_year,
+        "year_range": range(current_year, 1979, -1),
+        "categories": Category.objects.all().order_by("name"),
+        "makes": Brand.objects.filter(is_active=True).order_by("name"),
+    }
+    return render(request, "catalog/catalog_add.html", context)
+
+
+@login_required
+@staff_required
+def catalog_edit_view(request, pk):
+    from business_partners.catalog_models import CatalogItem
+    from parts.models import Category
+    from parts.models import Brand
+
+    catalog_item = get_object_or_404(
+        CatalogItem.objects.select_related("category", "vendor").prefetch_related("images"),
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        category_value = (request.POST.get("category") or "").strip()
+        make = request.POST.get("make", "").strip()
+        model = request.POST.get("model", "").strip() or None
+        year = request.POST.get("year", "").strip()
+        trim = request.POST.get("trim", "").strip() or None
+        engine = request.POST.get("engine", "").strip() or None
+
+        errors = []
+
+        category = None
+        if not category_value:
+            errors.append("Category is required.")
+        else:
+            try:
+                category_id = int(category_value)
+                category = Category.objects.get(pk=category_id)
+            except (TypeError, ValueError):
+                category, _ = Category.objects.get_or_create(name=category_value)
+            except Category.DoesNotExist:
+                errors.append("Please select a valid category.")
+
+        if not make:
+            errors.append("Make is required.")
+        else:
+            existing_make = Brand.objects.filter(name__iexact=make, is_active=True).first()
+            if not existing_make:
+                errors.append("Please select a valid Make from the master list.")
+            else:
+                make = existing_make.name
+
+        year_value = None
+        if year:
+            try:
+                year_int = int(year)
+                if year_int < 1900 or year_int > 2100:
+                    errors.append("Please enter a valid year.")
+                else:
+                    year_value = year_int
+            except ValueError:
+                errors.append("Year must be a number.")
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        else:
+            catalog_item.category = category
+            catalog_item.make = make
+            catalog_item.model = model
+            catalog_item.year = year_value
+            catalog_item.trim = trim
+            catalog_item.engine = engine
+            catalog_item.part_number = _build_catalog_part_number(category, make, model, year_value)
+            catalog_item.description = _build_catalog_description(category, make, model, year_value, trim, engine)
+            catalog_item.save()
+
+            messages.success(request, "Catalog item has been updated successfully.")
+            return redirect("admin_panel:catalog_detail", pk=catalog_item.pk)
+
+    current_year = timezone.now().year
+    context = {
+        "catalog_item": catalog_item,
+        "current_year": current_year,
+        "year_range": range(current_year, 1979, -1),
+        "categories": Category.objects.all().order_by("name"),
+        "makes": Brand.objects.filter(is_active=True).order_by("name"),
+    }
+    return render(request, "catalog/catalog_edit.html", context)
 
 
 @login_required
 @staff_required
 @require_http_methods(["POST"])
-def inventory_bulk_status_update_view(request):
-    from parts.models import Part
+def catalog_delete_view(request, pk):
+    from business_partners.catalog_models import CatalogItem
 
-    new_status = request.POST.get('status')
-    part_ids = request.POST.getlist('part_ids')
+    catalog_item = get_object_or_404(CatalogItem, pk=pk)
+    part_number = catalog_item.part_number
+    catalog_item.delete()
+    messages.success(request, f'Catalog item "{part_number}" has been deleted.')
+    return redirect("admin_panel:catalog_management")
 
-    if new_status not in ['draft', 'published', 'archived']:
-        messages.error(request, 'Invalid status.')
-        return redirect(
-            request.POST.get('next')
-            or request.META.get('HTTP_REFERER')
-            or reverse('admin_panel:inventory')
+
+@login_required
+@staff_required
+def catalog_management_view(request):
+    from business_partners.catalog_models import CatalogItem
+    from parts.models import Category
+    from parts.models import Brand
+
+    catalog_queryset = CatalogItem.objects.select_related("category", "vendor").prefetch_related("images")
+
+    search_query = request.GET.get("search", "")
+    if search_query:
+        catalog_queryset = catalog_queryset.filter(
+            Q(part_number__icontains=search_query)
+            | Q(description__icontains=search_query)
+            | Q(category__name__icontains=search_query)
+            | Q(make__icontains=search_query)
+            | Q(model__icontains=search_query)
+            | Q(trim__icontains=search_query)
+            | Q(engine__icontains=search_query)
+            | Q(vendor__name__icontains=search_query)
         )
 
-    if not part_ids:
-        messages.error(request, 'No parts selected.')
-        return redirect(
-            request.POST.get('next')
-            or request.META.get('HTTP_REFERER')
-            or reverse('admin_panel:inventory')
-        )
+    category_filter = request.GET.get("category", "").strip()
+    if category_filter:
+        try:
+            catalog_queryset = catalog_queryset.filter(category_id=int(category_filter))
+        except ValueError:
+            pass
 
-    updated_count = Part.objects.filter(id__in=part_ids).update(status=new_status)
-    messages.success(request, f'Updated status to {new_status} for {updated_count} parts.')
-    return redirect(
-        request.POST.get('next')
-        or request.META.get('HTTP_REFERER')
-        or reverse('admin_panel:inventory')
+    make_filter = request.GET.get("make", "").strip()
+    if make_filter:
+        catalog_queryset = catalog_queryset.filter(make__iexact=make_filter)
+
+    model_filter = request.GET.get("model", "").strip()
+    if model_filter:
+        catalog_queryset = catalog_queryset.filter(model__iexact=model_filter)
+
+    year_filter = request.GET.get("year", "").strip()
+    if year_filter:
+        try:
+            catalog_queryset = catalog_queryset.filter(year=int(year_filter))
+        except ValueError:
+            pass
+
+    catalog_queryset = catalog_queryset.order_by("-created_at")
+
+    paginator = Paginator(catalog_queryset, 25)
+    page_number = request.GET.get("page")
+    catalog_items = paginator.get_page(page_number)
+
+    base_queryset = CatalogItem.objects.select_related("category")
+    master_makes = list(Brand.objects.filter(is_active=True).values_list("name", flat=True).order_by("name"))
+    catalog_makes = list(
+        base_queryset.exclude(make__isnull=True).exclude(make__exact="").values_list("make", flat=True).distinct()
     )
+    makes = sorted(set(master_makes) | set(catalog_makes), key=lambda s: s.lower())
+    models = (
+        base_queryset.filter(make__iexact=make_filter)
+        .exclude(model__isnull=True)
+        .values_list("model", flat=True)
+        .distinct()
+        .order_by("model")
+        if make_filter
+        else base_queryset.exclude(model__isnull=True).values_list("model", flat=True).distinct().order_by("model")
+    )
+    years = (
+        base_queryset.filter(make__iexact=make_filter, model__iexact=model_filter)
+        .exclude(year__isnull=True)
+        .values_list("year", flat=True)
+        .distinct()
+        .order_by("-year")
+        if make_filter and model_filter
+        else base_queryset.exclude(year__isnull=True).values_list("year", flat=True).distinct().order_by("-year")
+    )
+
+    total_items = catalog_queryset.count()
+    categories = Category.objects.filter(vendor_catalog_items__isnull=False).distinct().order_by("name")
+    category_count = base_queryset.exclude(category__isnull=True).values("category").distinct().count()
+    make_count = base_queryset.exclude(make__isnull=True).values("make").distinct().count()
+    model_count = base_queryset.exclude(model__isnull=True).values("model").distinct().count()
+    year_count = base_queryset.exclude(year__isnull=True).values("year").distinct().count()
+
+    context = {
+        "catalog_items": catalog_items,
+        "parts": catalog_items,
+        "total_items": total_items,
+        "total_parts": total_items,
+        "total_skus": total_items,
+        "categories": categories,
+        "category_count": category_count,
+        "make_count": make_count,
+        "model_count": model_count,
+        "year_count": year_count,
+        "makes": makes,
+        "models": models,
+        "years": years,
+        "search_query": search_query,
+        "category_filter": category_filter,
+        "make_filter": make_filter,
+        "model_filter": model_filter,
+        "year_filter": year_filter,
+    }
+    return render(request, "catalog/catalog_management.html", context)
+
+
+@login_required
+@staff_required
+def catalog_inventory_view(request):
+    from parts.models import Part
+    from business_partners.models import BusinessPartner
+    from django.db.models import Count, Sum
+    from django.db.models import F
+    from django.db.models.functions import Coalesce
+
+    inventory_queryset = Part.objects.filter(vendor__isnull=False).select_related(
+        "vendor", "category", "brand", "inventory"
+    )
+
+    vendor_filter = (request.GET.get("vendor") or "").strip()
+    if vendor_filter:
+        try:
+            inventory_queryset = inventory_queryset.filter(vendor_id=int(vendor_filter))
+        except ValueError:
+            inventory_queryset = inventory_queryset.none()
+
+    search_query = (request.GET.get("search") or "").strip()
+    if search_query:
+        inventory_queryset = inventory_queryset.filter(
+            Q(parts_number__icontains=search_query)
+            | Q(material_description__icontains=search_query)
+            | Q(manufacturer_part_number__icontains=search_query)
+            | Q(category__name__icontains=search_query)
+            | Q(vendor__name__icontains=search_query)
+        )
+
+    vendor_queryset = (
+        BusinessPartner.objects
+        .filter(vendor_parts__isnull=False)
+        .annotate(
+            inventory_count=Count("vendor_parts", distinct=True),
+            stock_units=Coalesce(
+                Sum("vendor_parts__quantity"),
+                0
+            ),
+        )
+        .order_by("name")
+    )
+
+    total_vendors = vendor_queryset.count()
+    total_inventory_items = Part.objects.filter(vendor__isnull=False).count()
+    total_stock_units = (
+                            Part.objects
+                            .filter(vendor__isnull=False)
+                            .aggregate(total=Sum("quantity"))
+                        )["total"] or 0
+
+    filtered_stock_units = inventory_queryset.aggregate(
+        total=Sum(Coalesce(F("inventory__stock"), F("quantity")))
+    )["total"] or 0
+
+    inventory_queryset = inventory_queryset.order_by("-created_at")
+
+    per_page = get_per_page_param(request, 25)
+    paginator = Paginator(inventory_queryset, per_page)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "inventory_items": page_obj,
+        "search_query": search_query,
+        "page_obj": page_obj,
+        "per_page": per_page,
+        "per_page_options": PER_PAGE_OPTIONS,
+        "query_string": get_pagination_query_string(request),
+        "preserved_query_params": get_preserved_query_params(request),
+        "total_inventory_items": inventory_queryset.count(),
+        "filtered_stock_units": filtered_stock_units,
+        "vendors": vendor_queryset,
+        "vendor_filter": vendor_filter,
+        "cards": {
+            "total_vendors": total_vendors,
+            "total_inventory_items": total_inventory_items,
+            "total_stock_units": total_stock_units,
+        },
+    }
+    return render(request, "catalog/inventory.html", context)
+
+
+@login_required
+@staff_required
+def catalog_categories_view(request):
+    from parts.models import Category
+
+    categories = (
+        Category.objects.annotate(
+            parts_count=Count("vendor_catalog_items", distinct=True),
+            subcategories_count=models.Value(0, output_field=models.IntegerField()),
+        )
+        .order_by("name")
+    )
+    return render(request, "catalog/catalog_categories.html", {"categories": categories})
+
+
+@login_required
+@staff_required
+def catalog_makes_view(request):
+    from parts.models import Brand
+
+    makes = Brand.objects.all().order_by("name")
+    return render(request, "catalog/catalog_makes.html", {"makes": makes})
+
+
+@login_required
+@staff_required
+def catalog_make_add_view(request):
+    from parts.models import Brand
+
+    if request.method == "POST":
+        name = (request.POST.get("name") or "").strip()
+        description = (request.POST.get("description") or "").strip() or None
+        website = (request.POST.get("website") or "").strip() or None
+        is_active = request.POST.get("is_active") == "on"
+        logo = request.FILES.get("logo")
+
+        if not name:
+            messages.error(request, "Make name is required.")
+        else:
+            if Brand.objects.filter(name__iexact=name).exists():
+                messages.error(request, "This make already exists.")
+            else:
+                make = Brand(name=name, description=description, website=website, is_active=is_active)
+                if logo:
+                    make.logo = logo
+                make.save()
+                messages.success(request, "Make has been created successfully.")
+                return redirect("admin_panel:catalog_makes")
+
+    return render(request, "catalog/catalog_make_add.html")
+
+
+@login_required
+@staff_required
+def catalog_make_edit_view(request, pk):
+    from parts.models import Brand
+
+    make_obj = get_object_or_404(Brand, pk=pk)
+
+    if request.method == "POST":
+        name = (request.POST.get("name") or "").strip()
+        description = (request.POST.get("description") or "").strip() or None
+        website = (request.POST.get("website") or "").strip() or None
+        is_active = request.POST.get("is_active") == "on"
+        logo = request.FILES.get("logo")
+
+        if not name:
+            messages.error(request, "Make name is required.")
+        else:
+            duplicate = Brand.objects.filter(name__iexact=name).exclude(pk=make_obj.pk).exists()
+            if duplicate:
+                messages.error(request, "This make already exists.")
+            else:
+                make_obj.name = name
+                make_obj.description = description
+                make_obj.website = website
+                make_obj.is_active = is_active
+                if logo:
+                    make_obj.logo = logo
+                make_obj.save()
+                messages.success(request, "Make has been updated successfully.")
+                return redirect("admin_panel:catalog_makes")
+
+    return render(request, "catalog/catalog_make_edit.html", {"make": make_obj})
+
+
+@login_required
+@staff_required
+@require_http_methods(["POST"])
+def catalog_make_delete_view(request, pk):
+    from parts.models import Brand
+
+    make_obj = get_object_or_404(Brand, pk=pk)
+    make_obj.is_active = False
+    make_obj.save(update_fields=["is_active"])
+    messages.success(request, "Make has been deactivated.")
+    return redirect("admin_panel:catalog_makes")
 
 
 # ==================== REVIEWS MANAGEMENT VIEWS ====================
@@ -3183,48 +3703,24 @@ def bulk_upload_template_view(request):
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow([
-        "Part Number",
-        "Material Description",
         "Category",
-        "Brand",
-        "Price",
-        "Base Unit",
-        "Quantity",
-        "Safety Stock",
-        "Reorder Point",
-        "Active",
-        "Featured",
-        "Gross Weight",
-        "Net Weight",
-        "Dimensions",
-        "Arabic Description",
-        "Manufacturer Part Number",
-        "OEM Number",
-        "Image URL",
+        "Year",
+        "Make",
+        "Model",
+        "Trim",
+        "Engine",
     ])
     writer.writerow([
-        "PN-001",
-        "Oil Filter",
         "Engine Parts",
+        "2020",
         "Toyota",
-        "25.00",
-        "EA",
-        "10",
-        "2.000",
-        "5.000",
-        "true",
-        "false",
-        "0.500",
-        "0.450",
-        "10x10x10",
-        "فلتر زيت",
-        "MFG-12345",
-        "OEM-98765",
-        "https://example.com/image.jpg",
+        "Camry",
+        "SE",
+        "2.5L",
     ])
 
     response = HttpResponse(output.getvalue(), content_type="text/csv")
-    response["Content-Disposition"] = 'attachment; filename="parts_bulk_upload_template.csv"'
+    response["Content-Disposition"] = 'attachment; filename="catalog_bulk_upload_template.csv"'
     return response
 
 
@@ -3232,336 +3728,32 @@ def bulk_upload_template_view(request):
 @staff_required
 @require_POST
 def process_bulk_upload_view(request):
-    """Process a bulk upload file."""
-    import csv
-    import io
-    from decimal import Decimal, InvalidOperation
-    from django.db import transaction
-
-    from parts.models import BulkUploadLog, Part, Category, Brand, Inventory
+    from django.core.files.storage import default_storage
+    from parts.models import BulkUploadLog
+    from parts.tasks import process_catalog_bulk_upload_file, process_catalog_parts_import
     
     if 'file' not in request.FILES:
         messages.error(request, 'No file provided.')
         return redirect('admin_panel:bulk_upload')
     
     uploaded_file = request.FILES['file']
-    
-    # Create upload log
+
+    processing_mode = 'sync'
+
     upload_log = BulkUploadLog.objects.create(
         user=request.user,
         file_name=uploaded_file.name,
         file_size=uploaded_file.size,
-        status='processing'
+        status='processing',
+        processing_mode='sync',
     )
 
-    def normalize_header(value):
-        value = (value or "").strip().lower()
-        return "".join(ch for ch in value if ch.isalnum())
-
-    header_map = {
-        "partnumber": "parts_number",
-        "partsnumber": "parts_number",
-        "partno": "parts_number",
-        "partsno": "parts_number",
-        "materialdescription": "material_description",
-        "namedescription": "material_description",
-        "name": "material_description",
-        "description": "material_description",
-        "category": "category",
-        "price": "price",
-        "unitprice": "price",
-        "quantity": "quantity",
-        "qty": "quantity",
-        "stock": "quantity",
-        "brandmake": "brand",
-        "brand": "brand",
-        "make": "brand",
-        "baseunit": "base_unit_of_measure",
-        "baseunitofmeasure": "base_unit_of_measure",
-        "safetystock": "safety_stock",
-        "reorderpoint": "reorder_point",
-        "active": "is_active",
-        "featured": "is_featured",
-        "grossweight": "gross_weight",
-        "netweight": "net_weight",
-        "dimensions": "dimensions",
-        "sizedimensions": "dimensions",
-        "arabicdescription": "material_description_ar",
-        "materialdescriptionarabic": "material_description_ar",
-        "manufacturerpartnumber": "manufacturer_part_number",
-        "oemnumber": "manufacturer_oem_number",
-        "oem": "manufacturer_oem_number",
-        "imageurl": "image_url",
-    }
-
-    required_fields = [
-        "parts_number",
-        "material_description",
-        "category",
-        "brand",
-        "price",
-        "base_unit_of_measure",
-        "quantity",
-        "safety_stock",
-        "reorder_point",
-        "is_active",
-        "is_featured",
-        "gross_weight",
-        "net_weight",
-        "dimensions",
-        "material_description_ar",
-        "manufacturer_part_number",
-        "manufacturer_oem_number",
-        "image_url",
-    ]
-
-    def build_row_dict(headers, values):
-        row = {}
-        for idx, header in enumerate(headers):
-            key = header_map.get(normalize_header(header))
-            if not key:
-                continue
-            row[key] = "" if idx >= len(values) or values[idx] is None else str(values[idx]).strip()
-        return row
-
-    def process_rows(headers, row_values_iter):
-        header_keys = {}
-        for header in headers:
-            normalized = normalize_header(header)
-            canonical = header_map.get(normalized)
-            if canonical and canonical not in header_keys:
-                header_keys[canonical] = header
-
-        missing = [field for field in required_fields if field not in header_keys]
-        if missing:
-            raise ValueError(f"Missing required columns: {', '.join(missing)}")
-
-        def parse_bool(value, default):
-            text = ("" if value is None else str(value)).strip().lower()
-            if text == "":
-                return default
-            if text in {"1", "true", "t", "yes", "y"}:
-                return True
-            if text in {"0", "false", "f", "no", "n"}:
-                return False
-            return default
-
-        def parse_decimal(value):
-            text = ("" if value is None else str(value)).strip()
-            if text == "":
-                return None
-            return Decimal(text)
-
-        total_records = 0
-        parsed_rows = []
-        errors = []
-
-        for row_index, values in enumerate(row_values_iter, start=2):
-            if not any(v is not None and str(v).strip() for v in values):
-                continue
-
-            total_records += 1
-            row = build_row_dict(headers, values)
-
-            parts_number = row.get("parts_number", "").strip()
-            material_description = row.get("material_description", "").strip()
-            category_name = row.get("category", "").strip()
-            brand_name = row.get("brand", "").strip()
-            price_str = row.get("price", "").strip()
-            quantity_str = row.get("quantity", "").strip()
-            base_unit = row.get("base_unit_of_measure", "").strip() or "EA"
-            safety_stock_str = row.get("safety_stock", "").strip()
-            reorder_point_str = row.get("reorder_point", "").strip()
-            is_active_str = row.get("is_active", "").strip()
-            is_featured_str = row.get("is_featured", "").strip()
-            gross_weight_str = row.get("gross_weight", "").strip()
-            net_weight_str = row.get("net_weight", "").strip()
-            dimensions_value = row.get("dimensions", "").strip()
-            material_description_ar = row.get("material_description_ar", "").strip()
-            manufacturer_part_number = row.get("manufacturer_part_number", "").strip()
-            manufacturer_oem_number = row.get("manufacturer_oem_number", "").strip()
-            image_url = row.get("image_url", "").strip()
-
-            if not all([parts_number, material_description, category_name, brand_name, price_str, quantity_str]):
-                errors.append(f"Row {row_index}: Missing required values")
-                continue
-
-            try:
-                price = Decimal(price_str)
-                quantity = int(Decimal(quantity_str))
-                if quantity < 0:
-                    raise ValueError("Quantity must be non-negative")
-                safety_stock = parse_decimal(safety_stock_str)
-                reorder_point = parse_decimal(reorder_point_str)
-                gross_weight = parse_decimal(gross_weight_str)
-                net_weight = parse_decimal(net_weight_str)
-                is_active = parse_bool(is_active_str, True)
-                is_featured = parse_bool(is_featured_str, False)
-            except (InvalidOperation, ValueError):
-                errors.append(f"Row {row_index}: Invalid price/quantity")
-                continue
-
-            parsed_rows.append({
-                "row_index": row_index,
-                "parts_number": parts_number,
-                "material_description": material_description,
-                "material_description_ar": material_description_ar or None,
-                "category_name": category_name,
-                "brand_name": brand_name,
-                "price": price,
-                "base_unit": base_unit,
-                "quantity": quantity,
-                "safety_stock": safety_stock,
-                "reorder_point": reorder_point,
-                "is_active": is_active,
-                "is_featured": is_featured,
-                "gross_weight": gross_weight,
-                "net_weight": net_weight,
-                "dimensions_value": dimensions_value or None,
-                "manufacturer_part_number": manufacturer_part_number or None,
-                "manufacturer_oem_number": manufacturer_oem_number or None,
-                "image_url": image_url or None,
-            })
-
-        def normalize_name(value):
-            text = (value or "").strip().lower()
-            text = text.replace("\u00a0", " ").replace("\u200b", "")
-            text = " ".join(text.split())
-            return "".join(ch for ch in text if ch.isalnum())
-
-        existing_categories = {
-            normalize_name(obj.name): obj
-            for obj in Category.objects.all()
-        }
-        existing_brands = {
-            normalize_name(obj.name): obj
-            for obj in Brand.objects.filter(is_active=True)
-        }
-
-        category_lookup = {}
-        for name in {r["category_name"] for r in parsed_rows}:
-            key = normalize_name(name)
-            category = existing_categories.get(key)
-            if not category:
-                errors.append(f"Category not found: {name}")
-            else:
-                category_lookup[key] = category
-
-        brand_lookup = {}
-        for name in {r["brand_name"] for r in parsed_rows}:
-            key = normalize_name(name)
-            brand = existing_brands.get(key)
-            if not brand:
-                errors.append(f"Brand not found: {name}")
-            else:
-                brand_lookup[key] = brand
-
-        if errors:
-            return total_records, 0, total_records, errors
-
-        with transaction.atomic():
-            for row in parsed_rows:
-                row_index = row["row_index"]
-                category = category_lookup[normalize_name(row["category_name"])]
-                brand = brand_lookup[normalize_name(row["brand_name"])]
-
-                try:
-                    part = Part.objects.filter(parts_number=row["parts_number"], vendor__isnull=True).first()
-
-                    if part:
-                        part.material_description = row["material_description"]
-                        part.category = category
-                        part.brand = brand
-                        part.price = row["price"]
-                        part.quantity = row["quantity"]
-                        part.base_unit_of_measure = row["base_unit"]
-                        part.safety_stock = row["safety_stock"]
-                        part.reorder_point = row["reorder_point"]
-                        part.is_active = row["is_active"]
-                        part.is_featured = row["is_featured"]
-                        part.gross_weight = row["gross_weight"]
-                        part.net_weight = row["net_weight"]
-                        part.material_description_ar = row["material_description_ar"]
-                        part.manufacturer_part_number = row["manufacturer_part_number"]
-                        part.manufacturer_oem_number = row["manufacturer_oem_number"]
-                        part.image_url = row["image_url"]
-                        if row["dimensions_value"]:
-                            part.size_dimensions = row["dimensions_value"]
-                            part.dimensions = row["dimensions_value"]
-                        part.original_currency = (part.original_currency or "USD").upper()
-                        part.save()
-                    else:
-                        part = Part.objects.create(
-                            parts_number=row["parts_number"],
-                            material_description=row["material_description"],
-                            material_description_ar=row["material_description_ar"],
-                            base_unit_of_measure=row["base_unit"],
-                            safety_stock=row["safety_stock"],
-                            reorder_point=row["reorder_point"],
-                            gross_weight=row["gross_weight"],
-                            net_weight=row["net_weight"],
-                            size_dimensions=row["dimensions_value"],
-                            dimensions=row["dimensions_value"],
-                            manufacturer_part_number=row["manufacturer_part_number"],
-                            manufacturer_oem_number=row["manufacturer_oem_number"],
-                            image_url=row["image_url"],
-                            category=category,
-                            brand=brand,
-                            price=row["price"],
-                            quantity=row["quantity"],
-                            original_currency="USD",
-                            status="published",
-                            is_active=row["is_active"],
-                            is_featured=row["is_featured"],
-                        )
-
-                    inventory_defaults = {"stock": row["quantity"]}
-                    if row["reorder_point"] is not None:
-                        inventory_defaults["reorder_level"] = max(0, int(row["reorder_point"]))
-                    Inventory.objects.update_or_create(part=part, defaults=inventory_defaults)
-
-                except Exception as exc:
-                    raise ValueError(f"Row {row_index}: {str(exc)}") from exc
-
-        return total_records, total_records, 0, []
-
     try:
-        file_name = (uploaded_file.name or "").lower()
-
-        if file_name.endswith(".csv"):
-            uploaded_file.seek(0)
-            raw = uploaded_file.read()
-            try:
-                text = raw.decode("utf-8-sig")
-            except UnicodeDecodeError:
-                text = raw.decode("utf-8")
-
-            reader = csv.reader(io.StringIO(text))
-            headers = next(reader, None)
-            if not headers:
-                raise ValueError("Empty CSV file")
-            totals = process_rows(headers, reader)
-
-        elif file_name.endswith(".xlsx"):
-            import openpyxl
-
-            uploaded_file.seek(0)
-            workbook = openpyxl.load_workbook(uploaded_file, read_only=True, data_only=True)
-            sheet = workbook.active
-            rows_iter = sheet.iter_rows(values_only=True)
-            headers = next(rows_iter, None)
-            if not headers:
-                raise ValueError("Empty Excel file")
-            headers = ["" if h is None else str(h) for h in headers]
-            totals = process_rows(headers, rows_iter)
-
-        elif file_name.endswith(".xls"):
-            raise ValueError("XLS files are not supported. Please save as .xlsx.")
-
-        else:
-            raise ValueError("Unsupported file type. Please upload a CSV or XLSX file.")
-
-        total_records, successful_records, failed_records, errors = totals
+        total_records, successful_records, failed_records, errors = process_catalog_bulk_upload_file(
+            uploaded_file,
+            uploaded_file.name,
+            upload_log_id=upload_log.id,
+        )
 
         upload_log.total_records = total_records
         upload_log.successful_records = successful_records
@@ -3590,7 +3782,7 @@ def process_bulk_upload_view(request):
         upload_log.status = "failed"
         upload_log.completed_at = timezone.now()
         upload_log.error_log = str(exc)
-        upload_log.save()
+        upload_log.save(update_fields=['status', 'completed_at', 'error_log'])
         messages.error(request, f"Bulk upload failed: {str(exc)}")
         return redirect('admin_panel:bulk_upload')
 
@@ -3819,7 +4011,7 @@ def partners_view(request):
         'preserved_query_params': get_preserved_query_params(request),
     }
     
-    return render(request, './partners/business-partners.html', context)
+    return render(request, 'partners/business-partners.html', context)
 
 
 @login_required
@@ -3835,5 +4027,5 @@ def partner_detail_view(request, partner_id):
         'documents': partner.documents.all() if hasattr(partner, 'documents') else [],
     }
     
-    return render(request, './partners/partner_detail.html', context)
+    return render(request, 'partners/partner_detail.html', context)
 

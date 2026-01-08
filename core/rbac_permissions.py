@@ -2,7 +2,7 @@
 RBAC Permission Definitions
 Pre-defined permissions for the system
 """
-from .rbac_models import Permission
+from .rbac_models import Permission, Role
 
 
 def create_system_permissions():

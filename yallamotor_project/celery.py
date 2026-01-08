@@ -31,6 +31,10 @@ app.conf.beat_schedule = {
         'task': 'parts.tasks.update_popular_parts_cache',
         'schedule': 1800.0,  # Every 30 minutes
     },
+    'process-escrow-releases': {
+        'task': 'finance.tasks.process_escrow_releases',
+        'schedule': 3600.0,  # Every hour
+    },
 }
 
 app.conf.timezone = 'UTC'

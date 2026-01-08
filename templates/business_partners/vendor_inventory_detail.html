@@ -1,6 +1,7 @@
 {% extends 'vendors/base.html' %}
 {% load static %}
 
+{% load vendor_currency %}
 {% block title %}Inventory Detail | CarSyncro{% endblock %}
 {% block header_title %}Inventory Detail{% endblock %}
 {% block header_subtitle %}{{ part.material_description|default:part.parts_number }}{% endblock %}
@@ -30,8 +31,20 @@
                     <p class="text-sm font-medium text-gray-900">{{ part.parts_number }}</p>
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-gray-500 uppercase">Description</label>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Manufacturer Part Number</label>
+                    <p class="text-sm font-medium text-gray-900">{{ part.manufacturer_part_number|default:"N/A" }}</p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">OEM Number</label>
+                    <p class="text-sm font-medium text-gray-900">{{ part.oem_number|default:"N/A" }}</p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Description (EN)</label>
                     <p class="text-sm font-medium text-gray-900">{{ part.material_description|default:"N/A" }}</p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Description (AR)</label>
+                    <p class="text-sm font-medium text-gray-900">{{ part.material_description_ar|default:"N/A" }}</p>
                 </div>
                 <div>
                     <label class="text-xs font-bold text-gray-500 uppercase">Category</label>
@@ -48,6 +61,32 @@
                 <div>
                     <label class="text-xs font-bold text-gray-500 uppercase">Storage Bin</label>
                     <p class="text-sm font-medium text-gray-900">{{ part.storage_bin|default:"N/A" }}</p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Dimensions</label>
+                    <p class="text-sm font-medium text-gray-900">{{ part.dimensions|default:"N/A" }}</p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Gross Weight</label>
+                    <p class="text-sm font-medium text-gray-900">{{ part.gross_weight|default:"N/A" }}</p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Net Weight</label>
+                    <p class="text-sm font-medium text-gray-900">{{ part.net_weight|default:"N/A" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Pricing Information</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Retail Price</label>
+                    <p class="text-lg font-extrabold text-gray-900">{% vendor_currency_part_field part 'standard_price' %}</p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Wholesale Price</label>
+                    <p class="text-lg font-extrabold text-gray-900">{% vendor_currency_part_field part 'moving_average_price' %}</p>
                 </div>
             </div>
         </div>

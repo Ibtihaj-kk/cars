@@ -1,85 +1,138 @@
 {% extends 'admin_panel/base.html' %}
-{% load humanize %}
+{% load vendor_currency %}
+
+{% block title %}Vendor Balance | CarSyncro Admin{% endblock %}
 {% block header_title %}Vendor Balance{% endblock %}
 
 {% block content %}
-<div class="mb-6">
+<div class="mb-8">
     <div class="flex items-center justify-between gap-4">
         <div>
-            <h2 class="text-2xl font-extrabold">{{ vendor.name|default:"Vendor" }}</h2>
-            <p class="text-sm text-gray-500">{{ vendor.bp_number|default:"" }}</p>
+            <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">{{ vendor.business_name|default:vendor.name|default:"Vendor" }}</h2>
+            <p class="text-sm text-gray-500 mt-1">
+                <span class="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">ID: #{{ vendor.id }}</span>
+                {% if vendor.bp_number %}<span class="ml-2 text-gray-400">BP: {{ vendor.bp_number }}</span>{% endif %}
+            </p>
         </div>
-        <a href="{% url 'admin_panel:payment_management' %}"
-            class="px-4 py-2 rounded-xl border text-sm font-bold hover:bg-gray-50">
-            Back to Payments
-        </a>
+        <div class="flex gap-3">
+            <button onclick="openAdjustmentModal()" class="bg-black text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-gray-800 transition shadow-sm">
+                <i class="fas fa-adjust mr-2"></i> Adjust Balance
+            </button>
+            <a href="{% url 'admin_panel:payment_management' %}"
+                class="px-6 py-2 rounded-xl border border-gray-200 text-sm font-bold hover:bg-gray-50 transition bg-white">
+                Back to Payments
+            </a>
+        </div>
     </div>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-        <p class="text-xs font-bold text-gray-400 uppercase">Current Balance</p>
-        <p class="text-2xl font-extrabold text-gray-900 mt-1">${{ balance.current_balance|floatformat:2 }}</p>
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-4 opacity-10">
+            <i class="fas fa-wallet text-5xl text-black"></i>
+        </div>
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Balance</p>
+        <h3 class="text-3xl font-extrabold text-gray-900 mt-2">{% vendor_currency_value balance.current_balance|default:0 %}</h3>
+        <span class="text-green-600 text-[10px] font-extrabold mt-2 block uppercase">Available for payout</span>
     </div>
-    <div class="bg-yellow-50 p-5 rounded-2xl border border-yellow-200">
-        <p class="text-xs font-bold text-yellow-700 uppercase">Pending Balance</p>
-        <p class="text-2xl font-extrabold text-yellow-800 mt-1">${{ balance.pending_balance|floatformat:2 }}</p>
+    
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-4 opacity-10">
+            <i class="fas fa-clock text-5xl text-black"></i>
+        </div>
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Pending Balance</p>
+        <h3 class="text-3xl font-extrabold text-orange-600 mt-2">{% vendor_currency_value balance.pending_balance|default:0 %}</h3>
+        <span class="text-orange-400 text-[10px] font-extrabold mt-2 block uppercase">Awaiting escrow release</span>
     </div>
-    <div class="bg-green-50 p-5 rounded-2xl border border-green-200">
-        <p class="text-xs font-bold text-green-700 uppercase">Total Earned</p>
-        <p class="text-2xl font-extrabold text-green-800 mt-1">${{ balance.total_earned|floatformat:2 }}</p>
+    
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-4 opacity-10">
+            <i class="fas fa-chart-line text-5xl text-black"></i>
+        </div>
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Earned</p>
+        <h3 class="text-3xl font-extrabold text-gray-900 mt-2">{% vendor_currency_value balance.total_earned|default:0 %}</h3>
+        <span class="text-gray-400 text-[10px] font-extrabold mt-2 block uppercase">Lifetime earnings</span>
     </div>
-    <div class="bg-blue-50 p-5 rounded-2xl border border-blue-200">
-        <p class="text-xs font-bold text-blue-700 uppercase">Total Paid</p>
-        <p class="text-2xl font-extrabold text-blue-800 mt-1">${{ balance.total_paid|floatformat:2 }}</p>
+    
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-4 opacity-10">
+            <i class="fas fa-check-circle text-5xl text-black"></i>
+        </div>
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Paid</p>
+        <h3 class="text-3xl font-extrabold text-blue-600 mt-2">{% vendor_currency_value balance.total_paid|default:0 %}</h3>
+        <span class="text-blue-400 text-[10px] font-extrabold mt-2 block uppercase">Successfully disbursed</span>
     </div>
 </div>
 
-<div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
-    <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
-        <h3 class="font-bold text-lg">Recent Payments</h3>
-        <div class="flex gap-4 text-sm text-gray-600">
-            <span>Total: <span class="font-bold">{{ balance_stats.total_payments|default:0 }}</span></span>
-            <span>Avg: <span class="font-bold">${{ balance_stats.average_payment|floatformat:2|default:"0.00" }}</span></span>
-            <span>Pending: <span class="font-bold">${{ balance_stats.pending_payments|floatformat:2|default:"0.00" }}</span></span>
+<div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50/50">
+        <h3 class="font-bold text-lg text-gray-900">Recent Payments</h3>
+        <div class="flex gap-6 text-xs font-bold uppercase tracking-wider text-gray-400">
+            <div class="flex flex-col">
+                <span class="text-gray-900">{{ balance_stats.total_payments|default:0 }}</span>
+                <span>Total TXNs</span>
+            </div>
+            <div class="flex flex-col border-l border-gray-200 pl-6">
+                <span class="text-gray-900">{% vendor_currency_value balance_stats.average_payment|default:0 %}</span>
+                <span>Avg. Amount</span>
+            </div>
+            <div class="flex flex-col border-l border-gray-200 pl-6">
+                <span class="text-orange-600">{% vendor_currency_value balance_stats.pending_payments|default:0 %}</span>
+                <span>Pending</span>
+            </div>
         </div>
     </div>
 
     <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
-            <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500">
+            <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500 border-b">
                 <tr>
                     <th class="px-6 py-4">Reference</th>
                     <th class="px-6 py-4">Amount</th>
                     <th class="px-6 py-4">Commission</th>
                     <th class="px-6 py-4">Net</th>
                     <th class="px-6 py-4">Status</th>
-                    <th class="px-6 py-4">Date</th>
+                    <th class="px-6 py-4 text-right">Date</th>
                 </tr>
             </thead>
-            <tbody class="divide-y">
+            <tbody class="divide-y divide-gray-100">
                 {% for payment in payments %}
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 font-mono font-bold text-blue-600">{{ payment.payment_reference|default:payment.id }}</td>
-                    <td class="px-6 py-4">${{ payment.amount|floatformat:2 }}</td>
-                    <td class="px-6 py-4 text-red-600">${{ payment.commission_amount|floatformat:2 }}</td>
-                    <td class="px-6 py-4 font-bold text-green-600">${{ payment.net_amount|floatformat:2 }}</td>
+                <tr class="hover:bg-gray-50/80 transition">
+                    <td class="px-6 py-4 font-mono font-bold text-blue-600">
+                        <span class="bg-blue-50 px-2 py-1 rounded">#{{ payment.payment_reference|default:payment.id }}</span>
+                    </td>
                     <td class="px-6 py-4">
-                        <span class="px-2 py-1 rounded-full text-xs font-bold
+                        <p class="font-bold text-gray-900">{% vendor_currency_value payment.amount %}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="text-red-600 font-medium">{% vendor_currency_value payment.commission_amount %}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="font-extrabold text-green-600">{% vendor_currency_value payment.net_amount %}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider
                             {% if payment.status == 'completed' %}bg-green-100 text-green-700
                             {% elif payment.status == 'pending' %}bg-yellow-100 text-yellow-700
                             {% elif payment.status == 'processing' %}bg-blue-100 text-blue-700
                             {% else %}bg-gray-100 text-gray-700{% endif %}">
-                            {{ payment.status|title }}
+                            {{ payment.status }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-gray-500">{{ payment.created_at|date:"M d, Y" }}</td>
+                    <td class="px-6 py-4 text-right">
+                        <p class="font-medium text-gray-700">{{ payment.created_at|date:"M d, Y" }}</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase">{{ payment.created_at|time:"H:i" }}</p>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
-                        <i class="fas fa-credit-card text-4xl mb-4 text-gray-300"></i>
-                        <p>No payments found</p>
+                    <td colspan="6" class="px-6 py-12 text-center">
+                        <div class="flex flex-col items-center">
+                            <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                                <i class="fas fa-credit-card text-2xl text-gray-300"></i>
+                            </div>
+                            <p class="text-gray-500 font-medium">No payments found for this vendor.</p>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -87,5 +140,93 @@
         </table>
     </div>
 </div>
+
+<!-- Adjustment Modal -->
+<div id="adjustmentModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
+    <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl scale-95 transition-transform duration-300" id="modalContent">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-extrabold text-gray-900">Adjust Balance</h3>
+            <button onclick="closeAdjustmentModal()" class="text-gray-400 hover:text-black">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+        
+        <form action="{% url 'admin_panel:adjust_vendor_balance' vendor.id %}" method="post">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Adjustment Type</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="relative cursor-pointer">
+                            <input type="radio" name="type" value="credit" checked class="peer sr-only">
+                            <div class="p-3 border-2 border-gray-100 rounded-xl text-center font-bold text-sm peer-checked:border-black peer-checked:bg-black peer-checked:text-white transition">
+                                <i class="fas fa-plus-circle mr-2"></i> Credit
+                            </div>
+                        </label>
+                        <label class="relative cursor-pointer">
+                            <input type="radio" name="type" value="debit" class="peer sr-only">
+                            <div class="p-3 border-2 border-gray-100 rounded-xl text-center font-bold text-sm peer-checked:border-black peer-checked:bg-black peer-checked:text-white transition">
+                                <i class="fas fa-minus-circle mr-2"></i> Debit
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Amount</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">$</span>
+                        <input type="number" name="amount" step="0.01" required placeholder="0.00"
+                               class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-8 pr-4 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Reason for Adjustment</label>
+                    <textarea name="reason" rows="3" required placeholder="e.g. Manual correction for order #123"
+                              class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-black/5 outline-none resize-none"></textarea>
+                </div>
+            </div>
+            
+            <div class="mt-8 flex gap-3">
+                <button type="button" onclick="closeAdjustmentModal()" class="flex-1 px-6 py-3 rounded-xl border border-gray-200 font-bold text-sm hover:bg-gray-50 transition">
+                    Cancel
+                </button>
+                <button type="submit" class="flex-1 bg-black text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-gray-800 transition shadow-lg shadow-black/10">
+                    Apply Change
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openAdjustmentModal() {
+        const modal = document.getElementById('adjustmentModal');
+        const content = document.getElementById('modalContent');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        }, 10);
+    }
+    
+    function closeAdjustmentModal() {
+        const modal = document.getElementById('adjustmentModal');
+        const content = document.getElementById('modalContent');
+        content.classList.remove('scale-100');
+        content.classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 200);
+    }
+    
+    // Close on backdrop click
+    document.getElementById('adjustmentModal').addEventListener('click', function(e) {
+        if (e.target === this) closeAdjustmentModal();
+    });
+</script>
 {% endblock %}
 
