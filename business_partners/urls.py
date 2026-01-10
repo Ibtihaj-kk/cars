@@ -449,13 +449,4 @@ urlpatterns = [
     path('order-processing/bulk-action/', order_processing_views.bulk_order_processing, name='bulk_order_processing'),
     path('order-processing/api/<int:order_id>/', order_processing_views.order_processing_api, name='order_processing_api'),
     
-    # CRUD System Test
-    path('vendor/crud-test/', 
-         vendor_views.vendor_crud_test, 
-         name='vendor_crud_test'),
-    
-    # Responsive Design Test
-    path('vendor/responsive-test/', 
-         vendor_views.vendor_responsive_test, 
-         name='vendor_responsive_test'),
 ]

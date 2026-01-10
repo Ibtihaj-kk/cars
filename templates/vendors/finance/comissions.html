@@ -14,11 +14,11 @@
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
     <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm text-center">
         <p class="text-xs font-bold text-gray-400 uppercase">Total Sales</p>
-        <h3 class="text-xl font-extrabold text-gray-900 mt-2">{% vendor_currency total_sales|default:0 %}</h3>
+        <h3 class="text-xl font-extrabold text-gray-900 mt-2">{% vendor_currency_value total_sales|default:0 %}</h3>
     </div>
     <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm text-center">
         <p class="text-xs font-bold text-gray-400 uppercase">Total Commission</p>
-        <h3 class="text-xl font-extrabold text-red-600 mt-2">- {% vendor_currency total_commission|default:0 %}</h3>
+        <h3 class="text-xl font-extrabold text-red-600 mt-2">- {% vendor_currency_value total_commission|default:0 %}</h3>
     </div>
     <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm text-center">
         <p class="text-xs font-bold text-gray-400 uppercase">Effective Rate</p>
@@ -73,7 +73,7 @@
         <tbody class="divide-y divide-gray-100 text-sm">
             {% for p in payments %}
             <tr class="hover:bg-gray-50 transition">
-                <td class="px-6 py-4 font-mono font-bold">{{ p.payment_reference }}</td>
+                <td class="px-6 py-4 font-mono font-bold">{{ p.reference }}</td>
                 <td class="px-6 py-4">
                     {% if p.commission_type == 'percentage' %}
                         Percentage

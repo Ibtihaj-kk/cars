@@ -55,6 +55,7 @@ class VendorPayment(models.Model):
     payment_date = models.DateTimeField(null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     processed_at = models.DateTimeField(null=True, blank=True)
+    processed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_payments')
     
     # Additional information
     notes = models.TextField(blank=True)
@@ -93,6 +94,7 @@ class CommissionRule(models.Model):
     """Model for commission rules and tiers."""
     
     name = models.CharField(max_length=100)
+    category = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(blank=True)
     
     commission_type = models.CharField(max_length=20, choices=CommissionType.choices, default=CommissionType.PERCENTAGE)
@@ -122,6 +124,21 @@ class CommissionRule(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.commission_rate}%"
+
+
+class CommissionTier(models.Model):
+    """Specific tiers for a CommissionRule of type TIERED."""
+    rule = models.ForeignKey(CommissionRule, on_delete=models.CASCADE, related_name='tiers')
+    min_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    max_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+    fixed_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    
+    class Meta:
+        ordering = ['min_amount']
+
+    def __str__(self):
+        return f"Tier {self.min_amount} - {self.max_amount or '∞'}: {self.commission_rate}%"
 
 
 class PaymentBatch(models.Model):
@@ -159,7 +176,90 @@ class PaymentBatch(models.Model):
     
     def __str__(self):
         return f"Batch {self.batch_reference} - {self.name}"
-    
+
+    def process_batch(self, admin_user):
+        """Processes all payments in this batch."""
+        from finance.services import FinanceService
+        from django.db import transaction
+        
+        self.status = PaymentStatus.PROCESSING
+        self.processing_started_at = timezone.now()
+        self.save()
+        
+        success_count = 0
+        fail_count = 0
+        
+        for payment in self.payments.all():
+            try:
+                with transaction.atomic():
+                    if payment.status == PaymentStatus.PENDING:
+                        # Security Check: Ensure bank details are verified
+                        try:
+                            profile = payment.vendor.vendor_profile
+                            if not profile.bank_details_verified:
+                                raise ValueError(f"Vendor {payment.vendor.business_name} bank details not verified")
+                        except Exception:
+                            raise ValueError(f"Vendor {payment.vendor.business_name} has no profile or bank details")
+
+                        # Record payout in finance system
+                        vendor = payment.vendor
+                        amount = payment.net_amount
+                        
+                        # Use FinanceService to handle the wallet deduction
+                        # Assuming 'PAYOUT' type handles deduction from available_balance
+                        FinanceService.record_payout(
+                            vendor, amount, 
+                            reference=payment.payment_reference,
+                            processed_by=admin_user
+                        )
+                        
+                        # Update payment status
+                        payment.status = PaymentStatus.COMPLETED
+                        payment.processed_at = timezone.now()
+                        payment.processed_by = admin_user
+                        payment.save()
+                        
+                        # Log history
+                        PaymentHistory.objects.create(
+                            payment=payment,
+                            old_status=PaymentStatus.PENDING,
+                            new_status=PaymentStatus.COMPLETED,
+                            notes=f"Processed in batch {self.batch_reference}",
+                            changed_by=admin_user
+                        )
+                        success_count += 1
+            except Exception as e:
+                fail_count += 1
+                payment.status = PaymentStatus.FAILED
+                payment.save()
+                PaymentHistory.objects.create(
+                    payment=payment,
+                    old_status=PaymentStatus.PENDING,
+                    new_status=PaymentStatus.FAILED,
+                    notes=f"Batch processing error: {str(e)}",
+                    changed_by=admin_user
+                )
+
+        self.processed_payments = success_count
+        self.failed_payments = fail_count
+        self.status = PaymentStatus.COMPLETED if fail_count == 0 else PaymentStatus.FAILED
+        self.processing_completed_at = timezone.now()
+        self.save()
+
+        # Log batch processing in financial audit logs
+        FinanceService.log_action(
+            action_type='BATCH_PROCESSED',
+            user=admin_user,
+            amount=self.total_net_amount,
+            details={
+                'batch_id': self.id,
+                'batch_reference': self.batch_reference,
+                'success_count': success_count,
+                'fail_count': fail_count
+            }
+        )
+        return success_count, fail_count
+
     def save(self, *args, **kwargs):
         # Generate batch reference if not provided
         if not self.batch_reference:

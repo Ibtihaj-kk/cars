@@ -699,6 +699,8 @@ def user_dashboard(request):
     from listings.models import VehicleListing, SavedListing
     from inquiries.models import ListingInquiry
     from parts.models import Order
+    from finance.models import Wallet
+    from django.contrib.contenttypes.models import ContentType
     
     # Common context
     context = {
@@ -717,11 +719,25 @@ def user_dashboard(request):
         # Seller context
         user_listings = VehicleListing.objects.filter(user=user)
         user_inquiries = ListingInquiry.objects.filter(listing__user=user)
+        
+        # Get or create vendor wallet
+        from business_partners.models import BusinessPartner
+        vendor = BusinessPartner.objects.filter(user=user).first()
+        wallet = None
+        if vendor:
+            vendor_ct = ContentType.objects.get_for_model(vendor)
+            wallet, _ = Wallet.objects.get_or_create(
+                owner_content_type=vendor_ct,
+                owner_id=vendor.id,
+                defaults={'currency': 'USD'}
+            )
+            
         context.update({
             'total_listings': user_listings.count(),
             'total_inquiries': user_inquiries.count(),
             'recent_listings': user_listings.order_by('-created_at')[:5],
             'recent_inquiries': user_inquiries.order_by('-created_at')[:5],
+            'wallet': wallet,
         })
     else:
         # Client/User context
@@ -766,12 +782,21 @@ def user_dashboard(request):
         
         total_spent = orders.aggregate(Sum('total_price'))['total_price__sum'] or 0
         
+        # Get or create user wallet
+        user_ct = ContentType.objects.get_for_model(user)
+        wallet, _ = Wallet.objects.get_or_create(
+            owner_content_type=user_ct,
+            owner_id=user.id,
+            defaults={'currency': 'USD'}
+        )
+        
         context.update({
             'total_orders': orders.count(),
             'pending_orders_count': orders.filter(status__in=['pending', 'confirmed', 'processing']).count(),
             'total_spent': total_spent,
             'recent_orders': orders.order_by('-created_at')[:5],
             'saved_listings_count': saved_listings.count(),
+            'wallet': wallet,
         })
         
     return render(request, 'user/user_dashboard.html', context)

@@ -1,0 +1,105 @@
+{% extends 'user/base.html' %}
+{% load static %}
+{% load vendor_currency %}
+
+{% block title %}Transaction #{{ transaction.id }} | CarSyncro{% endblock %}
+
+{% block page_title %}
+<div style="display: flex; align-items: center; gap: 15px;">
+    <a href="{% url 'finance:user_wallet' %}" class="action-icon-btn" style="width: 40px; height: 40px;">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+    <div>
+        <h1>Transaction Details</h1>
+        <p>Reference: #{{ transaction.reference|default:transaction.id }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="content-card">
+        <div class="card-head">
+            <h3>Information</h3>
+            <span class="status {{ transaction.status|lower }}">{{ transaction.get_status_display }}</span>
+        </div>
+        
+        <div class="table-wrapper">
+            <table class="clean-table">
+                <tr>
+                    <td style="color: #888; width: 200px;">Transaction ID</td>
+                    <td>#{{ transaction.id }}</td>
+                </tr>
+                <tr>
+                    <td style="color: #888;">Reference</td>
+                    <td><span class="order-id">{{ transaction.reference|default:"N/A" }}</span></td>
+                </tr>
+                <tr>
+                    <td style="color: #888;">Type</td>
+                    <td><strong>{{ transaction.get_transaction_type_display }}</strong></td>
+                </tr>
+                <tr>
+                    <td style="color: #888;">Amount</td>
+                    <td>
+                        <span style="font-size: 20px; font-weight: 800;">
+                            {% if transaction.destination_wallet == wallet %}
+                                <span style="color: #10B981;">+ {% vendor_currency_value transaction.amount %}</span>
+                            {% else %}
+                                <span style="color: #EF4444;">- {% vendor_currency_value transaction.amount %}</span>
+                            {% endif %}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="color: #888;">Date & Time</td>
+                    <td>{{ transaction.created_at|date:"F d, Y - H:i:s" }}</td>
+                </tr>
+                <tr>
+                    <td style="color: #888;">Description</td>
+                    <td>{{ transaction.description|default:"No description provided." }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="content-card">
+        <div class="card-head">
+            <h3>Summary</h3>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="address-preview">
+                <div class="loc-icon"><i class="fas fa-history"></i></div>
+                <div>
+                    <h6 style="margin: 0; font-weight: 700;">Transaction Log</h6>
+                    <p style="margin: 5px 0 0; font-size: 13px; color: #666;">
+                        Created on {{ transaction.created_at|date:"M d, Y" }}
+                    </p>
+                </div>
+            </div>
+
+            <div style="padding: 20px; background: #f9f9f9; border-radius: 16px;">
+                <h6 style="margin-bottom: 15px; font-weight: 700; font-size: 14px; text-transform: uppercase; color: #888;">Details</h6>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="color: #666;">Fee</span>
+                    <span>{% vendor_currency_value 0 %}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: 800; border-top: 1px solid #eee; pt-10; margin-top: 10px; padding-top: 10px;">
+                    <span>Total Impact</span>
+                    <span>
+                        {% if transaction.destination_wallet == wallet %}
+                            <span style="color: #10B981;">+ {% vendor_currency_value transaction.amount %}</span>
+                        {% else %}
+                            <span style="color: #EF4444;">- {% vendor_currency_value transaction.amount %}</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <button onclick="window.print()" class="btn-black" style="width: 100%; justify-content: center;">
+                <i class="fas fa-print"></i> Print Receipt
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

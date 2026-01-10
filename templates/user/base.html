@@ -196,7 +196,7 @@
         }
 
         .stat-card {
-            background: white; padding: 25px; border-radius: 20px;
+            background: white; padding: 15px; border-radius: 20px;
             border: 1px solid var(--border-subtle);
             display: flex; flex-direction: column; justify-content: space-between;
             height: 160px; transition: 0.3s; cursor: default;
@@ -324,6 +324,14 @@
             <a href="{% url 'users:user-dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'user-dashboard' %}active{% endif %}">
                 <i class="fas fa-th-large"></i> <span>User Dashboard</span>
             </a>
+            <a href="{% url 'finance:user_wallet' %}" class="nav-link {% if request.resolver_match.url_name == 'user_wallet' %}active{% endif %}">
+                <i class="fas fa-wallet"></i> <span>My Wallet</span>
+            </a>
+            {% if user.is_seller %}
+            <a href="{% url 'finance:vendor_wallet' %}" class="nav-link {% if request.resolver_match.url_name == 'vendor_wallet' %}active{% endif %}">
+                <i class="fas fa-university"></i> <span>Business Wallet</span>
+            </a>
+            {% endif %}
             
             {% if user.is_admin %}
                 <a href="#" class="nav-link">
@@ -385,7 +393,7 @@
         <div class="user-mini">
             <div class="user-avatar">{{ user.first_name|first|default:user.username|first|upper }}</div>
             <div class="user-details">
-                <h6>{{ user.get_full_name|default:user.username }}</h6>
+                <h6>{% if user.is_authenticated %}{{ user.get_full_name|default:user.username }}{% else %}Guest{% endif %}</h6>
                 <p>{{ user.role|title }}</p>
             </div>
             <a href="{% url 'users:logout' %}" class="logout-icon" style="margin-left:auto; color:#d32f2f;"><i class="fas fa-sign-out-alt"></i></a>

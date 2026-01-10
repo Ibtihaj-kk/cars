@@ -340,50 +340,127 @@ def place_order_htmx(request):
     if not cart_items:
         return redirect('parts:cart')
 
-    # Calculate total
-    subtotal = sum(item.part.price * item.quantity for item in cart_items)
-    tax = subtotal * 0.05
-    shipping = 0
-    total = subtotal + tax + shipping
-
-    # Create order
-    order = Order.objects.create(
-        user=request.user,
-        total_amount=total,
-        status='pending',
-        shipping_address=request.POST.get('shipping_address', ''),
-        shipping_city=request.POST.get('shipping_city', ''),
-        shipping_state=request.POST.get('shipping_state', ''),
-        shipping_postal_code=request.POST.get('shipping_postal_code', ''),
-        payment_method=request.POST.get('payment_method', 'card'),
-    )
-
-    # Create order items
-    for cart_item in cart_items:
-        OrderItem.objects.create(
-            order=order,
-            part=cart_item.part,
-            quantity=cart_item.quantity,
-            price=cart_item.part.price,
-        )
+    # Extract form data
+    first_name = request.POST.get('first_name', '').strip()
+    last_name = request.POST.get('last_name', '').strip()
+    email = request.POST.get('email', '').strip()
+    phone = request.POST.get('phone', '').strip()
+    address = request.POST.get('address', '').strip()
+    city_id = request.POST.get('city', '')
+    city_area_id = request.POST.get('area', '')
+    payment_method = request.POST.get('payment_method', 'cod')
+    
+    # Calculate totals
+    subtotal = sum(item.part.standard_price * item.quantity for item in cart_items)
+    
+    # Calculate tax based on item classification
+    tax_amount = Decimal('0.00')
+    order_items_data = []
+    
+    for item in cart_items:
+        item_tax_rate = Decimal('0.15') # Default
+        if hasattr(item.part, 'tax_classification_material'):
+            classification = item.part.tax_classification_material
+            if classification == 'VAT_5':
+                item_tax_rate = Decimal('0.05')
+            elif classification in ['ZERO', 'EXEMPT']:
+                item_tax_rate = Decimal('0.00')
+            elif classification == 'VAT_15':
+                item_tax_rate = Decimal('0.15')
         
-    # Subtract inventory using the model method which handles both Inventory and Part models
+        item_price = item.part.standard_price
+        item_total = item_price * item.quantity
+        item_tax = item_total * item_tax_rate
+        tax_amount += item_tax
+        
+        order_items_data.append({
+            'part': item.part,
+            'quantity': item.quantity,
+            'price': item_price,
+            'tax_amount': item_tax
+        })
+
+    shipping_cost = Decimal('0.00') # Free shipping or calculate
+    grand_total = subtotal + tax_amount + shipping_cost
+
     try:
-        order.deduct_inventory()
-    except ValueError as e:
-        # If stock runs out during checkout
-        order.delete()
+        with transaction.atomic():
+            # Create order
+            order = Order.objects.create(
+                customer=request.user,
+                total_price=grand_total,
+                shipping_cost=shipping_cost,
+                tax_amount=tax_amount,
+                status='pending',
+                payment_method=payment_method,
+                payment_status='pending'
+            )
+
+            # Create order items
+            for item_data in order_items_data:
+                OrderItem.objects.create(
+                    order=order,
+                    part=item_data['part'],
+                    quantity=item_data['quantity'],
+                    price=item_data['price'],
+                    tax_amount=item_data['tax_amount']
+                )
+                
+            # Subtract inventory using the model method which handles both Inventory and Part models
+            # Phase 1: Reserve inventory
+            order.reserve_inventory()
+            
+            # Phase 2: Finalize inventory
+            # For COD/Bank Transfer we finalize immediately as there's no online payment step.
+            # For online payments (credit_card, paypal), finalize_inventory will be called 
+            # via signals when payment_status changes to 'completed'.
+            if payment_method in ['cash_on_delivery', 'bank_transfer']:
+                order.finalize_inventory()
+
+            # Record Financial Transactions
+            FinanceService.record_order_payment(order, payment_method=payment_method)
+            
+            # Create Shipping Info
+            city = None
+            if city_id:
+                try:
+                    city = City.objects.get(id=city_id)
+                except City.DoesNotExist:
+                    pass
+            
+            city_area = None
+            if city_area_id:
+                try:
+                    city_area = CityArea.objects.get(id=city_area_id)
+                except CityArea.DoesNotExist:
+                    pass
+            
+            OrderShipping.objects.create(
+                order=order,
+                contact_name=f"{first_name} {last_name}".strip(),
+                mobile_number=phone,
+                city=city,
+                city_area=city_area,
+                address=address,
+                shipping_cost=shipping_cost
+            )
+
+            # Clear cart properly
+            cart.items.all().delete()
+            # We don't mark it inactive here if we want to keep it for future use, 
+            # but usually checkout clears the current active cart.
+            # cart.is_active = False
+            # cart.save()
+
+            context = {
+                'order': order,
+            }
+
+            return render(request, 'parts/htmx/order_confirmation.html', context)
+            
+    except Exception as e:
+        # If stock runs out or any other error occurs during checkout
         return render(request, 'parts/htmx/error_message.html', {'message': str(e)})
-
-    # Clear cart
-    cart.is_active = False
-    cart.save()
-
-    context = {
-        'order': order,
-    }
-
-    return render(request, 'parts/htmx/order_confirmation.html', context)
 
 
 # =====================

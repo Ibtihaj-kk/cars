@@ -1106,6 +1106,10 @@ class Inventory(models.Model):
         related_name='inventory'
     )
     stock = models.PositiveIntegerField(default=0)
+    reserved_stock = models.PositiveIntegerField(
+        default=0,
+        help_text="Stock currently held in checkout processes"
+    )
     reorder_level = models.PositiveIntegerField(
         default=10,
         help_text="Minimum stock level before reordering"
@@ -1310,6 +1314,10 @@ class Order(models.Model):
         elif new_status == 'delivered' and not self.delivered_at:
             self.delivered_at = timezone.now()
         
+        # Handle Inventory for Cancellation
+        if new_status == 'cancelled' and previous_status != 'cancelled':
+            self.restore_inventory()
+            
         # Update the status
         self.status = new_status
         self.save()
@@ -1343,7 +1351,10 @@ class Order(models.Model):
         return ip
     
     def deduct_inventory(self):
-        """Deduct inventory quantities for all items in this order."""
+        """
+        Deduct inventory quantities for all items in this order (Direct deduction).
+        @deprecated: Use reserve_inventory() and finalize_inventory() instead for 2-phase commit.
+        """
         from django.db import transaction
         
         with transaction.atomic():
@@ -1387,6 +1398,118 @@ class Order(models.Model):
                     
                     order_item.part.quantity -= order_item.quantity
                     order_item.part.save()
+
+    def reserve_inventory(self):
+        """Reserve inventory quantities during checkout (Phase 1 of 2nd Phase Commit)."""
+        from django.db import transaction
+        
+        with transaction.atomic():
+            for order_item in self.items.all():
+                if hasattr(order_item.part, 'inventory'):
+                    # Use select_for_update to avoid race conditions
+                    inventory = Inventory.objects.select_for_update().get(id=order_item.part.inventory.id)
+                    
+                    available_stock = inventory.stock - inventory.reserved_stock
+                    if available_stock < order_item.quantity:
+                        raise ValueError(
+                            f"Insufficient stock for {order_item.part.name}. "
+                            f"Available: {available_stock}, Required: {order_item.quantity}"
+                        )
+                    
+                    # Increase reserved stock
+                    inventory.reserved_stock += order_item.quantity
+                    inventory.save()
+                    
+                    # Create reservation record
+                    InventoryTransaction.objects.create(
+                        inventory=inventory,
+                        transaction_type='adjustment', # Or a new type 'reservation'
+                        quantity_change=0, # No change in total stock yet
+                        previous_quantity=inventory.stock,
+                        new_quantity=inventory.stock,
+                        order=self,
+                        order_item=order_item,
+                        notes=f"Stock reserved for order {self.order_number}"
+                    )
+                else:
+                    # Fallback for legacy parts without Inventory model
+                    if order_item.part.quantity < order_item.quantity:
+                        raise ValueError(
+                            f"Insufficient stock for {order_item.part.name}. "
+                            f"Available: {order_item.part.quantity}, Required: {order_item.quantity}"
+                        )
+                    # We can't reserve without Inventory model, so we just check availability
+                    pass
+
+    def finalize_inventory(self):
+        """Finalize inventory deduction after successful payment (Phase 2 of 2nd Phase Commit)."""
+        from django.db import transaction
+        
+        with transaction.atomic():
+            for order_item in self.items.all():
+                if hasattr(order_item.part, 'inventory'):
+                    inventory = Inventory.objects.select_for_update().get(id=order_item.part.inventory.id)
+                    
+                    # Check if already finalized to ensure idempotency
+                    already_finalized = InventoryTransaction.objects.filter(
+                        inventory=inventory,
+                        order=self,
+                        order_item=order_item,
+                        transaction_type='sale'
+                    ).exists()
+                    
+                    if already_finalized:
+                        continue
+                    
+                    # Deduct from both stock and reserved_stock
+                    inventory.stock -= order_item.quantity
+                    inventory.reserved_stock -= order_item.quantity
+                    inventory.save()
+                    
+                    # Create final sale record
+                    InventoryTransaction.objects.create(
+                        inventory=inventory,
+                        transaction_type='sale',
+                        quantity_change=-order_item.quantity,
+                        previous_quantity=inventory.stock + order_item.quantity,
+                        new_quantity=inventory.stock,
+                        order=self,
+                        order_item=order_item,
+                        notes=f"Stock finalized for order {self.order_number}"
+                    )
+                    
+                    # Sync part quantity
+                    order_item.part.quantity = inventory.stock
+                    order_item.part.save()
+                else:
+                    # Fallback for legacy parts
+                    if order_item.part.quantity >= order_item.quantity:
+                        order_item.part.quantity -= order_item.quantity
+                        order_item.part.save()
+
+    def release_reservation(self):
+        """Release reserved stock (e.g., if checkout expires or payment fails)."""
+        from django.db import transaction
+        
+        with transaction.atomic():
+            for order_item in self.items.all():
+                if hasattr(order_item.part, 'inventory'):
+                    inventory = Inventory.objects.select_for_update().get(id=order_item.part.inventory.id)
+                    
+                    if inventory.reserved_stock >= order_item.quantity:
+                        inventory.reserved_stock -= order_item.quantity
+                        inventory.save()
+                        
+                        InventoryTransaction.objects.create(
+                            inventory=inventory,
+                            transaction_type='adjustment',
+                            quantity_change=0,
+                            previous_quantity=inventory.stock,
+                            new_quantity=inventory.stock,
+                            order=self,
+                            order_item=order_item,
+                            notes=f"Reservation released for order {self.order_number}"
+                        )
     
     def check_stock_availability(self):
         """Check if all items in the order have sufficient stock."""
@@ -1401,35 +1524,79 @@ class Order(models.Model):
         return True, "All items are in stock"
     
     def restore_inventory(self):
-        """Restore inventory quantities (e.g., for cancelled orders)."""
+        """
+        Restore inventory quantities (e.g., for cancelled orders).
+        Handles both cases: 
+        1. Only reserved (Phase 1 only)
+        2. Already finalized (Phase 2 completed)
+        """
         from django.db import transaction
         
         with transaction.atomic():
             for order_item in self.items.all():
                 if hasattr(order_item.part, 'inventory'):
-                    inventory = order_item.part.inventory
+                    inventory = Inventory.objects.select_for_update().get(id=order_item.part.inventory.id)
                     
-                    # Create inventory transaction record
-                    InventoryTransaction.objects.create(
+                    # 1. Release reservation if it exists
+                    # Check if this order item has an 'adjustment' record indicating reservation
+                    has_reservation = InventoryTransaction.objects.filter(
                         inventory=inventory,
-                        transaction_type='return',
-                        quantity_change=order_item.quantity,
-                        previous_quantity=inventory.stock,
-                        new_quantity=inventory.stock + order_item.quantity,
                         order=self,
                         order_item=order_item,
-                        notes=f"Stock restored for cancelled order {self.order_number}"
-                    )
+                        transaction_type='adjustment'
+                    ).exists()
                     
-                    # Update inventory stock
-                    inventory.stock += order_item.quantity
-                    inventory.save()
+                    # Also check if it was finalized
+                    has_finalized = InventoryTransaction.objects.filter(
+                        inventory=inventory,
+                        order=self,
+                        order_item=order_item,
+                        transaction_type='sale'
+                    ).exists()
                     
-                    # Sync part quantity
-                    order_item.part.quantity = inventory.stock
-                    order_item.part.save()
+                    # If it was finalized, we must restore total stock
+                    if has_finalized:
+                        # Create inventory transaction record for return
+                        InventoryTransaction.objects.create(
+                            inventory=inventory,
+                            transaction_type='return',
+                            quantity_change=order_item.quantity,
+                            previous_quantity=inventory.stock,
+                            new_quantity=inventory.stock + order_item.quantity,
+                            order=self,
+                            order_item=order_item,
+                            notes=f"Stock restored for cancelled order {self.order_number}"
+                        )
+                        
+                        # Update inventory stock
+                        inventory.stock += order_item.quantity
+                        inventory.save()
+                        
+                        # Sync part quantity
+                        order_item.part.quantity = inventory.stock
+                        order_item.part.save()
+                    
+                    # If it was reserved but NOT finalized, we just release the reservation
+                    # If it was finalized, the reserved_stock was already deducted in finalize_inventory
+                    # So we only touch reserved_stock if it's still there
+                    elif has_reservation:
+                        if inventory.reserved_stock >= order_item.quantity:
+                            inventory.reserved_stock -= order_item.quantity
+                            inventory.save()
+                            
+                            InventoryTransaction.objects.create(
+                                inventory=inventory,
+                                transaction_type='adjustment',
+                                quantity_change=0,
+                                previous_quantity=inventory.stock,
+                                new_quantity=inventory.stock,
+                                order=self,
+                                order_item=order_item,
+                                notes=f"Reservation released for cancelled order {self.order_number}"
+                            )
                 else:
                     # Fallback: Update part quantity directly
+                    # For legacy, we don't know if it was deducted, but usually cancellation implies restoring
                     order_item.part.quantity += order_item.quantity
                     order_item.part.save()
 
@@ -1554,6 +1721,12 @@ class OrderItem(models.Model):
         max_digits=10, 
         decimal_places=2,
         help_text="Price at the time of order"
+    )
+    tax_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Tax amount for this item"
     )
     
     # Multi-currency rate locking metadata

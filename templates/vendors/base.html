@@ -235,55 +235,52 @@
                         <i id="sidebar-section-icon-finance" class="fas fa-chevron-down text-[10px] text-gray-400"></i>
                     </button>
 
-                    <div id="sidebar-section-finance" class="space-y-1 hidden">
+                    <div id="sidebar-section-finance" class="space-y-1">
                         <a href="{% url 'business_partners:vendor_finance_dashboard' %}"
                             class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
-                            <i class="fas fa-chart-line w-6 text-center"></i>
-                            <span class="nav-text ml-3">Finance Dashboard</span>
+                            <i class="fas fa-wallet w-6 text-center"></i>
+                            <span class="nav-text ml-3">Business Wallet</span>
                         </a>
-
                         <a href="{% url 'business_partners:vendor_settlement_statements' %}"
                             class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
-                            <i class="fas fa-receipt w-6 text-center"></i>
-                            <span class="nav-text ml-3">Settlements</span>
+                            <i class="fas fa-file-alt w-6 text-center"></i>
+                            <span class="nav-text ml-3">Settlement Statements</span>
                         </a>
-
+                        <a href="{% url 'finance:submit_cod_settlement' %}"
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-hand-holding-usd w-6 text-center"></i>
+                            <span class="nav-text ml-3">Submit Settlement</span>
+                        </a>
                         <a href="{% url 'business_partners:vendor_payout_tracking' %}"
                             class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
-                            <i class="fas fa-university w-6 text-center"></i>
-                            <span class="nav-text ml-3">Payouts</span>
+                            <i class="fas fa-money-bill-wave w-6 text-center"></i>
+                            <span class="nav-text ml-3">Payout Tracking</span>
                         </a>
-
                         <a href="{% url 'business_partners:vendor_commission_breakdown' %}"
                             class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
-                            <i class="fas fa-percent w-6 text-center"></i>
+                            <i class="fas fa-percentage w-6 text-center"></i>
                             <span class="nav-text ml-3">Commissions</span>
                         </a>
-
                         <a href="{% url 'business_partners:vendor_tax_summary' %}"
                             class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
-                            <i class="fas fa-file-invoice w-6 text-center"></i>
+                            <i class="fas fa-receipt w-6 text-center"></i>
                             <span class="nav-text ml-3">Taxes</span>
                         </a>
-
                         <a href="{% url 'business_partners:vendor_finance_ledger' %}"
                             class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
                             <i class="fas fa-book w-6 text-center"></i>
                             <span class="nav-text ml-3">Ledger</span>
                         </a>
-
                         <a href="{% url 'business_partners:vendor_bank_setup' %}"
                             class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
                             <i class="fas fa-university w-6 text-center"></i>
                             <span class="nav-text ml-3">Bank Setup</span>
                         </a>
-
                         <a href="{% url 'business_partners:vendor_earnings' %}"
                             class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
-                            <i class="fas fa-wallet w-6 text-center"></i>
-                            <span class="nav-text ml-3">Earnings</span>
+                            <i class="fas fa-book w-6 text-center"></i>
+                            <span class="nav-text ml-3">Account Ledger</span>
                         </a>
-
                         <a href="{% url 'business_partners:vendor_invoices' %}"
                             class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
                             <i class="fas fa-file-invoice-dollar w-6 text-center"></i>
@@ -379,7 +376,7 @@
                     {% elif user.business_partners.first %}
                     {{ user.business_partners.first.name }}
                     {% else %}
-                    {{ user.get_full_name|default:user.email|default:"AutoPro Parts Ltd" }}
+                    {% if user.is_authenticated %}{{ user.get_full_name|default:user.email|default:"AutoPro Parts Ltd" }}{% else %}AutoPro Parts Ltd{% endif %}
                     {% endif %}
                 </p>
                 <p
@@ -412,7 +409,7 @@
                     {% elif user.business_partners.first %}
                     {{ user.business_partners.first.name }}
                     {% else %}
-                    {{ user.get_full_name|default:user.email|default:"AutoPro Parts Ltd" }}
+                    {% if user.is_authenticated %}{{ user.get_full_name|default:user.email|default:"AutoPro Parts Ltd" }}{% else %}AutoPro Parts Ltd{% endif %}
                     {% endif %}
                 </p>
             </div>

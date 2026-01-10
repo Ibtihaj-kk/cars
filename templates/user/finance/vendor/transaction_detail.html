@@ -1,0 +1,99 @@
+{% extends 'user/base.html' %}
+{% load static %}
+{% load vendor_currency %}
+
+{% block title %}Transaction #{{ transaction.id }} | Business | CarSyncro{% endblock %}
+
+{% block page_title %}
+<div style="display: flex; align-items: center; gap: 15px;">
+    <a href="{% url 'business_partners:vendor_finance_dashboard' %}" class="action-icon-btn" style="width: 40px; height: 40px;">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+    <div>
+        <h1>Business Transaction</h1>
+        <p>Reference: #{{ transaction.id }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="content-card">
+        <div class="card-head">
+            <h3>Transaction Information</h3>
+            <span class="status completed">Completed</span>
+        </div>
+        
+        <div class="table-wrapper">
+            <table class="clean-table">
+                <tr>
+                    <td style="color: #888; width: 200px;">Transaction ID</td>
+                    <td>#{{ transaction.id }}</td>
+                </tr>
+                <tr>
+                    <td style="color: #888;">Type</td>
+                    <td><strong>{{ transaction.get_transaction_type_display }}</strong></td>
+                </tr>
+                <tr>
+                    <td style="color: #888;">Base Amount</td>
+                    <td>
+                        <span style="font-size: 20px; font-weight: 800;">
+                            {% if transaction.destination_wallet == wallet %}
+                                <span style="color: #10B981;">+ {% vendor_currency_value transaction.amount_base %}</span>
+                            {% else %}
+                                <span style="color: #EF4444;">- {% vendor_currency_value transaction.amount_base %}</span>
+                            {% endif %}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="color: #888;">Display Amount</td>
+                    <td>{{ transaction.amount_display }} {{ transaction.currency }}</td>
+                </tr>
+                <tr>
+                    <td style="color: #888;">Exchange Rate</td>
+                    <td>1 USD = {{ transaction.exchange_rate }} {{ transaction.currency }}</td>
+                </tr>
+                <tr>
+                    <td style="color: #888;">Date & Time</td>
+                    <td>{{ transaction.created_at|date:"F d, Y - H:i:s" }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="content-card">
+        <div class="card-head">
+            <h3>Reference Details</h3>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="address-preview">
+                <div class="loc-icon"><i class="fas fa-link"></i></div>
+                <div>
+                    <h6 style="margin: 0; font-weight: 700;">Linked Entity</h6>
+                    <p style="margin: 5px 0 0; font-size: 13px; color: #666;">
+                        {{ transaction.reference_content_type.model|title }}: #{{ transaction.reference_id }}
+                    </p>
+                </div>
+            </div>
+
+            {% if transaction.metadata %}
+            <div style="padding: 20px; background: #f9f9f9; border-radius: 16px;">
+                <h6 style="margin-bottom: 15px; font-weight: 700; font-size: 14px; text-transform: uppercase; color: #888;">Metadata</h6>
+                {% for key, value in transaction.metadata.items %}
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #666; font-size: 13px;">{{ key|title }}</span>
+                    <span style="font-size: 13px;">{{ value }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <button onclick="window.print()" class="btn-black" style="width: 100%; justify-content: center;">
+                <i class="fas fa-print"></i> Download Statement
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -28,7 +28,7 @@
             <i class="fas fa-wallet text-9xl"></i>
         </div>
         <p class="text-green-100 text-xs font-bold uppercase tracking-wider mb-1">Available to Withdraw</p>
-        <h2 class="text-2xl font-extrabold mb-4">{% vendor_currency_value vendor_balance.current_balance|default:0 %}</h2>
+        <h2 class="text-2xl font-extrabold mb-4">{% vendor_currency_value available_balance|default:0 %}</h2>
         <div class="flex items-center text-xs text-green-100 bg-green-700 bg-opacity-30 inline-block px-2 py-1 rounded">
             <i class="fas fa-check-circle mr-1"></i> Cleared & Ready
         </div>
@@ -59,7 +59,7 @@
          <div class="flex justify-between items-start">
             <div>
                 <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Total Withdrawn</p>
-                <h2 class="text-2xl font-extrabold text-gray-900 mb-1">{% vendor_currency_value vendor_balance.total_paid|default:0 %}</h2>
+                <h2 class="text-2xl font-extrabold text-gray-900 mb-1">{% vendor_currency_value total_withdrawn|default:0 %}</h2>
                 <p class="text-xs text-gray-400">Lifetime earnings paid out</p>
             </div>
             <div class="bg-gray-100 p-3 rounded-lg text-gray-600">
@@ -94,20 +94,25 @@
                 <tbody class="divide-y divide-gray-100 text-sm">
                     {% for transaction in recent_transactions %}
                     <tr class="hover:bg-gray-50 transition">
-                        <td class="px-6 py-4 text-gray-500">{{ transaction.created_at|date:"M d" }}</td>
+                        <td class="px-6 py-4 text-gray-500">{{ transaction.date|date:"M d, Y" }}</td>
                         <td class="px-6 py-4">
-                            <div class="font-bold text-gray-900">{{ transaction.payment_reference }}</div>
+                            <div class="font-bold text-gray-900">{{ transaction.reference }}</div>
                             <div class="text-xs text-gray-500">{{ transaction.notes|default:"No description" }}</div>
                         </td>
                         <td class="px-6 py-4">
-                            {% if transaction.payment_method == 'bank_transfer' %}
-                            <span class="text-gray-600 bg-gray-100 px-2 py-0.5 rounded text-xs font-bold">Payout</span>
-                            {% else %}
-                            <span class="text-green-600 bg-green-50 px-2 py-0.5 rounded text-xs font-bold">Credit</span>
-                            {% endif %}
+                            <span class="px-2 py-0.5 rounded text-xs font-bold uppercase
+                                {% if transaction.type == 'payout' or transaction.type == 'payment' %}
+                                    bg-blue-50 text-blue-600
+                                {% elif transaction.type == 'commission' %}
+                                    bg-red-50 text-red-600
+                                {% else %}
+                                    bg-gray-100 text-gray-600
+                                {% endif %}">
+                                {{ transaction.type }}
+                            </span>
                         </td>
                         <td class="px-6 py-4 font-bold {% if transaction.amount < 0 %}text-red-600{% else %}text-green-600{% endif %}">
-                            {% vendor_currency transaction.amount %}
+                            {% vendor_currency_value transaction.amount %}
                         </td>
                         <td class="px-6 py-4">
                             {% if transaction.status == 'completed' %}
@@ -115,7 +120,7 @@
                             {% elif transaction.status == 'pending' %}
                             <span class="text-yellow-600 text-xs font-bold"><i class="fas fa-clock mr-1"></i> Pending</span>
                             {% else %}
-                            <span class="text-gray-400 text-xs font-bold">{{ transaction.get_status_display }}</span>
+                            <span class="text-gray-400 text-xs font-bold">{{ transaction.status|title }}</span>
                             {% endif %}
                         </td>
                     </tr>

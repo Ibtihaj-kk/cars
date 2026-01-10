@@ -91,6 +91,11 @@ class BusinessPartner(models.Model):
         verbose_name = 'Business Partner'
         verbose_name_plural = 'Business Partners'
     
+    @property
+    def business_name(self):
+        """Alias for name to maintain compatibility with legacy code/templates"""
+        return self.name
+
     def __str__(self):
         return f"{self.bp_number} - {self.name}"
     
@@ -420,8 +425,29 @@ class VendorProfile(models.Model):
     vendor_code = models.CharField(max_length=50, blank=True, null=True)
     tax_number = models.CharField(max_length=50, blank=True, null=True)
     bank_account_number = models.CharField(max_length=50, blank=True, null=True)
+    bank_account_holder_name = models.CharField(max_length=255, blank=True, null=True, help_text="Name of the bank account holder")
     bank_routing_number = models.CharField(max_length=50, blank=True, null=True)
     bank_name = models.CharField(max_length=200, blank=True, null=True)
+    iban = models.CharField(max_length=50, blank=True, null=True, help_text="International Bank Account Number")
+    
+    # Bank Verification status
+    bank_details_verified = models.BooleanField(
+        default=False,
+        help_text="Whether bank details have been verified by an admin"
+    )
+    bank_verification_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When bank details were verified"
+    )
+    bank_verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='verified_vendor_banks',
+        help_text="Admin who verified the bank details"
+    )
     vendor_rating = models.DecimalField(
         max_digits=3, 
         decimal_places=2, 
@@ -571,6 +597,16 @@ class VendorProfile(models.Model):
         # Ensure the business partner has vendor role
         if not self.business_partner.has_role('vendor'):
             raise ValidationError("Business partner must have vendor role to create vendor profile.")
+        
+        # Bank detail validation
+        bank_fields = [
+            self.bank_name, self.bank_account_number, 
+            self.bank_routing_number, self.iban, self.swift_code
+        ]
+        if any(bank_fields) and not self.bank_account_holder_name:
+            raise ValidationError({
+                'bank_account_holder_name': "Bank account holder name is required if other bank details are provided."
+            })
     
     def generate_backup_codes(self, count=10):
         import json
@@ -678,13 +714,46 @@ class VendorProfile(models.Model):
         return round(total_completion, 1)
     
     def save(self, *args, **kwargs):
-        """Override save to sync approval state with legacy is_approved field"""
+        """Override save to sync approval state and log bank detail changes"""
         # Sync approval_state with legacy is_approved for backward compatibility
         if self.approval_state == 'APPROVED':
             self.is_approved = True
         else:
             self.is_approved = False
         
+        # Detect bank detail changes for audit logging
+        if self.pk:
+            try:
+                old_instance = VendorProfile.objects.get(pk=self.pk)
+                bank_fields = [
+                    'bank_name', 'bank_account_number', 'bank_account_holder_name',
+                    'bank_routing_number', 'iban', 'swift_code'
+                ]
+                
+                changed_fields = {}
+                for field in bank_fields:
+                    old_val = getattr(old_instance, field)
+                    new_val = getattr(self, field)
+                    if old_val != new_val:
+                        changed_fields[field] = {'old': str(old_val), 'new': str(new_val)}
+                
+                if changed_fields:
+                    from .audit_logger import VendorAuditLogger
+                    # Reset verification if bank details change
+                    if not any(f in kwargs.get('update_fields', []) for f in ['bank_details_verified']):
+                        self.bank_details_verified = False
+                        self.bank_verification_date = None
+                        self.bank_verified_by = None
+                    
+                    VendorAuditLogger.log_vendor_action(
+                        action_type='bank_details_updated',
+                        user=kwargs.get('user'), # We might need to pass user to save()
+                        vendor=self.business_partner,
+                        details={'changed_fields': changed_fields}
+                    )
+            except VendorProfile.DoesNotExist:
+                pass
+
         super().save(*args, **kwargs)
     
     def get_approval_state(self):

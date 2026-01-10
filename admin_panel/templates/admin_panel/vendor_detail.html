@@ -105,6 +105,68 @@
                 {% endfor %}
             </div>
         </div>
+
+        <!-- Financial Information -->
+        <div class="bg-white rounded-2xl border shadow-sm p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-900">Financial & Bank Details</h3>
+                {% if vendor.vendor_profile.bank_details_verified %}
+                <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-bold">
+                    <i class="fas fa-check-circle mr-1"></i>Verified
+                </span>
+                {% else %}
+                <span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full font-bold">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>Unverified
+                </span>
+                {% endif %}
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold">Bank Name</p>
+                        <p class="font-bold text-gray-900">{{ vendor.vendor_profile.bank_name|default:"—" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold">Account Holder</p>
+                        <p class="font-bold text-gray-900">{{ vendor.vendor_profile.bank_account_holder_name|default:"—" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold">Account Number</p>
+                        <p class="font-bold text-gray-900">{{ vendor.vendor_profile.bank_account_number|default:"—" }}</p>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold">IBAN</p>
+                        <p class="font-bold text-gray-900">{{ vendor.vendor_profile.iban|default:"—" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold">SWIFT/BIC</p>
+                        <p class="font-bold text-gray-900">{{ vendor.vendor_profile.swift_code|default:"—" }}</p>
+                    </div>
+                    {% if vendor.vendor_profile.bank_details_verified %}
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold">Verified By</p>
+                        <p class="text-sm font-bold text-gray-900">{{ vendor.vendor_profile.bank_verified_by.get_full_name }} on {{ vendor.vendor_profile.bank_verification_date|date:"M d, Y" }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if not vendor.vendor_profile.bank_details_verified %}
+            <div class="mt-6 pt-6 border-t">
+                <form method="POST" action="{% url 'admin_panel:verify_vendor_bank' vendor.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full bg-blue-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-user-check"></i>
+                        Verify Bank Details
+                    </button>
+                    <p class="text-center text-xs text-gray-500 mt-2">Verifying these details will enable payouts for this vendor.</p>
+                </form>
+            </div>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Sidebar -->

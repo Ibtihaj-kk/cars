@@ -9,6 +9,14 @@
         <h1 class="text-2xl font-bold text-gray-900">Payout Tracking</h1>
         <p class="text-gray-500 text-sm mt-1">Track upcoming payouts and view payout history.</p>
     </div>
+    <div class="flex gap-3">
+        <button onclick="openPayoutModal()" class="bg-black text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-800 shadow-lg flex items-center transition">
+            <i class="fas fa-money-check-alt mr-2"></i> Request Payout
+        </button>
+        <a href="{% url 'business_partners:vendor_bank_setup' %}" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 shadow-sm flex items-center">
+            <i class="fas fa-university mr-2"></i> Bank Setup
+        </a>
+    </div>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -39,7 +47,7 @@
     </div>
     <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm text-center">
         <p class="text-xs font-bold text-gray-400 uppercase">Pending Balance</p>
-        <h3 class="text-xl font-extrabold text-gray-900 mt-2">{% vendor_currency pending_balance|default:0 %}</h3>
+        <h3 class="text-xl font-extrabold text-gray-900 mt-2">{% vendor_currency_value pending_balance|default:0 %}</h3>
         <p class="text-xs text-gray-500 mt-1">
             {% if clearing_in_days != None %}
                 Clearing in {{ clearing_in_days }} days
@@ -64,29 +72,23 @@
         <tbody class="divide-y divide-gray-100 text-sm">
             {% for p in payouts %}
             <tr class="hover:bg-gray-50 transition">
-                <td class="px-6 py-4 font-mono font-bold">{{ p.payment_reference }}</td>
+                <td class="px-6 py-4 font-mono font-bold">{{ p.reference }}</td>
                 <td class="px-6 py-4">
-                    {% if p.payment_date %}
-                        {{ p.payment_date|date:"M d, Y" }}
-                    {% elif p.processed_at %}
-                        {{ p.processed_at|date:"M d, Y" }}
-                    {% else %}
-                        {{ p.created_at|date:"M d, Y" }}
-                    {% endif %}
+                    {{ p.date|date:"M d, Y" }}
                 </td>
                 <td class="px-6 py-4">{{ bank_account_display }}</td>
                 <td class="px-6 py-4 font-bold {% if p.status == 'completed' %}text-green-600{% elif p.status == 'failed' or p.status == 'cancelled' %}text-red-600{% else %}text-gray-900{% endif %}">
-                    {% vendor_currency p.net_amount|default:0 %}
+                    {% vendor_currency p.amount|default:0 %}
                 </td>
                 <td class="px-6 py-4">
                     {% if p.status == 'completed' %}
-                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">{{ p.get_status_display }}</span>
+                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">{{ p.status_display }}</span>
                     {% elif p.status == 'pending' or p.status == 'processing' %}
-                        <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-bold">{{ p.get_status_display }}</span>
+                        <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-bold">{{ p.status_display }}</span>
                     {% elif p.status == 'failed' or p.status == 'cancelled' %}
-                        <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">{{ p.get_status_display }}</span>
+                        <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">{{ p.status_display }}</span>
                     {% else %}
-                        <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-bold">{{ p.get_status_display }}</span>
+                        <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-bold">{{ p.status_display }}</span>
                     {% endif %}
                 </td>
             </tr>
@@ -118,4 +120,140 @@
     {% endif %}
 </div>
 {% endif %}
+
+<div id="payoutModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: all 0.3s ease;">
+    <div class="modal-content" style="background: white; width: 100%; max-width: 500px; border-radius: 24px; overflow: hidden; transform: translateY(20px); transition: all 0.3s ease;">
+        <div class="modal-header" style="padding: 24px; border-bottom: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-size: 18px; font-weight: 800; margin: 0;">Request Payout</h3>
+            <button onclick="closePayoutModal()" style="background: none; border: none; cursor: pointer; color: #9CA3AF;"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+            <div style="background: #F9FAFB; padding: 20px; border-radius: 16px; margin-bottom: 24px;">
+                <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 15px; color: #374151;">Registered Bank Details</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label style="font-size: 11px; color: #6B7280; text-transform: uppercase; font-weight: 700;">Bank Name</label>
+                        <p style="font-size: 13px; font-weight: 600; margin: 4px 0 0;">{{ vendor_profile.bank_name|default:"Not Set" }}</p>
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; color: #6B7280; text-transform: uppercase; font-weight: 700;">Account Number</label>
+                        <p style="font-size: 13px; font-weight: 600; margin: 4px 0 0;">{{ vendor_profile.bank_account_number|default:"Not Set" }}</p>
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; color: #6B7280; text-transform: uppercase; font-weight: 700;">SWIFT/BIC</label>
+                        <p style="font-size: 13px; font-weight: 600; margin: 4px 0 0;">{{ vendor_profile.swift_code|default:"Not Set" }}</p>
+                    </div>
+                </div>
+                {% if not vendor_profile.bank_account_number %}
+                <div style="margin-top: 15px; padding: 10px; background: #FEF2F2; border-radius: 8px; color: #B91C1C; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>Please update your bank details in</span>
+                    <a href="{% url 'business_partners:vendor_bank_setup' %}" style="text-decoration: underline; font-weight: 700;">Bank Setup</a>
+                </div>
+                {% endif %}
+            </div>
+
+            <form id="payoutForm">
+                <div id="payoutError" style="display:none; margin-bottom: 16px; padding: 10px; background: #FEF2F2; border-radius: 8px; color: #B91C1C; font-size: 12px;"></div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; color: #374151;">Amount to Withdraw</label>
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-weight: 700; color: #9CA3AF;">{% vendor_currency_symbol %}</span>
+                        <input type="number" name="amount" step="0.01" max="{{ wallet.available_balance }}" required
+                               placeholder="0.00"
+                               style="width: 100%; padding: 12px 15px 12px 50px; border-radius: 12px; border: 1px solid #D1D5DB; font-size: 16px; font-weight: 700;">
+                    </div>
+                    <p style="font-size: 12px; color: #6B7280; margin-top: 8px;">Max available: {% vendor_currency_value wallet.available_balance %}</p>
+                </div>
+                
+                <button id="payoutSubmitBtn" type="submit" class="bg-black text-white w-full py-4 rounded-xl font-bold hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed" 
+                        {% if not vendor_profile.bank_account_number or wallet.available_balance <= 0 %}disabled{% endif %}>
+                    Submit Payout Request
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function openPayoutModal() {
+        const modal = document.getElementById('payoutModal');
+        const content = modal.querySelector('.modal-content');
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.style.opacity = '1';
+            modal.style.pointerEvents = 'auto';
+            content.style.transform = 'translateY(0)';
+        }, 10);
+    }
+
+    function closePayoutModal() {
+        const modal = document.getElementById('payoutModal');
+        const content = modal.querySelector('.modal-content');
+        modal.style.opacity = '0';
+        modal.style.pointerEvents = 'none';
+        content.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300);
+    }
+
+    document.getElementById('payoutForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const errorEl = document.getElementById('payoutError');
+        const submitBtn = document.getElementById('payoutSubmitBtn');
+        errorEl.style.display = 'none';
+        errorEl.textContent = '';
+
+        const amountField = this.querySelector('input[name="amount"]');
+        const amount = amountField ? amountField.value : null;
+        if (!amount) {
+            errorEl.textContent = 'Please enter an amount.';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        submitBtn.disabled = true;
+        try {
+            const response = await fetch("{% url 'finance:request_payout' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify({ amount }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+                const msg = (data && data.message) ? data.message : 'Failed to submit payout request.';
+                errorEl.textContent = msg;
+                errorEl.style.display = 'block';
+                submitBtn.disabled = false;
+                return;
+            }
+
+            window.location.reload();
+        } catch (err) {
+            errorEl.textContent = 'Network error. Please try again.';
+            errorEl.style.display = 'block';
+            submitBtn.disabled = false;
+        }
+    });
+</script>
 {% endblock %}

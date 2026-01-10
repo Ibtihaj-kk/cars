@@ -10,17 +10,21 @@
     <!-- Admin Stats -->
     <div class="stat-card dark">
         <div class="stat-header">
-            <div class="stat-icon"><i class="fas fa-users"></i></div>
+            <!-- <div class="stat-icon"><i class="fas fa-chart-line"></i></div> -->
+            <!-- <a href="{% url 'admin_panel:dashboard' %}" class="action-icon-btn" style="width: 30px; height: 30px; background: rgba(255,255,255,0.1); border: none; color: white;"> -->
+                <!-- <i class="fas fa-arrow-right" style="font-size: 12px;"></i> -->
+            </a>
         </div>
-        <div class="stat-value">{{ total_users }}</div>
-        <div class="stat-label">Total Users</div>
+        <div class="stat-value">Admin</div>
+        <div class="stat-label">System Control</div>
+        <div class="stat-trend"><i class="fas fa-shield-alt"></i> Full Access</div>
     </div>
     <div class="stat-card">
         <div class="stat-header">
-            <div class="stat-icon" style="color:black;"><i class="fas fa-car"></i></div>
+            <div class="stat-icon" style="color:black;"><i class="fas fa-users"></i></div>
         </div>
-        <div class="stat-value">{{ total_listings }}</div>
-        <div class="stat-label">Total Listings</div>
+        <div class="stat-value">{{ total_users }}</div>
+        <div class="stat-label">Total Users</div>
     </div>
     <div class="stat-card">
         <div class="stat-header">
@@ -41,7 +45,19 @@
     <!-- Seller Stats -->
     <div class="stat-card dark">
         <div class="stat-header">
-            <div class="stat-icon"><i class="fas fa-car"></i></div>
+            <div class="stat-icon"><i class="fas fa-university"></i></div>
+            <a href="{% url 'finance:vendor_wallet' %}" class="action-icon-btn" style="width: 30px; height: 30px; background: rgba(255,255,255,0.1); border: none; color: white;">
+                <i class="fas fa-arrow-right" style="font-size: 12px;"></i>
+            </a>
+        </div>
+        <span class="currency-symbol-top-right">{% vendor_currency_symbol %}</span>
+        <div class="stat-value">{% vendor_currency_value wallet.available_balance %}</div>
+        <div class="stat-label">Available Earnings</div>
+        <div class="stat-trend"><i class="fas fa-check-circle"></i> Settled</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color:black;"><i class="fas fa-car"></i></div>
         </div>
         <div class="stat-value">{{ total_listings }}</div>
         <div class="stat-label">My Listings</div>
@@ -73,17 +89,23 @@
     <div class="stat-card dark">
         <div class="stat-header">
             <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+            <a href="{% url 'finance:user_wallet' %}" class="action-icon-btn" style="width: 30px; height: 30px; background: rgba(255,255,255,0.1); border: none; color: white;">
+                <i class="fas fa-arrow-right" style="font-size: 12px;"></i>
+            </a>
         </div>
         <span class="currency-symbol-top-right">{% vendor_currency_symbol %}</span>
-        <div class="stat-value">{% vendor_currency_value total_spent %}</div>
-        <div class="stat-trend"><i class="fas fa-arrow-up"></i> Total Spent</div>
+        <div class="stat-value">{% vendor_currency_value wallet.available_balance %}</div>
+        <div class="stat-label">Available Balance</div>
+        <div class="stat-trend"><i class="fas fa-check-circle"></i> Wallet Ready</div>
     </div>
     <div class="stat-card">
         <div class="stat-header">
-            <div class="stat-icon" style="color:black;"><i class="fas fa-box-open"></i></div>
+            <div class="stat-icon" style="color:black;"><i class="fas fa-shopping-cart"></i></div>
         </div>
-        <div class="stat-value">{{ total_orders }}</div>
-        <div class="stat-label">Total Orders</div>
+        <span class="currency-symbol-top-right">{% vendor_currency_symbol %}</span>
+        <div class="stat-value">{% vendor_currency_value total_spent %}</div>
+        <div class="stat-label">Total Spent</div>
+        <div class="stat-trend"><i class="fas fa-arrow-up"></i> Lifetime</div>
     </div>
     <div class="stat-card">
         <div class="stat-header">

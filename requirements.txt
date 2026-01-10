@@ -5,6 +5,7 @@ python-dotenv
 
 # Database
 psycopg2-binary
+mysqlclient
 
 # Image Processing & Media
 Pillow

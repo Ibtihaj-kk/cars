@@ -284,7 +284,7 @@ class DealerReviewAdmin(BaseReviewAdmin):
         'status', 'created_at', 'helpful_votes', 'unhelpful_votes'
     ]
     list_filter = [ReviewStatusFilter, 'overall_rating', 'created_at']
-    search_fields = ['title', 'review_text', 'user__email', 'dealer__email', 'dealer__business_name']
+    search_fields = ['title', 'review_text', 'user__email', 'dealer__email', 'dealer__name']
     inlines = [ReviewImageInline, ReviewVoteInline, ReviewCommentInline]
     
     fieldsets = (

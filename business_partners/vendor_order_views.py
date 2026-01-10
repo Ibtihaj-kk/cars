@@ -525,6 +525,11 @@ def vendor_update_order_status(request, order_id):
         if new_order_status != order.status:
             order.status = new_order_status
             order.save()
+            
+            # If the order is now delivered, trigger escrow release timer in Finance System
+            if new_order_status == 'delivered':
+                from finance.services import FinanceService
+                FinanceService.trigger_delivery_settlement(order)
 
         # HTMX Success Response
         if request.headers.get('HX-Request'):

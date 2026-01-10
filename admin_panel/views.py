@@ -2,8 +2,8 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
-from django.db.models import Q, Count, Avg, Exists, OuterRef, Subquery, F
-from django.db import models
+from django.db.models import Q, Count, Avg, Exists, OuterRef, Subquery, F, Sum
+from django.db import models, transaction
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_http_methods, require_POST
 from django.views.decorators.csrf import csrf_exempt
@@ -15,21 +15,35 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.urls import reverse
 from django.utils import timezone
+from django.contrib.contenttypes.models import ContentType
 from datetime import datetime, timedelta
+from decimal import Decimal
 import json
 
+# Local app models
 from listings.models import VehicleListing, ListingStatusLog
 from users.models import User
 from vehicles.models import Brand, VehicleModel
-from business_partners.models import BusinessPartner, BusinessPartnerRole, ContactInfo, VendorProfile
-from business_partners.models import VendorApplication
+from business_partners.models import (
+    BusinessPartner, BusinessPartnerRole, ContactInfo, 
+    VendorProfile, VendorApplication
+)
 from business_partners.document_models import VendorDocument, DocumentVerificationQueue
+from business_partners.audit_logger import VendorAuditLogger
 from inquiries.models import ListingInquiry, InquiryStatus
 from notifications.models import Notification, NotificationType, NotificationPriority
-from django.db.models import Avg, Count, Q, Sum
-from datetime import datetime, timedelta
-from .payment_models import VendorPayment, CommissionRule, PaymentBatch, PaymentHistory, VendorBalance, PaymentStatus, PaymentMethod
-from .messaging_models import AdminMessage, MessageTemplate, VendorNotification, MessageStatus, MessagePriority, MessageCategory
+from finance.models import Wallet, Transaction, EscrowEntry, CODSettlementRequest, FinancialAuditLog
+from finance.services import FinanceService
+
+# Admin panel local models/utils
+from .payment_models import (
+    VendorPayment, CommissionRule, PaymentBatch, PaymentHistory, 
+    VendorBalance, PaymentStatus, PaymentMethod
+)
+from .messaging_models import (
+    AdminMessage, MessageTemplate, VendorNotification, 
+    MessageStatus, MessagePriority, MessageCategory
+)
 from .models import ActivityLog, ActivityLogType, DashboardWidget
 from .utils import (
     log_activity, log_listing_activity, log_bulk_listing_activity,
@@ -48,6 +62,32 @@ from .email_views import (
     send_manual_email, send_bulk_email, retry_failed_email,
     cancel_email, clear_email_queue
 )
+
+
+def verify_vendor_bank_view(request, vendor_id):
+    """Verify vendor bank details by admin."""
+    if not request.user.is_staff:
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+    
+    vendor = get_object_or_404(BusinessPartner, id=vendor_id)
+    try:
+        profile = vendor.vendor_profile
+        profile.bank_details_verified = True
+        profile.bank_verification_date = timezone.now()
+        profile.bank_verified_by = request.user
+        profile.save(update_fields=['bank_details_verified', 'bank_verification_date', 'bank_verified_by'], user=request.user)
+        
+        # Log the verification
+        VendorAuditLogger.log_vendor_action(
+            action_type='bank_details_verified',
+            user=request.user,
+            vendor=vendor,
+            details={'message': 'Bank details verified by admin'}
+        )
+        
+        return JsonResponse({'status': 'success', 'message': f'Bank details for {vendor.business_name} verified successfully'})
+    except VendorProfile.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Vendor profile not found'}, status=404)
 
 
 def is_admin_user(user):
@@ -289,21 +329,64 @@ def dashboard_view(request):
     }
     
     # Payment and commission statistics
-    total_payments = VendorPayment.objects.count()
-    pending_payments = VendorPayment.objects.filter(status='pending').count()
-    completed_payments = VendorPayment.objects.filter(status='completed').count()
-    total_commission_earned = VendorPayment.objects.filter(
+    legacy_total_payments = VendorPayment.objects.count()
+    legacy_pending_payments = VendorPayment.objects.filter(status='pending').count()
+    legacy_completed_payments = VendorPayment.objects.filter(status='completed').count()
+    legacy_total_commission_earned = VendorPayment.objects.filter(
         status='completed'
-    ).aggregate(total=Sum('commission_amount'))['total'] or 0
+    ).aggregate(total=Sum('commission_amount'))['total'] or Decimal('0.00')
+    
+    unified_total_payments = Transaction.objects.filter(transaction_type='PAYOUT').count()
+    unified_completed_payments = unified_total_payments # Transactions are completed ledger entries
+    unified_total_commission = Transaction.objects.filter(
+        transaction_type='COMMISSION'
+    ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+
+    total_payments = legacy_total_payments + unified_total_payments
+    pending_payments = legacy_pending_payments
+    completed_payments = legacy_completed_payments + unified_completed_payments
+    total_commission_earned = legacy_total_commission_earned + unified_total_commission
     
     total_commission_rules = CommissionRule.objects.count()
     active_commission_rules = CommissionRule.objects.filter(is_active=True).count()
     
-    # Recent payments
-    recent_payments = VendorPayment.objects.select_related('vendor').order_by('-created_at')[:5]
+    # Recent payments (Combined)
+    legacy_recent = VendorPayment.objects.select_related('vendor').order_by('-created_at')[:5]
+    unified_recent = Transaction.objects.filter(transaction_type='PAYOUT').order_by('-created_at')[:5]
+    
+    recent_payments_list = []
+    for lp in legacy_recent:
+        recent_payments_list.append({
+            'vendor': lp.vendor,
+            'amount': lp.net_amount,
+            'status': lp.status,
+            'created_at': lp.created_at,
+            'reference': lp.payment_reference,
+            'is_unified': False
+        })
+    for ut in unified_recent:
+        # Payout destination is usually vendor wallet, so ut.source_wallet owner is platform, 
+        # and ut.destination_wallet owner is vendor.
+        vendor = None
+        if ut.destination_wallet and ut.destination_wallet.owner_content_type.model == 'businesspartner':
+            vendor = ut.destination_wallet.owner
+        
+        recent_payments_list.append({
+            'vendor': vendor,
+            'amount': ut.amount_base,
+            'status': 'completed',
+            'created_at': ut.created_at,
+            'reference': f"TRX-{ut.id}",
+            'is_unified': True
+        })
+    
+    recent_payments_list.sort(key=lambda x: x['created_at'], reverse=True)
+    recent_payments = recent_payments_list[:5]
     
     # Vendor balance summary
-    total_vendor_balance = VendorBalance.objects.aggregate(total=Sum('current_balance'))['total'] or 0
+    legacy_total_balance = VendorBalance.objects.aggregate(total=Sum('current_balance'))['total'] or Decimal('0.00')
+    unified_total_balance = Wallet.objects.aggregate(total=Sum('available_balance'))['total'] or Decimal('0.00')
+    total_vendor_balance = legacy_total_balance + unified_total_balance
     
     context = {
         'total_listings': total_listings,
@@ -515,17 +598,20 @@ def bulk_update_listings(request):
 @login_required
 @require_POST
 def batch_process_payments_view(request):
-    """Process multiple payments in batch"""
+    """Process multiple payments in batch using the unified PaymentBatch model"""
     try:
-        name = request.POST.get('name')
+        name = request.POST.get('name', f"Batch {timezone.now().strftime('%Y-%m-%d %H:%M')}")
         description = request.POST.get('description', '')
-        payment_method = request.POST.get('payment_method')
-        vendor_id = request.POST.get('vendor_id')
+        payment_ids = request.POST.getlist('payment_ids')
         
+        if not payment_ids:
+            return JsonResponse({'success': False, 'message': 'No payments selected'})
+            
         # Get pending payments
-        payments = VendorPayment.objects.filter(status=PaymentStatus.PENDING)
-        if vendor_id:
-            payments = payments.filter(vendor_id=vendor_id)
+        payments = VendorPayment.objects.filter(id__in=payment_ids, status=PaymentStatus.PENDING)
+        
+        if not payments.exists():
+            return JsonResponse({'success': False, 'message': 'No valid pending payments found'})
         
         # Create payment batch
         batch = PaymentBatch.objects.create(
@@ -536,136 +622,75 @@ def batch_process_payments_view(request):
             created_by=request.user
         )
         
-        # Process each payment
-        processed_count = 0
-        for payment in payments:
+        # Add payments to batch
+        batch.payments.set(payments)
+        
+        # Process the batch using the model method
+        success_count, fail_count = batch.process_batch(request.user)
+        
+        return JsonResponse({
+            'success': True, 
+            'message': f'Batch processing completed. Success: {success_count}, Failed: {fail_count}',
+            'batch_id': batch.id,
+            'success_count': success_count,
+            'fail_count': fail_count
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+
+@login_required
+def export_payment_batch_csv(request, batch_id):
+    """Export a payment batch to CSV for bank upload"""
+    import csv
+    from django.http import HttpResponse
+    
+    try:
+        batch = PaymentBatch.objects.get(id=batch_id)
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="payout_batch_{batch.batch_reference}.csv"'
+        
+        writer = csv.writer(response)
+        # Header for bank upload - usually specific to the bank, but we'll use a standard format
+        writer.writerow([
+            'Payment Reference', 'Vendor Name', 'Bank Name', 'Account Holder', 
+            'Account Number', 'IBAN', 'SWIFT', 'Amount', 'Currency', 'Status'
+        ])
+        
+        for payment in batch.payments.all():
+            vendor = payment.vendor
             try:
-                # Update payment status
-                payment.status = PaymentStatus.COMPLETED
-                payment.payment_method = payment_method
-                payment.processed_at = timezone.now()
-                payment.processed_by = request.user
-                payment.batch = batch
-                payment.save()
+                profile = vendor.vendor_profile
+                bank_name = profile.bank_name or ''
+                acc_holder = profile.bank_account_holder_name or ''
+                acc_num = profile.bank_account_number or ''
+                iban = profile.iban or ''
+                swift = profile.swift_code or ''
+            except Exception:
+                bank_name = acc_holder = acc_num = iban = swift = 'N/A'
                 
-                # Update vendor balance
-                vendor_balance, created = VendorBalance.objects.get_or_create(
-                    vendor=payment.vendor,
-                    defaults={'current_balance': 0, 'total_earned': 0, 'total_withdrawn': 0}
-                )
-                vendor_balance.total_withdrawn += payment.net_amount
-                vendor_balance.current_balance -= payment.net_amount
-                vendor_balance.save()
-                
-                # Create payment history
-                PaymentHistory.objects.create(
-                    payment=payment,
-                    action='completed',
-                    previous_status=PaymentStatus.PENDING,
-                    new_status=PaymentStatus.COMPLETED,
-                    notes=f'Processed in batch: {name}',
-                    changed_by=request.user
-                )
-                
-                processed_count += 1
-                
-            except Exception as e:
-                # Log error but continue processing other payments
-                print(f"Error processing payment {payment.id}: {str(e)}")
-                continue
+            writer.writerow([
+                payment.payment_reference,
+                vendor.business_name,
+                bank_name,
+                acc_holder,
+                acc_num,
+                iban,
+                swift,
+                payment.net_amount,
+                'USD', # Base currency
+                payment.status
+            ])
+            
+        return response
         
-        # Update batch status
-        batch.processed_payments = processed_count
-        batch.status = 'completed' if processed_count == payments.count() else 'partial'
-        batch.save()
-        
-        return JsonResponse({
-            'success': True, 
-            'message': f'Successfully processed {processed_count} payments',
-            'processed_count': processed_count
-        })
-        
+    except PaymentBatch.DoesNotExist:
+        return HttpResponse("Batch not found", status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
+        return HttpResponse(f"Error: {str(e)}", status=500)
 
-
-@login_required
-@require_POST
-def create_commission_rule_view(request):
-    """Create a new commission rule"""
-    try:
-        name = request.POST.get('name')
-        category = request.POST.get('category')
-        description = request.POST.get('description', '')
-        commission_type = request.POST.get('commission_type', 'fixed')
-        commission_rate = float(request.POST.get('commission_rate', 0))
-        min_amount = float(request.POST.get('min_amount', 0)) if request.POST.get('min_amount') else None
-        max_amount = float(request.POST.get('max_amount', 0)) if request.POST.get('max_amount') else None
-        is_active = request.POST.get('is_active', 'true') == 'true'
-        
-        # Create commission rule
-        rule = CommissionRule.objects.create(
-            name=name,
-            category=category,
-            description=description,
-            commission_type=commission_type,
-            commission_rate=commission_rate,
-            min_amount=min_amount,
-            max_amount=max_amount,
-            is_active=is_active,
-            created_by=request.user
-        )
-        
-        return JsonResponse({
-            'success': True, 
-            'message': 'Commission rule created successfully',
-            'rule_id': rule.id
-        })
-        
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
-
-
-@login_required
-@require_POST
-def toggle_commission_rule_view(request, rule_id):
-    """Toggle commission rule status"""
-    try:
-        rule = get_object_or_404(CommissionRule, id=rule_id)
-        rule.is_active = not rule.is_active
-        rule.save()
-        
-        return JsonResponse({
-            'success': True, 
-            'message': f'Commission rule {"activated" if rule.is_active else "deactivated"}'
-        })
-        
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
-
-
-@login_required
-@require_POST
-def delete_commission_rule_view(request, rule_id):
-    """Delete a commission rule (soft delete)"""
-    try:
-        rule = get_object_or_404(CommissionRule, id=rule_id)
-        rule.is_deleted = True
-        rule.deleted_at = timezone.now()
-        rule.save()
-        
-        return JsonResponse({
-            'success': True, 
-            'message': 'Commission rule deleted successfully'
-        })
-        
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
-
-
-from finance.models import Wallet, Transaction, EscrowEntry
-from finance.services import FinanceService
-from django.db.models import Sum, Q
 
 @login_required
 def finance_ledger_view(request):
@@ -730,8 +755,63 @@ def escrow_management_view(request):
     
     context = {
         'escrow_entries': escrow_entries,
+        'now': timezone.now(),
     }
     return render(request, 'admin_panel/finance/escrow.html', context)
+
+
+@login_required
+def admin_cod_settlements_view(request):
+    """View for admins to review and process COD settlements."""
+    if not request.user.is_staff:
+        return redirect('admin_panel:dashboard')
+        
+    status_filter = request.GET.get('status', 'pending')
+    requests = CODSettlementRequest.objects.filter(status=status_filter).order_by('-created_at')
+    
+    if request.method == 'POST':
+        request_id = request.POST.get('request_id')
+        action = request.POST.get('action') # 'approved' or 'rejected'
+        notes = request.POST.get('notes', '')
+        
+        settlement_req = get_object_or_404(CODSettlementRequest, id=request_id)
+        
+        try:
+            FinanceService.process_cod_settlement(
+                settlement_req, 
+                action, 
+                request.user, 
+                notes
+            )
+            messages.success(request, f"Settlement request {action} successfully.")
+        except Exception as e:
+            messages.error(request, f"Error processing settlement: {str(e)}")
+            
+        return redirect('admin_panel:finance_cod_settlements')
+        
+    return render(request, 'admin_panel/finance/cod_settlements.html', {
+        'settlement_requests': requests, 
+        'status_filter': status_filter
+    })
+
+
+@login_required
+def financial_audit_logs_view(request):
+    """
+    View for high-level financial audit logs.
+    """
+    logs = FinancialAuditLog.objects.all().select_related('user', 'wallet')
+    
+    # Filters
+    action_type = request.GET.get('action_type')
+    if action_type:
+        logs = logs.filter(action_type=action_type)
+        
+    context = {
+        'logs': logs,
+        'action_types': FinancialAuditLog.ACTION_TYPES,
+    }
+    return render(request, 'admin_panel/finance/audit_logs.html', context)
 
 
 @can_manage_listings
@@ -1254,7 +1334,7 @@ def vendor_messages_view(request):
             Q(content__icontains=search) |
             Q(sender__email__icontains=search) |
             Q(recipient__email__icontains=search) |
-            Q(business_partner__business_name__icontains=search)
+            Q(business_partner__name__icontains=search)
         )
     
     # Pagination
@@ -1488,35 +1568,100 @@ def payment_management_view(request):
     date_to = request.GET.get('date_to', '')
     payment_method = request.GET.get('payment_method', '')
     
-    # Base queryset
-    payments = VendorPayment.objects.select_related('vendor').prefetch_related('related_listings')
-    
-    # Apply filters
+    # 1. Fetch Legacy Payments
+    legacy_payments = VendorPayment.objects.select_related('vendor').prefetch_related('related_listings')
     if status_filter:
-        payments = payments.filter(status=status_filter)
+        legacy_payments = legacy_payments.filter(status=status_filter)
     if vendor_filter:
-        payments = payments.filter(vendor_id=vendor_filter)
+        legacy_payments = legacy_payments.filter(vendor_id=vendor_filter)
     if date_from:
-        payments = payments.filter(created_at__date__gte=date_from)
+        legacy_payments = legacy_payments.filter(created_at__date__gte=date_from)
     if date_to:
-        payments = payments.filter(created_at__date__lte=date_to)
+        legacy_payments = legacy_payments.filter(created_at__date__lte=date_to)
     if payment_method:
-        payments = payments.filter(payment_method=payment_method)
+        legacy_payments = legacy_payments.filter(payment_method=payment_method)
+
+    # 2. Fetch Unified Transactions (Payouts)
+    # Note: unified transactions are effectively always "completed" in this ledger
+    unified_payouts = Transaction.objects.filter(transaction_type='PAYOUT')
+    if status_filter and status_filter != 'completed':
+        unified_payouts = unified_payouts.none() # Only completed in unified
+    if vendor_filter:
+        unified_payouts = unified_payouts.filter(destination_wallet__owner_id=vendor_filter, destination_wallet__owner_content_type__model='businesspartner')
+    if date_from:
+        unified_payouts = unified_payouts.filter(created_at__date__gte=date_from)
+    if date_to:
+        unified_payouts = unified_payouts.filter(created_at__date__lte=date_to)
+    # payment_method filter for unified might need metadata check if we store it there
+    if payment_method:
+        unified_payouts = unified_payouts.filter(metadata__payment_method=payment_method)
+
+    # 3. Normalize and Merge
+    merged_records = []
+    for lp in legacy_payments:
+        merged_records.append({
+            'id': lp.id,
+            'payment_reference': lp.payment_reference,
+            'vendor': lp.vendor,
+            'amount': lp.amount,
+            'commission_amount': lp.commission_amount,
+            'net_amount': lp.net_amount,
+            'status': lp.status,
+            'created_at': lp.created_at,
+            'is_unified': False
+        })
+    
+    for ut in unified_payouts:
+        vendor = None
+        if ut.destination_wallet and ut.destination_wallet.owner_content_type.model == 'businesspartner':
+            vendor = ut.destination_wallet.owner
+            
+        merged_records.append({
+            'id': ut.id,
+            'payment_reference': f"TRX-{ut.id}",
+            'vendor': vendor,
+            'amount': ut.amount_base,
+            'commission_amount': Decimal('0.00'), # Commissions are separate transactions in unified
+            'net_amount': ut.amount_base,
+            'status': 'completed',
+            'created_at': ut.created_at,
+            'is_unified': True
+        })
+
+    # Sort merged list
+    merged_records.sort(key=lambda x: x['created_at'], reverse=True)
+
+    # Statistics (Combined)
+    legacy_stats = legacy_payments.aggregate(
+        total_amount=Sum('amount'),
+        total_commission=Sum('commission_amount')
+    )
+    
+    # Unified commission needs to be fetched separately if we want total commission in the stats
+    total_unified_commission = Transaction.objects.filter(transaction_type='COMMISSION')
+    if vendor_filter:
+        total_unified_commission = total_unified_commission.filter(metadata__vendor_id=vendor_filter)
+    if date_from:
+        total_unified_commission = total_unified_commission.filter(created_at__date__gte=date_from)
+    if date_to:
+        total_unified_commission = total_unified_commission.filter(created_at__date__lte=date_to)
+    
+    unified_commission_amount = total_unified_commission.aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+    unified_payout_amount = unified_payouts.aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+
+    payment_stats = {
+        'total_payments': len(merged_records),
+        'total_amount': (legacy_stats['total_amount'] or Decimal('0.00')) + unified_payout_amount,
+        'total_commission': (legacy_stats['total_commission'] or Decimal('0.00')) + unified_commission_amount,
+        'pending_payments': legacy_payments.filter(status='pending').count(),
+        'completed_payments': legacy_payments.filter(status='completed').count() + unified_payouts.count(),
+        'failed_payments': legacy_payments.filter(status='failed').count(),
+    }
     
     # Pagination
     per_page = get_per_page_param(request, 20)
-    paginator = Paginator(payments, per_page)
+    paginator = Paginator(merged_records, per_page)
     payments_page = paginator.get_page(request.GET.get('page'))
-    
-    # Statistics
-    payment_stats = {
-        'total_payments': payments.count(),
-        'total_amount': payments.aggregate(total=Sum('amount'))['total'] or 0,
-        'total_commission': payments.aggregate(total=Sum('commission_amount'))['total'] or 0,
-        'pending_payments': payments.filter(status='pending').count(),
-        'completed_payments': payments.filter(status='completed').count(),
-        'failed_payments': payments.filter(status='failed').count(),
-    }
     
     # Get vendors for filter dropdown
     vendors = (
@@ -1589,6 +1734,98 @@ def commission_management_view(request):
 
 @login_required
 @staff_required
+def create_commission_rule(request):
+    """View to handle creation of a new commission rule."""
+    if request.method == 'POST':
+        try:
+            name = request.POST.get('name')
+            category = request.POST.get('category')
+            description = request.POST.get('description', '')
+            commission_type = request.POST.get('commission_type', 'percentage')
+            commission_rate = Decimal(request.POST.get('commission_rate', '0'))
+            fixed_amount = Decimal(request.POST.get('fixed_amount', '0'))
+            min_amount = Decimal(request.POST.get('min_amount', '0'))
+            max_amount_str = request.POST.get('max_amount')
+            max_amount = Decimal(max_amount_str) if max_amount_str else None
+            applies_to_all = request.POST.get('applies_to_all_vendors') == 'on'
+            is_active = request.POST.get('is_active') == 'on'
+            
+            rule = CommissionRule.objects.create(
+                name=name,
+                category=category,
+                description=description,
+                commission_type=commission_type,
+                commission_rate=commission_rate,
+                fixed_amount=fixed_amount,
+                min_amount=min_amount,
+                max_amount=max_amount,
+                applies_to_all_vendors=applies_to_all,
+                is_active=is_active,
+                created_by=request.user
+            )
+            
+            messages.success(request, f"Commission rule '{name}' created successfully.")
+        except Exception as e:
+            messages.error(request, f"Error creating rule: {str(e)}")
+            
+    return redirect('admin_panel:commission_management')
+
+
+@login_required
+@staff_required
+def toggle_commission_rule(request, rule_id):
+    """Toggle the active status of a commission rule."""
+    if request.method == 'POST':
+        rule = get_object_or_404(CommissionRule, id=rule_id)
+        rule.is_active = not rule.is_active
+        rule.save()
+        messages.success(request, f"Rule '{rule.name}' is now {'active' if rule.is_active else 'inactive'}.")
+    return redirect('admin_panel:commission_management')
+
+
+@login_required
+@staff_required
+def delete_commission_rule(request, rule_id):
+    """Delete a commission rule."""
+    if request.method == 'POST':
+        rule = get_object_or_404(CommissionRule, id=rule_id)
+        name = rule.name
+        rule.delete()
+        messages.success(request, f"Rule '{name}' has been deleted.")
+    return redirect('admin_panel:commission_management')
+
+
+@login_required
+@staff_required
+def update_commission_rule(request, rule_id):
+    """Update an existing commission rule."""
+    if request.method == 'POST':
+        try:
+            rule = get_object_or_404(CommissionRule, id=rule_id)
+            rule.name = request.POST.get('name')
+            rule.category = request.POST.get('category')
+            rule.description = request.POST.get('description', '')
+            rule.commission_type = request.POST.get('commission_type', 'percentage')
+            rule.commission_rate = Decimal(request.POST.get('commission_rate', '0'))
+            rule.fixed_amount = Decimal(request.POST.get('fixed_amount', '0'))
+            rule.min_amount = Decimal(request.POST.get('min_amount', '0'))
+            
+            max_amount_str = request.POST.get('max_amount')
+            rule.max_amount = Decimal(max_amount_str) if max_amount_str else None
+            
+            rule.applies_to_all_vendors = request.POST.get('applies_to_all_vendors') == 'on'
+            rule.is_active = request.POST.get('is_active') == 'on'
+            
+            rule.save()
+            messages.success(request, f"Commission rule '{rule.name}' updated successfully.")
+        except Exception as e:
+            messages.error(request, f"Error updating rule: {str(e)}")
+            
+    return redirect('admin_panel:commission_management')
+
+
+@login_required
+@staff_required
 def vendor_balance_view(request, vendor_id):
     """View for vendor balance and payment history."""
     
@@ -1597,28 +1834,75 @@ def vendor_balance_view(request, vendor_id):
         id=vendor_id,
     )
     
-    # Get or create vendor balance
-    balance, created = VendorBalance.objects.get_or_create(
-        vendor=vendor,
-        defaults={'current_balance': 0, 'total_earned': 0, 'total_paid': 0}
+    # 1. Get Legacy Data
+    legacy_balance, _ = VendorBalance.objects.get_or_create(vendor=vendor)
+    legacy_payments = VendorPayment.objects.filter(vendor=vendor).order_by('-created_at')
+    
+    # 2. Get Unified Data
+    vendor_ct = ContentType.objects.get_for_model(vendor)
+    wallet, created = Wallet.objects.get_or_create(
+        owner_content_type=vendor_ct,
+        owner_id=vendor.id,
+        defaults={'currency': 'USD'}
     )
     
-    # Get payment history
-    payments = VendorPayment.objects.filter(vendor=vendor).order_by('-created_at')
+    unified_transactions = Transaction.objects.filter(
+        Q(source_wallet=wallet) | Q(destination_wallet=wallet)
+    ).order_by('-created_at')
     
-    # Calculate statistics
+    # 3. Merge History
+    history = []
+    for lp in legacy_payments:
+        history.append({
+            'type': 'PAYOUT' if lp.status == 'completed' else 'PENDING_PAYOUT',
+            'amount': lp.net_amount,
+            'date': lp.created_at,
+            'reference': lp.payment_reference,
+            'status': lp.status,
+            'is_unified': False
+        })
+    
+    for ut in unified_transactions:
+        history.append({
+            'type': ut.transaction_type,
+            'amount': ut.amount_base,
+            'date': ut.created_at,
+            'reference': f"TRX-{ut.id}",
+            'status': 'completed',
+            'is_unified': True
+        })
+    
+    history.sort(key=lambda x: x['date'], reverse=True)
+    
+    # 4. Combined Statistics
+    unified_earned = unified_transactions.filter(
+        destination_wallet=wallet, 
+        transaction_type__in=['PAYMENT', 'EARNING', 'COMMISSION_REBATE']
+    ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+    
+    unified_paid = unified_transactions.filter(
+        source_wallet=wallet, 
+        transaction_type='PAYOUT'
+    ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+    
     balance_stats = {
-        'total_payments': payments.count(),
-        'total_earned': payments.aggregate(total=Sum('amount'))['total'] or 0,
-        'total_paid': payments.filter(status='completed').aggregate(total=Sum('net_amount'))['total'] or 0,
-        'pending_payments': payments.filter(status='pending').aggregate(total=Sum('net_amount'))['total'] or 0,
-        'average_payment': payments.filter(status='completed').aggregate(avg=Avg('net_amount'))['avg'] or 0,
+        'legacy_earned': legacy_balance.total_earned,
+        'legacy_paid': legacy_balance.total_paid,
+        'unified_earned': unified_earned,
+        'unified_paid': unified_paid,
+        'total_earned': (legacy_balance.total_earned or Decimal('0.00')) + (unified_earned or Decimal('0.00')),
+        'total_paid': (legacy_balance.total_paid or Decimal('0.00')) + (unified_paid or Decimal('0.00')),
+        'available_balance': (legacy_balance.current_balance or Decimal('0.00')) + (wallet.available_balance or Decimal('0.00')),
+        'pending_balance': (legacy_balance.pending_balance or Decimal('0.00')) + (wallet.pending_balance or Decimal('0.00')),
+        'escrow_balance': wallet.escrow_balance,
+        'liability_balance': wallet.liability_balance,
     }
     
     context = {
         'vendor': vendor,
-        'balance': balance,
-        'payments': payments[:10],  # Last 10 payments
+        'wallet': wallet,
+        'legacy_balance': legacy_balance,
+        'history': history[:50],  # Combined history
         'balance_stats': balance_stats,
     }
     
@@ -1629,44 +1913,70 @@ def vendor_balance_view(request, vendor_id):
 @staff_required
 @require_POST
 def adjust_vendor_balance_view(request, vendor_id):
-    """Manually adjust a vendor's balance."""
+    """Manually adjust a vendor's balance using unified Transaction model."""
     vendor = get_object_or_404(BusinessPartner, id=vendor_id)
-    balance, created = VendorBalance.objects.get_or_create(vendor=vendor)
+    vendor_ct = ContentType.objects.get_for_model(vendor)
+    wallet, created = Wallet.objects.get_or_create(
+        owner_content_type=vendor_ct,
+        owner_id=vendor.id,
+        defaults={'currency': 'USD'}
+    )
     
     try:
-        amount = float(request.POST.get('amount', 0))
+        amount = Decimal(request.POST.get('amount', '0'))
         adjustment_type = request.POST.get('type', 'credit')  # credit or debit
         reason = request.POST.get('reason', 'Manual adjustment')
         
-        if adjustment_type == 'debit':
-            amount = -abs(amount)
-        else:
-            amount = abs(amount)
+        with transaction.atomic():
+            old_balance = wallet.available_balance
             
-        old_balance = balance.current_balance
-        balance.current_balance += amount
-        balance.save()
+            if adjustment_type == 'debit':
+                wallet.available_balance -= amount
+                # Create Transaction record
+                Transaction.objects.create(
+                    source_wallet=wallet,
+                    amount_base=amount,
+                    amount_display=amount,
+                    exchange_rate=1.0,
+                    currency=wallet.currency,
+                    transaction_type='ADJUSTMENT',
+                    metadata={'reason': reason, 'admin_id': request.user.id, 'adjustment_type': 'debit'}
+                )
+            else:
+                wallet.available_balance += amount
+                # Create Transaction record
+                Transaction.objects.create(
+                    destination_wallet=wallet,
+                    amount_base=amount,
+                    amount_display=amount,
+                    exchange_rate=1.0,
+                    currency=wallet.currency,
+                    transaction_type='ADJUSTMENT',
+                    metadata={'reason': reason, 'admin_id': request.user.id, 'adjustment_type': 'credit'}
+                )
+            
+            wallet.save()
         
-        # Log the adjustment
+        # Log the adjustment in activity log
         log_activity(
             user=request.user,
             action_type=ActivityLogType.UPDATE,
-            description=f"Adjusted balance for {vendor.business_name}: {amount} (Old: {old_balance}, New: {balance.current_balance}). Reason: {reason}",
+            description=f"Adjusted wallet for {vendor.business_name}: {amount} (Old: {old_balance}, New: {wallet.available_balance}). Reason: {reason}",
             content_object=vendor,
             request=request,
             data={
-                'amount': amount,
-                'old_balance': float(old_balance),
-                'new_balance': float(balance.current_balance),
+                'amount': str(amount),
+                'old_balance': str(old_balance),
+                'new_balance': str(wallet.available_balance),
                 'reason': reason,
                 'type': adjustment_type
             }
         )
         
-        messages.success(request, f"Successfully adjusted balance for {vendor.business_name} by {amount}")
+        messages.success(request, f"Successfully adjusted wallet for {vendor.business_name} by {amount}")
         
-    except (ValueError, TypeError):
-        messages.error(request, "Invalid amount provided for adjustment.")
+    except (ValueError, TypeError, Exception) as e:
+        messages.error(request, f"Error adjusting balance: {str(e)}")
     
     return redirect('admin_panel:vendor_balance', vendor_id=vendor_id)
 
@@ -1679,6 +1989,16 @@ def process_payment_view(request, payment_id):
     if request.method == 'POST':
         payment = get_object_or_404(VendorPayment, id=payment_id)
         
+        # Check if vendor bank details are verified
+        try:
+            profile = payment.vendor.vendor_profile
+            if not profile.bank_details_verified:
+                messages.error(request, f"Cannot process payment: Bank details for {payment.vendor.business_name} are not verified.")
+                return redirect('admin_panel:payment_management')
+        except VendorProfile.DoesNotExist:
+            messages.error(request, "Vendor profile not found.")
+            return redirect('admin_panel:payment_management')
+
         # Update payment status
         old_status = payment.status
         payment.status = 'processing'
@@ -1696,31 +2016,76 @@ def process_payment_view(request, payment_id):
         
         # Simulate payment processing (in real implementation, integrate with payment gateway)
         import time
-        time.sleep(2)  # Simulate processing time
-        
-        # Update to completed status
-        payment.status = 'completed'
-        payment.payment_date = datetime.now()
-        payment.save()
-        
-        # Create payment history for completion
-        PaymentHistory.objects.create(
-            payment=payment,
-            old_status='processing',
-            new_status='completed',
-            notes=f"Payment completed by {request.user.get_full_name()}",
-            changed_by=request.user
-        )
-        
-        # Update vendor balance
-        balance, created = VendorBalance.objects.get_or_create(
-            vendor=payment.vendor,
-            defaults={'current_balance': 0, 'total_earned': 0, 'total_paid': 0}
-        )
-        balance.total_paid += payment.net_amount
-        balance.last_payment_date = payment.payment_date
-        balance.last_payment_amount = payment.net_amount
-        balance.update_balance()
+        # time.sleep(2)  # Removed for faster processing in dev
+
+        with transaction.atomic():
+            # Update to completed status
+            payment.status = 'completed'
+            payment.payment_date = timezone.now()
+            payment.save()
+
+            # Log payout in audit trail
+            VendorAuditLogger.log_vendor_action(
+                action_type='payout_processed',
+                user=request.user,
+                vendor=payment.vendor,
+                details={
+                    'payment_id': payment.id,
+                    'amount': str(payment.net_amount),
+                    'reference': payment.payment_reference,
+                    'notes': 'Single payment processed'
+                }
+            )
+            
+            # Create payment history for completion
+            PaymentHistory.objects.create(
+                payment=payment,
+                old_status='processing',
+                new_status='completed',
+                notes=f"Payment completed by {request.user.get_full_name()}",
+                changed_by=request.user
+            )
+            
+            # --- Sync with Unified Finance Model ---
+            vendor = payment.vendor
+            vendor_ct = ContentType.objects.get_for_model(vendor)
+            wallet, created = Wallet.objects.get_or_create(
+                owner_content_type=vendor_ct,
+                owner_id=vendor.id,
+                defaults={'currency': 'USD'}
+            )
+            
+            # Log the PAYOUT in the unified Transaction ledger
+            Transaction.objects.create(
+                source_wallet=wallet,  # Money leaving vendor wallet (payout)
+                amount_base=payment.net_amount,
+                amount_display=payment.net_amount,
+                exchange_rate=1.0,
+                currency=wallet.currency,
+                transaction_type='PAYOUT',
+                reference_content_type=ContentType.objects.get_for_model(payment),
+                reference_id=payment.id,
+                metadata={
+                    'payment_reference': payment.payment_reference,
+                    'method': payment.payment_method,
+                    'processed_by': request.user.id
+                }
+            )
+            
+            # Update wallet available balance (deduct the payout amount)
+            wallet.available_balance -= payment.net_amount
+            wallet.save()
+            
+            # Legacy sync (keep for compatibility until fully migrated)
+            balance, created = VendorBalance.objects.get_or_create(
+                vendor=vendor,
+                defaults={'current_balance': 0, 'total_earned': 0, 'total_paid': 0}
+            )
+            balance.total_paid += payment.net_amount
+            balance.last_payment_date = payment.payment_date
+            balance.last_payment_amount = payment.net_amount
+            balance.update_balance()
+            # ---------------------------------------
         
         messages.success(request, f"Payment {payment.payment_reference} processed successfully!")
         

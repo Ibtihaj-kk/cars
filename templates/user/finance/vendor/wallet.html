@@ -1,0 +1,289 @@
+{% extends 'user/base.html' %}
+{% load static %}
+{% load vendor_currency %}
+
+{% block title %}Vendor Wallet | CarSyncro{% endblock %}
+
+{% block page_title %}
+<div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+    <div>
+        <h1>Business Wallet</h1>
+        <p>Monitor your earnings, payouts, and escrow funds for {{ vendor.name }}.</p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <a href="{% url 'finance:submit_cod_settlement' %}" class="btn-outline" style="padding: 12px 24px; border-radius: 12px; border: 1px solid #000; color: #000; text-decoration: none; font-weight: 600; display: flex; align-items: center;">
+            <i class="fas fa-file-invoice-dollar" style="margin-right: 8px;"></i> Settle COD
+        </a>
+        <button onclick="openPayoutModal()" class="btn-black" style="padding: 12px 24px; border-radius: 12px;">
+            <i class="fas fa-money-check-alt" style="margin-right: 8px;"></i> Request Payout
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card dark">
+        <div class="stat-header">
+            <div class="stat-icon"><i class="fas fa-university"></i></div>
+        </div>
+        <span class="currency-symbol-top-right">{% vendor_currency_symbol %}</span>
+        <div class="stat-value">{% vendor_currency_value wallet.available_balance %}</div>
+        <div class="stat-label">Available for Payout</div>
+        <div class="stat-trend"><i class="fas fa-arrow-right"></i> Settled funds</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color: #F59E0B;"><i class="fas fa-lock"></i></div>
+        </div>
+        <span class="currency-symbol-top-right">{% vendor_currency_symbol %}</span>
+        <div class="stat-value">{% vendor_currency_value wallet.escrow_balance %}</div>
+        <div class="stat-label">In Escrow</div>
+        <div class="stat-trend" style="color: #F59E0B;"><i class="fas fa-clock"></i> Pending release</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color: #10B981;"><i class="fas fa-chart-pie"></i></div>
+        </div>
+        <span class="currency-symbol-top-right">{% vendor_currency_symbol %}</span>
+        <div class="stat-value">{% vendor_currency_value wallet.available_balance|add:wallet.escrow_balance %}</div>
+        <div class="stat-label">Total Earnings</div>
+        <div class="stat-trend" style="color: #10B981;"><i class="fas fa-plus"></i> Lifetime revenue</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color: #EF4444;"><i class="fas fa-file-invoice-dollar"></i></div>
+        </div>
+        <span class="currency-symbol-top-right">{% vendor_currency_symbol %}</span>
+        <div class="stat-value">{% vendor_currency_value wallet.liability_balance %}</div>
+        <div class="stat-label">Liabilities (COD)</div>
+        <div class="stat-trend" style="color: #EF4444;"><i class="fas fa-exclamation-circle"></i> To be settled</div>
+    </div>
+</div>
+
+<div class="dashboard-grid" style="margin-top: 30px;">
+    <!-- Recent Transactions -->
+    <div class="content-card">
+        <div class="card-head">
+            <h3>Recent Business Transactions</h3>
+            <div class="top-actions" style="margin-bottom: 0;">
+                <div class="search-box" style="position: relative;">
+                    <i class="fas fa-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #888;"></i>
+                    <input type="text" id="txSearch" placeholder="Search..." 
+                           style="padding: 10px 15px 10px 40px; border-radius: 12px; border: 1px solid var(--border-subtle); font-size: 14px; width: 200px;">
+                </div>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="clean-table" id="txTable">
+                <thead>
+                    <tr>
+                        <th>Ref</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in transactions %}
+                    <tr>
+                        <td><span class="order-id">#{{ tx.id }}</span></td>
+                        <td>
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-size: 14px; font-weight: 700;">{{ tx.get_transaction_type_display }}</span>
+                                <span style="font-size: 11px; color: #888;">{{ tx.currency }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if tx.destination_wallet == wallet %}
+                                <span style="color: #10B981; font-weight: 700;">+ {% vendor_currency_value tx.amount_base %}</span>
+                            {% else %}
+                                <span style="color: #EF4444; font-weight: 700;">- {% vendor_currency_value tx.amount_base %}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ tx.created_at|date:"M d, Y" }}</td>
+                        <td><span class="status completed">Completed</span></td>
+                        <td>
+                            <a href="{% url 'finance:vendor_transaction_detail' tx.id %}" class="action-icon-btn">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #888;">No transactions found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Escrow Breakdown -->
+    <div class="content-card">
+        <div class="card-head">
+            <h3>Escrow Breakdown</h3>
+        </div>
+        <div class="table-wrapper">
+            <table class="clean-table">
+                <thead>
+                    <tr>
+                        <th>Release Date</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in escrow_entries %}
+                    <tr>
+                        <td>{{ entry.release_date|date:"M d, Y" }}</td>
+                        <td style="font-weight: 700;">{% vendor_currency_value entry.amount %}</td>
+                        <td>
+                            <span class="status pending">Pending</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" style="text-align: center; padding: 40px; color: #888;">No pending escrow releases.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="padding: 20px; background: #F9FAFB; border-radius: 12px; margin-top: 20px;">
+            <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">Payout Schedule</h4>
+            <p style="font-size: 13px; color: #666; line-height: 1.5;">
+                Funds are released from escrow 7 days after order delivery. Available balance can be withdrawn to your registered bank account every Tuesday.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Payout Request Modal -->
+<div id="payoutModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: all 0.3s ease;">
+    <div class="modal-content" style="background: white; width: 100%; max-width: 500px; border-radius: 24px; overflow: hidden; transform: translateY(20px); transition: all 0.3s ease;">
+        <div class="modal-header" style="padding: 24px; border-bottom: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-size: 18px; font-weight: 800; margin: 0;">Request Payout</h3>
+            <button onclick="closePayoutModal()" style="background: none; border: none; cursor: pointer; color: #9CA3AF;"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px;">
+            <div style="background: #F9FAFB; padding: 20px; border-radius: 16px; margin-bottom: 24px;">
+                <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 15px; color: #374151;">Registered Bank Details</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label style="font-size: 11px; color: #6B7280; text-transform: uppercase; font-weight: 700;">Bank Name</label>
+                        <p style="font-size: 13px; font-weight: 600; margin: 4px 0 0;">{{ vendor.vendor_profile.bank_name|default:"Not Set" }}</p>
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; color: #6B7280; text-transform: uppercase; font-weight: 700;">Account Number</label>
+                        <p style="font-size: 13px; font-weight: 600; margin: 4px 0 0;">{{ vendor.vendor_profile.bank_account_number|default:"Not Set" }}</p>
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; color: #6B7280; text-transform: uppercase; font-weight: 700;">SWIFT/BIC</label>
+                        <p style="font-size: 13px; font-weight: 600; margin: 4px 0 0;">{{ vendor.vendor_profile.swift_code|default:"Not Set" }}</p>
+                    </div>
+                </div>
+                {% if not vendor.vendor_profile.bank_account_number %}
+                <div style="margin-top: 15px; padding: 10px; background: #FEF2F2; border-radius: 8px; color: #B91C1C; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-exclamation-circle"></i> Please update your bank details in profile settings.
+                </div>
+                {% endif %}
+            </div>
+
+            <form id="payoutForm">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; color: #374151;">Amount to Withdraw</label>
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-weight: 700; color: #9CA3AF;">{% vendor_currency_symbol %}</span>
+                        <input type="number" name="amount" step="0.01" max="{{ wallet.available_balance }}" required
+                               placeholder="0.00"
+                               style="width: 100%; padding: 12px 15px 12px 50px; border-radius: 12px; border: 1px solid #D1D5DB; font-size: 16px; font-weight: 700;">
+                    </div>
+                    <p style="font-size: 12px; color: #6B7280; margin-top: 8px;">Max available: {% vendor_currency_value wallet.available_balance %}</p>
+                </div>
+                
+                <button type="submit" class="btn-black" style="width: 100%; padding: 14px; justify-content: center;" {% if not vendor.vendor_profile.bank_account_number or wallet.available_balance <= 0 %}disabled{% endif %}>
+                    Submit Request
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openPayoutModal() {
+        const modal = document.getElementById('payoutModal');
+        const content = modal.querySelector('.modal-content');
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.style.opacity = '1';
+            modal.style.pointerEvents = 'auto';
+            content.style.transform = 'translateY(0)';
+        }, 10);
+    }
+
+    function closePayoutModal() {
+        const modal = document.getElementById('payoutModal');
+        const content = modal.querySelector('.modal-content');
+        modal.style.opacity = '0';
+        modal.style.pointerEvents = 'none';
+        content.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300);
+    }
+
+    document.getElementById('payoutForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const amount = this.amount.value;
+        const submitBtn = this.querySelector('button[type="submit"]');
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        fetch("{% url 'finance:request_payout' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ amount: amount })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Request';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Request';
+        });
+    });
+
+    document.getElementById('txSearch').addEventListener('keyup', function() {
+        let filter = this.value.toUpperCase();
+        let rows = document.querySelector("#txTable tbody").rows;
+        for (let i = 0; i < rows.length; i++) {
+            let text = rows[i].textContent.toUpperCase();
+            rows[i].style.display = text.indexOf(filter) > -1 ? "" : "none";
+        }
+    });
+</script>
+{% endblock %}

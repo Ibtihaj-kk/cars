@@ -5,8 +5,12 @@ Provides vendors with comprehensive access to manage their parts with all Excel 
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.contenttypes.models import ContentType
 from django.contrib import messages
 from django.core.paginator import Paginator
+from finance.models import Wallet, Transaction, EscrowEntry
+from admin_panel.payment_models import VendorBalance, VendorPayment, PaymentStatus
+from parts.models import Part, Order, OrderItem
 from django.db.models import Q, Count, Sum, Avg, F, Case, When, Min, Max
 from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.http import require_http_methods
@@ -449,22 +453,82 @@ def vendor_finance_dashboard(request):
 
     business_partner = vendor_profile.business_partner
 
-    from parts.models import Order, VendorOrderItemStatus
+    vendor_ct = ContentType.objects.get_for_model(BusinessPartner)
+    wallet, created = Wallet.objects.get_or_create(
+        owner_content_type=vendor_ct,
+        owner_id=business_partner.id,
+        defaults={'currency': vendor_profile.preferred_currency or 'USD'}
+    )
+
+    # Get or create legacy vendor balance for backward compatibility
+    vendor_balance, created = VendorBalance.objects.get_or_create(
+        vendor=business_partner,
+        defaults={
+            'current_balance': Decimal('0.00'),
+            'pending_balance': Decimal('0.00'),
+            'total_earned': Decimal('0.00'),
+            'total_paid': Decimal('0.00')
+        }
+    )
+
+    # Recalculate Legacy Balances to prevent double-counting
+    order_item_ct = ContentType.objects.get_for_model(OrderItem)
+    
+    legacy_total_earned = OrderItem.objects.filter(
+        part__vendor=business_partner,
+        order__status='delivered'
+    ).exclude(
+        id__in=Transaction.objects.filter(
+            reference_content_type=order_item_ct,
+            destination_wallet=wallet
+        ).values_list('reference_id', flat=True)
+    ).aggregate(
+        total=Sum(F('price') * F('quantity'))
+    )['total'] or Decimal('0.00')
+
+    pending_clearance_amount = OrderItem.objects.filter(
+        part__vendor=business_partner,
+        order__status__in=['confirmed', 'processing', 'shipped']
+    ).exclude(
+        id__in=Transaction.objects.filter(
+            reference_content_type=order_item_ct,
+            destination_wallet=wallet
+        ).values_list('reference_id', flat=True)
+    ).aggregate(
+        total=Sum(F('price') * F('quantity'))
+    )['total'] or Decimal('0.00')
+
+    vendor_balance.total_earned = legacy_total_earned
+    vendor_balance.pending_balance = pending_clearance_amount
+    vendor_balance.update_balance()
 
     now = timezone.now()
     last_30_days = now - timedelta(days=30)
 
-    cash_received = VendorPayment.objects.filter(
+    # Use Wallet and Transactions for data
+    # Combine legacy and unified data for stats
+    legacy_cash_received = VendorPayment.objects.filter(
         vendor=business_partner,
         status=PaymentStatus.COMPLETED,
-        created_at__gte=last_30_days,
-    ).aggregate(total=Sum('net_amount'))['total'] or Decimal('0.00')
+        created_at__gte=last_30_days
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
-    marketplace_commission = VendorPayment.objects.filter(
-        vendor=business_partner,
-        status=PaymentStatus.COMPLETED,
+    unified_cash_received = Transaction.objects.filter(
+        destination_wallet=wallet,
         created_at__gte=last_30_days,
-    ).aggregate(total=Sum('commission_amount'))['total'] or Decimal('0.00')
+        transaction_type='PAYMENT'
+    ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+
+    cash_received = legacy_cash_received + unified_cash_received
+
+    marketplace_commission = Transaction.objects.filter(
+        source_wallet=wallet,
+        created_at__gte=last_30_days,
+        transaction_type='COMMISSION'
+    ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+
+    # Note: Legacy system didn't track commission separately in VendorPayment, 
+    # so we rely on unified Transactions for this metric.
 
     base_orders = Order.objects.filter(items__part__vendor=business_partner).distinct()
 
@@ -474,14 +538,11 @@ def vendor_finance_dashboard(request):
         status__in=['cancelled', 'refunded']
     ).count()
 
-    refundable_statuses = VendorOrderItemStatus.objects.filter(
-        vendor=business_partner,
-        status='refunded',
-        updated_at__gte=last_30_days,
-    )
-    refund_amount = refundable_statuses.aggregate(
-        total=Sum(F('order_item__quantity') * F('order_item__price'))
-    )['total'] or Decimal('0.00')
+    refund_amount = Transaction.objects.filter(
+        source_wallet=wallet,
+        created_at__gte=last_30_days,
+        transaction_type='REFUND'
+    ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
 
     orders_last_30_days = base_orders.filter(
         created_at__gte=last_30_days,
@@ -498,29 +559,47 @@ def vendor_finance_dashboard(request):
         'tax_amount',
     ).annotate(
         vendor_items_total=Sum(
-            F('items__quantity') * F('items__price'),
+            'items__quantity',
             filter=Q(items__part__vendor=business_partner)
-        )
+        ) * F('items__price') # Note: This might need fix if Sum doesn't handle F correctly
     )
+    # Correction for the Sum/F logic
+    per_order_totals = orders_last_30_days.values('id', 'total_price', 'shipping_cost', 'tax_amount')
+    
+    for order_info in per_order_totals:
+        vendor_total = OrderItem.objects.filter(
+            order_id=order_info['id'], 
+            part__vendor=business_partner
+        ).aggregate(total=Sum(F('quantity') * F('price')))['total'] or Decimal('0.00')
+        
+        order_total = order_info['total_price'] or Decimal('0.00')
+        if order_total > 0:
+            ratio = vendor_total / order_total
+            tax_payable += (order_info['tax_amount'] or Decimal('0.00')) * ratio
+            shipping_cost += (order_info['shipping_cost'] or Decimal('0.00')) * ratio
 
-    for row in per_order_totals:
-        order_total = row.get('total_price') or Decimal('0.00')
-        vendor_total = row.get('vendor_items_total') or Decimal('0.00')
-        if order_total <= 0 or vendor_total <= 0:
-            continue
-        ratio = vendor_total / order_total
-        tax_payable += (row.get('tax_amount') or Decimal('0.00')) * ratio
-        shipping_cost += (row.get('shipping_cost') or Decimal('0.00')) * ratio
+    recent_transactions = Transaction.objects.filter(
+        Q(source_wallet=wallet) | Q(destination_wallet=wallet)
+    ).order_by('-created_at')[:20]
 
-    recent_transactions = VendorPayment.objects.filter(
-        vendor=business_partner
-    ).order_by('-created_at')[:10]
+    escrow_entries = wallet.escrow_entries.filter(is_released=False).order_by('release_date')
 
     pending_processing_count = base_orders.filter(
         status__in=['confirmed', 'processing']
     ).count()
 
+    # Calculate combined balances for display
+    combined_available_balance = (vendor_balance.current_balance or Decimal('0.00')) + (wallet.available_balance or Decimal('0.00'))
+    combined_escrow_balance = (vendor_balance.pending_balance or Decimal('0.00')) + (wallet.escrow_balance or Decimal('0.00'))
+    liability_balance = wallet.liability_balance or Decimal('0.00')
+
     context = {
+        'wallet': wallet,
+        'vendor_balance': vendor_balance,
+        'available_balance': combined_available_balance,
+        'escrow_balance': combined_escrow_balance,
+        'liability_balance': liability_balance,
+        'escrow_entries': escrow_entries,
         'vendor_profile': vendor_profile,
         'business_partner': business_partner,
         'is_approved': vendor_profile.is_approved,
@@ -626,7 +705,6 @@ def vendor_settlement_statements(request):
 
     pending_processing_count = 0
     try:
-        from parts.models import Order
         pending_processing_count = Order.objects.filter(
             items__part__vendor=business_partner,
             status__in=['confirmed', 'processing']
@@ -715,21 +793,11 @@ def vendor_payout_tracking(request):
         'prepaid': 0,
     }.get(vendor_profile.payment_terms, 30)
 
-    bank_details = (vendor_profile.bank_account_details or '').splitlines()
-    bank_name = ''
-    account_number = ''
-    iban = ''
-    for raw_line in bank_details:
-        line = raw_line.strip()
-        if not line:
-            continue
-        if line.lower().startswith('bank:'):
-            bank_name = line.split(':', 1)[1].strip()
-        elif line.lower().startswith('account number:'):
-            account_number = line.split(':', 1)[1].strip()
-        elif line.lower().startswith('iban:'):
-            iban = line.split(':', 1)[1].strip()
-
+    # Structured bank details
+    bank_name = vendor_profile.bank_name or ''
+    account_number = vendor_profile.bank_account_number or ''
+    iban = vendor_profile.iban or ''
+    
     account_source = account_number or iban
     bank_account_display = '—'
     if account_source:
@@ -737,22 +805,91 @@ def vendor_payout_tracking(request):
         if last4:
             prefix = bank_name or 'Bank'
             bank_account_display = f'{prefix} **** {last4}'
+            if vendor_profile.bank_details_verified:
+                bank_account_display += ' (Verified)'
 
-    payouts_qs = VendorPayment.objects.filter(vendor=business_partner).order_by('-created_at')
+    # Get Wallet
+    vendor_ct = ContentType.objects.get_for_model(business_partner)
+    wallet, created = Wallet.objects.get_or_create(
+        owner_content_type=vendor_ct,
+        owner_id=business_partner.id,
+        defaults={'currency': 'USD'}
+    )
 
-    last_payout = payouts_qs.filter(status=PaymentStatus.COMPLETED).order_by(
+    # Get or create legacy vendor balance for backward compatibility
+    vendor_balance, created = VendorBalance.objects.get_or_create(
+        vendor=business_partner,
+        defaults={
+            'current_balance': Decimal('0.00'),
+            'pending_balance': Decimal('0.00'),
+            'total_earned': Decimal('0.00'),
+            'total_paid': Decimal('0.00')
+        }
+    )
+
+    # Get Payouts from both legacy and new systems
+    legacy_payouts_qs = VendorPayment.objects.filter(vendor=business_partner).order_by('-created_at')
+    new_payouts_qs = Transaction.objects.filter(
+        source_wallet=wallet, 
+        transaction_type='PAYOUT'
+    ).order_by('-created_at')
+
+    # Normalize and merge payouts for display
+    merged_payouts = []
+    
+    # Add legacy payouts
+    for lp in legacy_payouts_qs:
+        merged_payouts.append({
+            'id': lp.id,
+            'date': lp.payment_date or lp.processed_at or lp.created_at,
+            'reference': lp.payment_reference,
+            'amount': lp.net_amount,
+            'method': lp.get_payment_method_display(),
+            'status': lp.status,
+            'status_display': lp.get_status_display(),
+            'is_unified': False,
+            'notes': lp.notes
+        })
+        
+    # Add unified payouts
+    for ut in new_payouts_qs:
+        merged_payouts.append({
+            'id': ut.id,
+            'date': ut.created_at,
+            'reference': f"TRX-{ut.id}",
+            'amount': ut.amount_base,
+            'method': ut.metadata.get('payment_method', 'Wallet Transfer'),
+            'status': 'completed', # Unified transactions in this list are assumed completed
+            'status_display': 'Completed',
+            'is_unified': True,
+            'notes': ut.metadata.get('reason', 'Payout')
+        })
+        
+    # Sort merged list by date descending
+    merged_payouts.sort(key=lambda x: x['date'], reverse=True)
+    
+    last_payout = legacy_payouts_qs.filter(status=PaymentStatus.COMPLETED).order_by(
         '-payment_date',
         '-processed_at',
         '-created_at',
     ).first()
-    last_payout_amount = last_payout.net_amount if last_payout else Decimal('0.00')
+    
+    # Check if there's a newer payout in Transactions
+    last_new_payout = new_payouts_qs.first()
+    
+    last_payout_amount = Decimal('0.00')
     last_payout_date = None
-    if last_payout:
+    
+    if last_new_payout and (not last_payout or last_new_payout.created_at > (last_payout.payment_date or last_payout.processed_at or last_payout.created_at)):
+        last_payout_amount = last_new_payout.amount_base
+        last_payout_date = last_new_payout.created_at
+    elif last_payout:
+        last_payout_amount = last_payout.net_amount
         last_payout_date = last_payout.payment_date or last_payout.processed_at or last_payout.created_at
 
     pending_statuses = [PaymentStatus.PENDING, PaymentStatus.PROCESSING]
     pending_payments = list(
-        payouts_qs.filter(status__in=pending_statuses).order_by('due_date', 'created_at')[:250]
+        legacy_payouts_qs.filter(status__in=pending_statuses).order_by('due_date', 'created_at')[:250]
     )
 
     today = timezone.now().date()
@@ -776,13 +913,15 @@ def vendor_payout_tracking(request):
             if p.id in next_due_payment_ids:
                 next_payout_estimated_amount += (p.net_amount or Decimal('0.00'))
 
-    pending_balance = sum((p.net_amount or Decimal('0.00')) for p in pending_payments) if pending_payments else Decimal('0.00')
+    # pending_balance should combine legacy and unified escrow
+    pending_balance = (vendor_balance.pending_balance or Decimal('0.00')) + (wallet.escrow_balance or Decimal('0.00'))
+    
     clearing_in_days = None
     if next_payout_date:
         clearing_in_days = (next_payout_date - today).days
 
     payouts_page_size = 20
-    paginator = Paginator(payouts_qs, payouts_page_size)
+    paginator = Paginator(merged_payouts, payouts_page_size)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -799,6 +938,7 @@ def vendor_payout_tracking(request):
     context = {
         'vendor_profile': vendor_profile,
         'business_partner': business_partner,
+        'wallet': wallet,
         'is_approved': vendor_profile.is_approved,
         'next_payout_date': next_payout_date,
         'next_payout_estimated_amount': next_payout_estimated_amount,
@@ -849,23 +989,86 @@ def vendor_commission_breakdown(request):
         else:
             current_plan_summary = 'Tiered commission'
 
+    # Get Wallet
+    vendor_ct = ContentType.objects.get_for_model(business_partner)
+    wallet, created = Wallet.objects.get_or_create(
+        owner_content_type=vendor_ct,
+        owner_id=business_partner.id,
+        defaults={'currency': 'USD'}
+    )
+
     payments_qs = VendorPayment.objects.filter(vendor=business_partner).order_by('-created_at')
 
     lookback_days = 90
     since = timezone.now() - timedelta(days=lookback_days)
+    
+    # Legacy totals
     payments_recent = payments_qs.filter(created_at__gte=since)
-
-    totals = payments_recent.aggregate(
+    legacy_totals = payments_recent.aggregate(
         total_sales=Sum('amount'),
         total_commission=Sum('commission_amount'),
     )
-    total_sales = totals.get('total_sales') or Decimal('0.00')
-    total_commission = totals.get('total_commission') or Decimal('0.00')
+    
+    # New totals from Transaction model
+    # Commission is usually a separate transaction or metadata in a PAYMENT transaction.
+    # Based on our migration, we often create a COMMISSION transaction.
+    unified_commissions_qs = Transaction.objects.filter(
+        source_wallet=wallet,
+        transaction_type='COMMISSION',
+        created_at__gte=since
+    ).order_by('-created_at')
+    
+    new_commission_total = unified_commissions_qs.aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+
+    # For sales, we look at PAYMENT transactions where this wallet is the destination
+    new_sales_total = Transaction.objects.filter(
+        destination_wallet=wallet,
+        transaction_type='PAYMENT',
+        created_at__gte=since
+    ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+
+    total_sales = (legacy_totals.get('total_sales') or Decimal('0.00')) + new_sales_total
+    total_commission = (legacy_totals.get('total_commission') or Decimal('0.00')) + new_commission_total
+    
+    # Normalize and merge commissions for display
+    merged_commissions = []
+    
+    # Add legacy commissions (from VendorPayment)
+    for lp in payments_recent:
+        merged_commissions.append({
+            'date': lp.created_at,
+            'reference': lp.payment_reference,
+            'amount': lp.amount,
+            'commission_amount': lp.commission_amount,
+            'net_amount': lp.net_amount,
+            'commission_type': lp.commission_type,
+            'commission_rate': lp.commission_rate,
+            'is_unified': False
+        })
+        
+    # Add unified commissions
+    for uc in unified_commissions_qs:
+        # Try to find the associated payment transaction via metadata or reference
+        sales_amount = uc.metadata.get('original_amount', uc.amount_base) # fallback
+        merged_commissions.append({
+            'date': uc.created_at,
+            'reference': f"TRX-{uc.id}",
+            'amount': sales_amount,
+            'commission_amount': uc.amount_base,
+            'net_amount': Decimal(str(sales_amount)) - uc.amount_base,
+            'commission_type': uc.metadata.get('commission_type', 'percentage'),
+            'commission_rate': uc.metadata.get('commission_rate', Decimal('0.00')),
+            'is_unified': True
+        })
+        
+    # Sort merged list by date descending
+    merged_commissions.sort(key=lambda x: x['date'], reverse=True)
+    
     effective_rate = Decimal('0.00')
     if total_sales > 0:
         effective_rate = (total_commission / total_sales) * Decimal('100')
 
-    paginator = Paginator(payments_recent, 25)
+    paginator = Paginator(merged_commissions, 25)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -882,6 +1085,7 @@ def vendor_commission_breakdown(request):
     context = {
         'vendor_profile': vendor_profile,
         'business_partner': business_partner,
+        'wallet': wallet,
         'is_approved': vendor_profile.is_approved,
         'current_plan_name': current_plan_name,
         'current_plan_summary': current_plan_summary,
@@ -1034,60 +1238,107 @@ def vendor_finance_ledger(request):
         return redirect('business_partners:vendor_registration_single')
 
     business_partner = vendor_profile.business_partner
+    
+    # Get or create vendor wallet (Unified Model)
+    vendor_ct = ContentType.objects.get_for_model(business_partner)
+    wallet, created = Wallet.objects.get_or_create(
+        owner_content_type=vendor_ct,
+        owner_id=business_partner.id,
+        defaults={'currency': 'USD'}
+    )
 
-    payments = VendorPayment.objects.filter(vendor=business_partner).order_by('created_at')
+    # Get or create legacy balance
+    vendor_balance, created = VendorBalance.objects.get_or_create(
+        vendor=business_partner,
+        defaults={'current_balance': Decimal('0.00'), 'total_earned': Decimal('0.00'), 'total_paid': Decimal('0.00')}
+    )
+
+    # Recalculate Legacy Total Earned (Delivered Orders NOT in Unified Transactions)
+    # This prevents double-counting of earnings that have already been migrated to the unified system.
+    order_item_ct = ContentType.objects.get_for_model(OrderItem)
+    
+    legacy_total_earned = OrderItem.objects.filter(
+        part__vendor=business_partner,
+        order__status='delivered'
+    ).exclude(
+        id__in=Transaction.objects.filter(
+            reference_content_type=order_item_ct,
+            destination_wallet=wallet
+        ).values_list('reference_id', flat=True)
+    ).aggregate(
+        total=Sum(F('price') * F('quantity'))
+    )['total'] or Decimal('0.00')
+
+    # Update legacy balance object for this request
+    vendor_balance.total_earned = legacy_total_earned
+    vendor_balance.update_balance()
+
+    # Get legacy payouts
+    legacy_payouts = VendorPayment.objects.filter(
+        vendor=business_partner,
+        status=PaymentStatus.COMPLETED
+    ).order_by('created_at')
+
+    # Get unified transactions
+    transactions_qs = Transaction.objects.filter(
+        Q(source_wallet=wallet) | Q(destination_wallet=wallet)
+    ).order_by('created_at')
 
     ledger_rows = []
-    for p in payments:
-        created_at = p.created_at or timezone.now()
-        if (p.amount or Decimal('0.00')) > 0:
-            ledger_rows.append({
-                'sort_dt': created_at,
-                'seq': 0,
-                'date': created_at,
-                'type': 'sale',
-                'label': 'Sale',
-                'description': f'{p.payment_reference} revenue',
-                'debit': None,
-                'credit': p.amount,
-            })
-
-        if (p.commission_amount or Decimal('0.00')) > 0:
-            ledger_rows.append({
-                'sort_dt': created_at,
-                'seq': 1,
-                'date': created_at,
-                'type': 'fee',
-                'label': 'Fee',
-                'description': f'Commission ({p.payment_reference})',
-                'debit': p.commission_amount,
-                'credit': None,
-            })
-
-        if p.status == PaymentStatus.COMPLETED and (p.net_amount or Decimal('0.00')) > 0:
-            payout_dt = p.payment_date or p.processed_at or p.created_at or timezone.now()
-            ledger_rows.append({
-                'sort_dt': payout_dt,
-                'seq': 2,
-                'date': payout_dt,
-                'type': 'payout',
-                'label': 'Payout',
-                'description': f'Payout ({p.payment_reference})',
-                'debit': p.net_amount,
-                'credit': None,
-            })
-
-    ledger_rows.sort(key=lambda r: (r['sort_dt'], r['seq']))
-
     running_balance = Decimal('0.00')
-    for row in ledger_rows:
-        credit = row['credit'] or Decimal('0.00')
-        debit = row['debit'] or Decimal('0.00')
+    
+    # 1. Add Legacy Opening Balance (if any)
+    # If total_earned > 0 but we don't have individual transaction records, 
+    # we can show a "Legacy Earnings" entry.
+    if vendor_balance.total_earned > 0:
+        running_balance += vendor_balance.total_earned
+        ledger_rows.append({
+            'date': vendor_balance.created_at or business_partner.created_at,
+            'type': 'legacy_earnings',
+            'label': 'Legacy Earnings',
+            'description': 'Historical earnings from legacy system',
+            'debit': None,
+            'credit': vendor_balance.total_earned,
+            'balance': running_balance,
+            'reference': "LEGACY-EARN"
+        })
+
+    # 2. Add Legacy Payouts
+    for lp in legacy_payouts:
+        debit = lp.net_amount
+        running_balance -= debit
+        ledger_rows.append({
+            'date': lp.payment_date or lp.processed_at or lp.created_at,
+            'type': 'payout',
+            'label': 'Legacy Payout',
+            'description': lp.notes or f"Payout ({lp.get_payment_method_display()})",
+            'debit': debit,
+            'credit': None,
+            'balance': running_balance,
+            'reference': lp.payment_reference
+        })
+
+    # 3. Add Unified Transactions
+    for tx in transactions_qs:
+        is_credit = tx.destination_wallet == wallet
+        credit = tx.amount_base if is_credit else Decimal('0.00')
+        debit = tx.amount_base if not is_credit else Decimal('0.00')
+        
         running_balance += credit
         running_balance -= debit
-        row['balance'] = running_balance
+        
+        ledger_rows.append({
+            'date': tx.created_at,
+            'type': tx.transaction_type.lower(),
+            'label': tx.get_transaction_type_display(),
+            'description': tx.metadata.get('reason') or tx.get_transaction_type_display(),
+            'debit': debit if debit > 0 else None,
+            'credit': credit if credit > 0 else None,
+            'balance': running_balance,
+            'reference': f"TRX-{tx.id}"
+        })
 
-    ledger_rows.reverse()
+    ledger_rows.reverse()  # Show newest first
 
     paginator = Paginator(ledger_rows, 25)
     page_number = request.GET.get('page')
@@ -1106,6 +1357,7 @@ def vendor_finance_ledger(request):
     context = {
         'vendor_profile': vendor_profile,
         'business_partner': business_partner,
+        'wallet': wallet,
         'is_approved': vendor_profile.is_approved,
         'ledger_rows': page_obj,
         'stats': {
@@ -1126,41 +1378,102 @@ def vendor_finance_ledger_export_csv(request):
         return redirect('business_partners:vendor_registration_single')
 
     business_partner = vendor_profile.business_partner
+    
+    # Get or create vendor wallet (Unified Model)
+    vendor_ct = ContentType.objects.get_for_model(business_partner)
+    wallet, created = Wallet.objects.get_or_create(
+        owner_content_type=vendor_ct,
+        owner_id=business_partner.id,
+        defaults={'currency': 'USD'}
+    )
 
-    payments = VendorPayment.objects.filter(vendor=business_partner).order_by('created_at')
+    # Get or create legacy balance
+    vendor_balance, created = VendorBalance.objects.get_or_create(
+        vendor=business_partner,
+        defaults={'current_balance': Decimal('0.00'), 'total_earned': Decimal('0.00'), 'total_paid': Decimal('0.00')}
+    )
 
-    ledger_rows = []
-    for p in payments:
-        created_at = p.created_at or timezone.now()
-        if (p.amount or Decimal('0.00')) > 0:
-            ledger_rows.append((created_at, 0, created_at, 'Sale', f'{p.payment_reference} revenue', None, p.amount))
+    # Recalculate Legacy Total Earned (Delivered Orders NOT in Unified Transactions)
+    order_item_ct = ContentType.objects.get_for_model(OrderItem)
+    
+    legacy_total_earned = OrderItem.objects.filter(
+        part__vendor=business_partner,
+        order__status='delivered'
+    ).exclude(
+        id__in=Transaction.objects.filter(
+            reference_content_type=order_item_ct,
+            destination_wallet=wallet
+        ).values_list('reference_id', flat=True)
+    ).aggregate(
+        total=Sum(F('price') * F('quantity'))
+    )['total'] or Decimal('0.00')
 
-        if (p.commission_amount or Decimal('0.00')) > 0:
-            ledger_rows.append((created_at, 1, created_at, 'Fee', f'Commission ({p.payment_reference})', p.commission_amount, None))
+    # Update legacy balance object for this request
+    vendor_balance.total_earned = legacy_total_earned
+    vendor_balance.update_balance()
 
-        if p.status == PaymentStatus.COMPLETED and (p.net_amount or Decimal('0.00')) > 0:
-            payout_dt = p.payment_date or p.processed_at or p.created_at or timezone.now()
-            ledger_rows.append((payout_dt, 2, payout_dt, 'Payout', f'Payout ({p.payment_reference})', p.net_amount, None))
+    # Get legacy payouts
+    legacy_payouts = VendorPayment.objects.filter(
+        vendor=business_partner,
+        status=PaymentStatus.COMPLETED
+    ).order_by('created_at')
 
-    ledger_rows.sort(key=lambda r: (r[0], r[1]))
-
-    running_balance = Decimal('0.00')
+    # Get unified transactions
+    transactions_qs = Transaction.objects.filter(
+        Q(source_wallet=wallet) | Q(destination_wallet=wallet)
+    ).order_by('created_at')
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="vendor-ledger-{business_partner.id}.csv"'
 
     writer = csv.writer(response)
-    writer.writerow(['Date', 'Type', 'Description', 'Debit', 'Credit', 'Balance'])
+    writer.writerow(['Date', 'Reference', 'Type', 'Description', 'Debit', 'Credit', 'Balance'])
 
-    for _, __, dt, label, desc, debit, credit in ledger_rows:
-        running_balance += (credit or Decimal('0.00'))
-        running_balance -= (debit or Decimal('0.00'))
+    running_balance = Decimal('0.00')
+
+    # 1. Add Legacy Opening Balance (if any)
+    if vendor_balance.total_earned > 0:
+        running_balance += vendor_balance.total_earned
         writer.writerow([
-            dt.isoformat() if dt else '',
-            label,
-            desc,
-            str(debit or ''),
-            str(credit or ''),
+            (vendor_balance.created_at or business_partner.created_at).isoformat(),
+            "LEGACY-EARN",
+            "Legacy Earnings",
+            "Historical earnings from legacy system",
+            '',
+            str(vendor_balance.total_earned),
+            str(running_balance)
+        ])
+
+    # 2. Add Legacy Payouts
+    for lp in legacy_payouts:
+        debit = lp.net_amount
+        running_balance -= debit
+        writer.writerow([
+            (lp.payment_date or lp.processed_at or lp.created_at).isoformat(),
+            lp.payment_reference,
+            "Legacy Payout",
+            lp.notes or f"Payout ({lp.get_payment_method_display()})",
+            str(debit),
+            '',
+            str(running_balance)
+        ])
+
+    # 3. Add Unified Transactions
+    for tx in transactions_qs:
+        is_credit = tx.destination_wallet == wallet
+        credit = tx.amount_base if is_credit else Decimal('0.00')
+        debit = tx.amount_base if not is_credit else Decimal('0.00')
+        
+        running_balance += credit
+        running_balance -= debit
+        
+        writer.writerow([
+            tx.created_at.isoformat(),
+            f"TRX-{tx.id}",
+            tx.get_transaction_type_display(),
+            tx.metadata.get('reason') or tx.get_transaction_type_display(),
+            str(debit) if debit > 0 else '',
+            str(credit) if credit > 0 else '',
             str(running_balance),
         ])
 
@@ -1175,48 +1488,83 @@ def vendor_bank_setup(request):
         messages.error(request, 'Vendor profile not found.')
         return redirect('business_partners:vendor_registration_single')
 
-    def parse_bank_details(raw_text):
-        parsed = {
-            'account_holder': '',
-            'bank_name': '',
-            'branch_code': '',
-            'iban': '',
-        }
-        for raw_line in (raw_text or '').splitlines():
-            line = raw_line.strip()
-            if not line:
-                continue
-            lower = line.lower()
-            if lower.startswith('account holder:'):
-                parsed['account_holder'] = line.split(':', 1)[1].strip()
-            elif lower.startswith('bank:'):
-                parsed['bank_name'] = line.split(':', 1)[1].strip()
-            elif lower.startswith('branch code:'):
-                parsed['branch_code'] = line.split(':', 1)[1].strip()
-            elif lower.startswith('iban:'):
-                parsed['iban'] = line.split(':', 1)[1].strip()
-        return parsed
-
-    existing = parse_bank_details(vendor_profile.bank_account_details)
+    existing = {
+        'bank_name': vendor_profile.bank_name or '',
+        'bank_branch': vendor_profile.bank_routing_number or '',
+        'account_holder_name': vendor_profile.bank_account_holder_name or '',
+        'account_number': vendor_profile.bank_account_number or '',
+        'iban': vendor_profile.iban or '',
+        'swift_code': vendor_profile.swift_code or '',
+    }
 
     if request.method == 'POST':
-        account_holder = (request.POST.get('account_holder') or '').strip()
-        bank_name = (request.POST.get('bank_name') or '').strip()
-        branch_code = (request.POST.get('branch_code') or '').strip()
-        iban = (request.POST.get('iban') or '').strip()
+        bank_name = (request.POST.get('bank_name') or '').strip() or None
+        bank_branch = (request.POST.get('bank_branch') or '').strip() or None
+        account_holder_name = (request.POST.get('account_holder_name') or '').strip() or None
+        account_number = (request.POST.get('account_number') or '').strip() or None
+        iban = (request.POST.get('iban') or '').strip() or None
+        swift_code = (request.POST.get('swift_code') or '').strip() or None
+
+        existing_values = {
+            'bank_name': vendor_profile.bank_name,
+            'bank_branch': vendor_profile.bank_routing_number,
+            'account_holder_name': vendor_profile.bank_account_holder_name,
+            'account_number': vendor_profile.bank_account_number,
+            'iban': vendor_profile.iban,
+            'swift_code': vendor_profile.swift_code,
+        }
+
+        new_values = {
+            'bank_name': bank_name,
+            'bank_branch': bank_branch,
+            'account_holder_name': account_holder_name,
+            'account_number': account_number,
+            'iban': iban,
+            'swift_code': swift_code,
+        }
+
+        changed = existing_values != new_values
+
+        vendor_profile.bank_name = bank_name
+        vendor_profile.bank_routing_number = bank_branch
+        vendor_profile.bank_account_holder_name = account_holder_name
+        vendor_profile.bank_account_number = account_number
+        vendor_profile.iban = iban
+        vendor_profile.swift_code = swift_code
 
         lines = []
-        if account_holder:
-            lines.append(f'Account Holder: {account_holder}')
+        if account_holder_name:
+            lines.append(f'Account Holder: {account_holder_name}')
         if bank_name:
             lines.append(f'Bank: {bank_name}')
-        if branch_code:
-            lines.append(f'Branch Code: {branch_code}')
+        if bank_branch:
+            lines.append(f'Branch: {bank_branch}')
+        if account_number:
+            lines.append(f'Account Number: {account_number}')
         if iban:
             lines.append(f'IBAN: {iban}')
+        if swift_code:
+            lines.append(f'SWIFT: {swift_code}')
 
         vendor_profile.bank_account_details = '\n'.join(lines) if lines else None
-        vendor_profile.save(update_fields=['bank_account_details'])
+
+        update_fields = [
+            'bank_name',
+            'bank_routing_number',
+            'bank_account_holder_name',
+            'bank_account_number',
+            'iban',
+            'swift_code',
+            'bank_account_details',
+        ]
+
+        if changed:
+            vendor_profile.bank_details_verified = False
+            vendor_profile.bank_verification_date = None
+            vendor_profile.bank_verified_by = None
+            update_fields.extend(['bank_details_verified', 'bank_verification_date', 'bank_verified_by'])
+
+        vendor_profile.save(update_fields=update_fields)
         messages.success(request, 'Bank details saved.')
         return redirect('business_partners:vendor_bank_setup')
 
@@ -1263,7 +1611,15 @@ def vendor_earnings(request):
     
     business_partner = vendor_profile.business_partner
     
-    # Get or create vendor balance
+    # Get or create vendor wallet (Unified Finance)
+    vendor_ct = ContentType.objects.get_for_model(BusinessPartner)
+    wallet, created = Wallet.objects.get_or_create(
+        owner_content_type=vendor_ct,
+        owner_id=business_partner.id,
+        defaults={'currency': vendor_profile.preferred_currency or 'USD'}
+    )
+
+    # Get or create legacy vendor balance for backward compatibility
     vendor_balance, created = VendorBalance.objects.get_or_create(
         vendor=business_partner,
         defaults={
@@ -1274,33 +1630,92 @@ def vendor_earnings(request):
         }
     )
     
-    # Calculate Total Earned (Lifetime Sales from Delivered Orders)
-    from parts.models import OrderItem
-    total_earned = OrderItem.objects.filter(
+    # Recalculate Legacy Total Earned (Delivered Orders NOT in Unified Transactions)
+    order_item_ct = ContentType.objects.get_for_model(OrderItem)
+    
+    legacy_total_earned = OrderItem.objects.filter(
         part__vendor=business_partner,
         order__status='delivered'
+    ).exclude(
+        id__in=Transaction.objects.filter(
+            reference_content_type=order_item_ct,
+            destination_wallet=wallet
+        ).values_list('reference_id', flat=True)
     ).aggregate(
         total=Sum(F('price') * F('quantity'))
     )['total'] or Decimal('0.00')
 
-    # Update Vendor Balance
-    vendor_balance.total_earned = total_earned
-    vendor_balance.update_balance() # Saves and updates current_balance including total_paid
-    
     # Calculate Pending Clearance (Orders confirmed/processing/shipped but not yet delivered)
-    # These are potential earnings that are "in flight"
+    # Only for orders NOT in Unified Transactions
     pending_clearance_amount = OrderItem.objects.filter(
         part__vendor=business_partner,
         order__status__in=['confirmed', 'processing', 'shipped']
+    ).exclude(
+        id__in=Transaction.objects.filter(
+            reference_content_type=order_item_ct,
+            destination_wallet=wallet
+        ).values_list('reference_id', flat=True)
     ).aggregate(
         total=Sum(F('price') * F('quantity'))
     )['total'] or Decimal('0.00')
+
+    # Update Legacy Vendor Balance
+    vendor_balance.total_earned = legacy_total_earned
+    vendor_balance.pending_balance = pending_clearance_amount
+    vendor_balance.update_balance() 
     
-    # Get recent transactions (payments)
-    recent_transactions = VendorPayment.objects.filter(
+    # Get recent transactions (Combined legacy and unified)
+    legacy_payments = VendorPayment.objects.filter(
         vendor=business_partner
     ).order_by('-created_at')[:10]
+
+    unified_transactions = Transaction.objects.filter(
+        Q(source_wallet=wallet) | Q(destination_wallet=wallet)
+    ).order_by('-created_at')[:10]
+
+    # Normalize and merge transactions for display
+    merged_transactions = []
     
+    for lp in legacy_payments:
+        merged_transactions.append({
+            'date': lp.created_at,
+            'reference': lp.payment_reference,
+            'notes': lp.notes or f"Legacy Payout ({lp.get_payment_method_display()})",
+            'type': 'payout', 
+            'amount': -lp.amount, # Payouts are negative for the vendor balance
+            'status': lp.status,
+            'is_unified': False
+        })
+
+    for ut in unified_transactions:
+        # Determine if it's a credit or debit for the vendor
+        is_credit = ut.destination_wallet == wallet
+        amount = ut.amount_base if is_credit else -ut.amount_base
+        
+        merged_transactions.append({
+            'date': ut.created_at,
+            'reference': f"TRX-{ut.id}",
+            'notes': f"{ut.get_transaction_type_display()}",
+            'type': ut.transaction_type.lower(),
+            'amount': amount,
+            'status': 'completed', 
+            'is_unified': True
+        })
+
+    # Sort merged list by date descending
+    merged_transactions.sort(key=lambda x: x['date'], reverse=True)
+    merged_transactions = merged_transactions[:10] # Keep top 10
+
+    # Combined stats for template
+    payout_sum = Transaction.objects.filter(
+        source_wallet=wallet,
+        transaction_type='PAYOUT'
+    ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+    
+    total_withdrawn = (vendor_balance.total_paid or Decimal('0.00')) + payout_sum
+
+    available_balance = (vendor_balance.current_balance or Decimal('0.00')) + (wallet.available_balance or Decimal('0.00'))
+
     # Chart Data: Last 6 months revenue
     revenue_labels = []
     revenue_data = []
@@ -1314,27 +1729,37 @@ def vendor_earnings(request):
             year_target -= 1
             
         # Get data for this month (Earnings/Payments)
-        monthly_earnings = VendorPayment.objects.filter(
+        # Combine legacy payments and unified transactions
+        legacy_monthly = VendorPayment.objects.filter(
             vendor=business_partner,
             status=PaymentStatus.COMPLETED,
             created_at__year=year_target,
             created_at__month=month_target
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        
-        # Or alternatively, use Order revenue for the chart if preferred:
-        # monthly_earnings = OrderItem.objects.filter(...)
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        unified_monthly = Transaction.objects.filter(
+            destination_wallet=wallet,
+            transaction_type='PAYMENT',
+            created_at__year=year_target,
+            created_at__month=month_target
+        ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+
+        total_monthly = legacy_monthly + unified_monthly
         
         import datetime as dt
         month_name = dt.date(year_target, month_target, 1).strftime('%b')
         revenue_labels.insert(0, month_name)
-        revenue_data.insert(0, float(monthly_earnings))
+        revenue_data.insert(0, float(total_monthly))
 
     context = {
         'vendor_profile': vendor_profile,
         'business_partner': business_partner,
+        'wallet': wallet,
         'vendor_balance': vendor_balance,
+        'available_balance': available_balance,
+        'total_withdrawn': total_withdrawn,
         'pending_clearance': pending_clearance_amount,
-        'recent_transactions': recent_transactions,
+        'recent_transactions': merged_transactions,
         'revenue_labels': json.dumps(revenue_labels),
         'revenue_data': json.dumps(revenue_data),
         'is_approved': vendor_profile.is_approved,
@@ -1951,30 +2376,6 @@ def vendor_parts_export_csv(request):
             part.updated_at.strftime('%Y-%m-%d %H:%M:%S') if part.updated_at else '',
         ]
         writer.writerow(row)
-
-
-@login_required
-def vendor_responsive_test(request):
-    """Test responsive design for vendor dashboard navigation and footer."""
-    return render(request, 'business_partners/vendor_responsive_test.html')
-    
-
-
-
-@vendor_required
-def vendor_crud_test(request):
-    """
-    Comprehensive CRUD system test page for vendors.
-    Tests all CRUD operations with validation and AJAX functionality.
-    """
-    vendor_profile = get_vendor_profile(request.user)
-    
-    context = {
-        'vendor_profile': vendor_profile,
-        'business_partner': vendor_profile.business_partner,
-    }
-    
-    return render(request, 'business_partners/vendor_crud_test.html', context)
 
 
 @vendor_required

@@ -1,6 +1,82 @@
 {% extends 'admin_panel/base.html' %}
 {% load vendor_currency %}
-{% block header_title %}Commission Rules{% endblock %}
+{% block header_title %}Commission Rules<!-- Edit Rule Modal -->
+<div id="editRuleModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-lg mx-4">
+        <h3 class="text-lg font-bold mb-4">Edit Commission Rule</h3>
+        <form id="editRuleForm" method="POST" action="">
+            {% csrf_token %}
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <label class="block text-sm font-bold mb-2">Rule Name</label>
+                    <input type="text" name="name" id="edit_name" required class="w-full px-4 py-2 border rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">Category</label>
+                    <input type="text" name="category" id="edit_category" class="w-full px-4 py-2 border rounded-xl"
+                        placeholder="Leave empty for all">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">Commission Type</label>
+                    <select name="commission_type" id="edit_commission_type" class="w-full px-4 py-2 border rounded-xl">
+                        <option value="percentage">Percentage</option>
+                        <option value="fixed_amount">Fixed Amount</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">Rate (% / {% vendor_currency_symbol %})</label>
+                    <input type="number" name="commission_rate" id="edit_commission_rate" step="0.01" required
+                        class="w-full px-4 py-2 border rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">Min Amount ({% vendor_currency_symbol %})</label>
+                    <input type="number" name="min_amount" id="edit_min_amount" step="0.01" class="w-full px-4 py-2 border rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">Max Amount ({% vendor_currency_symbol %})</label>
+                    <input type="number" name="max_amount" id="edit_max_amount" step="0.01" class="w-full px-4 py-2 border rounded-xl">
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="applies_to_all_vendors" id="edit_applies_to_all_vendors" class="w-4 h-4 mr-2">
+                    <label class="text-sm font-medium">Applies to All Vendors</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="is_active" id="edit_is_active" class="w-4 h-4 mr-2">
+                    <label class="text-sm font-medium">Active</label>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-bold mb-2">Description</label>
+                    <textarea name="description" id="edit_description" rows="2" class="w-full px-4 py-2 border rounded-xl"></textarea>
+                </div>
+            </div>
+            <div class="flex gap-3 justify-end mt-6">
+                <button type="button" onclick="document.getElementById('editRuleModal').classList.add('hidden')"
+                    class="px-4 py-2 border rounded-xl font-medium">Cancel</button>
+                <button type="submit" class="px-6 py-2 bg-black text-white rounded-xl font-bold">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function editRule(id, name, category, type, rate, min, max, desc, active, allVendors) {
+    const form = document.getElementById('editRuleForm');
+    form.action = `/admin-panel/commissions/rules/${id}/update/`;
+    
+    document.getElementById('edit_name').value = name;
+    document.getElementById('edit_category').value = category;
+    document.getElementById('edit_commission_type').value = type;
+    document.getElementById('edit_commission_rate').value = rate;
+    document.getElementById('edit_min_amount').value = min;
+    document.getElementById('edit_max_amount').value = max;
+    document.getElementById('edit_description').value = desc;
+    document.getElementById('edit_is_active').checked = active;
+    document.getElementById('edit_applies_to_all_vendors').checked = allVendors;
+    
+    document.getElementById('editRuleModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}
 
 {% block content %}
 <!-- Statistics -->
@@ -107,7 +183,8 @@
                                     class="fas {% if rule.is_active %}fa-toggle-on text-green-500{% else %}fa-toggle-off{% endif %}"></i>
                             </button>
                         </form>
-                        <button class="text-gray-400 hover:text-black mx-1" title="Edit">
+                        <button onclick="editRule('{{ rule.id }}', '{{ rule.name|escapejs }}', '{{ rule.category|default:''|escapejs }}', '{{ rule.commission_type }}', '{{ rule.commission_rate }}', '{{ rule.min_amount }}', '{{ rule.max_amount|default:'' }}', '{{ rule.description|escapejs }}', {{ rule.is_active|yesno:'true,false' }}, {{ rule.applies_to_all_vendors|yesno:'true,false' }})"
+                            class="text-gray-400 hover:text-black mx-1" title="Edit">
                             <i class="fas fa-edit"></i>
                         </button>
                         <form method="POST" action="{% url 'admin_panel:delete_commission_rule' rule.id %}"
@@ -154,7 +231,7 @@
                     <label class="block text-sm font-bold mb-2">Commission Type</label>
                     <select name="commission_type" class="w-full px-4 py-2 border rounded-xl">
                         <option value="percentage">Percentage</option>
-                        <option value="fixed">Fixed Amount</option>
+                        <option value="fixed_amount">Fixed Amount</option>
                     </select>
                 </div>
                 <div>
@@ -171,7 +248,11 @@
                     <input type="number" name="max_amount" step="0.01" class="w-full px-4 py-2 border rounded-xl">
                 </div>
                 <div class="flex items-center">
-                    <input type="checkbox" name="is_active" value="true" checked class="w-4 h-4 mr-2">
+                    <input type="checkbox" name="applies_to_all_vendors" checked class="w-4 h-4 mr-2">
+                    <label class="text-sm font-medium">Applies to All Vendors</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" name="is_active" checked class="w-4 h-4 mr-2">
                     <label class="text-sm font-medium">Active</label>
                 </div>
                 <div class="col-span-2">

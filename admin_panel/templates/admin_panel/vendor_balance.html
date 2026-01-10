@@ -32,8 +32,8 @@
             <i class="fas fa-wallet text-5xl text-black"></i>
         </div>
         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Balance</p>
-        <h3 class="text-3xl font-extrabold text-gray-900 mt-2">{% vendor_currency_value balance.current_balance|default:0 %}</h3>
-        <span class="text-green-600 text-[10px] font-extrabold mt-2 block uppercase">Available for payout</span>
+        <h3 class="text-3xl font-extrabold text-gray-900 mt-2">{% vendor_currency_value balance_stats.available_balance|default:0 %}</h3>
+        <span class="text-green-600 text-[10px] font-extrabold mt-2 block uppercase">Available for payout (Combined)</span>
     </div>
     
     <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
@@ -41,8 +41,8 @@
             <i class="fas fa-clock text-5xl text-black"></i>
         </div>
         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Pending Balance</p>
-        <h3 class="text-3xl font-extrabold text-orange-600 mt-2">{% vendor_currency_value balance.pending_balance|default:0 %}</h3>
-        <span class="text-orange-400 text-[10px] font-extrabold mt-2 block uppercase">Awaiting escrow release</span>
+        <h3 class="text-3xl font-extrabold text-orange-600 mt-2">{% vendor_currency_value balance_stats.pending_balance|default:0 %}</h3>
+        <span class="text-orange-400 text-[10px] font-extrabold mt-2 block uppercase">Awaiting clearance</span>
     </div>
     
     <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
@@ -50,7 +50,7 @@
             <i class="fas fa-chart-line text-5xl text-black"></i>
         </div>
         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Earned</p>
-        <h3 class="text-3xl font-extrabold text-gray-900 mt-2">{% vendor_currency_value balance.total_earned|default:0 %}</h3>
+        <h3 class="text-3xl font-extrabold text-gray-900 mt-2">{% vendor_currency_value balance_stats.total_earned|default:0 %}</h3>
         <span class="text-gray-400 text-[10px] font-extrabold mt-2 block uppercase">Lifetime earnings</span>
     </div>
     
@@ -59,26 +59,26 @@
             <i class="fas fa-check-circle text-5xl text-black"></i>
         </div>
         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Paid</p>
-        <h3 class="text-3xl font-extrabold text-blue-600 mt-2">{% vendor_currency_value balance.total_paid|default:0 %}</h3>
+        <h3 class="text-3xl font-extrabold text-blue-600 mt-2">{% vendor_currency_value balance_stats.total_paid|default:0 %}</h3>
         <span class="text-blue-400 text-[10px] font-extrabold mt-2 block uppercase">Successfully disbursed</span>
     </div>
 </div>
 
 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
     <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50/50">
-        <h3 class="font-bold text-lg text-gray-900">Recent Payments</h3>
+        <h3 class="font-bold text-lg text-gray-900">Financial History</h3>
         <div class="flex gap-6 text-xs font-bold uppercase tracking-wider text-gray-400">
             <div class="flex flex-col">
-                <span class="text-gray-900">{{ balance_stats.total_payments|default:0 }}</span>
-                <span>Total TXNs</span>
+                <span class="text-gray-900">{{ history|length }}</span>
+                <span>Total Items</span>
             </div>
             <div class="flex flex-col border-l border-gray-200 pl-6">
-                <span class="text-gray-900">{% vendor_currency_value balance_stats.average_payment|default:0 %}</span>
-                <span>Avg. Amount</span>
+                <span class="text-gray-900">{% vendor_currency_value balance_stats.total_earned|default:0 %}</span>
+                <span>Total Earned</span>
             </div>
             <div class="flex flex-col border-l border-gray-200 pl-6">
-                <span class="text-orange-600">{% vendor_currency_value balance_stats.pending_payments|default:0 %}</span>
-                <span>Pending</span>
+                <span class="text-orange-600">{% vendor_currency_value balance_stats.pending_balance|default:0 %}</span>
+                <span>Total Pending</span>
             </div>
         </div>
     </div>
@@ -88,50 +88,48 @@
             <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500 border-b">
                 <tr>
                     <th class="px-6 py-4">Reference</th>
+                    <th class="px-6 py-4">Type</th>
                     <th class="px-6 py-4">Amount</th>
-                    <th class="px-6 py-4">Commission</th>
-                    <th class="px-6 py-4">Net</th>
                     <th class="px-6 py-4">Status</th>
                     <th class="px-6 py-4 text-right">Date</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-                {% for payment in payments %}
+                {% for item in history %}
                 <tr class="hover:bg-gray-50/80 transition">
                     <td class="px-6 py-4 font-mono font-bold text-blue-600">
-                        <span class="bg-blue-50 px-2 py-1 rounded">#{{ payment.payment_reference|default:payment.id }}</span>
+                        <span class="bg-blue-50 px-2 py-1 rounded">{{ item.reference }}</span>
                     </td>
                     <td class="px-6 py-4">
-                        <p class="font-bold text-gray-900">{% vendor_currency_value payment.amount %}</p>
+                        <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider 
+                            {% if item.is_unified %}bg-purple-100 text-purple-700{% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ item.type|replace:'_',' '|title }} {% if not item.is_unified %}(Legacy){% endif %}
+                        </span>
                     </td>
                     <td class="px-6 py-4">
-                        <p class="text-red-600 font-medium">{% vendor_currency_value payment.commission_amount %}</p>
+                        <p class="font-bold text-gray-900">{% vendor_currency_value item.amount %}</p>
                     </td>
                     <td class="px-6 py-4">
-                        <p class="font-extrabold text-green-600">{% vendor_currency_value payment.net_amount %}</p>
-                    </td>
-                    <td class="px-6 py-4">
-                        <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider
-                            {% if payment.status == 'completed' %}bg-green-100 text-green-700
-                            {% elif payment.status == 'pending' %}bg-yellow-100 text-yellow-700
-                            {% elif payment.status == 'processing' %}bg-blue-100 text-blue-700
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase
+                            {% if item.status == 'completed' %}bg-green-100 text-green-700
+                            {% elif item.status == 'pending' %}bg-yellow-100 text-yellow-700
                             {% else %}bg-gray-100 text-gray-700{% endif %}">
-                            {{ payment.status }}
+                            {{ item.status|title }}
                         </span>
                     </td>
                     <td class="px-6 py-4 text-right">
-                        <p class="font-medium text-gray-700">{{ payment.created_at|date:"M d, Y" }}</p>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase">{{ payment.created_at|time:"H:i" }}</p>
+                        <p class="font-medium text-gray-700">{{ item.date|date:"M d, Y" }}</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase">{{ item.date|time:"H:i" }}</p>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center">
+                    <td colspan="5" class="px-6 py-12 text-center">
                         <div class="flex flex-col items-center">
                             <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                                <i class="fas fa-credit-card text-2xl text-gray-300"></i>
+                                <i class="fas fa-history text-2xl text-gray-300"></i>
                             </div>
-                            <p class="text-gray-500 font-medium">No payments found for this vendor.</p>
+                            <p class="text-gray-500 font-medium">No history found for this vendor.</p>
                         </div>
                     </td>
                 </tr>

@@ -2631,7 +2631,16 @@ def checkout_view(request):
             
         city_id = request.POST.get('city', '')
         city_area_id = request.POST.get('area', '')
-        payment_method = request.POST.get('payment_method', 'cod')
+        payment_method_input = (request.POST.get('payment_method') or 'cod').strip()
+        if payment_method_input == 'cod':
+            order_payment_method = 'cash_on_delivery'
+            finance_payment_method = 'cod'
+        elif payment_method_input == 'cash_on_delivery':
+            order_payment_method = 'cash_on_delivery'
+            finance_payment_method = 'cod'
+        else:
+            order_payment_method = payment_method_input
+            finance_payment_method = payment_method_input
         
         checkout_data = {
             'contact_name': f"{first_name} {last_name}".strip(),
@@ -2642,7 +2651,7 @@ def checkout_view(request):
             'address': address,
             'city_id': city_id,
             'city_area_id': city_area_id,
-            'payment_method': payment_method,
+            'payment_method': order_payment_method,
         }
         
         # Validate
@@ -2657,8 +2666,8 @@ def checkout_view(request):
                         'shipping_cost': shipping_cost,
                         'tax_amount': tax_amount,
                         'status': 'pending',
-                        'payment_method': payment_method,
-                        'payment_status': 'pending' if payment_method == 'cod' else 'pending'
+                        'payment_method': order_payment_method,
+                        'payment_status': 'pending'
                     }
                     
                     if request.user.is_authenticated:
@@ -2673,16 +2682,41 @@ def checkout_view(request):
                     
                     # Create Order Items
                     for item in cart_items_list:
+                        # Calculate item-specific tax for recording
+                        item_tax_rate = Decimal('0.15')
+                        if hasattr(item.part, 'tax_classification_material'):
+                            classification = item.part.tax_classification_material
+                            if classification == 'VAT_5':
+                                item_tax_rate = Decimal('0.05')
+                            elif classification in ['ZERO', 'EXEMPT']:
+                                item_tax_rate = Decimal('0.00')
+                        
+                        item_price = item.part.standard_price
+                        item_total = item_price * item.quantity
+                        item_tax = item_total * item_tax_rate
+                        
                         OrderItem.objects.create(
                             order=order,
                             part=item.part,
                             quantity=item.quantity,
-                            price=item.part.standard_price
+                            price=item_price,
+                            tax_amount=item_tax
                         )
                     
                     # Deduct inventory using the robust model method
-                    # This handles both Inventory model and Part.quantity field sync
-                    order.deduct_inventory()
+                    # Phase 1: Reserve inventory
+                    order.reserve_inventory()
+                    
+                    # Phase 2: Finalize inventory
+                    # For COD/Bank Transfer we finalize immediately as there's no online payment step.
+                    # For online payments (credit_card, paypal), finalize_inventory will be called 
+                    # via signals when payment_status changes to 'completed'.
+                    if order_payment_method in ['cash_on_delivery', 'bank_transfer']:
+                        order.finalize_inventory()
+
+                    # 4. Record Financial Transactions
+                    from finance.services import FinanceService
+                    FinanceService.record_order_payment(order, payment_method=finance_payment_method)
                     
                     # Create Shipping Info
                     city = City.objects.get(id=city_id)
@@ -3063,226 +3097,6 @@ def cart_view(request):
 
 
 # Multi-step Checkout Views
-
-
-
-def checkout_view(request):
-    """
-    Single-page checkout view.
-    Handles both display of checkout form (with cart summary) and order processing.
-    """
-    # 1. Get Cart Data
-    cart_items_list = []
-    items_total = Decimal('0.00')
-    
-    if request.user.is_authenticated:
-        try:
-            cart_obj = Cart.objects.get(user=request.user)
-            cart_items = cart_obj.items.select_related('part', 'part__brand').all()
-            cart_items_list = cart_items
-            items_total = cart_obj.total_price
-        except Cart.DoesNotExist:
-            pass
-    else:
-        cart = get_cart(request)
-        for part_id, item_data in cart.items():
-            try:
-                part = Part.objects.get(id=part_id, is_active=True)
-                item_total = part.standard_price * item_data['quantity']
-                
-                # Create mock object
-                class MockItem:
-                    def __init__(self, part, quantity, item_total):
-                        self.part = part
-                        self.quantity = quantity
-                        self.item_total = item_total
-                
-                cart_items_list.append(MockItem(part, item_data['quantity'], item_total))
-                items_total += item_total
-            except Part.DoesNotExist:
-                continue
-
-    if not cart_items_list:
-        messages.warning(request, 'Your cart is empty.')
-        return redirect('parts:cart_view')
-
-    # 2. Calculate Initial Totals (Tax, etc.)
-    # Calculate tax based on item classification
-    tax_amount = Decimal('0.00')
-    for item in cart_items_list:
-        # Determine tax rate for this item
-        item_tax_rate = Decimal('0.15') # Default standard rate
-        
-        # Check for tax classification
-        part = item.part if hasattr(item, 'part') else None
-        if part and hasattr(part, 'tax_classification_material'):
-            if part.tax_classification_material == 'VAT_5':
-                item_tax_rate = Decimal('0.05')
-            elif part.tax_classification_material == 'ZERO':
-                item_tax_rate = Decimal('0.00')
-            elif part.tax_classification_material == 'EXEMPT':
-                item_tax_rate = Decimal('0.00')
-        
-        # Calculate tax for this item
-        item_price_total = Decimal('0.00')
-        if hasattr(item, 'total_price'):
-             item_price_total = item.total_price
-        elif hasattr(item, 'item_total'):
-             item_price_total = item.item_total
-             
-        tax_amount += item_price_total * item_tax_rate
-
-    shipping_cost = Decimal('0.00') # Free shipping for now
-    
-    grand_total = items_total + tax_amount + shipping_cost
-
-    # 3. Handle POST (Order Placement)
-    if request.method == 'POST':
-        # Extract form data
-        first_name = request.POST.get('first_name', '').strip()
-        last_name = request.POST.get('last_name', '').strip()
-        email = request.POST.get('email', '').strip()
-        phone = request.POST.get('phone', '').strip()
-        address = request.POST.get('address', '').strip()
-        postal_code = request.POST.get('postal_code', '').strip()
-        if postal_code:
-            address = f"{address}, Postal Code: {postal_code}"
-
-        city_id = request.POST.get('city', '')
-        city_area_id = request.POST.get('area', '')
-        payment_method = request.POST.get('payment_method', 'cod')
-        
-        checkout_data = {
-            'contact_name': f"{first_name} {last_name}".strip(),
-            'first_name': first_name,
-            'last_name': last_name,
-            'email': email,
-            'mobile_number': phone,
-            'address': address,
-            'city_id': city_id,
-            'city_area_id': city_area_id,
-            'payment_method': payment_method,
-        }
-        
-        # Validate
-        if not all([first_name, email, phone, address, city_id]):
-             messages.error(request, 'Please fill in all required fields.')
-        else:
-             try:
-                with transaction.atomic():
-                    # Create Order
-                    order_data = {
-                        'total_price': grand_total,
-                        'shipping_cost': shipping_cost,
-                        'tax_amount': tax_amount,
-                        'status': 'pending',
-                        'payment_method': payment_method,
-                        'payment_status': 'pending' if payment_method == 'cod' else 'pending'
-                    }
-                    
-                    if request.user.is_authenticated:
-                        order_data['customer'] = request.user
-                    else:
-                        order_data['guest_name'] = checkout_data['contact_name']
-                        order_data['guest_email'] = checkout_data['email']
-                        order_data['guest_phone'] = checkout_data['mobile_number']
-                        order_data['guest_address'] = checkout_data['address']
-
-                    order = Order.objects.create(**order_data)
-
-                    # Create Order Items
-                    for item in cart_items_list:
-                        # Lock part for update to prevent race conditions
-                        part = Part.objects.select_for_update().get(id=item.part.id)
-                        
-                        if item.quantity > part.quantity:
-                             raise Exception(f"Insufficient stock for {part.name}. Available: {part.quantity}")
-
-                        OrderItem.objects.create(
-                            order=order,
-                            part=part,
-                            quantity=item.quantity,
-                            price=part.standard_price
-                        )
-                        # Update Stock
-                        part.quantity -= item.quantity
-                        part.save()
-                    
-                    # Create Shipping Info
-                    city = City.objects.get(id=city_id)
-                    city_area = None
-                    if city_area_id:
-                         try:
-                            city_area = CityArea.objects.get(id=city_area_id)
-                         except CityArea.DoesNotExist:
-                            pass
-                         
-                    OrderShipping.objects.create(
-                        order=order,
-                        contact_name=checkout_data['contact_name'],
-                        mobile_number=checkout_data['mobile_number'],
-                        city=city,
-                        city_area=city_area,
-                        address=checkout_data['address'],
-                        shipping_cost=shipping_cost
-                    )
-                    
-                    # Clear Cart
-                    if request.user.is_authenticated:
-                        cart_obj.items.all().delete()
-                    else:
-                        if 'cart' in request.session:
-                            del request.session['cart']
-                            request.session.modified = True
-                            
-                    messages.success(request, f'Order #{order.order_number} placed successfully!')
-                    return redirect('parts:order_confirmation', order_number=order.order_number)
-
-             except Exception as e:
-                 import traceback
-                 traceback.print_exc()
-                 messages.error(request, f'Error processing order: {str(e)}')
-
-    # 4. Prepare Context for GET (or failed POST)
-    # User Data Pre-fill
-    user_data = {}
-    if request.user.is_authenticated:
-        # Get basic user data
-        user_data = {
-            'first_name': request.user.first_name,
-            'last_name': request.user.last_name,
-            'email': request.user.email,
-            'phone': request.user.phone_number if hasattr(request.user, 'phone_number') else '',
-        }
-        
-        # Try to get profile data
-        if hasattr(request.user, 'profile'):
-            profile = request.user.profile
-            if profile.address:
-                user_data['address'] = profile.address
-            if profile.city:
-                # Check if profile.city matches any City name
-                city_obj = City.objects.filter(name__iexact=profile.city).first()
-                if city_obj:
-                    user_data['city_id'] = city_obj.id
-            if profile.postal_code:
-                user_data['postal_code'] = profile.postal_code
-
-    # Cities for dropdown
-    cities = City.objects.filter(is_active=True).order_by('name')
-
-    context = {
-        'cart_items': cart_items_list,
-        'items_total': items_total,
-        'tax_amount': tax_amount,
-        'shipping_cost': shipping_cost,
-        'grand_total': grand_total,
-        'user_data': user_data,
-        'cities': cities,
-        'title': 'Checkout'
-    }
-    return render(request, 'parts/checkout.html', context)
-
 
 def checkout_step1_order_summary(request):
     """Step 1: Order Summary - Display cart items and allow discount code application.
@@ -3881,8 +3695,15 @@ def checkout_step3_payment_method(request):
                                             continue
                             
                             # Deduct inventory using the robust model method
-                            # This handles both Inventory model and Part.quantity field sync
-                            order.deduct_inventory()
+                            # Phase 1: Reserve inventory
+                            order.reserve_inventory()
+                            
+                            # Phase 2: Finalize inventory
+                            # For COD/Bank Transfer we finalize immediately as there's no online payment step.
+                            # For online payments (credit_card, paypal), finalize_inventory will be called 
+                            # via signals when payment_status changes to 'completed'.
+                            if order.payment_method in ['cash_on_delivery', 'bank_transfer']:
+                                order.finalize_inventory()
                         
                         # Create shipping information (for both buy now and regular orders)
                         city = City.objects.get(id=checkout_data['city_id'])

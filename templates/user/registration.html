@@ -77,14 +77,14 @@
             top: 50%;
             right: 12px;
             transform: translateY(-50%);
-            width: 36px;
-            height: 36px;
+            /* width: 36px; */
+            /* height: 36px; */
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 10px;
-            border: 1px solid #e5e7eb;
-            background: #ffffff;
+            border-radius: 15px;
+            /* border: 1px solid #e5e7eb; */
+            /* background: #ffffff; */
             color: #6b7280;
         }
         .password-toggle-btn:hover { border-color: #9ca3af; color: #111; }
@@ -348,7 +348,7 @@
             if (!/[a-z]/.test(password)) return 'Password must include a lowercase letter';
             if (!/[A-Z]/.test(password)) return 'Password must include an uppercase letter';
             if (!/[0-9]/.test(password)) return 'Password must include a number';
-            if (!/[^A-Za-z0-9]/.test(password)) return 'Password must include a special character';
+            // if (!/[^A-Za-z0-9]/.test(password)) return 'Password must include a special character';
             return null;
         }
 

@@ -505,7 +505,13 @@ def process_order_workflow_action(order, action, user, options=None):
     elif action == 'process':
         # Deduct inventory when processing
         try:
-            order.deduct_inventory()
+            # Phase 1: Reserve inventory (idempotent)
+            order.reserve_inventory()
+            
+            # Phase 2: Finalize inventory
+            # We finalize here because "processing" usually means the order is being picked/packed
+            # and payment should have been confirmed (or is COD).
+            order.finalize_inventory()
         except ValueError as e:
             return {
                 'success': False,
@@ -521,39 +527,29 @@ def process_order_workflow_action(order, action, user, options=None):
         order.tracking_number = tracking_number
     
     elif action == 'cancel':
-        # Restore inventory for cancelled orders
-        if order.status in ['confirmed', 'processing']:
-            try:
-                order.restore_inventory()
-            except Exception as e:
-                return {
-                    'success': False,
-                    'error': f'Cannot cancel order: {str(e)}'
-                }
+        # Inventory restoration is now handled automatically inside order.update_status()
+        pass
     
-    # Update order status
-    previous_status = order.status
-    order.status = new_status
-    
-    # Update timestamps
-    if new_status == 'shipped':
-        order.shipped_at = timezone.now()
-    elif new_status == 'delivered':
-        order.delivered_at = timezone.now()
-    
-    order.save()
-    
-    # Create status history
-    OrderStatusHistory.objects.create(
-        order=order,
-        previous_status=previous_status,
-        new_status=new_status,
-        changed_by=user,
-        change_reason=f'Order {action}ed by {user.get_full_name() or user.email}',
-        notes=notes,
-        ip_address=request.META.get('REMOTE_ADDR') if request else None,
-        user_agent=request.META.get('HTTP_USER_AGENT') if request else None
-    )
+    # Update order status using the centralized robust method
+    try:
+        order.update_status(
+            new_status, 
+            changed_by=user, 
+            change_reason=f'Order {action}ed by {user.get_full_name() or user.email}',
+            notes=notes,
+            request=request
+        )
+        
+        # Additional action-specific updates that update_status doesn't handle
+        if action == 'ship' and tracking_number:
+            order.tracking_number = tracking_number
+            order.save(update_fields=['tracking_number'])
+            
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Failed to update order status: {str(e)}'
+        }
     
     return {
         'success': True,

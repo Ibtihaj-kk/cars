@@ -117,6 +117,16 @@ def abs_val(value):
     except (ValueError, TypeError):
         return value
 
+@register.filter(name='vendor_currency_filter')
+def vendor_currency_filter(amount, request=None):
+    """
+    Filter version of vendor_currency.
+    Usage: {{ amount|vendor_currency:request }}
+    """
+    # Create a dummy context with request if provided
+    context = {'request': request} if request else {}
+    return vendor_currency(context, amount)
+
 @register.simple_tag(takes_context=True)
 def vendor_currency(context, amount):
     """

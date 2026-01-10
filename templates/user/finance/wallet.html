@@ -1,0 +1,121 @@
+{% extends 'user/base.html' %}
+{% load static %}
+{% load vendor_currency %}
+
+{% block title %}My Wallet | CarSyncro{% endblock %}
+
+{% block page_title %}
+<h1>My Wallet</h1>
+<p>Manage your funds and view your transaction history.</p>
+{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card dark">
+        <div class="stat-header">
+            <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+        </div>
+        <span class="currency-symbol-top-right">{% vendor_currency_symbol %}</span>
+        <div class="stat-value">{% vendor_currency_value wallet.available_balance %}</div>
+        <div class="stat-label">Available Balance</div>
+        <div class="stat-trend"><i class="fas fa-check-circle"></i> Ready to use</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="color: #10B981;"><i class="fas fa-exchange-alt"></i></div>
+        </div>
+        <div class="stat-value">{{ transactions.count }}</div>
+        <div class="stat-label">Total Transactions</div>
+        <div class="stat-trend" style="color: #10B981;"><i class="fas fa-history"></i> Lifetime history</div>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="card-head">
+        <h3>Transaction History</h3>
+        <div class="top-actions" style="margin-bottom: 0;">
+            <div class="search-box" style="position: relative;">
+                <i class="fas fa-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #888;"></i>
+                <input type="text" id="transactionSearch" placeholder="Search transactions..." 
+                       style="padding: 10px 15px 10px 40px; border-radius: 12px; border: 1px solid var(--border-subtle); font-size: 14px; width: 250px;">
+            </div>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="clean-table" id="transactionTable">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr>
+                    <td><span class="order-id">#{{ tx.reference|default:tx.id }}</span></td>
+                    <td>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-size: 14px; font-weight: 700;">{{ tx.get_transaction_type_display }}</span>
+                            <span style="font-size: 11px; color: #888;">{{ tx.description|truncatechars:30 }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        {% if tx.destination_wallet == wallet %}
+                            <span style="color: #10B981; font-weight: 700;">+ {% vendor_currency_value tx.amount %}</span>
+                        {% else %}
+                            <span style="color: #EF4444; font-weight: 700;">- {% vendor_currency_value tx.amount %}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="status {{ tx.status|lower }}">
+                            {{ tx.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ tx.created_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                        <a href="{% url 'finance:transaction_detail' tx.id %}" class="action-icon-btn" style="width: 35px; height: 35px;">
+                            <i class="fas fa-eye" style="font-size: 14px;"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 40px; color: #888;">
+                        <i class="fas fa-receipt" style="font-size: 40px; margin-bottom: 15px; display: block; opacity: 0.3;"></i>
+                        No transactions found yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('transactionSearch').addEventListener('keyup', function() {
+        let filter = this.value.toUpperCase();
+        let rows = document.querySelector("#transactionTable tbody").rows;
+        
+        for (let i = 0; i < rows.length; i++) {
+            let ref = rows[i].cells[0].textContent.toUpperCase();
+            let type = rows[i].cells[1].textContent.toUpperCase();
+            let desc = rows[i].cells[1].querySelector('span:last-child').textContent.toUpperCase();
+            
+            if (ref.indexOf(filter) > -1 || type.indexOf(filter) > -1 || desc.indexOf(filter) > -1) {
+                rows[i].style.display = "";
+            } else {
+                rows[i].style.display = "none";
+            }
+        }
+    });
+</script>
+{% endblock %}

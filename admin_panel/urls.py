@@ -83,6 +83,12 @@ urlpatterns = [
     path('finance/ledger/', views.finance_ledger_view, name='finance_ledger'),
     path('finance/wallets/', views.wallets_management_view, name='finance_wallets'),
     path('finance/escrow/', views.escrow_management_view, name='finance_escrow'),
+    path('finance/commission/', views.commission_management_view, name='commission_management'),
+    path('finance/commission/add/', views.create_commission_rule, name='create_commission_rule'),
+    path('finance/commission/<int:rule_id>/toggle/', views.toggle_commission_rule, name='toggle_commission_rule'),
+    path('finance/commission/<int:rule_id>/delete/', views.delete_commission_rule, name='delete_commission_rule'),
+    path('finance/cod-settlements/', views.admin_cod_settlements_view, name='finance_cod_settlements'),
+    path('finance/audit-logs/', views.financial_audit_logs_view, name='finance_audit_logs'),
     
     # Tax Rules
     path('taxes/', views.taxes_view, name='taxes'),
@@ -109,6 +115,7 @@ urlpatterns = [
     path('vendors/', views.vendor_management_view, name='vendor_management'),
     path('vendors/<int:vendor_id>/', views.vendor_detail_view, name='vendor_detail'),
     path('vendors/<int:vendor_id>/update-status/', views.update_vendor_status, name='update_vendor_status'),
+    path('vendors/<int:vendor_id>/verify-bank/', views.verify_vendor_bank_view, name='verify_vendor_bank'),
     path('vendors/approval-queue/', views.vendor_approval_queue_view, name='vendor_approval_queue'),
     path('vendors/performance/<int:vendor_id>/', views.vendor_performance_view, name='vendor_performance'),
     path('vendors/applications/', views.vendor_management_view, name='vendor_applications'),
@@ -137,9 +144,11 @@ urlpatterns = [
     path('payments/vendor/<int:vendor_id>/balance/', views.vendor_balance_view, name='vendor_balance'),
     path('payments/<int:payment_id>/process/', views.process_payment_view, name='process_payment'),
     path('payments/batch-process/', views.batch_process_payments_view, name='batch_process_payments'),
-    path('commissions/rules/create/', views.create_commission_rule_view, name='create_commission_rule'),
-    path('commissions/rules/<int:rule_id>/toggle/', views.toggle_commission_rule_view, name='toggle_commission_rule'),
-    path('commissions/rules/<int:rule_id>/delete/', views.delete_commission_rule_view, name='delete_commission_rule'),
+    path('payments/batch/<int:batch_id>/export/', views.export_payment_batch_csv, name='export_payment_batch_csv'),
+    path('commissions/rules/create/', views.create_commission_rule, name='create_commission_rule'),
+    path('commissions/rules/<int:rule_id>/update/', views.update_commission_rule, name='update_commission_rule'),
+    path('commissions/rules/<int:rule_id>/toggle/', views.toggle_commission_rule, name='toggle_commission_rule'),
+    path('commissions/rules/<int:rule_id>/delete/', views.delete_commission_rule, name='delete_commission_rule'),
     path('payments/vendor/<int:vendor_id>/balance/adjust/', views.adjust_vendor_balance_view, name='adjust_vendor_balance'),
     
     # API endpoints for dashboard widgets

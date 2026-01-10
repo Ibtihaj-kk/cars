@@ -1,0 +1,128 @@
+{% extends 'user/base.html' %}
+{% load static %}
+{% load vendor_currency %}
+
+{% block title %}Submit COD Settlement | CarSyncro{% endblock %}
+
+{% block page_title %}
+<div>
+    <h1 style="font-size: 28px; font-weight: 800; margin-bottom: 8px;">COD Settlement Submission</h1>
+    <p style="color: #6B7280;">Upload proof of payment to settle your outstanding COD liabilities.</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div style="background: white; border-radius: 24px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #F3F4F6;">
+        <div style="display: flex; gap: 40px;">
+            <!-- Left Side: Information -->
+            <div style="flex: 1;">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;">Outstanding Liability</h3>
+                <div style="background: #FEF2F2; padding: 24px; border-radius: 16px; border: 1px solid #FEE2E2; margin-bottom: 30px;">
+                    <span style="display: block; font-size: 12px; font-weight: 700; color: #EF4444; text-transform: uppercase; margin-bottom: 8px;">Current Balance Owed</span>
+                    <div style="font-size: 32px; font-weight: 800; color: #991B1B;">
+                        {% vendor_currency_symbol %} {% vendor_currency_value wallet.liability_balance %}
+                    </div>
+                </div>
+
+                <div style="font-size: 14px; color: #4B5563; line-height: 1.6;">
+                    <h4 style="font-weight: 700; color: #111827; margin-bottom: 10px;">How to settle?</h4>
+                    <ol style="padding-left: 20px;">
+                        <li style="margin-bottom: 12px;">Transfer the commission amount to the platform's bank account.</li>
+                        <li style="margin-bottom: 12px;">Take a clear screenshot or photo of the payment receipt.</li>
+                        <li style="margin-bottom: 12px;">Submit the reference number and receipt using the form.</li>
+                        <li>Wait for admin verification (usually within 24-48 hours).</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Right Side: Form -->
+            <div style="flex: 1.2; border-left: 1px solid #F3F4F6; padding-left: 40px;">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div style="margin-bottom: 24px;">
+                        <label style="display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; color: #374151;">Settlement Amount</label>
+                        <div style="position: relative;">
+                            <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-weight: 600; color: #9CA3AF;">{% vendor_currency_symbol %}</span>
+                            <input type="number" name="amount" step="0.01" required 
+                                   max="{{ wallet.liability_balance }}"
+                                   placeholder="0.00"
+                                   style="width: 100%; padding: 12px 16px 12px 45px; border-radius: 12px; border: 1px solid #D1D5DB; font-size: 16px; font-weight: 600;">
+                        </div>
+                        <p style="font-size: 12px; color: #6B7280; margin-top: 6px;">You can settle part or all of your liability.</p>
+                    </div>
+
+                    <div style="margin-bottom: 24px;">
+                        <label style="display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; color: #374151;">Transaction Reference #</label>
+                        <input type="text" name="reference_number" required 
+                               placeholder="e.g. TRX-9823412"
+                               style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid #D1D5DB; font-size: 16px;">
+                    </div>
+
+                    <div style="margin-bottom: 30px;">
+                        <label style="display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; color: #374151;">Proof of Payment (Image)</label>
+                        <div id="dropzone" style="border: 2px dashed #D1D5DB; border-radius: 16px; padding: 30px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+                            <i class="fas fa-cloud-upload-alt" style="font-size: 32px; color: #9CA3AF; margin-bottom: 12px;"></i>
+                            <p style="font-size: 14px; color: #6B7280; margin: 0;">Click to upload or drag & drop</p>
+                            <p style="font-size: 12px; color: #9CA3AF; margin-top: 4px;">PNG, JPG, PDF (Max 5MB)</p>
+                            <input type="file" name="evidence_image" id="fileInput" accept="image/*,.pdf" style="display: none;" required>
+                        </div>
+                        <div id="filePreview" style="margin-top: 12px; display: none; align-items: center; gap: 10px; background: #F9FAFB; padding: 8px 12px; border-radius: 8px;">
+                            <i class="fas fa-file-image" style="color: #6366F1;"></i>
+                            <span id="fileName" style="font-size: 13px; font-weight: 500; color: #374151; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                            <button type="button" onclick="clearFile()" style="background: none; border: none; color: #EF4444; cursor: pointer;"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 12px;">
+                        <a href="{% url 'business_partners:vendor_finance_dashboard' %}" style="flex: 1; text-align: center; padding: 14px; border-radius: 12px; border: 1px solid #D1D5DB; color: #374151; font-weight: 600; text-decoration: none;">Cancel</a>
+                        <button type="submit" style="flex: 2; padding: 14px; border-radius: 12px; background: #000; color: #fff; border: none; font-weight: 600; cursor: pointer;">Submit Settlement</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+
+    dropzone.onclick = () => fileInput.click();
+
+    fileInput.onchange = (e) => {
+        if (fileInput.files.length > 0) {
+            fileName.textContent = fileInput.files[0].name;
+            filePreview.style.display = 'flex';
+            dropzone.style.borderColor = '#6366F1';
+            dropzone.style.background = '#EEF2FF';
+        }
+    };
+
+    function clearFile() {
+        fileInput.value = '';
+        filePreview.style.display = 'none';
+        dropzone.style.borderColor = '#D1D5DB';
+        dropzone.style.background = 'transparent';
+    }
+
+    // Drag and drop handling
+    dropzone.ondragover = (e) => {
+        e.preventDefault();
+        dropzone.style.borderColor = '#6366F1';
+    };
+    dropzone.ondragleave = () => {
+        dropzone.style.borderColor = '#D1D5DB';
+    };
+    dropzone.ondrop = (e) => {
+        e.preventDefault();
+        fileInput.files = e.dataTransfer.files;
+        fileInput.onchange();
+    };
+</script>
+{% endblock %}
