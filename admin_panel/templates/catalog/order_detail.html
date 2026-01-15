@@ -1,4 +1,5 @@
 {% extends 'admin_panel/base.html' %}
+{% load vendor_currency %}
 {% block header_title %}Order Details{% endblock %}
 
 {% block content %}
@@ -70,8 +71,8 @@
                             <p class="text-gray-500">{{ item.vendor.bp_number|default:"-" }}</p>
                         </td>
                         <td class="px-4 py-3">{{ item.quantity }}</td>
-                        <td class="px-4 py-3">${{ item.price|floatformat:2 }}</td>
-                        <td class="px-4 py-3 text-right font-bold">${{ item.total_price|floatformat:2 }}</td>
+                        <td class="px-4 py-3">{% vendor_currency item.price %}</td>
+                        <td class="px-4 py-3 text-right font-bold">{% vendor_currency item.total_price %}</td>
                     </tr>
                     {% empty %}
                     <tr>
@@ -121,23 +122,22 @@
             <div class="space-y-2 text-sm">
                 <div class="flex justify-between">
                     <span class="text-gray-500">Subtotal</span>
-                    <span class="font-bold text-gray-900">${{ order.subtotal|floatformat:2|default:"0.00" }}</span>
+                    <span class="font-bold text-gray-900">{% vendor_currency order.subtotal|default:0 %}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-gray-500">Tax</span>
-                    <span class="font-bold text-gray-900">${{ order.tax_amount|floatformat:2|default:"0.00" }}</span>
+                    <span class="font-bold text-gray-900">{% vendor_currency order.tax_amount|default:0 %}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-gray-500">Shipping</span>
-                    <span class="font-bold text-gray-900">${{ order.shipping_cost|floatformat:2|default:"0.00" }}</span>
+                    <span class="font-bold text-gray-900">{% vendor_currency order.shipping_cost|default:0 %}</span>
                 </div>
                 <div class="border-t pt-3 flex justify-between">
                     <span class="text-gray-500 font-bold">Total</span>
-                    <span class="text-gray-900 font-extrabold">${{ order.total_price|floatformat:2 }}</span>
+                    <span class="text-gray-900 font-extrabold">{% vendor_currency order.total_price %}</span>
                 </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
-

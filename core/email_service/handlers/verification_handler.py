@@ -21,7 +21,7 @@ class EmailVerificationHandler:
     """Handler for email verification workflows."""
     
     def __init__(self):
-        # No orchestrator instance needed - use module functions directly
+        self.orchestrator = send_email
     
     def send_verification_email(self, user, request=None):
         """
@@ -114,7 +114,7 @@ class EmailVerificationHandler:
             'company_name': 'CarSyncro',
         }
         
-        self.orchestrator.send_email(
+        send_email(
             email_type='account_blocked',
             to_email=user.email,
             template_name='account_blocked_unverified',
@@ -186,7 +186,7 @@ class EmailVerificationHandler:
             'company_name': 'CarSyncro',
         }
         
-        self.orchestrator.send_email(
+        send_email(
             email_type='welcome',
             to_email=user.email,
             template_name='welcome_email',

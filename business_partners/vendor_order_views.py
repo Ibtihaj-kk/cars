@@ -261,20 +261,6 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
             # Fallback for display if no vendor specific status exists
             status_display = vendor_status_obj.get_status_display() if vendor_status_obj else self.object.get_status_display()
 
-            # Calculate Tax for this item
-            tax_rate = Decimal('0.15') # Default
-            tax_rate_display = '15%'
-            if hasattr(item.part, 'tax_classification_material'):
-                if item.part.tax_classification_material == 'VAT_5':
-                    tax_rate = Decimal('0.05')
-                    tax_rate_display = '5%'
-                elif item.part.tax_classification_material == 'ZERO':
-                    tax_rate = Decimal('0.00')
-                    tax_rate_display = '0% (Zero Rated)'
-                elif item.part.tax_classification_material == 'EXEMPT':
-                    tax_rate = Decimal('0.00')
-                    tax_rate_display = 'Exempt'
-            
             try:
                 from core.models import ExchangeRate
                 from decimal import Decimal as D
@@ -306,7 +292,19 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
                     unit_price_usd = item.price
 
             line_subtotal_usd = unit_price_usd * item.quantity
-            item_tax = line_subtotal_usd * tax_rate
+            item_tax = getattr(item, 'tax_amount', None)
+            if item_tax is None:
+                item_tax = Decimal('0.00')
+            tax_rate = (item_tax / line_subtotal_usd).quantize(Decimal('0.0001')) if line_subtotal_usd else Decimal('0.0000')
+            tax_classification = getattr(item.part, 'tax_classification_material', None)
+            if tax_classification == 'VAT_5':
+                tax_rate_display = '5%'
+            elif tax_classification == 'ZERO':
+                tax_rate_display = '0% (Zero Rated)'
+            elif tax_classification == 'EXEMPT':
+                tax_rate_display = 'Exempt'
+            else:
+                tax_rate_display = f"{(tax_rate * Decimal('100')).quantize(Decimal('0.01'))}%"
             item_total_with_tax = line_subtotal_usd + item_tax
             
             # Get vendor currency amounts using locked exchange rates

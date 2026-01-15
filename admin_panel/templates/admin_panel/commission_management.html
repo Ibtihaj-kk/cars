@@ -59,9 +59,9 @@
 </div>
 
 <script>
-function editRule(id, name, category, type, rate, min, max, desc, active, allVendors) {
+function editRule(id, updateUrl, name, category, type, rate, min, max, desc, active, allVendors) {
     const form = document.getElementById('editRuleForm');
-    form.action = `/admin-panel/commissions/rules/${id}/update/`;
+    form.action = updateUrl;
     
     document.getElementById('edit_name').value = name;
     document.getElementById('edit_category').value = category;
@@ -183,7 +183,7 @@ function editRule(id, name, category, type, rate, min, max, desc, active, allVen
                                     class="fas {% if rule.is_active %}fa-toggle-on text-green-500{% else %}fa-toggle-off{% endif %}"></i>
                             </button>
                         </form>
-                        <button onclick="editRule('{{ rule.id }}', '{{ rule.name|escapejs }}', '{{ rule.category|default:''|escapejs }}', '{{ rule.commission_type }}', '{{ rule.commission_rate }}', '{{ rule.min_amount }}', '{{ rule.max_amount|default:'' }}', '{{ rule.description|escapejs }}', {{ rule.is_active|yesno:'true,false' }}, {{ rule.applies_to_all_vendors|yesno:'true,false' }})"
+                        <button onclick="editRule('{{ rule.id }}', '{% url 'admin_panel:update_commission_rule' rule.id %}', '{{ rule.name|escapejs }}', '{{ rule.category|default:''|escapejs }}', '{{ rule.commission_type }}', '{{ rule.edit_commission_rate }}', '{{ rule.edit_min_amount }}', '{{ rule.edit_max_amount|default:'' }}', '{{ rule.description|escapejs }}', {{ rule.is_active|yesno:'true,false' }}, {{ rule.applies_to_all_vendors|yesno:'true,false' }})"
                             class="text-gray-400 hover:text-black mx-1" title="Edit">
                             <i class="fas fa-edit"></i>
                         </button>

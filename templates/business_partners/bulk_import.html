@@ -63,6 +63,91 @@
 {% endblock %}
 
 {% block content %}
+{% if results or job %}
+<div class="mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900">Import Results</h2>
+        <a href="{% url 'business_partners:vendor_parts_import' %}" class="text-sm text-gray-500 hover:text-black flex items-center">
+            <i class="fas fa-times mr-1"></i> Dismiss
+        </a>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {% if job %}
+        <div class="p-4 border-b border-gray-200 bg-gray-50">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <div class="text-sm text-gray-700">
+                    <span class="font-bold">Progress:</span>
+                    <span>{{ job.success_message|default:"--" }}</span>
+                    {% if job_age_seconds %}
+                    <span class="text-gray-400">•</span>
+                    <span class="text-gray-600">Running for {{ job_age_seconds }}s</span>
+                    {% endif %}
+                </div>
+                {% if job_queued_too_long %}
+                <div class="text-sm text-red-700 font-bold">
+                    Not progressing. Celery worker/broker likely not running.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="p-6 border-b border-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <div class="text-sm text-gray-500 uppercase font-bold">Total Rows</div>
+                    <div class="text-3xl font-bold text-gray-900">{% if job %}{{ job.total_records }}{% else %}{{ results.total_rows }}{% endif %}</div>
+                </div>
+                <div class="p-4 bg-green-50 rounded-lg">
+                    <div class="text-sm text-green-600 uppercase font-bold">Created</div>
+                    <div class="text-3xl font-bold text-green-700">{% if job %}{{ job.successful_records }}{% else %}{{ results.created_count }}{% endif %}</div>
+                </div>
+                <div class="p-4 bg-blue-50 rounded-lg">
+                    <div class="text-sm text-blue-600 uppercase font-bold">{% if job %}Status{% else %}Updated{% endif %}</div>
+                    <div class="text-3xl font-bold text-blue-700">{% if job %}{{ job.status|title }}{% else %}{{ results.updated_count }}{% endif %}</div>
+                </div>
+                <div class="p-4 bg-red-50 rounded-lg">
+                    <div class="text-sm text-red-600 uppercase font-bold">Errors</div>
+                    <div class="text-3xl font-bold text-red-700">{% if job %}{{ job.failed_records }}{% else %}{{ results.error_count }}{% endif %}</div>
+                </div>
+            </div>
+        </div>
+        
+        {% if job_errors %}
+        <div class="p-6 bg-red-50 border-b border-red-100">
+            <h3 class="text-lg font-bold text-red-800 mb-3">Error Details</h3>
+            <ul class="list-disc list-inside space-y-1 text-red-700 text-sm max-h-60 overflow-y-auto">
+                {% for error in job_errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% elif results.errors %}
+        <div class="p-6 bg-red-50 border-b border-red-100">
+            <h3 class="text-lg font-bold text-red-800 mb-3">Error Details</h3>
+            <ul class="list-disc list-inside space-y-1 text-red-700 text-sm max-h-60 overflow-y-auto">
+                {% for error in results.errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if results.warnings %}
+        <div class="p-6 bg-yellow-50 border-b border-yellow-100">
+            <h3 class="text-lg font-bold text-yellow-800 mb-3">Warnings</h3>
+            <ul class="list-disc list-inside space-y-1 text-yellow-700 text-sm max-h-60 overflow-y-auto">
+                {% for warning in results.warnings %}
+                <li>{{ warning }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     
     <div class="lg:col-span-2 space-y-6">
@@ -647,8 +732,14 @@
         
         // Redirect after a short delay to allow user to see the result
         setTimeout(() => {
-            window.location.href = "{% url 'business_partners:vendor_inventory_list' %}";
-        }, 3000);
+            if (errors > 0) {
+                // If there are errors, redirect to the results page
+                window.location.href = "{% url 'business_partners:vendor_parts_import_results' %}";
+            } else {
+                // If successful, reload to show the success summary on this page
+                window.location.reload();
+            }
+        }, 2000);
     }
     
     function showError(message) {

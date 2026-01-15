@@ -26,7 +26,7 @@
     </div>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
     <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
         <div class="absolute top-0 right-0 p-4 opacity-10">
             <i class="fas fa-wallet text-5xl text-black"></i>
@@ -43,6 +43,15 @@
         <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Pending Balance</p>
         <h3 class="text-3xl font-extrabold text-orange-600 mt-2">{% vendor_currency_value balance_stats.pending_balance|default:0 %}</h3>
         <span class="text-orange-400 text-[10px] font-extrabold mt-2 block uppercase">Awaiting clearance</span>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-4 opacity-10">
+            <i class="fas fa-file-invoice-dollar text-5xl text-black"></i>
+        </div>
+        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Liabilities (COD)</p>
+        <h3 class="text-3xl font-extrabold text-red-600 mt-2">{% vendor_currency_value balance_stats.liability_balance|default:0 %}</h3>
+        <span class="text-red-400 text-[10px] font-extrabold mt-2 block uppercase">To be settled</span>
     </div>
     
     <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
@@ -227,4 +236,3 @@
     });
 </script>
 {% endblock %}
-

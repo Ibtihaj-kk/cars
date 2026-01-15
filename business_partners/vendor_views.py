@@ -3,6 +3,8 @@ Vendor-specific views for part management.
 Provides vendors with comprehensive access to manage their parts with all Excel fields.
 """
 
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
@@ -396,12 +398,47 @@ def vendor_dashboard(request):
     pending_processing_count = vendor_order_items.filter(order__status__in=['confirmed', 'processing']).values('order').distinct().count()
     total_fulfillment = delivered_count + pending_processing_count
 
+    # Customer Stats
+    User = get_user_model()
+    total_customers = User.objects.filter(
+        orders__items__part__vendor=business_partner
+    ).distinct().count()
+
+    # Finance Stats for Tiles
+    vendor_ct = ContentType.objects.get_for_model(BusinessPartner)
+    wallet, _ = Wallet.objects.get_or_create(
+        owner_content_type=vendor_ct,
+        owner_id=business_partner.id,
+        defaults={'currency': vendor_profile.preferred_currency or 'USD'}
+    )
+
+    # Tax Payable calculation (from vendor_finance_dashboard)
+    tax_payable = Decimal('0.00')
+    orders_last_30_days = Order.objects.filter(
+        items__part__vendor=business_partner,
+        created_at__gte=today - timedelta(days=30)
+    ).distinct()
+    
+    per_order_totals = orders_last_30_days.values('id', 'total_price', 'shipping_cost', 'tax_amount')
+    for order_info in per_order_totals:
+        vendor_total = OrderItem.objects.filter(
+            order_id=order_info['id'], 
+            part__vendor=business_partner
+        ).aggregate(total=Sum(F('quantity') * F('price')))['total'] or Decimal('0.00')
+        
+        order_total = order_info['total_price'] or Decimal('0.00')
+        if order_total > 0:
+            ratio = vendor_total / order_total
+            tax_payable += (order_info['tax_amount'] or Decimal('0.00')) * ratio
+
     # Profile completion percentage
     profile_completion_percentage = vendor_profile.get_profile_completion_percentage()
 
     context = {
         'vendor_profile': vendor_profile,
         'business_partner': business_partner,
+        'wallet': wallet,
+        'tax_payable': tax_payable,
         'stats': {
             'total_parts': total_parts,
             'active_parts': active_parts,
@@ -431,6 +468,9 @@ def vendor_dashboard(request):
             'delivered_count': delivered_count,
             'pending_processing_count': pending_processing_count,
             'total_fulfillment': total_fulfillment,
+            'total_customers': total_customers,
+            'wallet_balance': wallet.available_balance,
+            'liability_balance': wallet.liability_balance,
         },
         'recent_notifications': recent_notifications,
         'recent_parts': recent_parts,
@@ -459,6 +499,11 @@ def vendor_finance_dashboard(request):
         owner_id=business_partner.id,
         defaults={'currency': vendor_profile.preferred_currency or 'USD'}
     )
+
+    try:
+        FinanceService.sync_legacy_vendor_payments(vendor=business_partner, limit=None)
+    except Exception:
+        pass
 
     # Get or create legacy vendor balance for backward compatibility
     vendor_balance, created = VendorBalance.objects.get_or_create(
@@ -550,7 +595,14 @@ def vendor_finance_dashboard(request):
     )
 
     tax_payable = Decimal('0.00')
+    total_tax_collected = Decimal('0.00')
     shipping_cost = Decimal('0.00')
+
+    # All-time tax collection
+    total_tax_collected = OrderItem.objects.filter(
+        part__vendor=business_partner,
+        order__status__in=['confirmed', 'processing', 'shipped', 'delivered']
+    ).aggregate(total=Sum('tax_amount'))['total'] or Decimal('0.00')
 
     per_order_totals = orders_last_30_days.values(
         'id',
@@ -578,9 +630,92 @@ def vendor_finance_dashboard(request):
             tax_payable += (order_info['tax_amount'] or Decimal('0.00')) * ratio
             shipping_cost += (order_info['shipping_cost'] or Decimal('0.00')) * ratio
 
-    recent_transactions = Transaction.objects.filter(
+    # Fetch raw transactions first
+    raw_transactions = Transaction.objects.filter(
         Q(source_wallet=wallet) | Q(destination_wallet=wallet)
-    ).order_by('-created_at')[:20]
+    ).order_by('-created_at')[:30] # Fetch more to allow for consolidation
+
+    # Group order-related transactions to match the requested UI columns
+    consolidated_transactions = []
+    processed_items = set()
+
+    item_ct = ContentType.objects.get_for_model(OrderItem)
+
+    for tx in raw_transactions:
+        # Check if it's an order-related transaction (PAYMENT or COMMISSION)
+        if tx.transaction_type in ['PAYMENT', 'COMMISSION'] and tx.reference_id and tx.reference_content_type == item_ct:
+            item_id = tx.reference_id
+            if item_id in processed_items:
+                continue
+            
+            # Find both PAYMENT and COMMISSION for this specific item
+            item_txs = Transaction.objects.filter(
+                reference_content_type=item_ct,
+                reference_id=item_id
+            )
+            
+            payment_tx = item_txs.filter(transaction_type='PAYMENT').first()
+            commission_tx = item_txs.filter(transaction_type='COMMISSION').first()
+            
+            # Extract values
+            order_num = tx.order_number or "N/A"
+            date = tx.created_at
+            
+            # Settlement Amount (what vendor actually gets)
+            amount_settled = payment_tx.amount_base if payment_tx else Decimal('0.00')
+            
+            # Commission and Tax (usually in COMMISSION transaction metadata)
+            commission_val = Decimal('0.00')
+            tax_val = Decimal('0.00')
+            
+            if commission_tx:
+                # Platform Revenue = Commission + Tax (if not VAT registered)
+                # But we stored detailed breakdown in metadata in services.py
+                try:
+                    commission_val = Decimal(str(commission_tx.metadata.get('commission', '0.00')))
+                    tax_val = Decimal(str(commission_tx.metadata.get('tax', '0.00')))
+                except (ValueError, TypeError):
+                    pass
+            
+            # Order Amount = Settled + Commission + Tax? 
+            # Actually item.total_price is best if available
+            order_amount = Decimal('0.00')
+            if payment_tx and payment_tx.reference:
+                try:
+                    order_amount = payment_tx.reference.total_price
+                except:
+                    order_amount = amount_settled + commission_val + tax_val
+            else:
+                order_amount = amount_settled + commission_val + tax_val
+
+            consolidated_transactions.append({
+                'id': tx.id,
+                'order_number': order_num,
+                'date': date,
+                'order_amount': order_amount,
+                'tax': tax_val,
+                'commission': -commission_val, # Negative as shown in image
+                'amount_settled': amount_settled,
+                'status': tx.status,
+                'is_settlement': True
+            })
+            processed_items.add(item_id)
+        else:
+            # Other transaction types (Payouts, Refunds, etc.)
+            consolidated_transactions.append({
+                'id': tx.id,
+                'order_number': tx.order_number or 'N/A',
+                'date': tx.created_at,
+                'order_amount': tx.amount_base if tx.transaction_type == 'REFUND' else Decimal('0.00'),
+                'tax': Decimal('0.00'),
+                'commission': Decimal('0.00'),
+                'amount_settled': tx.amount_base if tx.destination_wallet == wallet else -tx.amount_base,
+                'status': tx.status,
+                'is_settlement': False,
+                'type_display': tx.get_transaction_type_display()
+            })
+
+    recent_transactions = consolidated_transactions[:20]
 
     escrow_entries = wallet.escrow_entries.filter(is_released=False).order_by('release_date')
 
@@ -588,16 +723,15 @@ def vendor_finance_dashboard(request):
         status__in=['confirmed', 'processing']
     ).count()
 
-    # Calculate combined balances for display
-    combined_available_balance = (vendor_balance.current_balance or Decimal('0.00')) + (wallet.available_balance or Decimal('0.00'))
-    combined_escrow_balance = (vendor_balance.pending_balance or Decimal('0.00')) + (wallet.escrow_balance or Decimal('0.00'))
+    available_balance = wallet.available_balance or Decimal('0.00')
+    escrow_balance = wallet.escrow_balance or Decimal('0.00')
     liability_balance = wallet.liability_balance or Decimal('0.00')
 
     context = {
         'wallet': wallet,
         'vendor_balance': vendor_balance,
-        'available_balance': combined_available_balance,
-        'escrow_balance': combined_escrow_balance,
+        'available_balance': available_balance,
+        'escrow_balance': escrow_balance,
         'liability_balance': liability_balance,
         'escrow_entries': escrow_entries,
         'vendor_profile': vendor_profile,
@@ -606,6 +740,7 @@ def vendor_finance_dashboard(request):
         'cash_received': cash_received,
         'open_invoices': open_invoices,
         'tax_payable': tax_payable,
+        'total_tax_collected': total_tax_collected,
         'shipping_cost': shipping_cost,
         'marketplace_commission': marketplace_commission,
         'refund_amount': refund_amount,
@@ -913,8 +1048,7 @@ def vendor_payout_tracking(request):
             if p.id in next_due_payment_ids:
                 next_payout_estimated_amount += (p.net_amount or Decimal('0.00'))
 
-    # pending_balance should combine legacy and unified escrow
-    pending_balance = (vendor_balance.pending_balance or Decimal('0.00')) + (wallet.escrow_balance or Decimal('0.00'))
+    pending_balance = wallet.escrow_balance or Decimal('0.00')
     
     clearing_in_days = None
     if next_payout_date:
@@ -1714,7 +1848,7 @@ def vendor_earnings(request):
     
     total_withdrawn = (vendor_balance.total_paid or Decimal('0.00')) + payout_sum
 
-    available_balance = (vendor_balance.current_balance or Decimal('0.00')) + (wallet.available_balance or Decimal('0.00'))
+    available_balance = wallet.available_balance or Decimal('0.00')
 
     # Chart Data: Last 6 months revenue
     revenue_labels = []
@@ -1818,19 +1952,28 @@ def vendor_invoices(request):
         return order_item.price
 
     def _tax_rate(order_item):
-        tax_rate = Decimal('0.15')
-        tax_classification = getattr(order_item.part, 'tax_classification_material', None)
-        if tax_classification == 'VAT_5':
-            return Decimal('0.05')
-        if tax_classification in ('ZERO', 'EXEMPT'):
-            return Decimal('0.00')
-        return tax_rate
+        from parts.views import _get_country_standard_tax_rate, _get_item_tax_rate
+        
+        # Try to get country code from order's shipping info
+        country_code = None
+        shipping_info = getattr(order_item.order, 'shipping_info', None)
+        if shipping_info and getattr(shipping_info, 'city', None):
+            try:
+                country_code = shipping_info.city.country.code
+            except Exception:
+                pass
+        
+        country_standard_rate = _get_country_standard_tax_rate(country_code)
+        return _get_item_tax_rate(order_item.part, country_standard_rate)
 
     def _sum_items_usd(items_qs):
         total = Decimal('0.00')
         for item in items_qs:
             line_subtotal = (_unit_price_usd(item) or Decimal('0.00')) * item.quantity
-            total += line_subtotal + (line_subtotal * _tax_rate(item))
+            item_tax = getattr(item, 'tax_amount', None)
+            if item_tax is None:
+                item_tax = line_subtotal * _tax_rate(item)
+            total += line_subtotal + item_tax
         return total
     
     # --- Statistics ---
@@ -3003,7 +3146,9 @@ def vendor_parts_import(request):
                         transaction.set_rollback(True)
 
                     request.session['import_results'] = results
-                    return redirect('business_partners:vendor_parts_import_results')
+                    if results.get('error_count', 0) > 0:
+                        return redirect('business_partners:vendor_parts_import_results')
+                    return redirect('business_partners:vendor_parts_import')
 
                 # Force synchronous processing to avoid Celery/Redis issues
                 # Synchronous processing for all batches
@@ -3031,7 +3176,9 @@ def vendor_parts_import(request):
                     f'Import completed! {results["created_count"]} created, '
                     f'{results["updated_count"]} updated, {results["error_count"]} errors.'
                 )
-                return redirect('business_partners:vendor_parts_import_results')
+                if results.get('error_count', 0) > 0:
+                    return redirect('business_partners:vendor_parts_import_results')
+                return redirect('business_partners:vendor_parts_import')
                 
             except Exception as e:
                 import traceback
@@ -3047,11 +3194,22 @@ def vendor_parts_import(request):
     else:
         form = VendorPartBulkImportForm()
     
+    from parts.models import BulkUploadLog
+    recent_uploads = BulkUploadLog.objects.filter(user=request.user).order_by('-uploaded_at')[:10]
+
     context = {
         'vendor_profile': vendor_profile,
         'form': form,
+        'recent_uploads': recent_uploads,
     }
-    
+
+    # Add results from session if available (for success cases)
+    results = request.session.get('import_results')
+    if results:
+        context['results'] = results
+        # Clear results from session so they don't persist on refresh
+        del request.session['import_results']
+
     return render(request, 'business_partners/bulk_import.html', context)
 
 

@@ -187,7 +187,7 @@ def vendor_currency(context, amount):
         return f"{symbol} {formatted_amount}"
 
 @register.simple_tag(takes_context=True)
-def vendor_currency_value(context, amount):
+def vendor_currency_value(context, amount, from_currency='USD'):
     if amount is None:
         return ""
 
@@ -233,6 +233,12 @@ def vendor_currency_value(context, amount):
         display_currency = Currency.objects.get(code=currency_code, is_active=True)
         base_amount = D(str(amount))
 
+        # Convert from source currency to USD (base) first if not already USD
+        if from_currency != 'USD':
+            rate_to_usd = ExchangeRate.get_current_rate(from_currency, 'USD')
+            base_amount = base_amount * D(str(rate_to_usd))
+
+        # Convert from USD to display currency
         if display_currency.code != 'USD':
             rate_from_usd = ExchangeRate.get_current_rate('USD', display_currency.code)
             base_amount = base_amount * D(str(rate_from_usd))
@@ -240,6 +246,49 @@ def vendor_currency_value(context, amount):
         return _format_amount_without_symbol(display_currency, base_amount)
     except Exception:
         return intcomma(f"{float(amount):.2f}")
+
+@register.simple_tag(takes_context=True)
+def vendor_currency_input_value(context, amount, from_currency='USD'):
+    if amount is None:
+        return ""
+
+    request = context.get('request')
+    currency_code = None
+
+    if request:
+        currency_code = request.session.get('currency_code') if hasattr(request, 'session') else None
+        if not currency_code and getattr(request, 'currency', None):
+            currency_code = request.currency.code
+
+    if not currency_code and request and hasattr(request, 'user') and request.user.is_authenticated:
+        currency_code = get_user_currency(request.user)
+
+    currency_code = (currency_code or 'SAR').upper()
+
+    try:
+        from core.models import Currency, ExchangeRate
+        from decimal import Decimal as D, ROUND_HALF_UP
+
+        display_currency = Currency.objects.get(code=currency_code, is_active=True)
+        base_amount = D(str(amount))
+
+        if from_currency != 'USD':
+            rate_to_usd = ExchangeRate.get_current_rate(from_currency, 'USD')
+            base_amount = base_amount * D(str(rate_to_usd))
+
+        if display_currency.code != 'USD':
+            rate_from_usd = ExchangeRate.get_current_rate('USD', display_currency.code)
+            base_amount = base_amount * D(str(rate_from_usd))
+
+        places = int(getattr(display_currency, 'decimal_places', 2) or 2)
+        quant = D('1').scaleb(-places)
+        normalized = base_amount.quantize(quant, rounding=ROUND_HALF_UP)
+        return f"{normalized:.{places}f}"
+    except Exception:
+        try:
+            return f"{float(amount):.2f}"
+        except Exception:
+            return ""
 
 @register.simple_tag(takes_context=True)
 def vendor_currency_part_field(context, part, field_name):
@@ -305,7 +354,7 @@ def vendor_currency_compact(context, amount):
     if not currency_code and request and hasattr(request, 'user') and request.user.is_authenticated:
         currency_code = get_user_currency(request.user)
 
-    currency_code = (currency_code or 'USD').upper()
+    currency_code = (currency_code or 'SAR').upper()
 
     try:
         amount = float(amount)
@@ -354,7 +403,7 @@ def vendor_currency_compact_value(context, amount):
     if not currency_code and request and hasattr(request, 'user') and request.user.is_authenticated:
         currency_code = get_user_currency(request.user)
 
-    currency_code = (currency_code or 'USD').upper()
+    currency_code = (currency_code or 'SAR').upper()
 
     try:
         amount = float(amount)
@@ -398,7 +447,7 @@ def vendor_currency_symbol(context):
     if not currency_code and request and hasattr(request, 'user') and request.user.is_authenticated:
         currency_code = get_user_currency(request.user)
 
-    currency_code = (currency_code or 'USD').upper()
+    currency_code = (currency_code or 'SAR').upper()
     return CURRENCY_SYMBOLS.get(currency_code, currency_code)
 
 @register.simple_tag(takes_context=True)
@@ -418,4 +467,4 @@ def vendor_currency_code(context):
     if not currency_code and request and hasattr(request, 'user') and request.user.is_authenticated:
         currency_code = get_user_currency(request.user)
 
-    return (currency_code or 'USD').upper()
+    return (currency_code or 'SAR').upper()

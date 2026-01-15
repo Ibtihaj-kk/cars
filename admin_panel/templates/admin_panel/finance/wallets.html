@@ -30,6 +30,7 @@
             <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500 border-b">
                 <tr>
                     <th class="px-6 py-4">Wallet Owner</th>
+                    <th class="px-6 py-4">Virtual Balance</th>
                     <th class="px-6 py-4">Available Balance</th>
                     <th class="px-6 py-4">Escrow Balance</th>
                     <th class="px-6 py-4">Liability (COD)</th>
@@ -53,13 +54,16 @@
                         </div>
                     </td>
                     <td class="px-6 py-4">
-                        <p class="font-extrabold text-green-600 text-base">{% vendor_currency_value wallet.available_balance %}</p>
+                        <p class="font-extrabold text-indigo-600 text-base">{% vendor_currency wallet.virtual_balance|default:0 %}</p>
                     </td>
                     <td class="px-6 py-4">
-                        <p class="font-bold text-blue-600">{% vendor_currency_value wallet.escrow_balance %}</p>
+                        <p class="font-extrabold text-green-600 text-base">{% vendor_currency wallet.available_balance|default:0 %}</p>
                     </td>
                     <td class="px-6 py-4">
-                        <p class="font-bold text-orange-600">{% vendor_currency_value wallet.liability_balance %}</p>
+                        <p class="font-bold text-blue-600">{% vendor_currency wallet.escrow_balance|default:0 %}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="font-bold text-orange-600">{% vendor_currency wallet.liability_balance|default:0 %}</p>
                     </td>
                     <td class="px-6 py-4">
                         <p class="text-xs text-gray-500 font-medium">{{ wallet.updated_at|date:"M d, Y" }}</p>
@@ -74,12 +78,11 @@
                     </td>
                     <td class="px-6 py-4 text-right">
                         <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition">
-                            <a href="#" class="p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition" title="View Details">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="#" class="p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition" title="Adjust Balance">
-                                <i class="fas fa-edit"></i>
-                            </a>
+                            {% if wallet.owner_content_type.model == 'businesspartner' %}
+                                <a href="{% url 'admin_panel:vendor_balance' wallet.owner_id %}" class="p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>

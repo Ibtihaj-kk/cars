@@ -48,6 +48,9 @@ def verify_flows():
     uploaded_file = SimpleUploadedFile('receipt.gif', image_content, content_type='image/gif')
     
     url = reverse('finance:submit_cod_settlement')
+    session = client.session
+    session['currency_code'] = 'USD'
+    session.save()
     response = client.post(url, {
         'amount': '50.00',
         'reference_number': 'TEST-REF-CLIENT-123',

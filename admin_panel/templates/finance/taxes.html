@@ -19,7 +19,11 @@
                 <div class="border rounded-xl p-4 hover:bg-gray-50">
                     <div class="flex justify-between items-center">
                         <div>
+                            {% if setting.key|slice:"4:6" in country_codes %}
+                            <h4 class="font-bold">{{ setting.key|slice:"4:6" }} - {{ setting.key|slice:"7:"|title }}</h4>
+                            {% else %}
                             <h4 class="font-bold">{{ setting.key|slice:"4:"|title }}</h4>
+                            {% endif %}
                             <p class="text-sm text-gray-500">{{ setting.description|default:"No description" }}</p>
                         </div>
                         <div class="flex items-center gap-4">
@@ -87,9 +91,18 @@
         <form method="POST" action="{% url 'admin_panel:add_tax_rule' %}">
             {% csrf_token %}
             <div class="mb-4">
+                <label class="block text-sm font-bold mb-2">Country</label>
+                <select name="country_code" class="w-full px-4 py-2 border rounded-xl">
+                    <option value="">All Countries</option>
+                    {% for country in countries %}
+                    <option value="{{ country.code }}">{{ country.name }} ({{ country.code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-4">
                 <label class="block text-sm font-bold mb-2">Name (Key)</label>
                 <input type="text" name="key" required class="w-full px-4 py-2 border rounded-xl"
-                    placeholder="e.g., vat_standard">
+                    placeholder="e.g., standard">
             </div>
             <div class="mb-4">
                 <label class="block text-sm font-bold mb-2">Rate (%)</label>

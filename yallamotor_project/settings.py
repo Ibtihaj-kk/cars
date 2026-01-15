@@ -87,7 +87,7 @@ INSTALLED_APPS = [
     'core',
     'parts',
     'analytics',
-    'finance',
+    'finance.apps.FinanceConfig',
 ]
 
 MIDDLEWARE = [

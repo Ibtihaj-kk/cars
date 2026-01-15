@@ -141,7 +141,10 @@ class VendorCustomerListView(LoginRequiredMixin, ListView):
             )
             for item in all_items:
                 line_subtotal = (_unit_price_usd(item) or Decimal('0.00')) * item.quantity
-                total_revenue += line_subtotal + (line_subtotal * _tax_rate(item))
+                item_tax = getattr(item, 'tax_amount', None)
+                if item_tax is None:
+                    item_tax = line_subtotal * _tax_rate(item)
+                total_revenue += line_subtotal + item_tax
             
             count = base_qs.count()
             context['avg_spend'] = round(total_revenue / count, 0) if count > 0 else 0
@@ -164,7 +167,10 @@ class VendorCustomerListView(LoginRequiredMixin, ListView):
             totals_by_customer = {cid: Decimal('0.00') for cid in customer_ids}
             for item in page_items:
                 line_subtotal = (_unit_price_usd(item) or Decimal('0.00')) * item.quantity
-                totals_by_customer[item.order.customer_id] += line_subtotal + (line_subtotal * _tax_rate(item))
+                item_tax = getattr(item, 'tax_amount', None)
+                if item_tax is None:
+                    item_tax = line_subtotal * _tax_rate(item)
+                totals_by_customer[item.order.customer_id] += line_subtotal + item_tax
 
             for customer in customers_list:
                 customer.vendor_total_spent = totals_by_customer.get(customer.id, Decimal('0.00'))
@@ -268,7 +274,10 @@ class VendorCustomerDetailView(LoginRequiredMixin, DetailView):
                 items = getattr(order, 'vendor_items', []) or []
                 for item in items:
                     line_subtotal = (_unit_price_usd(item) or Decimal('0.00')) * item.quantity
-                    order_total += line_subtotal + (line_subtotal * _tax_rate(item))
+                    item_tax = getattr(item, 'tax_amount', None)
+                    if item_tax is None:
+                        item_tax = line_subtotal * _tax_rate(item)
+                    order_total += line_subtotal + item_tax
                 order.vendor_total = order_total
                 order.vendor_items_count = len(items)
                 if order.status in ['delivered', 'shipped', 'processing']:

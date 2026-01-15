@@ -391,9 +391,9 @@
         </div>
 
         <div class="user-mini">
-            <div class="user-avatar">{{ user.first_name|first|default:user.username|first|upper }}</div>
+            <div class="user-avatar">{{ user.first_name|default:user.email|default:''|first|upper }}</div>
             <div class="user-details">
-                <h6>{% if user.is_authenticated %}{{ user.get_full_name|default:user.username }}{% else %}Guest{% endif %}</h6>
+                <h6>{% if user.is_authenticated %}{{ user.get_full_name|default:user.email }}{% else %}Guest{% endif %}</h6>
                 <p>{{ user.role|title }}</p>
             </div>
             <a href="{% url 'users:logout' %}" class="logout-icon" style="margin-left:auto; color:#d32f2f;"><i class="fas fa-sign-out-alt"></i></a>
@@ -410,7 +410,7 @@
                 </button>
                 <div class="page-title">
                     {% block page_title %}
-                    <h1>Welcome back, {{ user.first_name|default:user.username }}!</h1>
+                    <h1>Welcome back, {{ user.first_name|default:user.email }}!</h1>
                     <p>Here is an overview of your recent activity.</p>
                     {% endblock %}
                 </div>

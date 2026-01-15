@@ -1,99 +1,219 @@
-{% extends 'user/base.html' %}
+{% extends 'vendors/base.html' %}
 {% load static %}
 {% load vendor_currency %}
 
 {% block title %}Transaction #{{ transaction.id }} | Business | CarSyncro{% endblock %}
 
-{% block page_title %}
-<div style="display: flex; align-items: center; gap: 15px;">
-    <a href="{% url 'business_partners:vendor_finance_dashboard' %}" class="action-icon-btn" style="width: 40px; height: 40px;">
-        <i class="fas fa-arrow-left"></i>
-    </a>
-    <div>
-        <h1>Business Transaction</h1>
-        <p>Reference: #{{ transaction.id }}</p>
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+        <a href="{% url 'business_partners:vendor_finance_dashboard' %}" 
+           class="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:text-black hover:border-black transition-all shadow-sm">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Transaction Details</h1>
+            <p class="text-sm text-gray-500">Reference: #{{ transaction.id }}</p>
+        </div>
+    </div>
+    <div class="flex gap-3">
+        <button onclick="window.print()" class="bg-white text-gray-700 border border-gray-200 px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50 shadow-sm flex items-center transition">
+            <i class="fas fa-print mr-2"></i> Print Receipt
+        </button>
     </div>
 </div>
-{% endblock %}
 
-{% block content %}
-<div class="dashboard-grid">
-    <div class="content-card">
-        <div class="card-head">
-            <h3>Transaction Information</h3>
-            <span class="status completed">Completed</span>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Main Transaction Info -->
+    <div class="lg:col-span-2 space-y-8">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-900">Transaction Information</h3>
+                {% if transaction.status == 'completed' %}
+                    <span class="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-bold uppercase tracking-wider">Completed</span>
+                {% elif transaction.status == 'pending' %}
+                    <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-bold uppercase tracking-wider">Pending</span>
+                {% else %}
+                    <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold uppercase tracking-wider">{{ transaction.status }}</span>
+                {% endif %}
+            </div>
+            
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-6">
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Transaction ID</label>
+                            <p class="text-sm font-bold text-gray-900">#{{ transaction.id }}</p>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Transaction Type</label>
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-black"></span>
+                                <p class="text-sm font-bold text-gray-900">{{ transaction.get_transaction_type_display }}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Date & Time</label>
+                            <p class="text-sm font-medium text-gray-600">{{ transaction.created_at|date:"F d, Y" }} <span class="text-gray-400 mx-1">•</span> {{ transaction.created_at|date:"H:i:s" }}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-4 text-center">Amount Summary</label>
+                        
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-500 font-bold uppercase">Net Settlement</span>
+                                <span class="text-xl font-extrabold {% if transaction.destination_wallet == wallet %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {% if transaction.destination_wallet == wallet %}+{% else %}-{% endif %} {% vendor_currency_value transaction.amount_base %}
+                                </span>
+                            </div>
+                            
+                            <div class="h-px bg-gray-200 w-full my-2"></div>
+                            
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-500">Transaction Value (Base)</span>
+                                <span class="text-sm font-bold text-gray-900">{% vendor_currency_value transaction.amount_base %}</span>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-500">Local Currency</span>
+                                <span class="text-sm font-bold text-gray-900">{{ transaction.amount_display }} {{ transaction.currency }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <div class="table-wrapper">
-            <table class="clean-table">
-                <tr>
-                    <td style="color: #888; width: 200px;">Transaction ID</td>
-                    <td>#{{ transaction.id }}</td>
-                </tr>
-                <tr>
-                    <td style="color: #888;">Type</td>
-                    <td><strong>{{ transaction.get_transaction_type_display }}</strong></td>
-                </tr>
-                <tr>
-                    <td style="color: #888;">Base Amount</td>
-                    <td>
-                        <span style="font-size: 20px; font-weight: 800;">
-                            {% if transaction.destination_wallet == wallet %}
-                                <span style="color: #10B981;">+ {% vendor_currency_value transaction.amount_base %}</span>
+
+        <!-- Consolidated Order Breakdown if exists -->
+        {% if consolidated_data %}
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-900">Order Financial Breakdown</h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                    <div class="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Order Amount</label>
+                        <p class="text-sm font-bold text-gray-900">{% vendor_currency_value consolidated_data.order_amount %}</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Tax</label>
+                        <p class="text-sm font-bold text-gray-900">
+                            {% if consolidated_data.tax > 0 %}
+                                {% vendor_currency_value consolidated_data.tax %}
                             {% else %}
-                                <span style="color: #EF4444;">- {% vendor_currency_value transaction.amount_base %}</span>
+                                0.00
                             {% endif %}
-                        </span>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="color: #888;">Display Amount</td>
-                    <td>{{ transaction.amount_display }} {{ transaction.currency }}</td>
-                </tr>
-                <tr>
-                    <td style="color: #888;">Exchange Rate</td>
-                    <td>1 USD = {{ transaction.exchange_rate }} {{ transaction.currency }}</td>
-                </tr>
-                <tr>
-                    <td style="color: #888;">Date & Time</td>
-                    <td>{{ transaction.created_at|date:"F d, Y - H:i:s" }}</td>
-                </tr>
-            </table>
+                        </p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Commission</label>
+                        <p class="text-sm font-bold text-gray-600">{% vendor_currency_value consolidated_data.commission %}</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Settled Amount</label>
+                        <p class="text-sm font-bold text-gray-900">{% vendor_currency_value consolidated_data.amount_settled %}</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-black border border-black lg:col-span-1 col-span-2">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Order Reference</label>
+                        <p class="text-sm font-bold text-white">{{ consolidated_data.order_number }}</p>
+                    </div>
+                </div>
+            </div>
         </div>
+        {% endif %}
+
+        <!-- Metadata Section if exists -->
+        {% if transaction.metadata %}
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-900">Additional Metadata</h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for key, value in transaction.metadata.items %}
+                    <div class="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">{{ key|title }}</label>
+                        <p class="text-sm font-bold text-gray-900">{{ value }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
-    <div class="content-card">
-        <div class="card-head">
-            <h3>Reference Details</h3>
-        </div>
-        
-        <div style="display: flex; flex-direction: column; gap: 20px;">
-            <div class="address-preview">
-                <div class="loc-icon"><i class="fas fa-link"></i></div>
-                <div>
-                    <h6 style="margin: 0; font-weight: 700;">Linked Entity</h6>
-                    <p style="margin: 5px 0 0; font-size: 13px; color: #666;">
-                        {{ transaction.reference_content_type.model|title }}: #{{ transaction.reference_id }}
+    <!-- Reference Sidebar -->
+    <div class="space-y-8">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-900">Reference Details</h3>
+            </div>
+            <div class="p-6">
+                <div class="flex items-start gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-white flex-shrink-0 shadow-lg">
+                        <i class="fas fa-link text-lg"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-gray-900 uppercase tracking-tight">Linked Entity</h4>
+                        <p class="text-xs text-gray-500 mt-1">This transaction is linked to a {{ transaction.reference_content_type.model }} record.</p>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-gray-50 border border-gray-100 mb-6">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{{ transaction.reference_content_type.model|title }} ID</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-extrabold text-gray-900">#{{ transaction.reference_id }}</span>
+                        {% if transaction.reference_content_type.model == 'orderitem' %}
+                            <a href="{% url 'business_partners:vendor_order_detail' transaction.reference.order.id %}" class="text-[10px] px-2 py-0.5 bg-black text-white rounded font-bold uppercase hover:bg-gray-800 transition">View Order</a>
+                        {% elif transaction.reference_content_type.model == 'order' %}
+                            <a href="{% url 'business_partners:vendor_order_detail' transaction.reference.id %}" class="text-[10px] px-2 py-0.5 bg-black text-white rounded font-bold uppercase hover:bg-gray-800 transition">View Order</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <p class="text-[11px] text-gray-500 leading-relaxed italic">
+                        <i class="fas fa-info-circle mr-1"></i> 
+                        Immutable record from the financial ledger. This data cannot be modified and serves as the official transaction record.
                     </p>
                 </div>
             </div>
+        </div>
 
-            {% if transaction.metadata %}
-            <div style="padding: 20px; background: #f9f9f9; border-radius: 16px;">
-                <h6 style="margin-bottom: 15px; font-weight: 700; font-size: 14px; text-transform: uppercase; color: #888;">Metadata</h6>
-                {% for key, value in transaction.metadata.items %}
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="color: #666; font-size: 13px;">{{ key|title }}</span>
-                    <span style="font-size: 13px;">{{ value }}</span>
-                </div>
-                {% endfor %}
+        <div class="bg-black rounded-2xl p-6 text-white shadow-xl relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                <i class="fas fa-shield-alt text-6xl"></i>
             </div>
-            {% endif %}
-
-            <button onclick="window.print()" class="btn-black" style="width: 100%; justify-content: center;">
-                <i class="fas fa-print"></i> Download Statement
-            </button>
+            <h4 class="text-sm font-bold mb-2">Need Assistance?</h4>
+            <p class="text-xs text-gray-400 mb-4 leading-relaxed">If you notice any discrepancies in this transaction, please contact our finance support team immediately.</p>
+            <a href="#" class="inline-flex items-center text-xs font-bold hover:underline">
+                Contact Support <i class="fas fa-arrow-right ml-2"></i>
+            </a>
         </div>
     </div>
 </div>
+
+<style>
+    @media print {
+        .no-print, nav, #sidebar, .flex.items-center.justify-between, .bg-black.rounded-2xl {
+            display: none !important;
+        }
+        body {
+            background: white !important;
+            padding: 0 !important;
+        }
+        .bg-white {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .lg\:col-span-2, .lg\:grid-cols-3 {
+            grid-column: span 3 / span 3 !important;
+        }
+    }
+</style>
 {% endblock %}

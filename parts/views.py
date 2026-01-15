@@ -25,7 +25,7 @@ from decimal import Decimal
 from .models import (
     Part, Category, Brand, Inventory, Order, OrderItem, Review, BulkUploadLog, 
     IntegrationSource, Cart, CartItem, DiscountCode, OrderDiscount, City, 
-    CityArea, ShippingRate, OrderShipping, OrderStatusHistory
+    CityArea, ShippingRate, OrderShipping, OrderStatusHistory, Country
 )
 # from vehicles.models import VehicleMake, VehicleModelTaxonomy, VehicleVariant  # Disabled - vehicles not in INSTALLED_APPS
 from .cache import (
@@ -120,6 +120,78 @@ def set_country_currency(request):
         next_url = '/'
 
     return redirect(next_url)
+
+
+def _percent_str_to_rate(value):
+    try:
+        return (Decimal(str(value)) / Decimal('100')).quantize(Decimal('0.0001'))
+    except Exception:
+        return None
+
+
+def _get_country_standard_tax_rate(country_code):
+    from admin_panel.models import AdminSetting
+
+    country_code = (country_code or '').strip().upper()
+    keys_to_try = []
+    if country_code:
+        country_variants = {country_code, country_code.lower()}
+        for cc in country_variants:
+            keys_to_try.extend([
+                f'tax_{cc}_standard',
+                f'tax_{cc}_vat_standard',
+                f'tax_{cc}_vat',
+                f'tax_{cc}',
+            ])
+    keys_to_try.extend([
+        'tax_standard',
+        'tax_vat_standard',
+        'tax_vat',
+    ])
+
+    for key in keys_to_try:
+        # Use __iexact for case-insensitive matching in DB
+        setting = AdminSetting.objects.filter(key__iexact=key).only('value').first()
+        if not setting:
+            continue
+        rate = _percent_str_to_rate(setting.value)
+        if rate is not None:
+            return rate
+    return Decimal('0.15')
+
+
+def _infer_country_code_from_request(request):
+    detected = (getattr(request, 'detected_country', None) or '').strip().upper()
+    if detected:
+        return detected
+
+    currency_obj = getattr(request, 'currency', None)
+    currency_code = (getattr(currency_obj, 'code', None) or '').strip().upper()
+    if not currency_code:
+        session = getattr(request, 'session', None)
+        if session is not None:
+            currency_code = (session.get('currency_code') or session.get('currency_override') or '').strip().upper()
+
+    currency_to_iso2 = {
+        'AED': 'AE',
+        'SAR': 'SA',
+        'QAR': 'QA',
+        'OMR': 'OM',
+        'BHD': 'BH',
+        'PKR': 'PK',
+    }
+    return currency_to_iso2.get(currency_code)
+
+
+def _get_item_tax_rate(part, country_standard_rate):
+    tax_classification = getattr(part, 'tax_classification_material', None)
+    if tax_classification == 'VAT_5':
+        return Decimal('0.05')
+    if tax_classification in ('ZERO', 'EXEMPT'):
+        return Decimal('0.00')
+    if tax_classification == 'VAT_15':
+        return country_standard_rate
+    return country_standard_rate
 
 
 # Public Views
@@ -1127,10 +1199,16 @@ def buy_now(request):
             
             # Convert price to USD for storage
             from core.models import ExchangeRate
-            price_in_usd = part.standard_price
+            original_price = part.standard_price
+            if original_price is None:
+                original_price = getattr(part, 'price', Decimal('0.00'))
+            if original_price is None:
+                original_price = Decimal('0.00')
+                
+            price_in_usd = original_price
             if part.original_currency != 'USD':
                 rate = ExchangeRate.get_current_rate(part.original_currency, 'USD')
-                price_in_usd = part.standard_price * Decimal(str(rate))
+                price_in_usd = original_price * Decimal(str(rate))
             
             if part_id_str in cart:
                 new_quantity = cart[part_id_str]['quantity'] + qty
@@ -1145,7 +1223,7 @@ def buy_now(request):
                     'quantity': qty,
                     'name': part.name,
                     'price': float(price_in_usd),
-                    'original_price': float(part.standard_price),
+                    'original_price': float(original_price),
                     'original_currency': part.original_currency,
                     'sku': part.sku,
                     'image_url': part.image.url if part.image else (part.image_url or ''),
@@ -2050,11 +2128,16 @@ def get_cart_total(request):
                 try:
                     part = Part.objects.get(id=item_id, is_active=True)
                     price_in_usd = part.standard_price
+                    if price_in_usd is None:
+                        price_in_usd = getattr(part, 'price', Decimal('0.00'))
+                    if price_in_usd is None:
+                        price_in_usd = Decimal('0.00')
+                        
                     if part.original_currency != 'USD':
                         from core.models import ExchangeRate
                         from decimal import Decimal
                         rate = ExchangeRate.get_current_rate(part.original_currency, 'USD')
-                        price_in_usd = part.standard_price * Decimal(str(rate))
+                        price_in_usd = price_in_usd * Decimal(str(rate))
                     total += float(price_in_usd) * item_data['quantity']
                 except Part.DoesNotExist:
                     continue
@@ -2124,10 +2207,16 @@ def add_to_cart(request, part_id):
                     
                     # Convert price to USD for storage
                     from core.models import ExchangeRate
-                    price_in_usd = part.standard_price
+                    original_price = part.standard_price
+                    if original_price is None:
+                        original_price = getattr(part, 'price', Decimal('0.00'))
+                    if original_price is None:
+                        original_price = Decimal('0.00')
+                        
+                    price_in_usd = original_price
                     if part.original_currency != 'USD':
                         rate = ExchangeRate.get_current_rate(part.original_currency, 'USD')
-                        price_in_usd = part.standard_price * Decimal(str(rate))
+                        price_in_usd = original_price * Decimal(str(rate))
                     
                     if str(part_id) in cart:
                         new_quantity = cart[str(part_id)]['quantity'] + quantity
@@ -2139,7 +2228,7 @@ def add_to_cart(request, part_id):
                             'quantity': quantity,
                             'name': part.name,
                             'price': float(price_in_usd),
-                            'original_price': float(part.standard_price),
+                            'original_price': float(original_price),
                             'original_currency': part.original_currency,
                             'sku': part.sku,
                             'image_url': part.image.url if part.image else (part.image_url or ''),
@@ -2208,12 +2297,21 @@ def cart_view(request):
                 'id': item.id
             })
             cart_total += item.total_price
+
+        country_code = _infer_country_code_from_request(request)
+        country_standard_rate = _get_country_standard_tax_rate(country_code)
+        cart_tax = Decimal('0.00')
+        for row in cart_items_list:
+            part = row.get('part')
+            if not part:
+                continue
+            cart_tax += (row.get('item_total') or Decimal('0.00')) * _get_item_tax_rate(part, country_standard_rate)
         
         context = {
             'cart_items': cart_items_list,
             'cart_total': cart_total,
-            'cart_tax': cart_total * Decimal('0.15'),
-            'cart_grand_total': cart_total * Decimal('1.15'),
+            'cart_tax': cart_tax,
+            'cart_grand_total': cart_total + cart_tax,
             'cart_count': len(cart_items_list),
             'has_issue': has_issue,
             'can_checkout': not has_issue,
@@ -2568,10 +2666,15 @@ def checkout_view(request):
                     item_price_usd = Decimal(str(item_data['price']))
                 else:
                     item_price_usd = part.standard_price
+                    if item_price_usd is None:
+                        item_price_usd = getattr(part, 'price', Decimal('0.00'))
+                    if item_price_usd is None:
+                        item_price_usd = Decimal('0.00')
+                        
                     if part.original_currency != 'USD':
                         from core.models import ExchangeRate
                         rate = ExchangeRate.get_current_rate(part.original_currency, 'USD')
-                        item_price_usd = part.standard_price * Decimal(str(rate))
+                        item_price_usd = item_price_usd * Decimal(str(rate))
                 
                 item_total = item_price_usd * item_data['quantity']
                 
@@ -2593,20 +2696,12 @@ def checkout_view(request):
     
     # 2. Calculate Initial Totals (Tax, etc.)
     # Dynamic tax calculation based on tax_classification_material
+    country_code = _infer_country_code_from_request(request)
+    country_standard_rate = _get_country_standard_tax_rate(country_code)
     tax_amount = Decimal('0.00')
     for item in cart_items_list:
         part = item.part
-        # Default to 15% if not specified or unrecognized
-        item_tax_rate = Decimal('0.15')
-        
-        if hasattr(part, 'tax_classification_material'):
-            classification = part.tax_classification_material
-            if classification == 'VAT_5':
-                item_tax_rate = Decimal('0.05')
-            elif classification in ['ZERO', 'EXEMPT']:
-                item_tax_rate = Decimal('0.00')
-            elif classification == 'VAT_15':
-                item_tax_rate = Decimal('0.15')
+        item_tax_rate = _get_item_tax_rate(part, country_standard_rate)
         
         # Calculate tax for this item
         # Handle both MockItem and model object
@@ -2660,11 +2755,57 @@ def checkout_view(request):
         else:
              try:
                 with transaction.atomic():
+                    city = City.objects.select_related('country').get(id=city_id)
+                    country_standard_rate = _get_country_standard_tax_rate(getattr(getattr(city, 'country', None), 'code', None))
+
+                    # Create Order Items
+                    from core.models import ExchangeRate
+                    items_total_usd = Decimal('0.00')
+                    tax_total_usd = Decimal('0.00')
+                    order_items_data = []
+                    
+                    for item in cart_items_list:
+                        # Calculate item-specific tax for recording
+                        item_tax_rate = _get_item_tax_rate(item.part, country_standard_rate)
+                        
+                        # IMPORTANT: Convert price to USD (Base Currency) for storage
+                        original_price = item.part.standard_price
+                        if original_price is None:
+                            original_price = getattr(item.part, 'price', Decimal('0.00'))
+                        if original_price is None:
+                            original_price = Decimal('0.00')
+                            
+                        original_currency = getattr(item.part, 'original_currency', 'USD') or 'USD'
+                        
+                        item_price_usd = original_price
+                        locked_rate = Decimal('1.000000')
+                        
+                        if original_currency != 'USD':
+                            locked_rate = Decimal(str(ExchangeRate.get_current_rate(original_currency, 'USD')))
+                            item_price_usd = (original_price * locked_rate).quantize(Decimal('0.01'))
+                        
+                        item_total_usd = item_price_usd * item.quantity
+                        item_tax_usd = (item_total_usd * item_tax_rate).quantize(Decimal('0.01'))
+                        items_total_usd += item_total_usd
+                        tax_total_usd += item_tax_usd
+
+                        order_items_data.append({
+                            'part': item.part,
+                            'quantity': item.quantity,
+                            'price': item_price_usd,
+                            'tax_amount': item_tax_usd,
+                            'locked_exchange_rate': locked_rate,
+                            'vendor_currency_amount': original_price,
+                            'original_currency_code': original_currency,
+                        })
+
+                    order_total_price = (items_total_usd + tax_total_usd + shipping_cost).quantize(Decimal('0.01'))
+
                     # Create Order
                     order_data = {
-                        'total_price': grand_total,
+                        'total_price': order_total_price,
                         'shipping_cost': shipping_cost,
-                        'tax_amount': tax_amount,
+                        'tax_amount': tax_total_usd,
                         'status': 'pending',
                         'payment_method': order_payment_method,
                         'payment_status': 'pending'
@@ -2679,29 +2820,23 @@ def checkout_view(request):
                         order_data['guest_address'] = checkout_data['address']
                     
                     order = Order.objects.create(**order_data)
-                    
-                    # Create Order Items
-                    for item in cart_items_list:
-                        # Calculate item-specific tax for recording
-                        item_tax_rate = Decimal('0.15')
-                        if hasattr(item.part, 'tax_classification_material'):
-                            classification = item.part.tax_classification_material
-                            if classification == 'VAT_5':
-                                item_tax_rate = Decimal('0.05')
-                            elif classification in ['ZERO', 'EXEMPT']:
-                                item_tax_rate = Decimal('0.00')
-                        
-                        item_price = item.part.standard_price
-                        item_total = item_price * item.quantity
-                        item_tax = item_total * item_tax_rate
-                        
+
+                    for item_data in order_items_data:
                         OrderItem.objects.create(
                             order=order,
-                            part=item.part,
-                            quantity=item.quantity,
-                            price=item_price,
-                            tax_amount=item_tax
+                            part=item_data['part'],
+                            quantity=item_data['quantity'],
+                            price=item_data['price'],
+                            tax_amount=item_data['tax_amount'],
+                            locked_exchange_rate=item_data['locked_exchange_rate'],
+                            vendor_currency_amount=item_data['vendor_currency_amount'],
+                            original_currency_code=item_data['original_currency_code']
                         )
+                    
+                    # Lock exchange rates and timestamps on the order itself
+                    order.exchange_rate_locked_at = timezone.now()
+                    order.exchange_rate_valid_until = timezone.now() + timezone.timedelta(hours=24)
+                    order.save()
                     
                     # Deduct inventory using the robust model method
                     # Phase 1: Reserve inventory
@@ -2714,12 +2849,11 @@ def checkout_view(request):
                     if order_payment_method in ['cash_on_delivery', 'bank_transfer']:
                         order.finalize_inventory()
 
-                    # 4. Record Financial Transactions
-                    from finance.services import FinanceService
-                    FinanceService.record_order_payment(order, payment_method=finance_payment_method)
+                    if finance_payment_method != 'cod':
+                        from finance.services import FinanceService
+                        FinanceService.record_order_payment(order, payment_method=finance_payment_method)
                     
                     # Create Shipping Info
-                    city = City.objects.get(id=city_id)
                     city_area = None
                     if city_area_id:
                          try:
@@ -2782,8 +2916,9 @@ def checkout_view(request):
             if profile.postal_code:
                 user_data['postal_code'] = profile.postal_code
 
-    # Cities for dropdown
-    cities = City.objects.filter(is_active=True).order_by('name')
+    # Cities for dropdown - Filtered by inferred country
+    cities = City.objects.filter(country__code=country_code, is_active=True).order_by('name')
+    countries = Country.objects.filter(is_active=True).order_by('name')
     
     context = {
         'cart_items': cart_items_list,
@@ -2793,6 +2928,8 @@ def checkout_view(request):
         'grand_total': grand_total,
         'user_data': user_data,
         'cities': cities,
+        'countries': countries,
+        'country_code': country_code,
         'title': 'Checkout'
     }
     return render(request, 'parts/checkout.html', context)
@@ -3023,10 +3160,17 @@ def cart_view(request):
         for part_id, item_data in cart.items():
             try:
                 part = Part.objects.get(id=part_id, is_active=True)
-                item_total = part.standard_price * item_data['quantity']
+                
+                original_price = part.standard_price
+                if original_price is None:
+                    original_price = getattr(part, 'price', Decimal('0.00'))
+                if original_price is None:
+                    original_price = Decimal('0.00')
+                    
+                item_total = original_price * item_data['quantity']
                 cart[part_id].update({
                     'name': part.name,
-                    'price': part.standard_price,
+                    'price': original_price,
                     'image': part.image,
                     'image_url': part.image_url,
                     'sku': part.sku,
@@ -3055,19 +3199,14 @@ def cart_view(request):
     
     # Calculate tax based on item classification
     cart_tax = Decimal('0.00')
+    country_code = _infer_country_code_from_request(request)
+    country_standard_rate = _get_country_standard_tax_rate(country_code)
     for item in cart_items_list:
-        # Determine tax rate for this item
-        item_tax_rate = Decimal('0.15') # Default standard rate
-        
-        # Check for tax classification
         part = item.part if hasattr(item, 'part') else None
-        if part and hasattr(part, 'tax_classification_material'):
-            if part.tax_classification_material == 'VAT_5':
-                item_tax_rate = Decimal('0.05')
-            elif part.tax_classification_material == 'ZERO':
-                item_tax_rate = Decimal('0.00')
-            elif part.tax_classification_material == 'EXEMPT':
-                item_tax_rate = Decimal('0.00')
+        if part:
+            item_tax_rate = _get_item_tax_rate(part, country_standard_rate)
+        else:
+            item_tax_rate = country_standard_rate
         
         # Calculate tax for this item
         item_price_total = Decimal('0.00')
@@ -3167,14 +3306,21 @@ def checkout_step1_order_summary(request):
         for item_id, item_data in cart.items():
             try:
                 part = Part.objects.get(id=item_id, is_active=True)
-                item_total = part.standard_price * item_data['quantity']
+                
+                original_price = part.standard_price
+                if original_price is None:
+                    original_price = getattr(part, 'price', Decimal('0.00'))
+                if original_price is None:
+                    original_price = Decimal('0.00')
+                    
+                item_total = original_price * item_data['quantity']
                 items_total += item_total
                 
                 # Create a mock cart item object for template compatibility
                 cart_items_data.append({
                     'part': part,
                     'quantity': item_data['quantity'],
-                    'price': part.standard_price,
+                    'price': original_price,
                     'total_price': item_total,
                     'get_total_price': lambda: item_total,  # For template compatibility
                 })
@@ -3190,6 +3336,8 @@ def checkout_step1_order_summary(request):
     
     # Calculate tax based on item classification
     tax_amount = Decimal('0.00')
+    country_code = _infer_country_code_from_request(request)
+    country_standard_rate = _get_country_standard_tax_rate(country_code)
     
     # Use cart_items_data which is unified above
     for item_data in cart_items_data:
@@ -3209,14 +3357,7 @@ def checkout_step1_order_summary(request):
             total_price = item_data.total_price
             
         if part:
-            item_tax_rate = Decimal('0.15') # Default standard rate
-            if hasattr(part, 'tax_classification_material'):
-                if part.tax_classification_material == 'VAT_5':
-                    item_tax_rate = Decimal('0.05')
-                elif part.tax_classification_material == 'ZERO':
-                    item_tax_rate = Decimal('0.00')
-                elif part.tax_classification_material == 'EXEMPT':
-                    item_tax_rate = Decimal('0.00')
+            item_tax_rate = _get_item_tax_rate(part, country_standard_rate)
             
             tax_amount += total_price * item_tax_rate
 
@@ -3404,22 +3545,13 @@ def checkout_step2_shipping_info(request):
                 except ShippingRate.DoesNotExist:
                     shipping_cost = Decimal('25.00')  # Default shipping cost
                 
-                # Calculate tax (15% VAT in Saudi Arabia)
-                tax_rate = Decimal('0.15')
+                country_standard_rate = _get_country_standard_tax_rate(getattr(getattr(city, 'country', None), 'code', None))
                 tax_amount = Decimal('0.00')
                 
                 # Check if this is a buy now order to calculate tax per item
                 if buy_now_order:
                     for item in buy_now_order.items.all():
-                        item_tax_rate = Decimal('0.15') # Default
-                        
-                        if hasattr(item.part, 'tax_classification_material'):
-                            if item.part.tax_classification_material == 'VAT_5':
-                                item_tax_rate = Decimal('0.05')
-                            elif item.part.tax_classification_material == 'ZERO':
-                                item_tax_rate = Decimal('0.00')
-                            elif item.part.tax_classification_material == 'EXEMPT':
-                                item_tax_rate = Decimal('0.00')
+                        item_tax_rate = _get_item_tax_rate(item.part, country_standard_rate)
                         
                         tax_amount += item.quantity * item.price * item_tax_rate
                 else:
@@ -3445,17 +3577,16 @@ def checkout_step2_shipping_info(request):
                         try:
                             cart = Cart.objects.get(user=request.user)
                             for item in cart.items.all():
-                                item_tax_rate = Decimal('0.15')
-                                if hasattr(item.part, 'tax_classification_material'):
-                                    if item.part.tax_classification_material == 'VAT_5':
-                                        item_tax_rate = Decimal('0.05')
-                                    elif item.part.tax_classification_material == 'ZERO':
-                                        item_tax_rate = Decimal('0.00')
-                                    elif item.part.tax_classification_material == 'EXEMPT':
-                                        item_tax_rate = Decimal('0.00')
-                                tax_amount += item.quantity * item.part.standard_price * item_tax_rate
+                                item_tax_rate = _get_item_tax_rate(item.part, country_standard_rate)
+                                original_price = item.part.standard_price
+                                if original_price is None:
+                                    original_price = getattr(item.part, 'price', Decimal('0.00'))
+                                if original_price is None:
+                                    original_price = Decimal('0.00')
+                                
+                                tax_amount += item.quantity * original_price * item_tax_rate
                         except Cart.DoesNotExist:
-                            tax_amount = (items_total + shipping_cost - discount_amount) * tax_rate
+                            tax_amount = (items_total + shipping_cost - discount_amount) * country_standard_rate
                     else:
                         # Guest cart tax calculation
                         cart_data = get_cart(request)
@@ -3463,19 +3594,19 @@ def checkout_step2_shipping_info(request):
                             for part_id, item_data in cart_data.items():
                                 try:
                                     part = Part.objects.get(id=part_id)
-                                    item_tax_rate = Decimal('0.15')
-                                    if hasattr(part, 'tax_classification_material'):
-                                        if part.tax_classification_material == 'VAT_5':
-                                            item_tax_rate = Decimal('0.05')
-                                        elif part.tax_classification_material == 'ZERO':
-                                            item_tax_rate = Decimal('0.00')
-                                        elif part.tax_classification_material == 'EXEMPT':
-                                            item_tax_rate = Decimal('0.00')
-                                    tax_amount += item_data['quantity'] * part.standard_price * item_tax_rate
+                                    item_tax_rate = _get_item_tax_rate(part, country_standard_rate)
+                                            
+                                    original_price = part.standard_price
+                                    if original_price is None:
+                                        original_price = getattr(part, 'price', Decimal('0.00'))
+                                    if original_price is None:
+                                        original_price = Decimal('0.00')
+                                        
+                                    tax_amount += item_data['quantity'] * original_price * item_tax_rate
                                 except Part.DoesNotExist:
                                     continue
                         else:
-                             tax_amount = (items_total + shipping_cost - discount_amount) * tax_rate
+                             tax_amount = (items_total + shipping_cost - discount_amount) * country_standard_rate
 
                 grand_total = items_total + shipping_cost + tax_amount - discount_amount
                 
@@ -3668,6 +3799,11 @@ def checkout_step3_payment_method(request):
                                         # Use locked exchange rate if available, otherwise fallback to current price
                                         locked_price = cart_item.get_price_in_user_currency() if hasattr(cart_item, 'get_price_in_user_currency') else cart_item.part.standard_price
                                         
+                                        if locked_price is None:
+                                            locked_price = getattr(cart_item.part, 'price', Decimal('0.00'))
+                                        if locked_price is None:
+                                            locked_price = Decimal('0.00')
+                                            
                                         OrderItem.objects.create(
                                             order=order,
                                             part=cart_item.part,
@@ -3684,11 +3820,18 @@ def checkout_step3_payment_method(request):
                                     for part_id, item_data in cart_data.items():
                                         try:
                                             part = Part.objects.get(id=part_id, is_active=True)
+                                            
+                                            original_price = part.standard_price
+                                            if original_price is None:
+                                                original_price = getattr(part, 'price', Decimal('0.00'))
+                                            if original_price is None:
+                                                original_price = Decimal('0.00')
+                                                
                                             OrderItem.objects.create(
                                                 order=order,
                                                 part=part,
                                                 quantity=item_data['quantity'],
-                                                price=part.standard_price
+                                                price=original_price
                                             )
                                         except Part.DoesNotExist:
                                             logger.warning(f"Part {part_id} not found for guest cart item")
@@ -3799,20 +3942,6 @@ def order_confirmation(request, order_number):
         # Calculate tax for each item
         enhanced_items = []
         for item in order.items.select_related('part', 'part__brand').all():
-            tax_rate = Decimal('0.15') # Default
-            tax_rate_display = '15%'
-            
-            if hasattr(item.part, 'tax_classification_material'):
-                if item.part.tax_classification_material == 'VAT_5':
-                    tax_rate = Decimal('0.05')
-                    tax_rate_display = '5%'
-                elif item.part.tax_classification_material == 'ZERO':
-                    tax_rate = Decimal('0.00')
-                    tax_rate_display = '0% (Zero Rated)'
-                elif item.part.tax_classification_material == 'EXEMPT':
-                    tax_rate = Decimal('0.00')
-                    tax_rate_display = 'Exempt'
-
             unit_price_usd = item.price
             if item.locked_exchange_rate and item.vendor_currency_amount:
                 unit_price_usd = item.vendor_currency_amount * item.locked_exchange_rate
@@ -3829,7 +3958,29 @@ def order_confirmation(request, order_number):
                         unit_price_usd = item.price
 
             line_subtotal_usd = unit_price_usd * item.quantity
-            item_tax = line_subtotal_usd * tax_rate
+            item_tax = getattr(item, 'tax_amount', None)
+            if item_tax is None:
+                country_code = None
+                shipping_info = getattr(order, 'shipping_info', None)
+                if shipping_info and getattr(shipping_info, 'city', None):
+                    try:
+                        country_code = shipping_info.city.country.code
+                    except Exception:
+                        country_code = None
+                country_standard_rate = _get_country_standard_tax_rate(country_code)
+                item_tax_rate = _get_item_tax_rate(item.part, country_standard_rate)
+                item_tax = (line_subtotal_usd * item_tax_rate).quantize(Decimal('0.01'))
+
+            tax_rate = (item_tax / line_subtotal_usd).quantize(Decimal('0.0001')) if line_subtotal_usd else Decimal('0.0000')
+            tax_classification = getattr(item.part, 'tax_classification_material', None)
+            if tax_classification == 'VAT_5':
+                tax_rate_display = '5%'
+            elif tax_classification == 'ZERO':
+                tax_rate_display = '0% (Zero Rated)'
+            elif tax_classification == 'EXEMPT':
+                tax_rate_display = 'Exempt'
+            else:
+                tax_rate_display = f"{(tax_rate * Decimal('100')).quantize(Decimal('0.01'))}%"
             
             enhanced_items.append({
                 'item': item,
@@ -4074,28 +4225,37 @@ class OrderDetailView(LoginRequiredMixin, DetailView):
         # Calculate tax for each item
         enhanced_items = []
         for item in order_items:
-            tax_rate = Decimal('0.15') # Default
-            tax_rate_display = '15%'
-            
-            if hasattr(item.part, 'tax_classification_material'):
-                if item.part.tax_classification_material == 'VAT_5':
-                    tax_rate = Decimal('0.05')
-                    tax_rate_display = '5%'
-                elif item.part.tax_classification_material == 'ZERO':
-                    tax_rate = Decimal('0.00')
-                    tax_rate_display = '0% (Zero Rated)'
-                elif item.part.tax_classification_material == 'EXEMPT':
-                    tax_rate = Decimal('0.00')
-                    tax_rate_display = 'Exempt'
-            
-            item_tax = item.quantity * item.price * tax_rate
+            line_subtotal_usd = item.quantity * item.price
+            item_tax = getattr(item, 'tax_amount', None)
+            if item_tax is None:
+                country_code = None
+                shipping_info = getattr(self.object, 'shipping_info', None)
+                if shipping_info and getattr(shipping_info, 'city_id', None):
+                    try:
+                        country_code = shipping_info.city.country_id
+                    except Exception:
+                        country_code = None
+                country_standard_rate = _get_country_standard_tax_rate(country_code)
+                item_tax_rate = _get_item_tax_rate(item.part, country_standard_rate)
+                item_tax = (line_subtotal_usd * item_tax_rate).quantize(Decimal('0.01'))
+
+            tax_rate = (item_tax / line_subtotal_usd).quantize(Decimal('0.0001')) if line_subtotal_usd else Decimal('0.0000')
+            tax_classification = getattr(item.part, 'tax_classification_material', None)
+            if tax_classification == 'VAT_5':
+                tax_rate_display = '5%'
+            elif tax_classification == 'ZERO':
+                tax_rate_display = '0% (Zero Rated)'
+            elif tax_classification == 'EXEMPT':
+                tax_rate_display = 'Exempt'
+            else:
+                tax_rate_display = f"{(tax_rate * Decimal('100')).quantize(Decimal('0.01'))}%"
             
             enhanced_items.append({
                 'item': item,
                 'tax_rate': tax_rate,
                 'tax_rate_display': tax_rate_display,
                 'tax_amount': item_tax,
-                'total_with_tax': (item.quantity * item.price) + item_tax
+                'total_with_tax': line_subtotal_usd + item_tax
             })
             
         context['enhanced_order_items'] = enhanced_items

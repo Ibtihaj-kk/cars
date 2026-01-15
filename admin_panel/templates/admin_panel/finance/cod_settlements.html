@@ -1,5 +1,6 @@
 {% extends 'admin_panel/base.html' %}
 {% load static %}
+{% load vendor_currency %}
 
 {% block content %}
 <div class="p-6">
@@ -37,6 +38,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     {% for request in settlement_requests %}
+                    {% vendor_currency request.amount as amount_display %}
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4 font-medium text-gray-800">#{{ request.id }}</td>
                         <td class="px-6 py-4">
@@ -47,7 +49,7 @@
                                 <span class="text-sm text-gray-700 font-medium">{{ request.vendor.name }}</span>
                             </div>
                         </td>
-                        <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ request.amount }} {{ request.currency }}</td>
+                        <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ amount_display }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ request.created_at|date:"M d, Y H:i" }}</td>
                         <td class="px-6 py-4 text-sm text-gray-600 font-mono">{{ request.reference_number }}</td>
                         <td class="px-6 py-4">
@@ -60,7 +62,7 @@
                         </td>
                         <td class="px-6 py-4 text-right">
                             {% if request.status == 'pending' %}
-                            <button onclick="openModal('{{ request.id }}', '{{ request.vendor.name }}', '{{ request.amount }} {{ request.currency }}', '{{ request.reference_number }}', '{% if request.evidence_image %}{{ request.evidence_image.url }}{% endif %}')" 
+                            <button onclick="openModal('{{ request.id }}', '{{ request.vendor.name|escapejs }}', '{{ amount_display|escapejs }}', '{{ request.reference_number|escapejs }}', '{% if request.evidence_image %}{{ request.evidence_image.url|escapejs }}{% endif %}')" 
                                 class="text-blue-600 hover:text-blue-800 text-sm font-semibold">
                                 Process
                             </button>

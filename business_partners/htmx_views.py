@@ -34,12 +34,12 @@ def vendor_dashboard_htmx(request):
     active_parts = Part.objects.filter(dealer=request.user, is_active=True).count()
     low_stock = Part.objects.filter(
         dealer=request.user,
-        stock_quantity__lte=5,
-        stock_quantity__gt=0
+        quantity__lte=5,
+        quantity__gt=0
     ).count()
     out_of_stock = Part.objects.filter(
         dealer=request.user,
-        stock_quantity=0
+        quantity=0
     ).count()
 
     # Recent orders (last 30 days)
@@ -49,7 +49,7 @@ def vendor_dashboard_htmx(request):
         created_at__gte=last_30_days
     ).distinct()
 
-    monthly_revenue = sum(order.total_amount for order in recent_orders)
+    monthly_revenue = sum(order.total_price for order in recent_orders)
     monthly_orders = recent_orders.count()
 
     # Recent order items
@@ -99,14 +99,14 @@ def vendor_inventory_htmx(request):
     elif status_filter == 'inactive':
         parts = parts.filter(is_active=False)
     elif status_filter == 'low_stock':
-        parts = parts.filter(stock_quantity__lte=5, stock_quantity__gt=0)
+        parts = parts.filter(quantity__lte=5, quantity__gt=0)
     elif status_filter == 'out_of_stock':
-        parts = parts.filter(stock_quantity=0)
+        parts = parts.filter(quantity=0)
 
     if search:
         parts = parts.filter(
             Q(name__icontains=search) |
-            Q(part_number__icontains=search)
+            Q(parts_number__icontains=search)
         )
 
     parts = parts.order_by('-created_at')
@@ -155,16 +155,16 @@ def vendor_save_part_htmx(request, part_id=None):
 
     # Get form data
     name = request.POST.get('name')
-    part_number = request.POST.get('part_number')
+    parts_number = request.POST.get('parts_number')
     description = request.POST.get('description')
     price = request.POST.get('price')
-    stock_quantity = request.POST.get('stock_quantity')
+    quantity = request.POST.get('quantity')
     make_id = request.POST.get('make')
     model_id = request.POST.get('model')
     category_id = request.POST.get('category')
 
     # Validation (basic)
-    if not all([name, part_number, price, stock_quantity]):
+    if not all([name, parts_number, price, quantity]):
         context = {
             'error': 'All required fields must be filled',
             'part': part,
@@ -174,10 +174,10 @@ def vendor_save_part_htmx(request, part_id=None):
     # Create or update part
     if part:
         part.name = name
-        part.part_number = part_number
+        part.parts_number = parts_number
         part.description = description
         part.price = price
-        part.stock_quantity = stock_quantity
+        part.quantity = quantity
         part.make_id = make_id if make_id else None
         part.model_id = model_id if model_id else None
         part.category_id = category_id if category_id else None
@@ -187,10 +187,10 @@ def vendor_save_part_htmx(request, part_id=None):
         part = Part.objects.create(
             dealer=request.user,
             name=name,
-            part_number=part_number,
+            parts_number=parts_number,
             description=description,
             price=price,
-            stock_quantity=stock_quantity,
+            quantity=quantity,
             make_id=make_id if make_id else None,
             model_id=model_id if model_id else None,
             category_id=category_id if category_id else None,
@@ -247,7 +247,7 @@ def vendor_update_stock_htmx(request, part_id):
     part = get_object_or_404(Part, id=part_id, dealer=request.user)
 
     new_quantity = int(request.POST.get('quantity', 0))
-    part.stock_quantity = new_quantity
+    part.quantity = new_quantity
     part.save()
 
     context = {

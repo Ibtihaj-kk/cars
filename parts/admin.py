@@ -54,7 +54,7 @@ class PartAdmin(admin.ModelAdmin):
     form = PartAdminForm  # Use the comprehensive admin form
     list_display = [
         'parts_number', 'material_description', 'sku', 'category', 'brand', 
-        'price', 'quantity', 'is_active', 'is_featured', 'dealer', 'created_at'
+        'price', 'stock_display', 'is_active', 'is_featured', 'dealer', 'created_at'
     ]
     list_filter = [
         'is_active', 'is_featured', 'category', 'brand', 'dealer',
@@ -70,13 +70,14 @@ class PartAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name', 'sku')}
     readonly_fields = [
         'created_at', 'updated_at', 'view_count',
-        'user_visible_fields_display', 'vendor_admin_fields_display'
+        'user_visible_fields_display', 'vendor_admin_fields_display',
+        'stock_display'
     ]
     inlines = [InventoryInline]
     
     fieldsets = (
         ('Core Identification', {
-            'fields': ('parts_number', 'sku', 'name', 'slug'),
+            'fields': ('parts_number', 'sku', 'name', 'slug', 'stock_display'),
             'description': 'Primary identification fields for the part'
         }),
         ('USER-VISIBLE FIELDS (Dark Green)', {
@@ -114,7 +115,13 @@ class PartAdmin(admin.ModelAdmin):
         }),
         ('Legacy & Compatibility Fields', {
             'fields': ('description', 'price', 'quantity'),
-            'description': 'Legacy fields maintained for backward compatibility',
+            'description': mark_safe(
+                '<div style="background-color: #fff3cd; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; color: #856404;">'
+                '<strong>Warning:</strong> These are legacy fields. '
+                'For stock management, please use the <strong>Inventory</strong> section at the bottom of the page. '
+                'Updates to "Quantity" here will be synced to Inventory, but the Inventory section is the primary source.'
+                '</div>'
+            ),
             'classes': ('collapse',)
         }),
         ('Media & Visual', {
@@ -139,6 +146,20 @@ class PartAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    
+    def stock_display(self, obj):
+        """Display current stock from Inventory or legacy quantity."""
+        if hasattr(obj, 'inventory'):
+            stock = obj.inventory.stock
+            reserved = obj.inventory.reserved_stock
+            if reserved > 0:
+                return format_html(
+                    '<b style="color: green;">{}</b> <small style="color: orange;">({} reserved)</small>',
+                    stock, reserved
+                )
+            return format_html('<b style="color: green;">{}</b>', stock)
+        return format_html('<span style="color: gray;">{} (Legacy)</span>', obj.quantity)
+    stock_display.short_description = 'Current Stock'
     
     def user_visible_fields_display(self, obj):
         """Display user-visible fields as a formatted list."""

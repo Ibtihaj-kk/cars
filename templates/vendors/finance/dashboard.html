@@ -40,11 +40,11 @@
     <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group">
         <span class="absolute top-4 right-4 text-md font-extrabold text-gray-400 z-10">{% vendor_currency_symbol %}</span>
         <div class="absolute top-0 right-0 p-4 opacity-10">
-            <i class="fas fa-hand-holding-usd text-6xl text-red-500"></i>
+            <i class="fas fa-percentage text-6xl text-gray-900"></i>
         </div>
-        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Liabilities (COD)</p>
-        <h3 class="text-2xl font-extrabold text-red-600 mt-2">{% vendor_currency_value wallet.liability_balance %}</h3>
-        <p class="text-xs text-gray-500 mt-2"><i class="fas fa-exclamation-triangle mr-1"></i> Owed to platform</p>
+        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Tax Collection</p>
+        <h3 class="text-2xl font-extrabold text-gray-900 mt-2">{% vendor_currency_value total_tax_collected %}</h3>
+        <p class="text-xs text-gray-500 mt-2"><i class="fas fa-info-circle mr-1"></i> Total tax on orders</p>
     </div>
 
     <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group">
@@ -73,42 +73,63 @@
             <table class="w-full text-left" id="txTable">
                 <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500">
                     <tr>
+                        <th class="px-6 py-3">Order</th>
                         <th class="px-6 py-3">Date</th>
-                        <th class="px-6 py-3">Type</th>
-                        <th class="px-6 py-3 text-right">Amount</th>
+                        <th class="px-6 py-3 text-right">Order Amount</th>
+                        <th class="px-6 py-3 text-right">Tax</th>
+                        <th class="px-6 py-3 text-right">Commission</th>
+                        <th class="px-6 py-3 text-right">Amount Settled</th>
                         <th class="px-6 py-3 text-center">Status</th>
-                        <th class="px-6 py-3 text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 text-sm">
                     {% for transaction in recent_transactions %}
                     <tr class="hover:bg-gray-50 transition">
-                        <td class="px-6 py-4 text-gray-500">{{ transaction.created_at|date:"M d, Y" }}</td>
                         <td class="px-6 py-4">
-                            <div class="font-bold text-gray-900">{{ transaction.get_transaction_type_display }}</div>
-                            <div class="text-xs text-gray-500">
-                                {% if transaction.order_number %}
-                                    Order: {{ transaction.order_number }}
-                                {% else %}
-                                    {{ transaction.reference|default:"No reference" }}
-                                {% endif %}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 text-right font-bold">
-                            {% if transaction.destination_wallet == wallet %}
-                                <span class="text-green-600">+ {% vendor_currency_value transaction.amount_base %}</span>
+                            {% if transaction.is_settlement %}
+                                <a href="{% url 'finance:vendor_transaction_detail' transaction.id %}" class="text-blue-600 hover:underline font-medium">
+                                    {{ transaction.order_number }}
+                                </a>
                             {% else %}
-                                <span class="text-red-600">- {% vendor_currency_value transaction.amount_base %}</span>
+                                <span class="text-gray-900 font-medium">{{ transaction.order_number }}</span>
+                                <div class="text-[10px] text-gray-400 uppercase">{{ transaction.type_display }}</div>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">Completed</span>
+                        <td class="px-6 py-4 text-gray-500">{{ transaction.date|date:"d-M-y" }}</td>
+                        <td class="px-6 py-4 text-right font-medium">
+                            {% if transaction.order_amount != 'N/A' %}
+                                {% vendor_currency_value transaction.order_amount %}
+                            {% else %}
+                                -
+                            {% endif %}
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <a class="text-gray-500 hover:text-black font-bold text-sm"
-                               href="{% url 'finance:vendor_transaction_detail' transaction.id %}">
-                                View
-                            </a>
+                            {% if transaction.tax != 'N/A' and transaction.tax > 0 %}
+                                <span class="font-bold">{% vendor_currency_value transaction.tax %}</span>
+                            {% elif transaction.tax == 0 %}
+                                <span class="text-gray-400">0.00</span>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right text-gray-600">
+                            {% if transaction.commission != 'N/A' %}
+                                {% vendor_currency_value transaction.commission %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right font-bold text-gray-900">
+                            {% vendor_currency_value transaction.amount_settled %}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if transaction.status == 'completed' %}
+                                <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-[10px] font-bold uppercase">Completed</span>
+                            {% elif transaction.status == 'pending' %}
+                                <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-[10px] font-bold uppercase">Pending</span>
+                            {% else %}
+                                <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-[10px] font-bold uppercase">{{ transaction.status }}</span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}

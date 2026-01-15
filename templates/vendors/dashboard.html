@@ -45,11 +45,18 @@
         <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p class="text-gray-500 text-sm">Here's what's happening with your store today.</p>
     </div>
+    <div class="flex gap-2">
+        <button onclick="openPersonalizeModal()" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
+            <i class="fas fa-cog mr-2 text-gray-400"></i> Personalize
+        </button>
+    </div>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<div id="dashboardTiles" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Order Tiles -->
     <a href="{% url 'business_partners:vendor_orders_list' %}"
-        class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition">
+        data-tile-id="total_orders"
+        class="dashboard-tile block bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Orders</p>
@@ -62,23 +69,82 @@
             {{ stats.order_growth|abs_val }}% vs last week
         </div>
     </a>
+
+    <a href="{% url 'business_partners:vendor_orders_list' %}"
+        data-tile-id="delivered_orders"
+        class="dashboard-tile block bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Delivered Orders</p>
+                <h3 class="mt-2 text-2xl font-extrabold text-green-600">{{ stats.delivered_count|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-green-50 rounded-lg text-green-600"><i class="fas fa-check-circle"></i></div>
+        </div>
+        <div class="mt-4 flex items-center text-xs text-gray-500">Successfully fulfilled</div>
+    </a>
+
+    <!-- Finance Tiles -->
     <a href="{% url 'business_partners:vendor_order_analytics' %}"
-        class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition relative">
+        data-tile-id="monthly_sales"
+        class="dashboard-tile block bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition relative">
         <span class="absolute top-4 right-4 text-md font-extrabold text-black-400">{% vendor_currency_symbol %}</span>
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Monthly Sales</p>
                 <h3 class="mt-2 text-2xl font-extrabold text-yellow-600">{% vendor_currency_compact_value stats.monthly_sales_raw|default:0 %}</h3>
             </div>
-            <!-- <div class="p-2 bg-yellow-50 rounded-lg text-yellow-600">{% vendor_currency_symbol %}</div> -->
         </div>
         <div class="mt-4 flex items-center text-xs {% if stats.sales_growth >= 0 %}text-green-600{% else %}text-red-600{% endif %} font-bold">
             <i class="fas {% if stats.sales_growth >= 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %} mr-1"></i> 
             {{ stats.sales_growth|abs_val }}% vs last month
         </div>
     </a>
+
+    <a href="{% url 'business_partners:vendor_finance_dashboard' %}"
+        data-tile-id="wallet_balance"
+        class="dashboard-tile block bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition relative">
+        <span class="absolute top-4 right-4 text-md font-extrabold text-black-400">{% vendor_currency_symbol %}</span>
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Wallet Balance</p>
+                <h3 class="mt-2 text-2xl font-extrabold text-indigo-600">{% vendor_currency_compact_value stats.wallet_balance|default:0 %}</h3>
+            </div>
+            <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600"><i class="fas fa-wallet"></i></div>
+        </div>
+        <div class="mt-4 flex items-center text-xs text-gray-500">Available for withdrawal</div>
+    </a>
+
+    <!-- Inventory Tiles -->
+    <a href="{% url 'business_partners:vendor_inventory_list' %}"
+        data-tile-id="inventory_value"
+        class="dashboard-tile block bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition relative">
+        <span class="absolute top-4 right-4 text-md font-extrabold text-black-400">{% vendor_currency_symbol %}</span>
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Inventory Value</p>
+                <h3 class="mt-2 text-2xl font-extrabold text-blue-600">{% vendor_currency_compact_value stats.total_value_raw|default:0 %}</h3>
+            </div>
+        </div>
+        <div class="mt-4 flex items-center text-xs text-gray-500">Across {{ stats.active_parts|default:"0"|compact_number }} active SKUs</div>
+    </a>
+
+    <a href="{% url 'business_partners:vendor_inventory_list' %}?stock=low"
+        data-tile-id="low_stock"
+        class="dashboard-tile block bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Low Stock</p>
+                <h3 class="mt-2 text-2xl font-extrabold text-orange-500">{{ stats.low_stock|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-orange-50 rounded-lg text-orange-500"><i class="fas fa-layer-group"></i></div>
+        </div>
+        <div class="mt-4 flex items-center text-xs text-orange-500 font-bold">Items needing restock</div>
+    </a>
+
+    <!-- Summary & Action Tiles -->
     <a href="{% url 'business_partners:vendor_orders_list' %}"
-        class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-red-500 hover:shadow-md hover:border-gray-200 transition">
+        data-tile-id="pending_actions"
+        class="dashboard-tile block bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-red-500 hover:shadow-md hover:border-gray-200 transition">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Pending Action</p>
@@ -88,17 +154,47 @@
         </div>
         <div class="mt-4 flex items-center text-xs text-red-500 font-bold">Requires immediate attention</div>
     </a>
-    <a href="{% url 'business_partners:vendor_inventory_list' %}"
-        class="block bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition relative">
+
+    <a href="{% url 'business_partners:vendor_customers_list' %}"
+        data-tile-id="total_customers"
+        class="dashboard-tile block bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Customers</p>
+                <h3 class="mt-2 text-2xl font-extrabold text-purple-600">{{ stats.total_customers|default:"0" }}</h3>
+            </div>
+            <div class="p-2 bg-purple-50 rounded-lg text-purple-600"><i class="fas fa-users"></i></div>
+        </div>
+        <div class="mt-4 flex items-center text-xs text-gray-500">Unique customers reached</div>
+    </a>
+
+    <a href="{% url 'business_partners:vendor_finance_dashboard' %}"
+        data-tile-id="tax_collection"
+        class="dashboard-tile block bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition relative">
         <span class="absolute top-4 right-4 text-md font-extrabold text-black-400">{% vendor_currency_symbol %}</span>
         <div class="flex justify-between items-start">
             <div>
-                <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Inventory Value</p>
-                <h3 class="mt-2 text-2xl font-extrabold text-blue-600">{% vendor_currency_compact_value stats.total_value_raw|default:0 %}</h3>
+                <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Tax Collection</p>
+                <h3 class="mt-2 text-2xl font-extrabold text-teal-600">{% vendor_currency_compact_value tax_payable|default:0 %}</h3>
             </div>
-            <!-- <div class="p-2 bg-blue-50 rounded-lg text-blue-600">{% vendor_currency_symbol %}</div> -->
+            <div class="p-2 bg-teal-50 rounded-lg text-teal-600"><i class="fas fa-file-invoice-dollar"></i></div>
         </div>
-        <div class="mt-4 flex items-center text-xs text-gray-500">Across {{ stats.active_parts|default:"0"|compact_number }} active SKUs</div>
+        <div class="mt-4 flex items-center text-xs text-gray-500">Total tax collected (30d)</div>
+    </a>
+
+    <a href="{% url 'business_partners:vendor_profile' %}"
+        data-tile-id="profile_completion"
+        class="dashboard-tile block bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">Profile Status</p>
+                <h3 class="mt-2 text-2xl font-extrabold text-gray-900">{{ profile_completion_percentage }}%</h3>
+            </div>
+            <div class="p-2 bg-gray-50 rounded-lg text-gray-600"><i class="fas fa-user-edit"></i></div>
+        </div>
+        <div class="mt-4 w-full bg-gray-200 rounded-full h-1.5">
+            <div class="bg-black h-1.5 rounded-full" style="width: {{ profile_completion_percentage }}%"></div>
+        </div>
     </a>
 </div>
 
@@ -119,6 +215,38 @@
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span class="text-xl font-bold text-gray-800">{{ stats.total_fulfillment|default:"0" }}</span>
                 <span class="text-xs text-gray-400">Total</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Personalization Modal -->
+<div id="personalizeModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+            <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+        </div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                        <h3 class="text-lg leading-6 font-bold text-gray-900 mb-4">Personalize Dashboard</h3>
+                        <p class="text-sm text-gray-500 mb-6">Choose which tiles you want to see and their order.</p>
+                        
+                        <div id="personalizeList" class="space-y-3">
+                            <!-- Items will be injected by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" onclick="savePersonalization()" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-black text-base font-bold text-white hover:bg-gray-800 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition">
+                    Save Changes
+                </button>
+                <button type="button" onclick="closePersonalizeModal()" class="mt-3 w-full inline-flex justify-center rounded-xl border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition">
+                    Cancel
+                </button>
             </div>
         </div>
     </div>
@@ -161,5 +289,148 @@
             },
         options: { responsive: true, cutout: '75%', plugins: { legend: { display: false } }, maintainAspectRatio: false }
         });
+
+    // ==========================================
+    // DASHBOARD PERSONALIZATION
+    // ==========================================
+    const DEFAULT_TILES = [
+        { id: 'total_orders', label: 'Total Orders', visible: true },
+        { id: 'delivered_orders', label: 'Delivered Orders', visible: true },
+        { id: 'monthly_sales', label: 'Monthly Sales', visible: true },
+        { id: 'wallet_balance', label: 'Wallet Balance', visible: true },
+        { id: 'inventory_value', label: 'Inventory Value', visible: true },
+        { id: 'low_stock', label: 'Low Stock', visible: true },
+        { id: 'pending_actions', label: 'Pending Action', visible: true },
+        { id: 'total_customers', label: 'Total Customers', visible: true },
+        { id: 'tax_collection', label: 'Tax Collection', visible: true },
+        { id: 'profile_completion', label: 'Profile Status', visible: true }
+    ];
+
+    function getPersonalization() {
+        const saved = localStorage.getItem('vendor_dashboard_tiles');
+        if (!saved) return DEFAULT_TILES;
+        
+        try {
+            let config = JSON.parse(saved);
+            const defaultIds = DEFAULT_TILES.map(item => item.id);
+            const savedIds = config.map(item => item.id);
+            
+            // 1. Filter out tiles that no longer exist in DEFAULT_TILES
+            let filteredConfig = config.filter(item => defaultIds.includes(item.id));
+            
+            // 2. Add new tiles from DEFAULT_TILES that aren't in saved config
+            const newTiles = DEFAULT_TILES.filter(item => !savedIds.includes(item.id));
+            
+            return [...filteredConfig, ...newTiles];
+        } catch (e) {
+            return DEFAULT_TILES;
+        }
+    }
+
+    function applyPersonalization() {
+        const config = getPersonalization();
+        const container = document.getElementById('dashboardTiles');
+        const tiles = Array.from(container.querySelectorAll('.dashboard-tile'));
+        
+        // Clear container and re-append in order
+        config.forEach(item => {
+            const tile = tiles.find(t => t.dataset.tileId === item.id);
+            if (tile) {
+                tile.style.display = item.visible ? 'block' : 'none';
+                container.appendChild(tile);
+            }
+        });
+    }
+
+    function openPersonalizeModal() {
+        const config = getPersonalization();
+        const listContainer = document.getElementById('personalizeList');
+        listContainer.innerHTML = '';
+
+        config.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200 cursor-move transition-all duration-200 personalize-item';
+            div.draggable = true;
+            div.dataset.id = item.id;
+            div.innerHTML = `
+                <div class="flex items-center pointer-events-none">
+                    <i class="fas fa-grip-vertical text-gray-400 mr-3"></i>
+                    <span class="text-sm font-bold text-gray-700">${item.label}</span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" value="${item.id}" ${item.visible ? 'checked' : ''} class="sr-only peer personalization-checkbox">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                </label>
+            `;
+
+            // Drag and Drop events
+            div.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', Array.from(listContainer.children).indexOf(div));
+                div.classList.add('opacity-50', 'scale-95');
+            });
+
+            div.addEventListener('dragend', () => {
+                div.classList.remove('opacity-50', 'scale-95');
+                const items = listContainer.querySelectorAll('.personalize-item');
+                items.forEach(item => item.classList.remove('border-black', 'bg-gray-100'));
+            });
+
+            div.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                div.classList.add('border-black', 'bg-gray-100');
+            });
+
+            div.addEventListener('dragleave', () => {
+                div.classList.remove('border-black', 'bg-gray-100');
+            });
+
+            div.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const sourceIndex = e.dataTransfer.getData('text/plain');
+                const targetIndex = Array.from(listContainer.children).indexOf(div);
+                
+                if (sourceIndex !== targetIndex) {
+                    const children = Array.from(listContainer.children);
+                    const movedItem = children[sourceIndex];
+                    if (sourceIndex < targetIndex) {
+                        div.after(movedItem);
+                    } else {
+                        div.before(movedItem);
+                    }
+                }
+                div.classList.remove('border-black', 'bg-gray-100');
+            });
+
+            listContainer.appendChild(div);
+        });
+
+        document.getElementById('personalizeModal').classList.remove('hidden');
+    }
+
+    function closePersonalizeModal() {
+        document.getElementById('personalizeModal').classList.add('hidden');
+    }
+
+    function savePersonalization() {
+        const listItems = document.querySelectorAll('.personalize-item');
+        const newConfig = [];
+
+        listItems.forEach(item => {
+            const checkbox = item.querySelector('.personalization-checkbox');
+            const label = item.querySelector('span').textContent;
+            newConfig.push({
+                id: item.dataset.id,
+                label: label,
+                visible: checkbox.checked
+            });
+        });
+
+        localStorage.setItem('vendor_dashboard_tiles', JSON.stringify(newConfig));
+        applyPersonalization();
+        closePersonalizeModal();
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', applyPersonalization);
 </script>
 {% endblock %}

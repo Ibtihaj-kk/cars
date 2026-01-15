@@ -395,8 +395,11 @@
                                 
                                 <div class="col-md-5">
                                     <label class="form-label">Country</label>
-                                    <select class="form-select" disabled>
-                                        <option selected>Saudi Arabia</option>
+                                    <select name="country" id="country-select" class="form-select" required>
+                                        <option value="">Select Country</option>
+                                        {% for country in countries %}
+                                        <option value="{{ country.code }}" {% if user_data.country_code == country.code or country_code == country.code %}selected{% endif %}>{{ country.name }}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
                                 <div class="col-md-4">
@@ -594,6 +597,37 @@
         });
 
         // City/Area Dynamic Loading
+        document.getElementById('country-select').addEventListener('change', function() {
+            const countryCode = this.value;
+            const citySelect = document.getElementById('city-select');
+            const areaSelect = document.getElementById('area-select');
+            
+            // Clear cities and areas
+            citySelect.innerHTML = '<option value="">Select City</option>';
+            areaSelect.innerHTML = '<option value="">Select Area</option>';
+            areaSelect.disabled = true;
+            
+            if (countryCode) {
+                fetch(`{% url 'parts:get_cities_by_country' %}?country_code=${countryCode}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.cities.length > 0) {
+                            data.cities.forEach(city => {
+                                const option = document.createElement('option');
+                                option.value = city.id;
+                                option.textContent = city.name;
+                                citySelect.appendChild(option);
+                            });
+                            citySelect.disabled = false;
+                        } else {
+                            citySelect.disabled = true;
+                        }
+                    });
+            } else {
+                citySelect.disabled = true;
+            }
+        });
+
         document.getElementById('city-select').addEventListener('change', function() {
             const cityId = this.value;
             const areaSelect = document.getElementById('area-select');

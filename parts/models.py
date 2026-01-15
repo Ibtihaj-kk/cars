@@ -725,6 +725,28 @@ class Part(models.Model):
         
         super().save(*args, **kwargs)
         
+        # Sync with Inventory model if it exists, create if it doesn't
+        try:
+            if not hasattr(self, 'inventory'):
+                # Create inventory if it doesn't exist
+                from .models import Inventory
+                Inventory.objects.get_or_create(
+                    part=self,
+                    defaults={
+                        'stock': self.quantity,
+                        'reorder_level': 10,
+                        'last_restock_date': timezone.now()
+                    }
+                )
+            else:
+                inventory = self.inventory
+                if inventory.stock != self.quantity:
+                    inventory.stock = self.quantity
+                    inventory.save(update_fields=['stock'])
+        except Exception:
+            # Avoid recursion or errors during sync
+            pass
+        
         # Invalidate cache after saving
         try:
             from .cache import invalidate_part_cache
@@ -1128,6 +1150,17 @@ class Inventory(models.Model):
     class Meta:
         verbose_name = "Inventory"
         verbose_name_plural = "Inventories"
+    
+    def save(self, *args, **kwargs):
+        # Sync with legacy Part.quantity field
+        if self.part:
+            if self.part.quantity != self.stock:
+                self.part.quantity = self.stock
+                # Use update_fields to avoid recursion if possible, 
+                # but Part.save also handles sync so we need to be careful
+                self.part.save(update_fields=['quantity'])
+        
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.part.name} - Stock: {self.stock}"

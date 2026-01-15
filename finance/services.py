@@ -6,10 +6,31 @@ from .models import Wallet, Transaction, EscrowEntry, FinancialAuditLog, CODSett
 from admin_panel.payment_models import CommissionRule
 from business_partners.models import BusinessPartner
 from django.contrib.auth import get_user_model
+import logging
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 class FinanceService:
+    @staticmethod
+    def _reference_kwargs(reference_obj):
+        if not reference_obj:
+            return {}
+        content_type = ContentType.objects.get_for_model(reference_obj)
+        return {
+            'reference_content_type': content_type,
+            'reference_id': reference_obj.id,
+        }
+
+    @staticmethod
+    def _normalize_payment_method(payment_method):
+        if not payment_method:
+            return 'online'
+        normalized = str(payment_method).strip().lower()
+        if normalized in {'cod', 'cash_on_delivery', 'cash-on-delivery'}:
+            return 'cod'
+        return normalized
+
     @staticmethod
     def get_or_create_wallet(owner):
         """
@@ -76,8 +97,8 @@ class FinanceService:
             currency='USD',
             transaction_type='PAYOUT',
             status='pending',
-            reference=reference_obj,
-            metadata=metadata
+            metadata=metadata,
+            **cls._reference_kwargs(reference_obj)
         )
         
         # Log high-level audit action
@@ -96,10 +117,74 @@ class FinanceService:
 
     @classmethod
     @transaction.atomic
+    def sync_legacy_vendor_payments(cls, vendor=None, limit=5000):
+        from admin_panel.payment_models import PaymentStatus, VendorPayment
+
+        payments_qs = VendorPayment.objects.filter(status=PaymentStatus.COMPLETED).select_related('vendor').order_by('id')
+        if vendor is not None:
+            payments_qs = payments_qs.filter(vendor=vendor)
+
+        if limit is not None:
+            payments = list(payments_qs[: int(limit)])
+        else:
+            payments = list(payments_qs)
+
+        if not payments:
+            return 0
+
+        payment_ct = ContentType.objects.get_for_model(VendorPayment)
+        payment_ids = [p.id for p in payments]
+        existing_ids = set(
+            Transaction.objects.filter(
+                reference_content_type=payment_ct,
+                reference_id__in=payment_ids,
+                transaction_type='PAYOUT',
+            ).values_list('reference_id', flat=True)
+        )
+
+        to_create = []
+        for payment in payments:
+            if payment.id in existing_ids:
+                continue
+            wallet = cls.get_or_create_wallet(payment.vendor)
+            created_at = payment.payment_date or payment.processed_at or payment.created_at
+            to_create.append(
+                Transaction(
+                    source_wallet=wallet,
+                    destination_wallet=None,
+                    amount_base=payment.net_amount,
+                    amount_display=payment.net_amount,
+                    exchange_rate=Decimal('1.000000'),
+                    currency=wallet.currency,
+                    transaction_type='PAYOUT',
+                    status='completed',
+                    reference_content_type=payment_ct,
+                    reference_id=payment.id,
+                    metadata={
+                        'legacy': True,
+                        'payment_reference': payment.payment_reference,
+                        'payment_method': payment.payment_method,
+                        'gross_amount': str(payment.amount),
+                        'commission_amount': str(payment.commission_amount),
+                        'net_amount': str(payment.net_amount),
+                    },
+                    created_at=created_at,
+                )
+            )
+
+        if not to_create:
+            return 0
+
+        Transaction.objects.bulk_create(to_create, batch_size=500)
+        return len(to_create)
+
+    @classmethod
+    @transaction.atomic
     def record_order_payment(cls, order, payment_method='online'):
         """
         Records an order payment, handles commissions, taxes, and escrow.
         """
+        payment_method = cls._normalize_payment_method(payment_method or getattr(order, 'payment_method', None))
         # 1. Get Wallets
         platform_wallet = None
         try:
@@ -111,6 +196,8 @@ class FinanceService:
         from .models import Transaction
         from django.contrib.contenttypes.models import ContentType
         
+        from decimal import Decimal as D
+
         for item in order.items.all():
             if item.total_price <= 0:
                 continue # Skip zero price items or errors
@@ -125,72 +212,91 @@ class FinanceService:
                 continue
 
             vendor = item.part.vendor
+            if not vendor:
+                dealer_user = getattr(item.part, 'dealer', None)
+                if dealer_user:
+                    vendor = (
+                        BusinessPartner.objects.filter(user=dealer_user, roles__role_type='vendor')
+                        .distinct()
+                        .first()
+                    ) or BusinessPartner.objects.filter(user=dealer_user).first()
+            if not vendor:
+                continue
+
             vendor_wallet = cls.get_or_create_wallet(vendor)
             
-            # VAT/Tax Logic:
-            # item.total_price is the GROSS amount (Price * Quantity)
-            # We need the NET amount for commission calculation
-            # If tax_amount is stored on item (we just added it), use it.
-            # Otherwise, assume 15% VAT default if not present (legacy fallback)
+            # 1. Get amounts in USD (Base Currency)
+            item_price_usd = item.price
+            item_tax_usd = getattr(item, 'tax_amount', D('0.00'))
             
-            tax_amount = getattr(item, 'tax_amount', Decimal('0.00'))
-            if tax_amount == Decimal('0.00') and order.tax_amount > 0:
-                # Fallback: estimate proportional tax if not set on item level
-                tax_amount = (item.total_price / order.total_price) * order.tax_amount
+            # Use locked metadata if available (for new orders)
+            if hasattr(item, 'original_currency_code') and item.original_currency_code and item.original_currency_code != 'USD':
+                # If we have a locked rate, use it to ensure we have the correct USD amount
+                # item.price should already be in USD if views.py worked correctly
+                # but we can verify or use vendor_currency_amount * locked_exchange_rate
+                if item.locked_exchange_rate and item.vendor_currency_amount:
+                    item_price_usd = (item.vendor_currency_amount * item.locked_exchange_rate).quantize(D('0.01'))
+                    # Tax might need conversion too if it was stored in vendor currency (unlikely but safe)
+                    # For now assume item_tax_usd is already in USD as per views.py fix
+            elif item.price * item.quantity < order.total_price * D('0.5') and order.total_price > D('20.00'):
+                # Heuristic for legacy orders (like ORD8190047)
+                # If item price is much lower than order total, it's likely BHD stored as USD
+                # 1 BHD = 2.66 USD (1/0.376)
+                item_price_usd = (item.price * D('1.000000') / D('0.376000')).quantize(D('0.01'))
+                item_tax_usd = (item_tax_usd * D('1.000000') / D('0.376000')).quantize(D('0.01'))
             
-            net_amount = item.total_price - tax_amount
+            total_item_price_usd = item_price_usd * item.quantity
+            net_amount_usd = total_item_price_usd
             
-            # 2. Calculate Commission on NET amount
-            commission_rule = cls._get_active_commission_rule(vendor, net_amount)
-            commission_amount = cls._calculate_commission(net_amount, commission_rule)
+            # 2. Calculate Commission on NET amount (excluding tax)
+            commission_rule = cls._get_active_commission_rule(vendor, net_amount_usd)
+            commission_amount = cls._calculate_commission(net_amount_usd, commission_rule)
             
             # Security: Commission should never exceed 50% of net amount
-            max_commission = net_amount * Decimal('0.50')
+            max_commission = net_amount_usd * D('0.50')
             if commission_amount > max_commission:
-                commission_amount = max_commission.quantize(Decimal('0.01'))
+                commission_amount = max_commission.quantize(D('0.01'))
             
-            # Vendor gets Net - Commission + (Tax if they are VAT registered)
-            # If vendor is not VAT registered, Platform keeps the tax for remittance? 
-            # Usually, Platform collects and remits. Let's assume Platform holds Tax.
+            # 3. Calculate Vendor Payout (net + vendor tax if applicable)
+            vendor_payout_amount = net_amount_usd - commission_amount
             
-            vendor_payout_amount = net_amount - commission_amount
-            
-            # Check if vendor is VAT registered to pass them the tax
+            # If vendor is NOT VAT registered, platform keeps the tax
+            is_vat_registered = False
             try:
-                vendor_profile = vendor.vendor_profile
-                if vendor_profile.tax_id: # Has TRN
-                    vendor_payout_amount += tax_amount
+                if hasattr(vendor, 'vendor_profile') and vendor.vendor_profile.tax_id:
+                    is_vat_registered = True
             except:
                 pass
+                
+            if is_vat_registered:
+                vendor_payout_amount += item_tax_usd
             
             # 3. Create Transactions (Double-Entry)
-            
-            # Net to Vendor (Escrow or Liability if COD)
             txn_vendor = Transaction.objects.create(
                 destination_wallet=vendor_wallet,
                 amount_base=vendor_payout_amount,
                 amount_display=vendor_payout_amount,
-                exchange_rate=Decimal('1.000000'),
+                exchange_rate=D('1.000000'),
                 currency='USD',
                 transaction_type='PAYMENT',
-                reference=item,
                 metadata={
                     'order_id': order.id, 
                     'order_number': order.order_number,
-                    'tax_included': tax_amount > 0
-                }
+                    'tax_included': item_tax_usd > 0,
+                    'is_vat_registered': is_vat_registered
+                },
+                **cls._reference_kwargs(item)
             )
             
+            platform_revenue = commission_amount
+            if not is_vat_registered:
+                platform_revenue += item_tax_usd
+
             if payment_method == 'cod':
-                # In COD, vendor already has the FULL GROSS cash
-                # They owe Platform: Commission + Tax (if platform remits)
-                # Or just Commission (if vendor remits tax)
-                
-                amount_vendor_has = item.total_price
-                amount_vendor_should_have = vendor_payout_amount
-                liability = amount_vendor_has - amount_vendor_should_have
-                
-                vendor_wallet.liability_balance += liability
+                # For COD orders, the vendor collects the full amount.
+                # They owe the platform the commission and (if not VAT registered) the tax.
+                # Both are tracked in platform_revenue.
+                vendor_wallet.liability_balance += platform_revenue
             else:
                 # Online payment: Money is in platform hands, vendor gets net in Escrow
                 vendor_wallet.escrow_balance += vendor_payout_amount
@@ -199,11 +305,6 @@ class FinanceService:
             vendor_wallet.save()
 
             # Commission & Tax to Platform
-            platform_revenue = commission_amount
-            # If platform holds the tax (vendor not registered)
-            if vendor_payout_amount < (net_amount - commission_amount + tax_amount):
-                platform_revenue += tax_amount
-            
             if platform_wallet:
                 Transaction.objects.create(
                     source_wallet=vendor_wallet, # Link to vendor for transparency
@@ -213,14 +314,14 @@ class FinanceService:
                     exchange_rate=Decimal('1.000000'),
                     currency='USD',
                     transaction_type='COMMISSION',
-                    reference=item,
                     metadata={
                         'order_id': order.id, 
                         'order_number': order.order_number,
                         'vendor_id': vendor.id, 
                         'commission': str(commission_amount), 
-                        'tax': str(tax_amount)
-                    }
+                        'tax': str(item_tax_usd)
+                    },
+                    **cls._reference_kwargs(item)
                 )
                 platform_wallet.available_balance += platform_revenue
                 platform_wallet.save()
@@ -235,8 +336,8 @@ class FinanceService:
                     'order_id': order.id,
                     'order_number': order.order_number,
                     'item_id': item.id,
-                    'net_amount': str(net_amount),
-                    'tax_amount': str(tax_amount),
+                    'payout_amount': str(vendor_payout_amount),
+                    'tax_amount': str(item_tax_usd),
                     'commission': str(commission_amount),
                     'payment_method': payment_method
                 }
@@ -252,32 +353,16 @@ class FinanceService:
         
         if settlement_request.status != 'pending':
             raise ValueError("This settlement request has already been processed.")
-            
-        settlement_request.status = status
-        settlement_request.admin_notes = admin_notes
-        settlement_request.processed_by = admin_user
-        settlement_request.processed_at = timezone.now()
-        settlement_request.save()
         
         if status == 'approved':
             wallet = settlement_request.wallet
             amount = settlement_request.amount
             
-            # Reduce liability
-            wallet.liability_balance -= amount
-            wallet.save()
-            
-            # Create Transaction record
-            Transaction.objects.create(
-                source_wallet=wallet,
-                destination_wallet=None, # Platform receives the cash externally
-                amount_base=amount,
-                amount_display=amount,
-                exchange_rate=Decimal('1.000000'),
-                currency=wallet.currency,
-                transaction_type='COD_SETTLEMENT',
-                reference=settlement_request,
-                metadata={'reference_number': settlement_request.reference_number}
+            cls.settle_cod_payment(
+                vendor=settlement_request.vendor,
+                amount_to_settle=amount,
+                reference_obj=settlement_request,
+                reference_number=settlement_request.reference_number,
             )
             
             # Log high-level audit action
@@ -291,6 +376,12 @@ class FinanceService:
                     'reference_number': settlement_request.reference_number
                 }
             )
+
+        settlement_request.status = status
+        settlement_request.admin_notes = admin_notes
+        settlement_request.processed_by = admin_user
+        settlement_request.processed_at = timezone.now()
+        settlement_request.save(update_fields=['status', 'admin_notes', 'processed_by', 'processed_at', 'updated_at'])
             
         return settlement_request
 
@@ -425,12 +516,16 @@ class FinanceService:
 
     @classmethod
     @transaction.atomic
-    def settle_cod_payment(cls, vendor, amount_to_settle):
+    def settle_cod_payment(cls, vendor, amount_to_settle, reference_obj=None, reference_number=None):
         """
         MasterAdmin confirms that vendor has handed over COD cash.
         """
         vendor_wallet = cls.get_or_create_wallet(vendor)
-        platform_wallet = cls.get_platform_wallet()
+        platform_wallet = None
+        try:
+            platform_wallet = cls.get_platform_wallet()
+        except ValueError:
+            platform_wallet = None
 
         if vendor_wallet.liability_balance < amount_to_settle:
             raise ValueError("Settlement amount exceeds vendor liability.")
@@ -442,17 +537,15 @@ class FinanceService:
             amount_base=amount_to_settle,
             amount_display=amount_to_settle,
             exchange_rate=Decimal('1.000000'),
-            currency='USD',
-            transaction_type='COD_SETTLEMENT'
+            currency=vendor_wallet.currency,
+            transaction_type='COD_SETTLEMENT',
+            metadata={'reference_number': reference_number} if reference_number else {},
+            **cls._reference_kwargs(reference_obj)
         )
 
         # Update Balances
         vendor_wallet.liability_balance -= amount_to_settle
         vendor_wallet.save()
-        
-        # Platform now has the real cash
-        platform_wallet.available_balance += amount_to_settle
-        platform_wallet.save()
 
     @classmethod
     @transaction.atomic
@@ -474,7 +567,8 @@ class FinanceService:
             exchange_rate=original_txn.exchange_rate,
             currency=original_txn.currency,
             transaction_type='REFUND',
-            reference=original_txn.reference,
+            reference_content_type=original_txn.reference_content_type,
+            reference_id=original_txn.reference_id,
             metadata={'original_transaction_id': original_txn.id, 'reason': reason}
         )
         
@@ -537,9 +631,67 @@ class FinanceService:
             exchange_rate=Decimal('1.000000'),
             currency='USD',
             transaction_type='SUBSCRIPTION',
-            reference=subscription_payment,
-            metadata={'subscription_id': subscription_payment.subscription.id}
+            metadata={'subscription_id': subscription_payment.subscription.id},
+            **cls._reference_kwargs(subscription_payment)
         )
         
         platform_wallet.available_balance += subscription_payment.amount
         platform_wallet.save()
+
+    @classmethod
+    @transaction.atomic
+    def release_matured_escrow_entries(cls, now=None):
+        now = now or timezone.now()
+        matured_entries = (
+            EscrowEntry.objects.select_for_update()
+            .filter(release_date__lte=now, is_released=False)
+            .select_related('wallet', 'transaction')
+        )
+
+        count = 0
+        for entry in matured_entries:
+            try:
+                cls._release_single_escrow_entry(entry)
+                count += 1
+            except Exception:
+                logger.exception("Failed to release escrow entry %s", entry.id)
+        return count
+
+    @classmethod
+    def _release_single_escrow_entry(cls, entry):
+        entry.refresh_from_db()
+        if entry.is_released:
+            return False
+
+        wallet = Wallet.objects.select_for_update().get(id=entry.wallet_id)
+        amount = entry.amount
+
+        wallet.escrow_balance -= amount
+        wallet.available_balance += amount
+        wallet.save(update_fields=['escrow_balance', 'available_balance', 'updated_at'])
+
+        entry.is_released = True
+        entry.save(update_fields=['is_released'])
+
+        Transaction.objects.create(
+            source_wallet=wallet,
+            destination_wallet=wallet,
+            amount_base=amount,
+            amount_display=amount,
+            exchange_rate=Decimal('1.000000'),
+            currency=wallet.currency,
+            transaction_type='ESCROW_RELEASE',
+            metadata={'escrow_entry_id': entry.id, 'reason': 'Escrow Maturity Release'},
+            reference_content_type=entry.transaction.reference_content_type,
+            reference_id=entry.transaction.reference_id,
+        )
+
+        cls.log_action(
+            action_type='ESCROW_RELEASED',
+            user=None,
+            wallet=wallet,
+            amount=amount,
+            details={'escrow_entry_id': entry.id, 'original_transaction': entry.transaction_id},
+        )
+
+        return True

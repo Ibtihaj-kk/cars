@@ -6,11 +6,63 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.http import HttpResponse
+from django.db import transaction
 from django.db.models import Q, Sum
 from django.contrib import messages
+from django.utils import timezone
 
-from .models import Part, PartCategory, Order, OrderItem, Cart, CartItem
+from finance.services import FinanceService
+from .models import Part, PartCategory, Order, OrderItem, Cart, CartItem, City, CityArea, OrderShipping
 # from vehicles.models import Make, Model  # Disabled - vehicles app not in INSTALLED_APPS
+from decimal import Decimal
+
+
+def _percent_str_to_rate(value):
+    try:
+        return (Decimal(str(value)) / Decimal('100')).quantize(Decimal('0.0001'))
+    except Exception:
+        return None
+
+
+def _get_country_standard_tax_rate(country_code):
+    from admin_panel.models import AdminSetting
+
+    country_code = (country_code or '').strip().upper()
+    keys_to_try = []
+    if country_code:
+        country_variants = {country_code, country_code.lower()}
+        for cc in country_variants:
+            keys_to_try.extend([
+                f'tax_{cc}_standard',
+                f'tax_{cc}_vat_standard',
+                f'tax_{cc}_vat',
+                f'tax_{cc}',
+            ])
+    keys_to_try.extend([
+        'tax_standard',
+        'tax_vat_standard',
+        'tax_vat',
+    ])
+
+    for key in keys_to_try:
+        setting = AdminSetting.objects.filter(key=key).only('value').first()
+        if not setting:
+            continue
+        rate = _percent_str_to_rate(setting.value)
+        if rate is not None:
+            return rate
+    return Decimal('0.15')
+
+
+def _get_item_tax_rate(part, country_standard_rate):
+    tax_classification = getattr(part, 'tax_classification_material', None)
+    if tax_classification == 'VAT_5':
+        return Decimal('0.05')
+    if tax_classification in ('ZERO', 'EXEMPT'):
+        return Decimal('0.00')
+    if tax_classification == 'VAT_15':
+        return country_standard_rate
+    return country_standard_rate
 
 
 # =====================
@@ -35,7 +87,7 @@ def parts_list_htmx(request):
     # Base queryset
     parts = Part.objects.filter(
         is_active=True,
-        stock_quantity__gt=0
+        quantity__gt=0
     ).select_related('dealer', 'make', 'model', 'category')
 
     # Apply filters
@@ -111,7 +163,7 @@ def part_detail_htmx(request, part_id):
     related_parts = Part.objects.filter(
         category=part.category,
         is_active=True,
-        stock_quantity__gt=0
+        quantity__gt=0
     ).exclude(id=part.id)[:4]
 
     context = {
@@ -348,40 +400,75 @@ def place_order_htmx(request):
     address = request.POST.get('address', '').strip()
     city_id = request.POST.get('city', '')
     city_area_id = request.POST.get('area', '')
-    payment_method = request.POST.get('payment_method', 'cod')
+    payment_method_input = (request.POST.get('payment_method') or 'cod').strip()
+    if payment_method_input in ['cod', 'cash_on_delivery']:
+        order_payment_method = 'cash_on_delivery'
+        finance_payment_method = 'cod'
+    else:
+        order_payment_method = payment_method_input
+        finance_payment_method = payment_method_input
+
+    city = None
+    if city_id:
+        try:
+            city = City.objects.select_related('country').get(id=city_id)
+        except City.DoesNotExist:
+            city = None
+    country_code = getattr(getattr(city, 'country', None), 'code', None) if city else None
+    country_standard_rate = _get_country_standard_tax_rate(country_code)
     
     # Calculate totals
-    subtotal = sum(item.part.standard_price * item.quantity for item in cart_items)
+    subtotal = Decimal('0.00')
+    for item in cart_items:
+        original_price = item.part.standard_price
+        if original_price is None:
+            original_price = getattr(item.part, 'price', Decimal('0.00'))
+        if original_price is None:
+            original_price = Decimal('0.00')
+        subtotal += original_price * item.quantity
     
     # Calculate tax based on item classification
+    from core.models import ExchangeRate
     tax_amount = Decimal('0.00')
     order_items_data = []
     
     for item in cart_items:
-        item_tax_rate = Decimal('0.15') # Default
-        if hasattr(item.part, 'tax_classification_material'):
-            classification = item.part.tax_classification_material
-            if classification == 'VAT_5':
-                item_tax_rate = Decimal('0.05')
-            elif classification in ['ZERO', 'EXEMPT']:
-                item_tax_rate = Decimal('0.00')
-            elif classification == 'VAT_15':
-                item_tax_rate = Decimal('0.15')
+        item_tax_rate = _get_item_tax_rate(item.part, country_standard_rate)
         
-        item_price = item.part.standard_price
-        item_total = item_price * item.quantity
-        item_tax = item_total * item_tax_rate
-        tax_amount += item_tax
+        # IMPORTANT: Convert price to USD (Base Currency) for storage
+        original_price = item.part.standard_price
+        if original_price is None:
+            original_price = getattr(item.part, 'price', Decimal('0.00'))
+        if original_price is None:
+            original_price = Decimal('0.00')
+            
+        original_currency = getattr(item.part, 'original_currency', 'USD') or 'USD'
+        
+        item_price_usd = original_price
+        locked_rate = Decimal('1.000000')
+        
+        if original_currency != 'USD':
+            locked_rate = Decimal(str(ExchangeRate.get_current_rate(original_currency, 'USD')))
+            item_price_usd = (original_price * locked_rate).quantize(Decimal('0.01'))
+        
+        item_total_usd = item_price_usd * item.quantity
+        item_tax_usd = (item_total_usd * item_tax_rate).quantize(Decimal('0.01'))
+        tax_amount += item_tax_usd # Accumulate tax in USD
         
         order_items_data.append({
             'part': item.part,
             'quantity': item.quantity,
-            'price': item_price,
-            'tax_amount': item_tax
+            'price': item_price_usd,
+            'tax_amount': item_tax_usd,
+            'locked_rate': locked_rate,
+            'original_price': original_price,
+            'original_currency': original_currency
         })
 
     shipping_cost = Decimal('0.00') # Free shipping or calculate
-    grand_total = subtotal + tax_amount + shipping_cost
+    # Recalculate grand total in USD
+    subtotal_usd = sum(d['price'] * d['quantity'] for d in order_items_data)
+    grand_total = subtotal_usd + tax_amount + shipping_cost
 
     try:
         with transaction.atomic():
@@ -392,7 +479,7 @@ def place_order_htmx(request):
                 shipping_cost=shipping_cost,
                 tax_amount=tax_amount,
                 status='pending',
-                payment_method=payment_method,
+                payment_method=order_payment_method,
                 payment_status='pending'
             )
 
@@ -403,8 +490,16 @@ def place_order_htmx(request):
                     part=item_data['part'],
                     quantity=item_data['quantity'],
                     price=item_data['price'],
-                    tax_amount=item_data['tax_amount']
+                    tax_amount=item_data['tax_amount'],
+                    locked_exchange_rate=item_data['locked_rate'],
+                    vendor_currency_amount=item_data['original_price'],
+                    original_currency_code=item_data['original_currency']
                 )
+            
+            # Lock exchange rates on the order
+            order.exchange_rate_locked_at = timezone.now()
+            order.exchange_rate_valid_until = timezone.now() + timezone.timedelta(hours=24)
+            order.save()
                 
             # Subtract inventory using the model method which handles both Inventory and Part models
             # Phase 1: Reserve inventory
@@ -414,20 +509,13 @@ def place_order_htmx(request):
             # For COD/Bank Transfer we finalize immediately as there's no online payment step.
             # For online payments (credit_card, paypal), finalize_inventory will be called 
             # via signals when payment_status changes to 'completed'.
-            if payment_method in ['cash_on_delivery', 'bank_transfer']:
+            if order_payment_method in ['cash_on_delivery', 'bank_transfer']:
                 order.finalize_inventory()
 
             # Record Financial Transactions
-            FinanceService.record_order_payment(order, payment_method=payment_method)
+            FinanceService.record_order_payment(order, payment_method=finance_payment_method)
             
             # Create Shipping Info
-            city = None
-            if city_id:
-                try:
-                    city = City.objects.get(id=city_id)
-                except City.DoesNotExist:
-                    pass
-            
             city_area = None
             if city_area_id:
                 try:

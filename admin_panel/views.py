@@ -34,6 +34,7 @@ from inquiries.models import ListingInquiry, InquiryStatus
 from notifications.models import Notification, NotificationType, NotificationPriority
 from finance.models import Wallet, Transaction, EscrowEntry, CODSettlementRequest, FinancialAuditLog
 from finance.services import FinanceService
+from core.models import Currency, ExchangeRate
 
 # Admin panel local models/utils
 from .payment_models import (
@@ -106,6 +107,66 @@ def get_per_page_param(request, default):
     except (TypeError, ValueError):
         return default
     return per_page if per_page in PER_PAGE_OPTIONS else default
+
+
+def _get_display_currency_code(request):
+    currency_obj = getattr(request, "currency", None)
+    code = getattr(currency_obj, "code", None)
+    if code:
+        return code
+    session = getattr(request, "session", None)
+    if session is not None:
+        code = session.get("currency_code")
+        if code:
+            return code
+    return "USD"
+
+
+def _get_base_currency_code():
+    base = Currency.objects.filter(is_active=True, is_base=True).first()
+    if base:
+        return base.code
+    any_active = Currency.objects.filter(is_active=True).order_by("code").first()
+    if any_active:
+        return any_active.code
+    return "USD"
+
+
+def _as_decimal(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    if text == "":
+        return None
+    return Decimal(text)
+
+
+def _as_decimal_with_default(value, default):
+    parsed = _as_decimal(value)
+    return parsed if parsed is not None else default
+
+
+def _rate_decimal(base_code, target_code):
+    rate = ExchangeRate.get_current_rate(base_code, target_code)
+    return Decimal(str(rate))
+
+
+def _convert_display_to_base(amount_display, display_code, base_code):
+    if amount_display is None:
+        return None
+    if display_code == base_code:
+        return amount_display
+    rate = _rate_decimal(base_code, display_code)
+    return amount_display / rate
+
+
+def _convert_base_to_display(amount_base, display_code, base_code):
+    if amount_base is None:
+        return None
+    if display_code == base_code:
+        return amount_base
+    rate = _rate_decimal(base_code, display_code)
+    return amount_base * rate
 
 
 def get_pagination_query_string(request):
@@ -732,14 +793,82 @@ def wallets_management_view(request):
     """
     Manage all wallets (Vendors, Admin).
     """
-    wallets = Wallet.objects.all().order_by('-available_balance')
+    from business_partners.models import BusinessPartner
+    from decimal import Decimal
+    from django.db.models import DecimalField, F, OuterRef, Subquery, Sum, Value
+    from django.db.models.functions import Coalesce
+
+    try:
+        FinanceService.get_platform_wallet()
+    except Exception:
+        pass
+
+    vendors = BusinessPartner.objects.filter(roles__role_type='vendor').distinct()
+    for vendor in vendors:
+        try:
+            FinanceService.get_or_create_wallet(vendor)
+        except Exception:
+            continue
+
+    try:
+        FinanceService.sync_legacy_vendor_payments(limit=5000)
+    except Exception:
+        pass
+
+    wallets_qs = (
+        Wallet.objects.select_related('owner_content_type')
+        .annotate(
+            virtual_credits=Coalesce(
+                Subquery(
+                    Transaction.objects.filter(
+                        destination_wallet=OuterRef('pk'),
+                        status='completed',
+                        transaction_type__in=['PAYMENT', 'ESCROW_RELEASE', 'ADJUSTMENT', 'COMMISSION', 'COD_SETTLEMENT', 'SUBSCRIPTION'],
+                    )
+                    .values('destination_wallet')
+                    .annotate(total=Sum('amount_base'))
+                    .values('total')[:1],
+                    output_field=DecimalField(max_digits=15, decimal_places=2),
+                ),
+                Value(Decimal('0.00')),
+                output_field=DecimalField(max_digits=15, decimal_places=2),
+            ),
+            virtual_debits=Coalesce(
+                Subquery(
+                    Transaction.objects.filter(
+                        source_wallet=OuterRef('pk'),
+                        status='completed',
+                        transaction_type__in=['PAYOUT', 'REFUND', 'ADJUSTMENT', 'COD_SETTLEMENT', 'COMMISSION'],
+                    )
+                    .values('source_wallet')
+                    .annotate(total=Sum('amount_base'))
+                    .values('total')[:1],
+                    output_field=DecimalField(max_digits=15, decimal_places=2),
+                ),
+                Value(Decimal('0.00')),
+                output_field=DecimalField(max_digits=15, decimal_places=2),
+            ),
+        )
+        .annotate(
+            virtual_balance=F('virtual_credits') - F('virtual_debits')
+        )
+        .all()
+        .order_by('-virtual_balance', '-available_balance', '-escrow_balance', '-liability_balance', '-updated_at')
+    )
     
     # Search
     query = request.GET.get('q')
     if query:
-        # Since it's a GenericForeignKey, searching by owner name is tricky with pure SQL
-        # In production, we'd use a search index or more complex query.
-        pass
+        q = query.strip().lower()
+        wallets = [
+            w
+            for w in wallets_qs
+            if q in (str(getattr(w, 'owner', '')) or '').lower()
+            or q in (str(getattr(getattr(w, 'owner_content_type', None), 'model', '')) or '').lower()
+            or q in str(getattr(w, 'owner_id', '') or '')
+        ]
+    else:
+        wallets = wallets_qs
 
     context = {
         'wallets': wallets,
@@ -1719,6 +1848,22 @@ def commission_management_view(request):
         'active_rules': CommissionRule.objects.filter(is_active=True).count(),
         'vendor_specific_rules': CommissionRule.objects.filter(applies_to_all_vendors=False).count(),
     }
+
+    display_currency_code = _get_display_currency_code(request)
+    base_currency_code = _get_base_currency_code()
+    commission_rules = list(commission_rules)
+    for rule in commission_rules:
+        rule.edit_min_amount = _convert_base_to_display(rule.min_amount, display_currency_code, base_currency_code)
+        rule.edit_max_amount = (
+            _convert_base_to_display(rule.max_amount, display_currency_code, base_currency_code)
+            if rule.max_amount is not None
+            else None
+        )
+        rule.edit_commission_rate = (
+            _convert_base_to_display(rule.commission_rate, display_currency_code, base_currency_code)
+            if rule.commission_type == "fixed_amount"
+            else rule.commission_rate
+        )
     
     context = {
         'commission_rules': commission_rules,
@@ -1738,15 +1883,35 @@ def create_commission_rule(request):
     """View to handle creation of a new commission rule."""
     if request.method == 'POST':
         try:
-            name = request.POST.get('name')
-            category = request.POST.get('category')
+            name = (request.POST.get('name') or '').strip()
+            commission_type = (request.POST.get('commission_type') or '').strip() or 'percentage'
+            commission_rate_raw = request.POST.get('commission_rate')
+            if not name or not commission_type or (commission_rate_raw is None or str(commission_rate_raw).strip() == ''):
+                raise ValueError("Rule name, type, and rate are required.")
+
+            category = (request.POST.get('category') or '').strip() or None
             description = request.POST.get('description', '')
-            commission_type = request.POST.get('commission_type', 'percentage')
-            commission_rate = Decimal(request.POST.get('commission_rate', '0'))
-            fixed_amount = Decimal(request.POST.get('fixed_amount', '0'))
-            min_amount = Decimal(request.POST.get('min_amount', '0'))
-            max_amount_str = request.POST.get('max_amount')
-            max_amount = Decimal(max_amount_str) if max_amount_str else None
+
+            display_currency_code = _get_display_currency_code(request)
+            base_currency_code = _get_base_currency_code()
+
+            if commission_type == "fixed_amount":
+                commission_rate_display = _as_decimal(commission_rate_raw)
+                commission_rate = _convert_display_to_base(commission_rate_display, display_currency_code, base_currency_code)
+            else:
+                commission_rate = _as_decimal(commission_rate_raw)
+
+            fixed_amount = _as_decimal_with_default(request.POST.get('fixed_amount'), Decimal('0.00'))
+            min_amount_display = _as_decimal_with_default(request.POST.get('min_amount'), Decimal('0.00'))
+            min_amount = _convert_display_to_base(min_amount_display, display_currency_code, base_currency_code)
+
+            max_amount_display = _as_decimal(request.POST.get('max_amount'))
+            max_amount = (
+                _convert_display_to_base(max_amount_display, display_currency_code, base_currency_code)
+                if max_amount_display is not None
+                else None
+            )
+
             applies_to_all = request.POST.get('applies_to_all_vendors') == 'on'
             is_active = request.POST.get('is_active') == 'on'
             
@@ -1802,16 +1967,36 @@ def update_commission_rule(request, rule_id):
     if request.method == 'POST':
         try:
             rule = get_object_or_404(CommissionRule, id=rule_id)
-            rule.name = request.POST.get('name')
-            rule.category = request.POST.get('category')
+            name = (request.POST.get('name') or '').strip()
+            commission_type = (request.POST.get('commission_type') or '').strip() or 'percentage'
+            commission_rate_raw = request.POST.get('commission_rate')
+            if not name or not commission_type or (commission_rate_raw is None or str(commission_rate_raw).strip() == ''):
+                raise ValueError("Rule name, type, and rate are required.")
+
+            rule.name = name
+            rule.category = (request.POST.get('category') or '').strip() or None
             rule.description = request.POST.get('description', '')
-            rule.commission_type = request.POST.get('commission_type', 'percentage')
-            rule.commission_rate = Decimal(request.POST.get('commission_rate', '0'))
-            rule.fixed_amount = Decimal(request.POST.get('fixed_amount', '0'))
-            rule.min_amount = Decimal(request.POST.get('min_amount', '0'))
-            
-            max_amount_str = request.POST.get('max_amount')
-            rule.max_amount = Decimal(max_amount_str) if max_amount_str else None
+            rule.commission_type = commission_type
+
+            display_currency_code = _get_display_currency_code(request)
+            base_currency_code = _get_base_currency_code()
+
+            if commission_type == "fixed_amount":
+                commission_rate_display = _as_decimal(commission_rate_raw)
+                rule.commission_rate = _convert_display_to_base(commission_rate_display, display_currency_code, base_currency_code)
+            else:
+                rule.commission_rate = _as_decimal(commission_rate_raw)
+
+            rule.fixed_amount = _as_decimal_with_default(request.POST.get('fixed_amount'), Decimal('0.00'))
+            min_amount_display = _as_decimal_with_default(request.POST.get('min_amount'), Decimal('0.00'))
+            rule.min_amount = _convert_display_to_base(min_amount_display, display_currency_code, base_currency_code)
+
+            max_amount_display = _as_decimal(request.POST.get('max_amount'))
+            rule.max_amount = (
+                _convert_display_to_base(max_amount_display, display_currency_code, base_currency_code)
+                if max_amount_display is not None
+                else None
+            )
             
             rule.applies_to_all_vendors = request.POST.get('applies_to_all_vendors') == 'on'
             rule.is_active = request.POST.get('is_active') == 'on'
@@ -1845,6 +2030,11 @@ def vendor_balance_view(request, vendor_id):
         owner_id=vendor.id,
         defaults={'currency': 'USD'}
     )
+
+    try:
+        FinanceService.sync_legacy_vendor_payments(vendor=vendor, limit=None)
+    except Exception:
+        pass
     
     unified_transactions = Transaction.objects.filter(
         Q(source_wallet=wallet) | Q(destination_wallet=wallet)
@@ -1893,7 +2083,7 @@ def vendor_balance_view(request, vendor_id):
         'total_earned': (legacy_balance.total_earned or Decimal('0.00')) + (unified_earned or Decimal('0.00')),
         'total_paid': (legacy_balance.total_paid or Decimal('0.00')) + (unified_paid or Decimal('0.00')),
         'available_balance': (legacy_balance.current_balance or Decimal('0.00')) + (wallet.available_balance or Decimal('0.00')),
-        'pending_balance': (legacy_balance.pending_balance or Decimal('0.00')) + (wallet.pending_balance or Decimal('0.00')),
+        'pending_balance': (legacy_balance.pending_balance or Decimal('0.00')) + (wallet.escrow_balance or Decimal('0.00')),
         'escrow_balance': wallet.escrow_balance,
         'liability_balance': wallet.liability_balance,
     }
@@ -4254,14 +4444,19 @@ def invoice_detail_view(request, order_id):
 def taxes_view(request):
     """Tax rules configuration."""
     from .models import AdminSetting
+    from parts.models import Country
     
     # Get tax settings from AdminSetting model
     tax_settings = AdminSetting.objects.filter(
         key__startswith='tax_'
     ).order_by('key')
+
+    countries = Country.objects.filter(is_active=True).order_by('name')
     
     context = {
         'tax_settings': tax_settings,
+        'countries': countries,
+        'country_codes': [c.code for c in countries],
     }
     
     return render(request, './finance/taxes.html', context)
@@ -4273,13 +4468,21 @@ def taxes_view(request):
 def add_tax_rule_view(request):
     """Add a tax rule."""
     from .models import AdminSetting
+    import re
     
-    key = request.POST.get('key')
+    country_code = (request.POST.get('country_code') or '').strip().upper()
+    raw_key = (request.POST.get('key') or '').strip()
+    key = re.sub(r'[^a-z0-9_]+', '_', raw_key.lower()).strip('_')
     value = request.POST.get('value')
     description = request.POST.get('description', '')
+
+    if country_code:
+        setting_key = f'tax_{country_code}_{key}'
+    else:
+        setting_key = f'tax_{key}'
     
     AdminSetting.objects.update_or_create(
-        key=f'tax_{key}',
+        key=setting_key,
         defaults={
             'value': value,
             'description': description,

@@ -1,4 +1,4 @@
-{% extends 'user/base.html' %}
+{% extends 'vendors/base.html' %}
 {% load static %}
 {% load vendor_currency %}
 
@@ -46,7 +46,7 @@
                         <div style="position: relative;">
                             <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-weight: 600; color: #9CA3AF;">{% vendor_currency_symbol %}</span>
                             <input type="number" name="amount" step="0.01" required 
-                                   max="{{ wallet.liability_balance }}"
+                                   max="{% vendor_currency_input_value wallet.liability_balance %}"
                                    placeholder="0.00"
                                    style="width: 100%; padding: 12px 16px 12px 45px; border-radius: 12px; border: 1px solid #D1D5DB; font-size: 16px; font-weight: 600;">
                         </div>
