@@ -590,18 +590,19 @@ def vendor_finance_dashboard(request):
     ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
 
     orders_last_30_days = base_orders.filter(
+        Q(status='delivered') | Q(payment_status='completed'),
         created_at__gte=last_30_days,
-        status__in=['confirmed', 'processing', 'shipped', 'delivered']
     )
 
     tax_payable = Decimal('0.00')
     total_tax_collected = Decimal('0.00')
     shipping_cost = Decimal('0.00')
 
-    # All-time tax collection
+    # All-time tax collection (only delivered or paid orders)
     total_tax_collected = OrderItem.objects.filter(
-        part__vendor=business_partner,
-        order__status__in=['confirmed', 'processing', 'shipped', 'delivered']
+        part__vendor=business_partner
+    ).filter(
+        Q(order__status='delivered') | Q(order__payment_status='completed')
     ).aggregate(total=Sum('tax_amount'))['total'] or Decimal('0.00')
 
     per_order_totals = orders_last_30_days.values(
@@ -1150,16 +1151,61 @@ def vendor_commission_breakdown(request):
         source_wallet=wallet,
         transaction_type='COMMISSION',
         created_at__gte=since
-    ).order_by('-created_at')
+    ).select_related('reference_content_type').order_by('-created_at')
     
-    new_commission_total = unified_commissions_qs.aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
-
-    # For sales, we look at PAYMENT transactions where this wallet is the destination
-    new_sales_total = Transaction.objects.filter(
-        destination_wallet=wallet,
-        transaction_type='PAYMENT',
-        created_at__gte=since
-    ).aggregate(total=Sum('amount_base'))['total'] or Decimal('0.00')
+    new_commission_total = Decimal('0.00')
+    new_sales_total = Decimal('0.00')
+    
+    # Process unified transactions for accurate totals
+    unified_data = []
+    for uc in unified_commissions_qs:
+        # 1. Get Commission Amount (actual commission, not including tax if combined in amount_base)
+        comm_val = Decimal(str(uc.metadata.get('commission', uc.amount_base)))
+        new_commission_total += comm_val
+        
+        # 2. Get Sales Amount (Gross Sale)
+        sales_val = Decimal('0.00')
+        if uc.reference and hasattr(uc.reference, 'total_price'):
+            # OrderItem.total_price is usually net of tax in this model, 
+            # so we add tax_amount if available to get the gross sale.
+            sales_val = uc.reference.total_price
+            if hasattr(uc.reference, 'tax_amount'):
+                sales_val += uc.reference.tax_amount
+        else:
+            # Fallback reconstruction
+            try:
+                # Find the related PAYMENT transaction
+                payment_tx = Transaction.objects.filter(
+                    transaction_type='PAYMENT',
+                    reference_content_type=uc.reference_content_type,
+                    reference_id=uc.reference_id
+                ).first()
+                
+                tax_val = Decimal(str(uc.metadata.get('tax', '0.00')))
+                payout_val = payment_tx.amount_base if payment_tx else Decimal('0.00')
+                
+                # Metadata check for VAT registration (stored in PAYMENT metadata)
+                is_vat = False
+                if payment_tx and payment_tx.metadata.get('is_vat_registered'):
+                    is_vat = True
+                
+                # Gross = (Payout - Tax if is_vat else Payout) + Commission + Tax
+                if is_vat:
+                    sales_val = (payout_val - tax_val) + comm_val + tax_val
+                else:
+                    sales_val = payout_val + comm_val + tax_val
+            except Exception:
+                # Last resort fallback to metadata
+                sales_val = Decimal(str(uc.metadata.get('original_amount', uc.amount_base)))
+        
+        new_sales_total += sales_val
+        
+        # Store for merged_commissions list to avoid re-calculating
+        unified_data.append({
+            'uc': uc,
+            'sales_val': sales_val,
+            'comm_val': comm_val
+        })
 
     total_sales = (legacy_totals.get('total_sales') or Decimal('0.00')) + new_sales_total
     total_commission = (legacy_totals.get('total_commission') or Decimal('0.00')) + new_commission_total
@@ -1181,15 +1227,22 @@ def vendor_commission_breakdown(request):
         })
         
     # Add unified commissions
-    for uc in unified_commissions_qs:
-        # Try to find the associated payment transaction via metadata or reference
-        sales_amount = uc.metadata.get('original_amount', uc.amount_base) # fallback
+    for ud in unified_data:
+        uc = ud['uc']
+        sales_amount = ud['sales_val']
+        comm_amount = ud['comm_val']
+        
+        # Try to get order number for reference
+        reference = uc.metadata.get('order_number')
+        if not reference:
+            reference = f"TRX-{uc.id}"
+            
         merged_commissions.append({
             'date': uc.created_at,
-            'reference': f"TRX-{uc.id}",
+            'reference': reference,
             'amount': sales_amount,
-            'commission_amount': uc.amount_base,
-            'net_amount': Decimal(str(sales_amount)) - uc.amount_base,
+            'commission_amount': comm_amount,
+            'net_amount': sales_amount - comm_amount,
             'commission_type': uc.metadata.get('commission_type', 'percentage'),
             'commission_rate': uc.metadata.get('commission_rate', Decimal('0.00')),
             'is_unified': True
@@ -1262,29 +1315,72 @@ def vendor_tax_summary(request):
 
     base_orders = Order.objects.filter(items__part__vendor=business_partner).distinct()
     orders_in_period = base_orders.filter(
+        Q(status='delivered') | Q(payment_status='completed'),
         created_at__gte=period_start,
-        status__in=['confirmed', 'processing', 'shipped', 'delivered'],
     )
 
     sales_tax_payable = Decimal('0.00')
-    per_order_totals = orders_in_period.values(
-        'id',
-        'total_price',
-        'tax_amount',
-    ).annotate(
+    
+    # Sorting logic
+    sort_param = request.GET.get('sort', '-created_at')
+    allowed_sorts = {
+        'order_number': 'order_number',
+        '-order_number': '-order_number',
+        'created_at': 'created_at',
+        '-created_at': '-created_at',
+        'total_price': 'total_price',
+        '-total_price': '-total_price',
+        'tax_amount': 'tax_amount',
+        '-tax_amount': '-tax_amount',
+    }
+    order_by = allowed_sorts.get(sort_param, '-created_at')
+
+    per_order_totals_query = orders_in_period.annotate(
         vendor_items_total=Sum(
             F('items__quantity') * F('items__price'),
             filter=Q(items__part__vendor=business_partner)
-        )
-    )
+        ),
+        vendor_count=Count('items__part__vendor', distinct=True)
+    ).order_by(order_by)
 
-    for row in per_order_totals:
-        order_total = row.get('total_price') or Decimal('0.00')
-        vendor_total = row.get('vendor_items_total') or Decimal('0.00')
-        if order_total <= 0 or vendor_total <= 0:
+    order_tax_details = []
+    for order in per_order_totals_query:
+        order_total = order.total_price or Decimal('0.00')
+        vendor_total = order.vendor_items_total or Decimal('0.00')
+        
+        # Skip if no value for this vendor
+        if vendor_total <= 0:
             continue
-        ratio = vendor_total / order_total
-        sales_tax_payable += (row.get('tax_amount') or Decimal('0.00')) * ratio
+        
+        # Determine tax share
+        # If vendor is the only one in the order, they take the full tax
+        if order.vendor_count == 1:
+            vendor_share_tax = order.tax_amount or Decimal('0.00')
+        else:
+            # Proportional calculation for multi-vendor orders
+            # Use ratio of vendor items to order total (excluding shipping if possible, but total_price is easier)
+            if order_total > 0:
+                ratio = vendor_total / order_total
+                vendor_share_tax = (order.tax_amount or Decimal('0.00')) * ratio
+            else:
+                vendor_share_tax = Decimal('0.00')
+        
+        sales_tax_payable += vendor_share_tax
+        
+        order_tax_details.append({
+            'id': order.id,
+            'order_number': order.order_number,
+            'created_at': order.created_at,
+            'total_price': order_total,
+            'tax_amount': order.tax_amount or Decimal('0.00'),
+            'vendor_items_total': vendor_total,
+            'vendor_share_tax': vendor_share_tax,
+        })
+
+    # Pagination
+    paginator = Paginator(order_tax_details, 10)  # 10 items per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
     withholding_tax_payable = Decimal('0.00')
     total_payable = sales_tax_payable + withholding_tax_payable
@@ -1319,6 +1415,8 @@ def vendor_tax_summary(request):
         'sales_tax_payable': sales_tax_payable,
         'withholding_tax_payable': withholding_tax_payable,
         'total_tax_payable': total_payable,
+        'page_obj': page_obj,
+        'current_sort': sort_param,
         'has_tax_certificate': bool(tax_certificate_file or vat_certificate_file),
         'stats': {
             'pending_processing_count': pending_processing_count,
@@ -1964,7 +2062,7 @@ def vendor_invoices(request):
                 pass
         
         country_standard_rate = _get_country_standard_tax_rate(country_code)
-        return _get_item_tax_rate(order_item.part, country_standard_rate)
+        return _get_item_tax_rate(order_item.part, country_standard_rate, dest_country_code=country_code)
 
     def _sum_items_usd(items_qs):
         total = Decimal('0.00')

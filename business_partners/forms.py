@@ -15,7 +15,7 @@ from .models import VendorApplication, VendorProfile
 from .permissions import get_vendor_profile
 from .catalog_models import CatalogItem
 from .widgets import VehicleVariantMultiSelectWidget, ProfitMarginCalculatorWidget, InventoryThresholdWidget
-from parts.models import Part, Category, Brand
+from parts.models import Part, Category, Brand, PartFieldConfiguration
 from django.contrib.auth import authenticate
 
 User = get_user_model()
@@ -653,6 +653,7 @@ class VendorPartForm(forms.ModelForm):
             'parts_number': forms.TextInput(attrs={'class': 'form-control'}),
             'material_description': forms.TextInput(attrs={'class': 'form-control'}),
             'material_description_ar': forms.TextInput(attrs={'class': 'form-control', 'dir': 'rtl'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
             'manufacturer_part_number': forms.TextInput(attrs={'class': 'form-control'}),
             'manufacturer_oem_number': forms.TextInput(attrs={'class': 'form-control'}),
             
@@ -669,6 +670,9 @@ class VendorPartForm(forms.ModelForm):
             'net_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
             'weight_of_unit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
             'size_dimensions': forms.TextInput(attrs={'class': 'form-control'}),
+            'weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'dimensions': forms.TextInput(attrs={'class': 'form-control'}),
+            'warranty_period': forms.NumberInput(attrs={'class': 'form-control'}),
             
             # Pricing & Valuation
             'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -677,6 +681,7 @@ class VendorPartForm(forms.ModelForm):
             'valuation_class': forms.TextInput(attrs={'class': 'form-control'}),
             'price_control_indicator': forms.Select(attrs={'class': 'form-select'}),
             'price_unit_peinh': forms.NumberInput(attrs={'class': 'form-control'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
             
             # Logistics
             'plant': forms.TextInput(attrs={'class': 'form-control'}),
@@ -697,6 +702,13 @@ class VendorPartForm(forms.ModelForm):
             'planned_delivery_time_days': forms.NumberInput(attrs={'class': 'form-control'}),
             'goods_receipt_processing_time_days': forms.NumberInput(attrs={'class': 'form-control'}),
             'total_replenishment_lead_time': forms.NumberInput(attrs={'class': 'form-control'}),
+            
+            # Forecasting
+            'forecast_model': forms.TextInput(attrs={'class': 'form-control'}),
+            'forecast_periods': forms.NumberInput(attrs={'class': 'form-control'}),
+            'historical_periods': forms.NumberInput(attrs={'class': 'form-control'}),
+            'initialization_indicator': forms.Select(attrs={'class': 'form-select'}),
+            'period_indicator': forms.Select(attrs={'class': 'form-select'}),
             
             # Sales
             'sales_organization': forms.TextInput(attrs={'class': 'form-control'}),
@@ -733,11 +745,28 @@ class VendorPartForm(forms.ModelForm):
         self.vendor = kwargs.pop('vendor', None)
         super().__init__(*args, **kwargs)
 
-        # Make important fields required
-        self.fields['parts_number'].required = True
-        self.fields['material_description'].required = True
-        self.fields['category'].required = True
-        self.fields['brand'].required = True
+        # Apply dynamic configurations
+        try:
+            configs = PartFieldConfiguration.objects.all()
+            if configs.exists():
+                for config in configs:
+                    if config.field_name in self.fields:
+                        self.fields[config.field_name].required = config.is_required
+                        # Label can also be dynamic
+                        if config.label:
+                            self.fields[config.field_name].label = config.label
+            else:
+                # Default requirements if no config exists yet
+                self.fields['parts_number'].required = True
+                self.fields['material_description'].required = True
+                self.fields['category'].required = True
+                self.fields['brand'].required = True
+        except Exception:
+            # Fallback for migrations/other issues
+            if 'parts_number' in self.fields: self.fields['parts_number'].required = True
+            if 'material_description' in self.fields: self.fields['material_description'].required = True
+            if 'category' in self.fields: self.fields['category'].required = True
+            if 'brand' in self.fields: self.fields['brand'].required = True
 
         # Always show all active brands and all categories
         self.fields['category'].queryset = Category.objects.all().order_by('name')

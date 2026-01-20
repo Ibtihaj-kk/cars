@@ -166,6 +166,15 @@ def process_email_queue_item(queue_item: EmailQueue) -> bool:
         # Get email provider
         provider = get_email_provider()
         
+        # Check if email service is enabled
+        config = getattr(settings, 'EMAIL_SERVICE_CONFIG', {})
+        if not config.get('ENABLED', True):
+            logger.warning(f"Email service disabled, skipping: {queue_item.message_id}")
+            queue_item.status = 'failed'
+            queue_item.error_message = 'Email service disabled'
+            queue_item.save()
+            return False
+            
         if not provider.is_configured():
             logger.warning(f"Email provider not configured, skipping: {queue_item.message_id}")
             queue_item.status = 'failed'
@@ -174,17 +183,28 @@ def process_email_queue_item(queue_item: EmailQueue) -> bool:
             return False
         
         # Render email templates
-        from django.template.loader import render_to_string
+        from django.template.loader import render_to_string, TemplateDoesNotExist
         
-        html_content = render_to_string(
-            f'emails/{queue_item.template_name}.html',
-            queue_item.context
-        )
-        
-        plain_text_content = render_to_string(
-            f'emails/{queue_item.template_name}.txt',
-            queue_item.context
-        )
+        try:
+            html_content = render_to_string(
+                f'emails/{queue_item.template_name}.html',
+                queue_item.context
+            )
+        except TemplateDoesNotExist:
+            logger.warning(f"HTML template not found: emails/{queue_item.template_name}.html")
+            html_content = ""
+            
+        try:
+            plain_text_content = render_to_string(
+                f'emails/{queue_item.template_name}.txt',
+                queue_item.context
+            )
+        except TemplateDoesNotExist:
+            logger.warning(f"Plain text template not found: emails/{queue_item.template_name}.txt")
+            # If both are missing, raise error
+            if not html_content:
+                raise TemplateDoesNotExist(f"No template found for {queue_item.template_name}")
+            plain_text_content = ""
         
         # Send email
         success = provider.send(

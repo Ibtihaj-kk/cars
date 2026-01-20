@@ -109,7 +109,7 @@ def send_manual_email(request):
             # Validate recipient emails
             if not recipient_emails:
                 messages.error(request, 'Recipient emails are required')
-                return redirect('admin_email_console')
+                return redirect('admin_panel:admin_email_console')
             
             # Parse recipient emails
             email_list = [email.strip() for email in recipient_emails.split(',') if email.strip()]
@@ -118,14 +118,14 @@ def send_manual_email(request):
             for email in email_list:
                 if '@' not in email or '.' not in email.split('@')[1]:
                     messages.error(request, f'Invalid email format: {email}')
-                    return redirect('admin_email_console')
+                    return redirect('admin_panel:admin_email_console')
             
             # Prepare context
             context = {
                 'message_content': message_content,
                 'sent_by_admin': True,
-                'admin_user': request.user,
-                'sent_at': timezone.now(),
+                'admin_user_id': request.user.id,
+                'sent_at': timezone.now().isoformat(),
             }
             
             # Send emails
@@ -157,13 +157,13 @@ def send_manual_email(request):
             # Store detailed results in session for display
             request.session['email_send_results'] = results
             
-            return redirect('admin_email_console')
+            return redirect('admin_panel:admin_email_console')
             
         except Exception as e:
             messages.error(request, f'Error sending email: {str(e)}')
-            return redirect('admin_email_console')
+            return redirect('admin_panel:admin_email_console')
     
-    return redirect('admin_email_console')
+    return redirect('admin_panel:admin_email_console')
 
 
 @login_required
@@ -210,8 +210,8 @@ def send_bulk_email(request):
                 'message_content': message_content,
                 'is_bulk_email': True,
                 'sent_by_admin': True,
-                'admin_user': request.user,
-                'sent_at': timezone.now(),
+                'admin_user_id': request.user.id, # Store ID instead of object
+                'sent_at': timezone.now().isoformat(), # Use ISO format
             }
             
             # Send emails
@@ -244,16 +244,17 @@ def send_bulk_email(request):
                 'target_group': target_group,
                 'total_users': len(users),
                 'results': results,
-                'sent_at': timezone.now(),
+                'sent_at': timezone.now().isoformat(),
             }
+            request.session.modified = True
             
-            return redirect('admin_email_console')
+            return redirect('admin_panel:admin_email_console')
             
         except Exception as e:
             messages.error(request, f'Error sending bulk email: {str(e)}')
-            return redirect('admin_email_console')
+            return redirect('admin_panel:admin_email_console')
     
-    return redirect('admin_email_console')
+    return redirect('admin_panel:admin_email_console')
 
 
 @login_required
@@ -276,7 +277,7 @@ def retry_failed_email(request, email_id):
     except Exception as e:
         messages.error(request, f'Error retrying email: {str(e)}')
     
-    return redirect('admin_email_queue')
+    return redirect('admin_panel:admin_email_queue')
 
 
 @login_required
@@ -295,7 +296,7 @@ def cancel_email(request, email_id):
     except Exception as e:
         messages.error(request, f'Error cancelling email: {str(e)}')
     
-    return redirect('admin_email_queue')
+    return redirect('admin_panel:admin_email_queue')
 
 
 @login_required
@@ -357,4 +358,4 @@ def clear_email_queue(request):
     except Exception as e:
         messages.error(request, f'Error clearing queue: {str(e)}')
     
-    return redirect('admin_email_queue')
+    return redirect('admin_panel:admin_email_queue')

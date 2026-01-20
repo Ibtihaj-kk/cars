@@ -54,7 +54,16 @@ def _get_country_standard_tax_rate(country_code):
     return Decimal('0.15')
 
 
-def _get_item_tax_rate(part, country_standard_rate):
+def _get_item_tax_rate(part, country_standard_rate, dest_country_code=None):
+    """
+    Calculate tax rate for a specific part.
+    VAT is only applied if the vendor and destination country are the same.
+    """
+    if dest_country_code and part.vendor:
+        vendor_country_code = part.vendor.get_country_code()
+        if vendor_country_code != dest_country_code:
+            return Decimal('0.00')
+
     tax_classification = getattr(part, 'tax_classification_material', None)
     if tax_classification == 'VAT_5':
         return Decimal('0.05')
@@ -433,7 +442,7 @@ def place_order_htmx(request):
     order_items_data = []
     
     for item in cart_items:
-        item_tax_rate = _get_item_tax_rate(item.part, country_standard_rate)
+        item_tax_rate = _get_item_tax_rate(item.part, country_standard_rate, dest_country_code=country_code)
         
         # IMPORTANT: Convert price to USD (Base Currency) for storage
         original_price = item.part.standard_price

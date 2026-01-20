@@ -199,6 +199,12 @@
                         <i class="fas fa-cloud-upload-alt w-6 text-center"></i>
                         <span class="nav-text ml-3">Bulk Upload</span>
                     </a>
+
+                    <a href="{% url 'admin_panel:part_field_config' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-cog w-6 text-center"></i>
+                        <span class="nav-text ml-3">Part Field Config</span>
+                    </a>
                 </div>
             </div>
 
@@ -271,6 +277,37 @@
                         class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
                         <i class="fas fa-percent w-6 text-center"></i>
                         <span class="nav-text ml-3">Tax Rules</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <button type="button"
+                    class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6 flex items-center justify-between w-full"
+                    data-section-toggle="emails">
+                    <span>Communication</span>
+                    <i class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                </button>
+                <div id="sidebar-section-emails" data-section-content="emails" class="space-y-1">
+                    <a href="{% url 'admin_panel:admin_email_console' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-terminal w-6 text-center"></i>
+                        <span class="nav-text ml-3">Email Console</span>
+                    </a>
+                    <a href="{% url 'admin_panel:admin_email_queue' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-list-ol w-6 text-center"></i>
+                        <span class="nav-text ml-3">Email Queue</span>
+                    </a>
+                    <a href="{% url 'admin_panel:admin_email_analytics' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-chart-pie w-6 text-center"></i>
+                        <span class="nav-text ml-3">Email Analytics</span>
+                    </a>
+                    <a href="{% url 'admin_panel:send_manual_email' %}"
+                        class="nav-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                        <i class="fas fa-paper-plane w-6 text-center"></i>
+                        <span class="nav-text ml-3">Send Email</span>
                     </a>
                 </div>
             </div>
@@ -468,6 +505,7 @@
                 parts: 'collapsed',
                 operations: 'collapsed',
                 finance: 'collapsed',
+                emails: 'collapsed',
                 system: 'collapsed',
             };
 

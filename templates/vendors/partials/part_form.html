@@ -44,10 +44,14 @@
             </h3>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {% with config=field_configs.parts_number %}
+                {% if not config or config.is_visible %}
                 <div class="md:col-span-2">
                     <label for="{{ form.parts_number.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Parts Number (Internal) <span
-                            class="text-red-500">*</span></label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Parts Number (Internal)" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.parts_number }}
                     {% if vendor_catalog_items %}
                     {{ vendor_catalog_items|json_script:"vendor-catalog-items" }}
@@ -56,123 +60,242 @@
                     <p class="text-red-500 text-xs mt-1">{{ form.parts_number.errors.0 }}</p>
                     {% endif %}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.sku %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.sku.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">SKU</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"SKU" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.sku }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.name %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.name.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Name</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Name" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.name }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.material_description %}
+                {% if not config or config.is_visible %}
                 <div class="md:col-span-2">
                     <label for="{{ form.material_description.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Material Description (English) <span
-                            class="text-red-500">*</span></label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Material Description (English)" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.material_description }}
                     {% if form.material_description.errors %}
                     <p class="text-red-500 text-xs mt-1">{{ form.material_description.errors.0 }}</p>
                     {% endif %}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.material_description_ar %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.material_description_ar.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Material Description (Arabic)</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Material Description (Arabic)" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.material_description_ar }}
                     {% if form.material_description_ar.errors %}
                     <p class="text-red-500 text-xs mt-1">{{ form.material_description_ar.errors.0 }}</p>
                     {% endif %}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.manufacturer_part_number %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.manufacturer_part_number.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Manufacturer Part No.</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Manufacturer Part No." }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.manufacturer_part_number }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.manufacturer_oem_number %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.manufacturer_oem_number.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Manufacturer OEM Number</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Manufacturer OEM Number" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.manufacturer_oem_number }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.old_material_number %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.old_material_number.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Old Material Number</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Old Material Number" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.old_material_number }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.material_type %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.material_type.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Material Type</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Material Type" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.material_type }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.material_group %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.material_group.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Material Group</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Material Group" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.material_group }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.external_material_group %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.external_material_group.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">External Material Group</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"External Material Group" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.external_material_group }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.division %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.division.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Division</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Division" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.division }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.industry_sector %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.industry_sector.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Industry Sector</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Industry Sector" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.industry_sector }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.category %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.category.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Category <span
-                            class="text-red-500">*</span></label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Category" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.category }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.brand %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.brand.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Make <span
-                            class="text-red-500">*</span></label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Make" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.brand }}
                 </div>
+                {% endif %}
+                {% endwith %}
             </div>
 
             <!-- Pricing & Classification Section -->
             <div class="mt-8 pt-6 border-t border-gray-100">
                 <label class="block text-sm font-bold text-gray-700 uppercase mb-3">Purchase Price</label>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {% with config=field_configs.moving_average_price %}
+                    {% if not config or config.is_visible %}
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Purchase Price</label>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">
+                            {{ config.label|default:"Purchase Price" }}
+                            {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                        </label>
                         {{ form.moving_average_price }}
                     </div>
+                    {% endif %}
+                    {% endwith %}
                 </div>
 
                 <div class="mt-6">
                     <label class="block text-sm font-bold text-gray-700 uppercase mb-3">Sales Price</label>
                     <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        {% with config=field_configs.price %}
+                        {% if not config or config.is_visible %}
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Wholesale Price<span
-                                    class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">
+                                {{ config.label|default:"Wholesale Price" }}
+                                {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                            </label>
                             {{ form.price }}
                         </div>
+                        {% endif %}
+                        {% endwith %}
+
+                        {% with config=field_configs.standard_price %}
+                        {% if not config or config.is_visible %}
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Retail Price</label>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">
+                                {{ config.label|default:"Retail Price" }}
+                                {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                            </label>
                             {{ form.standard_price }}
                         </div>
+                        {% endif %}
+                        {% endwith %}
+
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Currency <span
                                     class="text-red-500">*</span></label>
@@ -189,11 +312,18 @@
                                 {% endfor %}
                             </select>
                         </div>
+
+                        {% with config=field_configs.quantity %}
+                        {% if not config or config.is_visible %}
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Quantity <span
-                                    class="text-red-500">*</span></label>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">
+                                {{ config.label|default:"Quantity" }}
+                                {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                            </label>
                             {{ form.quantity }}
                         </div>
+                        {% endif %}
+                        {% endwith %}
                     </div>
                 </div>
             </div>
@@ -216,77 +346,161 @@
                     </div>
                 </div>
 
+                {% with config=field_configs.price_unit_peinh %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.price_unit_peinh.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Price Unit (PEINH)</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Price Unit (PEINH)" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.price_unit_peinh }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.valuation_class %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.valuation_class.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Valuation Class</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Valuation Class" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.valuation_class }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.valuation_category %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.valuation_category.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Valuation Category</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Valuation Category" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.valuation_category }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.price_control_indicator %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.price_control_indicator.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Price Control Indicator</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Price Control Indicator" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.price_control_indicator }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.sales_organization %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.sales_organization.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Sales Organization</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Sales Organization" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.sales_organization }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.distribution_channel %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.distribution_channel.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Distribution Channel</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Distribution Channel" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.distribution_channel }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.profit_center %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.profit_center.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Profit Center</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Profit Center" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.profit_center }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.tax_classification_material %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.tax_classification_material.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Tax Classification</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Tax Classification" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.tax_classification_material }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.account_assignment_group %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.account_assignment_group.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Acct. Assignment Group</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Acct. Assignment Group" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.account_assignment_group }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.item_category_group %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.item_category_group.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Item Category Group</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Item Category Group" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.item_category_group }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.general_item_category_group %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.general_item_category_group.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">General Item Category Group</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"General Item Category Group" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.general_item_category_group }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.material_pricing_group %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.material_pricing_group.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Material Pricing Group</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Material Pricing Group" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.material_pricing_group }}
                 </div>
+                {% endif %}
+                {% endwith %}
             </div>
         </div>
     </div>
@@ -299,100 +513,203 @@
             </h3>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {% with config=field_configs.plant %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.plant.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Plant</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Plant" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.plant }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
-
-
+                {% with config=field_configs.warehouse_number %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.warehouse_number.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Warehouse No.</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Warehouse No." }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.warehouse_number }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.storage_bin %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.storage_bin.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Storage Bin</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Storage Bin" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.storage_bin }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.base_unit_of_measure %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.base_unit_of_measure.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Base Unit of Measure <span
-                            class="text-red-500">*</span></label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Base Unit of Measure" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.base_unit_of_measure }}
-                    {% if form.base_unit_of_measure.errors %}<p class="text-red-500 text-xs mt-1">{{
-                        form.base_unit_of_measure.errors.0 }}</p>{% endif %}
+                    {% if form.base_unit_of_measure.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.base_unit_of_measure.errors.0 }}</p>
+                    {% endif %}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.gross_weight %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.gross_weight.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Gross Weight</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Gross Weight" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.gross_weight }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.net_weight %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.net_weight.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Net Weight</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Net Weight" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.net_weight }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.size_dimensions %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.size_dimensions.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Size / Dimensions</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Size / Dimensions" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.size_dimensions }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.weight_of_unit %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.weight_of_unit.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Weight of Unit</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Weight of Unit" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.weight_of_unit }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.weight %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.weight.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Weight</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Weight" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.weight }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.dimensions %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.dimensions.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Dimensions</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Dimensions" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.dimensions }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.warranty_period %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.warranty_period.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Warranty Period</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Warranty Period" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.warranty_period }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.minimum_order_quantity %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.minimum_order_quantity.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Min. Order Qty</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Min. Order Qty" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.minimum_order_quantity }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.transportation_group %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.transportation_group.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Transportation Grp</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Transportation Grp" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.transportation_group }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.loading_group %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.loading_group.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Loading Group</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Loading Group" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.loading_group }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.abc_indicator %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.abc_indicator.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">ABC Indicator</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"ABC Indicator" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.abc_indicator }}
                 </div>
+                {% endif %}
+                {% endwith %}
             </div>
         </div>
     </div>
@@ -405,127 +722,267 @@
             </h3>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {% with config=field_configs.inventory_threshold %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.inventory_threshold.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Low Stock Alert Threshold</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Low Stock Alert Threshold" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.inventory_threshold }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.mrp_type %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.mrp_type.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">MRP Type</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"MRP Type" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.mrp_type }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.mrp_controller %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.mrp_controller.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">MRP Controller</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"MRP Controller" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.mrp_controller }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.mrp_group %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.mrp_group.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">MRP Group</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"MRP Group" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.mrp_group }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.procurement_type %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.procurement_type.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Procurement Type</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Procurement Type" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.procurement_type }}
                     {% if form.procurement_type.errors %}<p class="text-red-500 text-xs mt-1">{{
                         form.procurement_type.errors.0 }}</p>{% endif %}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.reorder_point %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.reorder_point.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Reorder Point</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Reorder Point" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.reorder_point }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.safety_stock %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.safety_stock.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Safety Stock</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Safety Stock" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.safety_stock }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.minimum_safety_stock %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.minimum_safety_stock.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Min. Safety Stock</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Min. Safety Stock" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.minimum_safety_stock }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.planned_delivery_time_days %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.planned_delivery_time_days.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Planned Delivery Time</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Planned Delivery Time" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.planned_delivery_time_days }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.goods_receipt_processing_time_days %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.goods_receipt_processing_time_days.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">GR Processing Time</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"GR Processing Time" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.goods_receipt_processing_time_days }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.total_replenishment_lead_time %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.total_replenishment_lead_time.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Total Replenish Lead Time</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Total Replenish Lead Time" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.total_replenishment_lead_time }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.purchasing_group %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.purchasing_group.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Purchasing Group</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Purchasing Group" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.purchasing_group }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.lot_size %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.lot_size.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Lot Size</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Lot Size" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.lot_size }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.availability_check %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.availability_check.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Availability Check</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Availability Check" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.availability_check }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.forecast_model %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.forecast_model.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Forecast Model</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Forecast Model" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.forecast_model }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.period_indicator %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.period_indicator.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Period Indicator</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Period Indicator" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.period_indicator }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.historical_periods %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.historical_periods.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Historical Periods</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Historical Periods" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.historical_periods }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.forecast_periods %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.forecast_periods.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Forecast Periods</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Forecast Periods" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.forecast_periods }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.initialization_indicator %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.initialization_indicator.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Initialization Indicator</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Initialization Indicator" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.initialization_indicator }}
                 </div>
+                {% endif %}
+                {% endwith %}
 
+                {% with config=field_configs.expiration_xchpf %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.expiration_xchpf.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Expiration</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Expiration" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.expiration_xchpf }}
                 </div>
+                {% endif %}
+                {% endwith %}
             </div>
         </div>
     </div>
@@ -561,18 +1018,32 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {% with config=field_configs.image_url %}
+                {% if not config or config.is_visible %}
                 <div>
                     <label for="{{ form.image_url.id_for_label }}"
-                        class="block text-sm font-semibold text-gray-700 mb-1">Image URL</label>
+                        class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ config.label|default:"Image URL" }}
+                        {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
                     {{ form.image_url }}
                 </div>
+                {% endif %}
+                {% endwith %}
             </div>
 
+            {% with config=field_configs.description %}
+            {% if not config or config.is_visible %}
             <div class="mb-8">
                 <label for="{{ form.description.id_for_label }}"
-                    class="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+                    class="block text-sm font-semibold text-gray-700 mb-1">
+                    {{ config.label|default:"Description" }}
+                    {% if config.is_required %}<span class="text-red-500">*</span>{% endif %}
+                </label>
                 {{ form.description }}
             </div>
+            {% endif %}
+            {% endwith %}
 
             <!-- Vehicle Compatibility Section Placeholder -->
             <div class="opacity-50">

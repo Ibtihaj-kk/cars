@@ -1,0 +1,26 @@
+Account Blocked - CarSyncro
+
+Hello {{ user.first_name|default:user.username }},
+
+Important Notice: Your CarSyncro account has been blocked because you did not verify your email address within the required 3-day period.
+
+Your account was blocked on {{ blocked_at|date:"F j, Y at g:i A" }} for security reasons.
+
+What You Need to Do:
+1. Contact our support team at {{ support_email }}
+2. Provide your account email address
+3. Request account reactivation
+4. Complete the email verification process
+
+Our support team will guide you through the reactivation process and help you get your account back online.
+
+We take account security seriously to protect both our users and our platform. This automated blocking helps prevent unauthorized account creation.
+
+If you believe this is an error, please contact us immediately.
+
+Best regards,
+The CarSyncro Team
+
+---
+© 2024 CarSyncro. All rights reserved.
+Support: {{ support_email }}

@@ -3323,7 +3323,99 @@ def delete_part_view(request, part_id):
     part.is_active = False
     part.save()
     messages.success(request, 'Part deactivated successfully.')
-    return redirect('admin_panel:parts')
+    return redirect('admin_panel:catalog_management')
+
+
+@login_required
+@staff_required
+def part_field_config_view(request):
+    """Manage dynamic field requirements and visibility for Part form."""
+    from parts.models import PartFieldConfiguration
+    from business_partners.forms import VendorPartForm
+    
+    # Initialize configurations if they don't exist
+    existing_fields = set(PartFieldConfiguration.objects.values_list('field_name', flat=True))
+    form = VendorPartForm()
+    
+    # Define groups based on form sections
+    groups = {
+        'Basic Info': ['parts_number', 'name', 'material_description', 'material_description_ar', 'manufacturer_part_number', 'manufacturer_oem_number'],
+        'Classification': ['category', 'brand', 'material_type', 'material_group', 'division'],
+        'Weights & Dimensions': ['base_unit_of_measure', 'gross_weight', 'net_weight', 'weight_of_unit', 'size_dimensions', 'weight', 'dimensions'],
+        'Pricing & Valuation': ['price', 'quantity', 'standard_price', 'moving_average_price', 'valuation_class', 'price_control_indicator', 'price_unit_peinh'],
+        'Logistics': ['plant', 'storage_location', 'warehouse_number', 'storage_bin', 'minimum_order_quantity', 'safety_stock', 'minimum_safety_stock', 'reorder_point', 'lot_size'],
+        'Planning': ['mrp_type', 'mrp_controller', 'mrp_group', 'procurement_type', 'planned_delivery_time_days', 'goods_receipt_processing_time_days', 'total_replenishment_lead_time'],
+        'Forecasting': ['forecast_model', 'forecast_periods', 'historical_periods', 'initialization_indicator', 'period_indicator'],
+        'Sales': ['sales_organization', 'distribution_channel', 'material_pricing_group', 'account_assignment_group', 'item_category_group', 'general_item_category_group', 'tax_classification_material', 'transportation_group', 'loading_group', 'profit_center', 'purchasing_group', 'availability_check'],
+        'Status': ['status', 'abc_indicator', 'valuation_category'],
+        'Media': ['image', 'image_url'],
+        'Other': ['description', 'old_material_number', 'expiration_xchpf', 'external_material_group', 'industry_sector', 'inventory_threshold', 'warranty_period']
+    }
+    
+    # Core fields that should be locked as required
+    locked_fields = ['parts_number', 'material_description', 'category', 'brand', 'price']
+    
+    new_configs = []
+    for group_name, field_names in groups.items():
+        for field_name in field_names:
+            if field_name in form.fields and field_name not in existing_fields:
+                field = form.fields[field_name]
+                new_configs.append(PartFieldConfiguration(
+                    field_name=field_name,
+                    label=field.label or field_name.replace('_', ' ').title(),
+                    is_required=field.required,
+                    is_visible=True,
+                    group_name=group_name,
+                    is_locked=field_name in locked_fields
+                ))
+    
+    if new_configs:
+        PartFieldConfiguration.objects.bulk_create(new_configs)
+        
+    configurations = PartFieldConfiguration.objects.all().order_by('group_name', 'field_name')
+    
+    # Re-group for display
+    grouped_configs = {}
+    for config in configurations:
+        if config.group_name not in grouped_configs:
+            grouped_configs[config.group_name] = []
+        grouped_configs[config.group_name].append(config)
+        
+    context = {
+        'grouped_configs': grouped_configs,
+    }
+    return render(request, './catalog/field_config.html', context)
+
+
+@login_required
+@staff_required
+@require_POST
+def update_part_field_config(request):
+    """Update dynamic field configurations."""
+    from parts.models import PartFieldConfiguration
+    
+    field_ids = request.POST.getlist('field_ids')
+    required_fields = request.POST.getlist('is_required')
+    visible_fields = request.POST.getlist('is_visible')
+    
+    with transaction.atomic():
+        # Reset all to optional/hidden first (only for the fields being sent)
+        configs = PartFieldConfiguration.objects.filter(id__in=field_ids)
+        for config in configs:
+            # Skip locked fields for requirement changes, but they can be toggled if we wanted
+            # For now, let's just apply what's sent
+            config.is_required = str(config.id) in required_fields
+            config.is_visible = str(config.id) in visible_fields
+            
+            # Ensure locked fields stay required
+            if config.is_locked:
+                config.is_required = True
+                config.is_visible = True
+                
+            config.save()
+            
+    messages.success(request, 'Field configurations updated successfully.')
+    return redirect('admin_panel:part_field_config')
 
 
 # ==================== CATEGORIES & BRANDS VIEWS ====================

@@ -65,4 +65,106 @@
         </form>
     </div>
 </div>
+
+<div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-gray-900">Tax Details by Order</h3>
+        <span class="text-xs font-bold text-gray-500 uppercase">{{ tax_period_label }}</span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-50">
+                    <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <a href="?sort={% if current_sort == 'order_number' %}-order_number{% else %}order_number{% endif %}" class="hover:text-black flex items-center gap-1">
+                            Order No.
+                            {% if current_sort == 'order_number' %}↑{% elif current_sort == '-order_number' %}↓{% endif %}
+                        </a>
+                    </th>
+                    <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <a href="?sort={% if current_sort == 'created_at' %}-created_at{% else %}created_at{% endif %}" class="hover:text-black flex items-center gap-1">
+                            Date
+                            {% if current_sort == 'created_at' %}↑{% elif current_sort == '-created_at' %}↓{% endif %}
+                        </a>
+                    </th>
+                    <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">
+                        <a href="?sort={% if current_sort == 'total_price' %}-total_price{% else %}total_price{% endif %}" class="hover:text-black flex items-center justify-end gap-1">
+                            Order Total
+                            {% if current_sort == 'total_price' %}↑{% elif current_sort == '-total_price' %}↓{% endif %}
+                        </a>
+                    </th>
+                    <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Vendor Items</th>
+                    <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">
+                        <a href="?sort={% if current_sort == 'tax_amount' %}-tax_amount{% else %}tax_amount{% endif %}" class="hover:text-black flex items-center justify-end gap-1">
+                            Total Tax
+                            {% if current_sort == 'tax_amount' %}↑{% elif current_sort == '-tax_amount' %}↓{% endif %}
+                        </a>
+                    </th>
+                    <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right text-blue-600">Your Share Tax</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for detail in page_obj %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <a href="{% url 'business_partners:vendor_order_detail' detail.id %}" class="text-sm font-bold text-blue-600 hover:underline">
+                            {{ detail.order_number }}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {{ detail.created_at|date:"M d, Y" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
+                        {% vendor_currency detail.total_price %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-right">
+                        {% vendor_currency detail.vendor_items_total %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 text-right">
+                        {% vendor_currency detail.tax_amount %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600 text-right">
+                        {% vendor_currency detail.vendor_share_tax %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500 italic">
+                        No orders found for the current tax period.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+        <div class="text-sm text-gray-500">
+            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} orders
+        </div>
+        <div class="flex gap-2">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}&sort={{ current_sort }}" class="px-4 py-2 bg-white border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50">
+                    Previous
+                </a>
+            {% else %}
+                <span class="px-4 py-2 bg-gray-100 border border-gray-200 text-sm font-medium text-gray-400 rounded-lg cursor-not-allowed">
+                    Previous
+                </span>
+            {% endif %}
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&sort={{ current_sort }}" class="px-4 py-2 bg-white border border-gray-200 text-sm font-medium rounded-lg hover:bg-gray-50">
+                    Next
+                </a>
+            {% else %}
+                <span class="px-4 py-2 bg-gray-100 border border-gray-200 text-sm font-medium text-gray-400 rounded-lg cursor-not-allowed">
+                    Next
+                </span>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}

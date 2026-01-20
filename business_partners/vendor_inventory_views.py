@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 import csv
 import io
 
-from parts.models import Part, Inventory, InventoryTransaction, OrderItem, Brand, Category
+from parts.models import Part, Inventory, InventoryTransaction, OrderItem, Brand, Category, PartFieldConfiguration
 from business_partners.models import VendorProfile, BusinessPartner
 from business_partners.permissions import get_vendor_profile, vendor_required
 from parts.forms import InventoryForm, PartForm
@@ -886,6 +886,7 @@ def add_part(request):
         'form': form,
         'vendor_profile': vendor_profile,
         'vendor_catalog_items': vendor_catalog_items,
+        'field_configs': {c.field_name: c for c in PartFieldConfiguration.objects.filter(is_visible=True)},
     })
 
 
@@ -948,10 +949,11 @@ def add_part_htmx(request):
         else:
             # Return form with errors rendered as HTML partial
             return render(request, 'vendors/partials/part_form.html', {
-                'form': form,
-                'vendor_profile': vendor_profile,
-                'vendor_catalog_items': vendor_catalog_items,
-            })
+        'form': form,
+        'vendor_profile': vendor_profile,
+        'vendor_catalog_items': vendor_catalog_items,
+        'field_configs': {c.field_name: c for c in PartFieldConfiguration.objects.filter(is_visible=True)},
+    })
     
     return HttpResponse("Invalid request method.", status=405)
 

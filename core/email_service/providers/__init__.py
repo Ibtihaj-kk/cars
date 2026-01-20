@@ -19,7 +19,15 @@ def get_email_provider():
     """
     from django.conf import settings
     
-    provider_name = getattr(settings, 'EMAIL_PROVIDER', 'console').lower()
+    # Try to get from EMAIL_SERVICE_CONFIG first
+    config = getattr(settings, 'EMAIL_SERVICE_CONFIG', {})
+    provider_name = config.get('PROVIDER')
+    
+    # Fallback to top-level setting
+    if not provider_name:
+        provider_name = getattr(settings, 'EMAIL_PROVIDER', 'console')
+    
+    provider_name = provider_name.lower()
     
     if provider_name == 'sendgrid':
         return SendGridProvider()

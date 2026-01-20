@@ -32,10 +32,12 @@ urlpatterns = [
     path('roles/update/', views.update_role_permissions_view, name='update_role_permissions'),
     
     # Parts Management
-    path('parts/', views.parts_management_view, name='parts'),
-    path('parts/<int:part_id>/', views.part_detail_view, name='part_detail'),
-    path('parts/<int:part_id>/update/', views.update_part_view, name='update_part'),
-    path('parts/<int:part_id>/delete/', views.delete_part_view, name='delete_part'),
+    # path('parts/', views.parts_management_view, name='parts'),
+    # path('parts/<int:part_id>/', views.part_detail_view, name='part_detail'),
+    # path('parts/<int:part_id>/update/', views.update_part_view, name='update_part'),
+    # path('parts/<int:part_id>/delete/', views.delete_part_view, name='delete_part'),
+    path('parts/fields/', views.part_field_config_view, name='part_field_config'),
+    path('parts/fields/update/', views.update_part_field_config, name='update_part_field_config'),
     
     # Categories & Brands
     path('categories/', views.categories_view, name='categories'),

@@ -433,8 +433,8 @@ REDOC_SETTINGS = {
 
 # Email Service Configuration
 EMAIL_SERVICE_CONFIG = {
-    'ENABLED': os.environ.get('EMAIL_SERVICE_ENABLED', 'True') == 'True',
-    'PROVIDER': os.environ.get('EMAIL_PROVIDER', 'smtp'),
+    'ENABLED': os.environ.get('EMAIL_SERVICE_ENABLED', 'True').lower() == 'true',
+    'PROVIDER': os.environ.get('EMAIL_PROVIDER', 'smtp').lower(),
     'QUEUE_PROCESSING_INTERVAL': int(os.environ.get('EMAIL_QUEUE_PROCESSING_INTERVAL', 300)),
     'MAX_RETRIES': int(os.environ.get('EMAIL_MAX_RETRIES', 3)),
     'RETRY_DELAY': int(os.environ.get('EMAIL_RETRY_DELAY', 300)),
@@ -444,11 +444,12 @@ EMAIL_SERVICE_CONFIG = {
 # Fallback to Django's email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'carsyncro.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 465))
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True') == 'True'
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@carsyncro.com')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'info@carsyncro.com')
 
 
 # Email notification settings

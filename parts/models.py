@@ -757,7 +757,7 @@ class Part(models.Model):
     
     def get_absolute_url(self):
         return reverse('parts:part_detail', kwargs={'pk': self.pk})
-    
+
     @property
     def is_in_stock(self):
         return self.quantity > 0
@@ -1117,6 +1117,26 @@ class Part(models.Model):
             'view_count', 'updated_at'
         ]
         return user_fields + vendor_admin_only
+
+
+class PartFieldConfiguration(models.Model):
+    """
+    Configuration for dynamic field requirements and visibility in the Part form.
+    """
+    field_name = models.CharField(max_length=100, unique=True)
+    label = models.CharField(max_length=100)
+    is_required = models.BooleanField(default=False)
+    is_visible = models.BooleanField(default=True)
+    group_name = models.CharField(max_length=50, default='General')
+    is_locked = models.BooleanField(default=False)  # For core fields that shouldn't be made optional
+
+    class Meta:
+        ordering = ['group_name', 'field_name']
+        verbose_name = "Part Field Configuration"
+        verbose_name_plural = "Part Field Configurations"
+
+    def __str__(self):
+        return f"{self.label} ({self.field_name})"
 
 
 class Inventory(models.Model):

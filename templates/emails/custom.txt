@@ -1,0 +1,4 @@
+{{ message_content|safe }}
+
+---
+Sent via CarSyncro Admin Console

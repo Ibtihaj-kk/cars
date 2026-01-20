@@ -110,7 +110,7 @@ class UserRegistrationView(generics.CreateAPIView):
                 to_email=user.email,
                 template_name='email_verification',
                 context={
-                    'user': user,
+                    'user_name': user.first_name or user.email,
                     'verification_url': verification_url,
                     'expiration_hours': 24
                 },

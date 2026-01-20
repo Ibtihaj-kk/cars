@@ -1,195 +1,290 @@
 {% extends "admin_panel/base.html" %}
 {% load static %}
 
-{% block title %}Email Queue - Admin Panel{% endblock %}
+{% block title %}Email Queue - CarSyncro Admin{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Email Queue</h1>
-        <div class="btn-group">
-            <a href="{% url 'admin_panel:admin_email_console' %}" class="btn btn-outline-primary">
-                <i class="fas fa-tachometer-alt"></i> Console
+<div class="p-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Email Queue</h1>
+            <p class="text-gray-500 text-sm mt-1">Monitor and manage queued email communications</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'admin_panel:admin_email_console' %}" 
+               class="inline-flex items-center px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+                <i class="fas fa-terminal mr-2 text-gray-400"></i>
+                Console
             </a>
-            <a href="{% url 'admin_panel:admin_email_analytics' %}" class="btn btn-outline-info">
-                <i class="fas fa-chart-bar"></i> Analytics
+            <a href="{% url 'admin_panel:admin_email_analytics' %}" 
+               class="inline-flex items-center px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+                <i class="fas fa-chart-bar mr-2 text-gray-400"></i>
+                Analytics
             </a>
-            <form method="post" action="{% url 'admin_panel:clear_email_queue' %}" class="d-inline">
+            <form method="post" action="{% url 'admin_panel:clear_email_queue' %}" class="inline">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-outline-danger" 
+                <button type="submit" 
+                        class="inline-flex items-center px-4 py-2 bg-red-50 border border-red-100 rounded-xl text-sm font-medium text-red-600 hover:bg-red-100 transition-colors shadow-sm"
                         onclick="return confirm('Are you sure you want to clear old emails from queue?')">
-                    <i class="fas fa-trash"></i> Clear Old Emails
+                    <i class="fas fa-trash mr-2"></i>
+                    Clear Old Emails
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Status</label>
-                    <select class="form-select" name="status" onchange="this.form.submit()">
-                        <option value="">All Statuses</option>
-                        {% for value, label in status_choices.items %}
-                            <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
-                                {{ label }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Search</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="q" 
-                               placeholder="Search by email, subject, or type..." 
-                               value="{{ search_query }}">
-                        <button class="btn btn-primary" type="submit">
-                            <i class="fas fa-search"></i>
-                        </button>
+    <!-- Filters Section -->
+    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-8">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+            <div class="md:col-span-3">
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Status</label>
+                <select name="status" onchange="this.form.submit()"
+                        class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-black focus:border-transparent transition-all outline-none appearance-none">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices.items %}
+                        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="md:col-span-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Search</label>
+                <div class="relative">
+                    <input type="text" name="q" value="{{ search_query }}"
+                           class="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-black focus:border-transparent transition-all outline-none"
+                           placeholder="Search by email, subject, or type...">
+                    <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                        <i class="fas fa-search"></i>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
-                    <a href="{% url 'admin_panel:admin_email_queue' %}" class="btn btn-outline-secondary w-100">
-                        Clear Filters
-                    </a>
-                </div>
-            </form>
-        </div>
+            </div>
+            
+            <div class="md:col-span-3 flex gap-3">
+                <button type="submit" 
+                        class="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-all shadow-sm">
+                    Filter
+                </button>
+                <a href="{% url 'admin_panel:admin_email_queue' %}" 
+                   class="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+                    Reset
+                </a>
+            </div>
+        </form>
     </div>
 
     <!-- Email Queue Table -->
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Message ID</th>
-                            <th>To Email</th>
-                            <th>Subject</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Priority</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for email in page_obj %}
-                        <tr>
-                            <td><small class="text-muted">{{ email.message_id|truncatechars:8 }}</small></td>
-                            <td>{{ email.to_email }}</td>
-                            <td>{{ email.subject|truncatewords:4 }}</td>
-                            <td><span class="badge bg-secondary">{{ email.email_type }}</span></td>
-                            <td>
-                                <span class="badge {% if email.status == 'sent' %}bg-success{% elif email.status == 'failed' %}bg-danger{% elif email.status == 'queued' %}bg-warning{% elif email.status == 'processing' %}bg-info{% else %}bg-secondary{% endif %}">
-                                    {{ email.status }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge {% if email.priority == 'high' %}bg-danger{% elif email.priority == 'critical' %}bg-dark{% elif email.priority == 'low' %}bg-secondary{% else %}bg-primary{% endif %}">
-                                    {{ email.priority }}
-                                </span>
-                            </td>
-                            <td>{{ email.created_at|date:"M j, Y H:i" }}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    {% if email.status == 'failed' and email.can_retry %}
-                                        <a href="{% url 'admin_panel:retry_email' email.message_id %}" 
-                                           class="btn btn-outline-success"
-                                           title="Retry Email">
-                                            <i class="fas fa-redo"></i>
-                                        </a>
-                                    {% endif %}
-                                    {% if email.status == 'queued' %}
-                                        <a href="{% url 'admin_panel:cancel_email' email.message_id %}" 
-                                           class="btn btn-outline-danger"
-                                           onclick="return confirm('Are you sure you want to cancel this email?')"
-                                           title="Cancel Email">
-                                            <i class="fas fa-times"></i>
-                                        </a>
-                                    {% endif %}
-                                    <button class="btn btn-outline-info"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#emailDetailModal" 
-                                            data-email-id="{{ email.message_id }}"
-                                            title="View Details">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center text-muted">
-                                No emails found matching your criteria
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            {% if page_obj.has_other_pages %}
-            <nav aria-label="Email queue pagination">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">First</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">Previous</a>
-                        </li>
-                    {% endif %}
-
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ num }}</span>
-                            </li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">{{ num }}</a>
-                            </li>
-                        {% endif %}
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-gray-50/50">
+                        <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Message ID</th>
+                        <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Recipient</th>
+                        <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Subject</th>
+                        <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Priority</th>
+                        <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Created</th>
+                        <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    {% for email in page_obj %}
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="px-6 py-4">
+                            <span class="text-xs font-mono text-gray-400">{{ email.message_id|truncatechars:8 }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-gray-900">{{ email.to_email }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-600 truncate max-w-xs">{{ email.subject|truncatewords:4 }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                {{ email.email_type }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if email.status == 'sent' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Sent
+                            </span>
+                            {% elif email.status == 'failed' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Failed
+                            </span>
+                            {% elif email.status == 'queued' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                Queued
+                            </span>
+                            {% elif email.status == 'processing' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 animate-pulse">
+                                Processing
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                {{ email.status }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if email.priority == 'critical' or email.priority == 'high' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700">
+                                {{ email.priority|title }}
+                            </span>
+                            {% elif email.priority == 'low' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                {{ email.priority|title }}
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                                {{ email.priority|title }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            {{ email.created_at|date:"M j, Y H:i" }}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                {% if email.status == 'failed' and email.can_retry %}
+                                    <a href="{% url 'admin_panel:retry_email' email.message_id %}" 
+                                       class="h-8 w-8 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                                       title="Retry Email">
+                                        <i class="fas fa-redo text-xs"></i>
+                                    </a>
+                                {% endif %}
+                                {% if email.status == 'queued' %}
+                                    <a href="{% url 'admin_panel:cancel_email' email.message_id %}" 
+                                       class="h-8 w-8 flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                       onclick="return confirm('Are you sure you want to cancel this email?')"
+                                       title="Cancel Email">
+                                        <i class="fas fa-times text-xs"></i>
+                                    </a>
+                                {% endif %}
+                                <button class="h-8 w-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                        onclick="viewEmailDetails('{{ email.message_id }}')"
+                                        title="View Details">
+                                    <i class="fas fa-eye text-xs"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-10 text-center text-gray-500">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-inbox text-4xl text-gray-200 mb-3"></i>
+                                <p>No emails found matching your criteria</p>
+                            </div>
+                        </td>
+                    </tr>
                     {% endfor %}
-
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">Next</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">Last</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
+                </tbody>
+            </table>
         </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="px-6 py-4 bg-gray-50/50 border-t border-gray-100">
+            <nav class="flex items-center justify-between">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" 
+                       class="relative inline-flex items-center px-4 py-2 border border-gray-200 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50">
+                        Previous
+                    </a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" 
+                       class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-200 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50">
+                        Next
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing page <span class="font-bold">{{ page_obj.number }}</span> of <span class="font-bold">{{ page_obj.paginator.num_pages }}</span>
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-xl shadow-sm -space-x-px" aria-label="Pagination">
+                            {% if page_obj.has_previous %}
+                            <a href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" 
+                               class="relative inline-flex items-center px-3 py-2 rounded-l-xl border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="fas fa-angles-left text-xs"></i>
+                            </a>
+                            <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" 
+                               class="relative inline-flex items-center px-3 py-2 border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="fas fa-chevron-left text-xs"></i>
+                            </a>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                <span class="relative inline-flex items-center px-4 py-2 border border-black bg-black text-sm font-bold text-white">
+                                    {{ num }}
+                                </span>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <a href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" 
+                                   class="relative inline-flex items-center px-4 py-2 border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50">
+                                    {{ num }}
+                                </a>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" 
+                               class="relative inline-flex items-center px-3 py-2 border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="fas fa-chevron-right text-xs"></i>
+                            </a>
+                            <a href="?page={{ page_obj.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" 
+                               class="relative inline-flex items-center px-3 py-2 rounded-r-xl border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="fas fa-angles-right text-xs"></i>
+                            </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            </nav>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<!-- Email Detail Modal -->
-<div class="modal fade" id="emailDetailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Email Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="emailDetailContent">
-                <div class="text-center">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
+<!-- Email Detail Modal (Tailwind Version) -->
+<div id="emailDetailModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeModal()"></div>
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="flex justify-between items-center pb-4 border-b border-gray-100 mb-4">
+                    <h3 class="text-lg font-bold text-gray-900" id="modal-title">Email Details</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-500 transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="emailDetailContent" class="mt-2">
+                    <!-- Content will be loaded here -->
+                    <div class="flex flex-col items-center justify-center py-12">
+                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-black"></div>
+                        <p class="mt-4 text-sm text-gray-500 font-medium">Loading email details...</p>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" onclick="closeModal()" 
+                        class="w-full inline-flex justify-center rounded-xl border border-gray-200 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all">
+                    Close
+                </button>
             </div>
         </div>
     </div>
@@ -199,23 +294,42 @@
 
 {% block extra_js %}
 <script>
-// Load email details in modal
-$('#emailDetailModal').on('show.bs.modal', function (event) {
-    var button = $(event.relatedTarget);
-    var emailId = button.data('email-id');
-    var modal = $(this);
-    
-    // Load email details via AJAX
-    $.ajax({
-        url: '/admin/api/email/' + emailId + '/',
-        method: 'GET',
-        success: function(data) {
-            $('#emailDetailContent').html(data);
-        },
-        error: function() {
-            $('#emailDetailContent').html('<div class="alert alert-danger">Failed to load email details</div>');
+    function viewEmailDetails(emailId) {
+        const modal = document.getElementById('emailDetailModal');
+        const content = document.getElementById('emailDetailContent');
+        
+        // Show modal
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        
+        // Load content
+        fetch(`/admin/email-detail/${emailId}/`)
+            .then(response => response.text())
+            .then(html => {
+                content.innerHTML = html;
+            })
+            .catch(error => {
+                content.innerHTML = `
+                    <div class="p-6 text-center text-red-600 bg-red-50 rounded-xl">
+                        <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                        <p class="font-bold">Error loading email details</p>
+                        <p class="text-xs mt-1">${error.message}</p>
+                    </div>
+                `;
+            });
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('emailDetailModal');
+        modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeModal();
         }
     });
-});
 </script>
 {% endblock %}

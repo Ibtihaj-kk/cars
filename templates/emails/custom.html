@@ -1,0 +1,10 @@
+{% extends "emails/base.html" %}
+
+{% block content %}
+<div class="content">
+    {{ message_content|safe|linebreaks }}
+</div>
+<div class="footer">
+    <p>Sent via CarSyncro Admin Console</p>
+</div>
+{% endblock %}

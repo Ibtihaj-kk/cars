@@ -6,6 +6,7 @@ Database models for email queuing, tracking, and templates.
 
 import uuid
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 from django.utils import timezone
 from django.core.serializers.json import DjangoJSONEncoder
 
@@ -34,8 +35,8 @@ class EmailQueue(models.Model):
     
     # Recipient information
     to_email = models.EmailField()
-    cc_emails = models.JSONField(default=list, blank=True)
-    bcc_emails = models.JSONField(default=list, blank=True)
+    cc_emails = ArrayField(models.EmailField(), default=list, blank=True)
+    bcc_emails = ArrayField(models.EmailField(), default=list, blank=True)
     
     # Email content
     subject = models.CharField(max_length=255)

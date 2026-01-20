@@ -41,7 +41,7 @@ class EmailVerificationHandler:
             
             # Prepare email context
             context = {
-                'user': user,
+                'user_name': user.first_name or user.email,
                 'verification_url': verification_url,
                 'expiration_hours': 72,  # 3 days
                 'support_email': 'support@carsyncro.com',

@@ -1,0 +1,4 @@
+Account Blocked
+Hello {{ user.first_name }},
+Your account has been temporarily blocked because your email remains unverified.
+Please verify your email to restore access.

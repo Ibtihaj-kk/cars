@@ -99,9 +99,24 @@
                             <span class="text-xs text-gray-500 ml-1 text-gray-400">({{ order.customer_email }})</span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if order.payment_status == 'completed' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
-                                {{ order.get_payment_status_display }}
-                            </span>
+                            <div class="flex flex-col">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if order.payment_status == 'completed' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %} w-fit">
+                                    {{ order.get_payment_status_display }}
+                                </span>
+                                <span class="text-gray-500 text-[10px] font-bold uppercase tracking-wider mt-1 ml-1">
+                                    {% if order.payment_method == 'cash_on_delivery' %}
+                                        <i class="fas fa-money-bill-wave text-green-600 mr-1"></i> COD
+                                    {% elif order.payment_method == 'bank_transfer' %}
+                                        <i class="fas fa-university text-blue-600 mr-1"></i> Bank
+                                    {% elif order.payment_method == 'credit_card' %}
+                                        <i class="fas fa-credit-card text-purple-600 mr-1"></i> Card
+                                    {% elif order.payment_method == 'paypal' %}
+                                        <i class="fab fa-paypal text-blue-500 mr-1"></i> PayPal
+                                    {% else %}
+                                        {{ order.get_payment_method_display|default:"—" }}
+                                    {% endif %}
+                                </span>
+                            </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 

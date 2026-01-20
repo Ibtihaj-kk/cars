@@ -1,0 +1,135 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block title %}Part Field Configuration | Admin{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Part Field Configuration</h1>
+            <p class="text-sm text-gray-500 mt-1">Manage which fields are required or visible for vendors in the "Add Part" form.</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'admin_panel:catalog_management' %}" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Catalog
+            </a>
+            <button type="submit" form="field-config-form" class="px-4 py-2 bg-black rounded-lg text-sm font-medium text-white hover:bg-gray-800 transition-colors">
+                Save Changes
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="mb-6">
+        {% for message in messages %}
+        <div class="p-4 {% if message.tags == 'success' %}bg-green-50 text-green-700 border-green-200{% else %}bg-red-50 text-red-700 border-red-200{% endif %} border rounded-lg text-sm">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form id="field-config-form" method="POST" action="{% url 'admin_panel:update_part_field_config' %}">
+        {% csrf_token %}
+        
+        <div class="space-y-8">
+            {% for group_name, configs in grouped_configs.items %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group-container">
+                <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition-colors" 
+                     onclick="toggleGroup(this)">
+                    <h3 class="font-semibold text-gray-900">{{ group_name }}</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-500 font-medium">{{ configs|length }} fields</span>
+                        <i class="fas fa-chevron-up text-gray-400 transition-transform duration-200 group-chevron"></i>
+                    </div>
+                </div>
+                <div class="overflow-x-auto group-content transition-all duration-200">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                <th class="px-6 py-4">Field Name</th>
+                                <th class="px-6 py-4 text-center">Required</th>
+                                <th class="px-6 py-4 text-center">Visible</th>
+                                <th class="px-6 py-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {% for config in configs %}
+                            <tr>
+                                <td class="px-6 py-4">
+                                    <input type="hidden" name="field_ids" value="{{ config.id }}">
+                                    <div class="text-sm font-medium text-gray-900">{{ config.label }}</div>
+                                    <div class="text-xs text-gray-500 font-mono">{{ config.field_name }}</div>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <input type="checkbox" name="is_required" value="{{ config.id }}" 
+                                           {% if config.is_required %}checked{% endif %}
+                                           {% if config.is_locked %}disabled{% endif %}
+                                           class="w-4 h-4 text-black border-gray-300 rounded focus:ring-black">
+                                    {% if config.is_locked %}
+                                    <input type="hidden" name="is_required" value="{{ config.id }}">
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <input type="checkbox" name="is_visible" value="{{ config.id }}" 
+                                           {% if config.is_visible %}checked{% endif %}
+                                           {% if config.is_locked %}disabled{% endif %}
+                                           class="w-4 h-4 text-black border-gray-300 rounded focus:ring-black">
+                                    {% if config.is_locked %}
+                                    <input type="hidden" name="is_visible" value="{{ config.id }}">
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4">
+                                    {% if config.is_locked %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                        <i class="fas fa-lock mr-1"></i> Core Field
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                        Configurable
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-8 flex justify-end">
+            <button type="submit" class="px-6 py-3 bg-black rounded-lg text-white font-semibold hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200">
+                Save Configuration
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function toggleGroup(header) {
+        const container = header.parentElement;
+        const content = container.querySelector('.group-content');
+        const chevron = container.querySelector('.group-chevron');
+        
+        if (content.style.maxHeight === '0px') {
+            content.style.maxHeight = content.scrollHeight + 'px';
+            content.style.opacity = '1';
+            chevron.style.transform = 'rotate(0deg)';
+        } else {
+            content.style.maxHeight = '0px';
+            content.style.opacity = '0';
+            chevron.style.transform = 'rotate(-180deg)';
+        }
+    }
+
+    // Initialize all groups as expanded
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.group-content').forEach(content => {
+            content.style.maxHeight = content.scrollHeight + 'px';
+            content.style.opacity = '1';
+        });
+    });
+</script>
+{% endblock %}

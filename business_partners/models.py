@@ -98,6 +98,33 @@ class BusinessPartner(models.Model):
 
     def __str__(self):
         return f"{self.bp_number} - {self.name}"
+
+    def get_country_code(self):
+        """Get the 2-letter country code for this business partner."""
+        # Try to get from primary office address first
+        primary_address = self.addresses.filter(address_type='office', is_primary=True).first()
+        if not primary_address:
+            primary_address = self.addresses.filter(address_type='office').first()
+        if not primary_address:
+            primary_address = self.addresses.filter(is_primary=True).first()
+        if not primary_address:
+            primary_address = self.addresses.first()
+        
+        if primary_address:
+            country_name = primary_address.country.strip()
+            # If it's already a 2-letter code, return it
+            if len(country_name) == 2:
+                return country_name.upper()
+            
+            # Try to find in Country model
+            # Import inside method to avoid circular dependency
+            from parts.models import Country
+            country = Country.objects.filter(name__iexact=country_name).first()
+            if country:
+                return country.code.upper()
+        
+        # Fallback to Saudi Arabia as it's the default in many places
+        return 'SA'
     
     def save(self, *args, **kwargs):
         if not self.bp_number:
