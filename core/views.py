@@ -16,6 +16,7 @@ from .models import SystemMetric, DashboardWidget, ComplianceCheck
 from .audit_logging import audit_logger
 from users.models import UserRole
 from business_partners.permissions import get_vendor_profile
+from vendor_employees.utils import get_vendor_context
 from parts.cache import get_cached_categories, get_cached_brands, get_cached_popular_parts, get_cached_featured_parts
 from parts.models import Part, Category, Brand
 from vehicles.models import VehicleMake, VehicleModelTaxonomy, VehicleVariant
@@ -42,17 +43,25 @@ def custom_login_view(request):
     
     # If user is already authenticated, redirect them away from login page
     if request.user.is_authenticated:
-        vendor_profile = get_vendor_profile(request.user)
-        if vendor_profile and vendor_profile.is_approved:
-            return redirect('business_partners:vendor_dashboard')
-        elif vendor_profile:
-            return redirect('business_partners:vendor_registration_status')
-        else:
-                # Regular authenticated user
-                if request.user.is_staff or request.user.is_superuser:
-                    return redirect('/admin/')
+        vendor_context = get_vendor_context(request.user)
+        if vendor_context:
+            # Check if it's a vendor profile or employee
+            # Vendor masters have a vendor_profile
+            vendor_profile = getattr(vendor_context, 'vendor_profile', None)
+            if vendor_profile:
+                if vendor_profile.is_approved:
+                    return redirect('business_partners:vendor_dashboard')
                 else:
-                    return redirect('users:user-dashboard')
+                    return redirect('business_partners:vendor_registration_status')
+            else:
+                # It's a vendor employee
+                return redirect('business_partners:vendor_dashboard')
+        else:
+            # Regular authenticated user
+            if request.user.is_staff or request.user.is_superuser:
+                return redirect('/admin/')
+            else:
+                return redirect('users:user-dashboard')
     
     if request.method == 'POST':
         email = request.POST.get('username', '').strip().lower()
@@ -79,14 +88,19 @@ def custom_login_view(request):
             # Check if user is vendor or seller
             is_vendor = False
             
-            # Check if user has vendor profile
-            vendor_profile = get_vendor_profile(user)
-            if vendor_profile and vendor_profile.is_approved:
-                is_vendor = True
-                print(f"User has approved vendor profile")
+            # Check if user has vendor context (master or employee)
+            vendor_context = get_vendor_context(user)
+            if vendor_context:
+                vendor_profile = getattr(vendor_context, 'vendor_profile', None)
+                if vendor_profile:
+                    if vendor_profile.is_approved:
+                        is_vendor = True
+                else:
+                    # It's an active vendor employee
+                    is_vendor = True
             
             # Debug logging
-            print(f"User {user.email} logged in. Role: {getattr(user, 'role', 'unknown')}, Vendor profile: {vendor_profile is not None}, Is vendor: {is_vendor}")
+            print(f"User {user.email} logged in. Role: {getattr(user, 'role', 'unknown')}, Vendor context: {vendor_context is not None}, Is vendor: {is_vendor}")
             
             # Redirect based on role or next parameter
             next_url = request.GET.get('next') or request.POST.get('next')

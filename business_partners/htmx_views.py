@@ -5,7 +5,7 @@ Server-side rendered views for vendor management and inventory
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.db.models import Q, Sum, Count
 from django.utils import timezone
 from datetime import timedelta
@@ -14,11 +14,16 @@ from .models import VendorProfile, VendorApplication, BusinessPartner, BusinessP
 from .document_models import VendorDocument, DocumentCategory
 from parts.models import Part, Order, OrderItem
 from vehicles.models import VehicleMake, VehicleModel
+from vendor_employees.models import VendorLocation, StorageLocation
 
 
 # =====================
 # VENDOR DASHBOARD
 # =====================
+
+from .utils import get_vendor_profile
+from vendor_employees.utils import get_vendor_context
+from parts.models import Part, Order, OrderItem
 
 @login_required
 @require_http_methods(["GET"])
@@ -27,25 +32,45 @@ def vendor_dashboard_htmx(request):
     HTMX endpoint for vendor dashboard
     Returns dashboard stats HTML fragment
     """
-    vendor_profile = get_object_or_404(VendorProfile, user=request.user)
+    business_partner = get_vendor_context(request.user)
+    if not business_partner:
+        return HttpResponseForbidden("Vendor access not found.")
+
+    vendor_profile = getattr(business_partner, 'vendor_profile', None)
+
+    # Base queryset for parts
+    parts_queryset = Part.objects.filter(vendor=business_partner)
+    
+    # Location-based filtering for vendor employees
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            parts_queryset = parts_queryset.filter(
+                Q(plant__in=employee_locations) | 
+                Q(storage_location__in=employee_locations) | 
+                Q(warehouse_number__in=employee_locations)
+            )
+        else:
+            parts_queryset = parts_queryset.none()
 
     # Get statistics
-    total_parts = Part.objects.filter(dealer=request.user).count()
-    active_parts = Part.objects.filter(dealer=request.user, is_active=True).count()
-    low_stock = Part.objects.filter(
-        dealer=request.user,
+    total_parts = parts_queryset.count()
+    active_parts = parts_queryset.filter(is_active=True).count()
+    low_stock = parts_queryset.filter(
         quantity__lte=5,
         quantity__gt=0
     ).count()
-    out_of_stock = Part.objects.filter(
-        dealer=request.user,
+    out_of_stock = parts_queryset.filter(
         quantity=0
     ).count()
 
     # Recent orders (last 30 days)
     last_30_days = timezone.now() - timedelta(days=30)
+    
+    # Get all orders that contain items from this vendor's parts (filtered by location if needed)
     recent_orders = Order.objects.filter(
-        items__part__dealer=request.user,
+        items__part__in=parts_queryset,
         created_at__gte=last_30_days
     ).distinct()
 
@@ -54,13 +79,23 @@ def vendor_dashboard_htmx(request):
 
     # Recent order items
     recent_items = OrderItem.objects.filter(
-        part__dealer=request.user
+        part__in=parts_queryset
     ).select_related('order', 'part').order_by('-created_at')[:10]
 
+    # Verification status
+    verification_deadline = vendor_profile.get_verification_deadline() if vendor_profile else None
+    remaining_time = vendor_profile.get_remaining_verification_time() if vendor_profile else None
+    is_verification_expired = vendor_profile.is_verification_expired if vendor_profile else False
+    is_email_verified = request.user.is_verified or not request.user.requires_email_verification
+
     context = {
-        'vendor': vendor_profile,
+        'vendor': business_partner,
         'vendor_profile': vendor_profile,
         'is_approved': vendor_profile.is_approved if vendor_profile else False,
+        'verification_deadline': verification_deadline,
+        'remaining_time': remaining_time,
+        'is_verification_expired': is_verification_expired,
+        'is_email_verified': is_email_verified,
         'total_parts': total_parts,
         'active_parts': active_parts,
         'low_stock': low_stock,
@@ -84,14 +119,31 @@ def vendor_inventory_htmx(request):
     HTMX endpoint for vendor inventory list
     Returns inventory HTML fragment
     """
+    business_partner = get_vendor_context(request.user)
+    if not business_partner:
+        return HttpResponseForbidden("Vendor access not found.")
+
     # Filter parameters
     status_filter = request.GET.get('status', 'all')
     search = request.GET.get('search', '')
 
     # Base queryset
     parts = Part.objects.filter(
-        dealer=request.user
+        vendor=business_partner
     ).select_related('make', 'model', 'category')
+
+    # Location-based filtering for vendor employees
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            parts = parts.filter(
+                Q(plant__in=employee_locations) | 
+                Q(storage_location__in=employee_locations) | 
+                Q(warehouse_number__in=employee_locations)
+            )
+        else:
+            parts = parts.none()
 
     # Apply filters
     if status_filter == 'active':
@@ -129,6 +181,18 @@ def vendor_part_form_htmx(request, part_id=None):
     part = None
     if part_id:
         part = get_object_or_404(Part, id=part_id, dealer=request.user)
+        
+        # Location-based access control for vendor employees
+        vendor_employee = getattr(request.user, 'vendor_employee', None)
+        if vendor_employee and vendor_employee.is_active:
+            employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+            if employee_locations:
+                if not (part.plant in employee_locations or 
+                        part.storage_location in employee_locations or 
+                        part.warehouse_number in employee_locations):
+                    return HttpResponseForbidden("You don't have permission to access this part's location.")
+            else:
+                return HttpResponseForbidden("You don't have access to any locations.")
 
     makes = VehicleMake.objects.all().order_by('name')
     models = VehicleModel.objects.all().order_by('name') if part else []
@@ -152,6 +216,18 @@ def vendor_save_part_htmx(request, part_id=None):
     part = None
     if part_id:
         part = get_object_or_404(Part, id=part_id, dealer=request.user)
+
+        # Location-based access control for vendor employees
+        vendor_employee = getattr(request.user, 'vendor_employee', None)
+        if vendor_employee and vendor_employee.is_active:
+            employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+            if employee_locations:
+                if not (part.plant in employee_locations or 
+                        part.storage_location in employee_locations or 
+                        part.warehouse_number in employee_locations):
+                    return HttpResponseForbidden("You don't have permission to modify this part's location.")
+            else:
+                return HttpResponseForbidden("You don't have access to any locations.")
 
     # Get form data
     name = request.POST.get('name')
@@ -214,6 +290,18 @@ def vendor_toggle_part_status_htmx(request, part_id):
     """
     part = get_object_or_404(Part, id=part_id, dealer=request.user)
 
+    # Location-based access control for vendor employees
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            if not (part.plant in employee_locations or 
+                    part.storage_location in employee_locations or 
+                    part.warehouse_number in employee_locations):
+                return HttpResponseForbidden("You don't have permission to modify this part's location.")
+        else:
+            return HttpResponseForbidden("You don't have access to any locations.")
+
     part.is_active = not part.is_active
     part.save()
 
@@ -222,6 +310,44 @@ def vendor_toggle_part_status_htmx(request, part_id):
     }
 
     return render(request, 'business_partners/htmx/inventory_row.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_storage_locations(request):
+    """
+    AJAX endpoint to fetch storage locations for a given plant
+    """
+    plant_id = request.GET.get('plant_id')
+    if not plant_id:
+        return HttpResponse('<option value="">Select Storage Location</option>')
+    
+    storage_locations = StorageLocation.objects.filter(plant_id=plant_id, is_active=True).order_by('name')
+    
+    options = ['<option value="">Select Storage Location</option>']
+    for loc in storage_locations:
+        options.append(f'<option value="{loc.id}">{loc.name}</option>')
+    
+    return HttpResponse(''.join(options))
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_warehouses(request):
+    """
+    AJAX endpoint to fetch warehouses for a given plant
+    """
+    plant_id = request.GET.get('plant_id')
+    if not plant_id:
+        return HttpResponse('<option value="">Select Warehouse Number</option>')
+
+    warehouses = StorageLocation.objects.filter(plant_id=plant_id, is_active=True).order_by('name')
+
+    options = ['<option value="">Select Warehouse Number</option>']
+    for wh in warehouses:
+        options.append(f'<option value="{wh.id}">{wh.name}</option>')
+
+    return HttpResponse(''.join(options))
 
 
 @login_required

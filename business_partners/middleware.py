@@ -37,6 +37,7 @@ class VendorAccessMiddleware:
         '/business_partners/vendor/registration/status/',
         '/business-partners/vendor/register/status/',
         '/vendor/registration/status/',  # Add this for direct vendor URLs
+        '/business-partners/vendor/employees/accept-invitation/',
     ]
     
     def __init__(self, get_response):
@@ -152,7 +153,17 @@ class VendorAccessMiddleware:
         if has_login_timestamp and not request.user.is_authenticated:
             return self.get_response(request)
         
-        # Check if user has vendor profile
+        is_employee_management_path = (
+            request.path.startswith('/business-partners/vendor/employees/') or 
+            request.path.startswith('/business-partners/vendor/roles/') or
+            request.path.startswith('/business-partners/vendor/locations/')
+        )
+        if is_employee_management_path:
+            from vendor_employees.utils import get_vendor_context
+            if get_vendor_context(request.user):
+                return self.get_response(request)
+            return HttpResponseForbidden("Access denied: Vendor access required.")
+
         vendor_profile = get_vendor_profile(request.user)
         if not vendor_profile:
             return HttpResponseForbidden("Access denied: Vendor profile required.")

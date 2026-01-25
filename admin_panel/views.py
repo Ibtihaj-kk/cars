@@ -2772,22 +2772,48 @@ def vendor_communication_view(request, vendor_id):
 def users_management_view(request):
     """User management view with filtering and search."""
     from users.models import UserRole
+    from django.db.models import Count, Q, OuterRef, Subquery, IntegerField
+    from vendor_employees.models import VendorEmployee
+    from business_partners.models import BusinessPartner
     
     search = request.GET.get('search', '')
     role_filter = request.GET.get('role', '')
     status_filter = request.GET.get('status', '')
     
-    users = User.objects.all().order_by('-date_joined')
+    # Subquery for employee count if user is a vendor (business partner)
+    # A user can have multiple business partners, but usually one as vendor
+    vendor_bp_subquery = BusinessPartner.objects.filter(
+        user=OuterRef('pk'),
+        roles__role_type='vendor'
+    ).values('pk')[:1]
+
+    employee_count_subquery = BusinessPartner.objects.filter(
+        user=OuterRef('pk'),
+        roles__role_type='vendor'
+    ).annotate(
+        count=Count('employees')
+    ).values('count')[:1]
+
+    users = User.objects.all().annotate(
+        employee_count=Subquery(employee_count_subquery, output_field=IntegerField())
+    ).select_related('vendor_employee', 'vendor_employee__vendor', 'vendor_employee__role').order_by('-date_joined')
     
     if search:
         users = users.filter(
             Q(email__icontains=search) |
             Q(first_name__icontains=search) |
-            Q(last_name__icontains=search)
-        )
+            Q(last_name__icontains=search) |
+            Q(vendor_employee__vendor__name__icontains=search) |
+            Q(business_partners__name__icontains=search)
+        ).distinct()
     
     if role_filter:
-        users = users.filter(role=role_filter)
+        if role_filter == 'vendor':
+            users = users.filter(business_partners__roles__role_type='vendor')
+        elif role_filter == 'vendor_employee':
+            users = users.filter(vendor_employee__isnull=False)
+        else:
+            users = users.filter(role=role_filter)
     
     if status_filter == 'active':
         users = users.filter(is_active=True)
@@ -2799,13 +2825,19 @@ def users_management_view(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    role_choices = list(UserRole.choices)
+    role_choices.extend([
+        ('vendor', 'Vendor Partner'),
+        ('vendor_employee', 'Vendor Employee'),
+    ])
+    
     context = {
         'page_obj': page_obj,
         'users': page_obj,
         'search': search,
         'role_filter': role_filter,
         'status_filter': status_filter,
-        'role_choices': UserRole.choices,
+        'role_choices': role_choices,
         'total_users': User.objects.count(),
         'active_users': User.objects.filter(is_active=True).count(),
         'per_page': per_page,

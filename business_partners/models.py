@@ -739,6 +739,30 @@ class VendorProfile(models.Model):
         total_completion = field_completion + document_completion
         
         return round(total_completion, 1)
+
+    def get_verification_deadline(self):
+        """Get the 3-day verification deadline from profile creation."""
+        from datetime import timedelta
+        return self.created_at + timedelta(days=3)
+
+    @property
+    def is_verification_expired(self):
+        """Check if the 3-day verification period has expired."""
+        from django.utils import timezone
+        if self.approval_state == 'APPROVED':
+            return False
+        return timezone.now() > self.get_verification_deadline()
+
+    def get_remaining_verification_time(self):
+        """Get remaining time for verification."""
+        from django.utils import timezone
+        if self.approval_state == 'APPROVED':
+            return None
+        deadline = self.get_verification_deadline()
+        now = timezone.now()
+        if now > deadline:
+            return None
+        return deadline - now
     
     def save(self, *args, **kwargs):
         """Override save to sync approval state and log bank detail changes"""
@@ -1437,6 +1461,7 @@ Please review the application in the admin panel.
                 email_id = send_email(
                     email_type='vendor_approval',
                     to_email=self.user.email,
+                    subject='Welcome to CarSyncro - Application Approved',
                     template_name='vendor_application_approved',
                     context={
                         'contact_person_name': self.contact_person_name,
@@ -1510,6 +1535,7 @@ CarSyncro Team
                 email_id = send_email(
                     email_type='vendor_rejection',
                     to_email=self.user.email,
+                    subject='Vendor Application Status - CarSyncro',
                     template_name='vendor_application_rejected',
                     context={
                         'contact_person_name': self.contact_person_name,

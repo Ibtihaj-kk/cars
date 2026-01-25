@@ -26,27 +26,47 @@ import json
 from parts.models import Order, OrderItem, OrderStatusHistory, OrderShipping, OrderDiscount, VendorOrderItemStatus
 from .models import BusinessPartner, VendorProfile
 from .decorators import vendor_required
-from .utils import get_vendor_profile
+from vendor_employees.utils import get_vendor_context
+from vendor_employees.permissions import VendorPermissionRequiredMixin
 
 
-class VendorOrderListView(LoginRequiredMixin, ListView):
+class VendorOrderListView(VendorPermissionRequiredMixin, ListView):
     """Vendor-specific view to list orders containing their parts."""
     model = Order
     template_name = 'vendors/orders.html'
     context_object_name = 'orders'
     paginate_by = 20
+    vendor_permission_code = 'orders'
+    vendor_permission_action = 'view'
     
     def get_queryset(self):
         """Return orders that contain parts from the current vendor."""
         user = self.request.user
-        vendor_profile = get_vendor_profile(user)
+        vendor_partner = get_vendor_context(user)
         
-        if not vendor_profile:
+        if not vendor_partner:
             return Order.objects.none()
+        
+        # Base filters
+        base_filters = Q(items__part__vendor=vendor_partner)
+        
+        # Location-based filtering for vendor employees
+        vendor_employee = getattr(user, 'vendor_employee', None)
+        if vendor_employee and vendor_employee.is_active:
+            employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+            if employee_locations:
+                location_filter = (
+                    Q(items__part__plant__in=employee_locations) | 
+                    Q(items__part__storage_location__in=employee_locations) | 
+                    Q(items__part__warehouse_number__in=employee_locations)
+                )
+                base_filters &= location_filter
+            else:
+                return Order.objects.none()
         
         # Base queryset: orders with vendor's parts
         qs = Order.objects.filter(
-            items__part__vendor=vendor_profile.business_partner
+            base_filters
         ).exclude(status='created').distinct()
 
         # Apply status filter
@@ -79,15 +99,32 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['title'] = 'My Orders'
         
-        # Get vendor profile
-        vendor_profile = get_vendor_profile(self.request.user)
-        if vendor_profile:
-            context['vendor_profile'] = vendor_profile
-            vendor_partner = vendor_profile.business_partner
+        # Get vendor context
+        vendor_partner = get_vendor_context(self.request.user)
+        if vendor_partner:
+            context['business_partner'] = vendor_partner
+            context['vendor_profile'] = getattr(vendor_partner, 'vendor_profile', None)
             
-            # Base queryset for counts (unfiltered by status/search)
+            # Base filters for counts (unfiltered by status/search)
+            base_filters = Q(items__part__vendor=vendor_partner)
+            
+            # Location-based filtering for vendor employees
+            vendor_employee = getattr(self.request.user, 'vendor_employee', None)
+            if vendor_employee and vendor_employee.is_active:
+                employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+                if employee_locations:
+                    location_filter = (
+                        Q(items__part__plant__in=employee_locations) | 
+                        Q(items__part__storage_location__in=employee_locations) | 
+                        Q(items__part__warehouse_number__in=employee_locations)
+                    )
+                    base_filters &= location_filter
+                else:
+                    # If an employee has no locations, all counts should be 0
+                    base_filters = Q(pk__in=[])
+            
             base_qs = Order.objects.filter(
-                items__part__vendor=vendor_partner
+                base_filters
             ).distinct()
             
             context['total_orders'] = base_qs.count()
@@ -108,10 +145,24 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
             context['cancelled_orders'] = base_qs.filter(status='cancelled').count()
             
             # Revenue statistics (Vendor Specific)
-            context['total_revenue'] = OrderItem.objects.filter(
+            revenue_qs = OrderItem.objects.filter(
                 part__vendor=vendor_partner,
                 order__status__in=['delivered', 'shipped']
-            ).aggregate(
+            )
+            
+            # Location-based filtering for vendor employees
+            if vendor_employee and vendor_employee.is_active:
+                if employee_locations:
+                    location_filter = (
+                        Q(part__plant__in=employee_locations) | 
+                        Q(part__storage_location__in=employee_locations) | 
+                        Q(part__warehouse_number__in=employee_locations)
+                    )
+                    revenue_qs = revenue_qs.filter(location_filter)
+                else:
+                    revenue_qs = revenue_qs.none()
+            
+            context['total_revenue'] = revenue_qs.aggregate(
                 total=Sum(F('quantity') * F('price'))
             )['total'] or 0
             
@@ -129,7 +180,7 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
             context['date_to'] = self.request.GET.get('date_to', '')
             context['min_amount'] = self.request.GET.get('min_amount', '')
             context['max_amount'] = self.request.GET.get('max_amount', '')
-
+            
             orders_page = context.get('orders')
             if orders_page:
                 try:
@@ -138,7 +189,7 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
                 except Exception:
                     ExchangeRate = None
                     D = Decimal
-
+                
                 currency_rates_to_usd = {}
                 for order in orders_page:
                     vendor_total_usd = Decimal('0.00')
@@ -191,11 +242,13 @@ class VendorOrderListView(LoginRequiredMixin, ListView):
         return context
 
 
-class VendorOrderDetailView(LoginRequiredMixin, DetailView):
+class VendorOrderDetailView(VendorPermissionRequiredMixin, DetailView):
     """Detailed view of an order for vendors (only shows their parts)."""
     model = Order
     template_name = 'vendors/order_details.html'
     context_object_name = 'order'
+    vendor_permission_code = 'orders'
+    vendor_permission_action = 'view'
     
     def get_object(self):
         """Get order and verify vendor has parts in this order."""
@@ -212,17 +265,32 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
             raise Http404("Order not found")
             
         user = self.request.user
-        # Assuming get_vendor_profile is a helper function you have defined
-        vendor_profile = get_vendor_profile(user)
+        vendor_partner = get_vendor_context(user)
         
-        if not vendor_profile:
+        if not vendor_partner:
             raise PermissionDenied("You don't have vendor access.")
         
         # Check if this order contains parts from this vendor
         # We check existence efficiently
-        has_items = order.items.filter(part__vendor=vendor_profile.business_partner).exists()
+        item_filters = Q(part__vendor=vendor_partner)
+        
+        # Location-based filtering for vendor employees
+        vendor_employee = getattr(user, 'vendor_employee', None)
+        if vendor_employee and vendor_employee.is_active:
+            employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+            if employee_locations:
+                location_filter = (
+                    Q(part__plant__in=employee_locations) | 
+                    Q(part__storage_location__in=employee_locations) | 
+                    Q(part__warehouse_number__in=employee_locations)
+                )
+                item_filters &= location_filter
+            else:
+                raise PermissionDenied("You don't have access to any locations.")
+
+        has_items = order.items.filter(item_filters).exists()
         if not has_items:
-            raise PermissionDenied("This order doesn't contain any of your parts.")
+            raise PermissionDenied("This order doesn't contain any of your parts for your assigned locations.")
         
         return order
     
@@ -230,8 +298,7 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['title'] = f'Order #{self.object.order_number}'
         
-        vendor_profile = get_vendor_profile(self.request.user)
-        vendor_partner = vendor_profile.business_partner
+        vendor_partner = get_vendor_context(self.request.user)
         
         # Prefetch specifically the status for THIS vendor to avoid fetching other vendors' statuses
         status_prefetch = Prefetch(
@@ -241,8 +308,24 @@ class VendorOrderDetailView(LoginRequiredMixin, DetailView):
         )
 
         # Get vendor's items with optimized queries
+        item_filters = Q(part__vendor=vendor_partner)
+        
+        # Location-based filtering for vendor employees
+        vendor_employee = getattr(self.request.user, 'vendor_employee', None)
+        if vendor_employee and vendor_employee.is_active:
+            employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+            if employee_locations:
+                location_filter = (
+                    Q(part__plant__in=employee_locations) | 
+                    Q(part__storage_location__in=employee_locations) | 
+                    Q(part__warehouse_number__in=employee_locations)
+                )
+                item_filters &= location_filter
+            else:
+                item_filters = Q(pk__in=[])
+
         vendor_items = self.object.items.filter(
-            part__vendor=vendor_partner
+            item_filters
         ).select_related(
             'part', 'part__brand', 'part__category'
         ).prefetch_related(
@@ -435,18 +518,11 @@ def vendor_update_order_status(request, order_id):
     try:
         order = get_object_or_404(Order, id=order_id)
         
-        # Ensure get_vendor_profile is defined/imported
-        try:
-            vendor_profile = get_vendor_profile(request.user)
-        except NameError:
-            print("ERROR: 'get_vendor_profile' is not imported.")
-            return send_error("Server configuration error: missing helper function.", 500)
+        vendor_partner = get_vendor_context(request.user)
             
-        if not vendor_profile:
-            return send_error("Vendor profile not found.", 403)
+        if not vendor_partner:
+            return send_error("Vendor access required.", 403)
         
-        vendor_partner = vendor_profile.business_partner
-
         # Check if this order contains parts from this vendor
         vendor_items = order.items.filter(part__vendor=vendor_partner).select_related('part')
         
@@ -548,12 +624,13 @@ def vendor_update_order_status(request, order_id):
 
 
 @login_required
+@vendor_required
 def vendor_order_analytics(request):
     """Vendor-specific order analytics dashboard."""
-    vendor_profile = get_vendor_profile(request.user)
+    vendor_partner = get_vendor_context(request.user)
     
-    if not vendor_profile:
-        messages.error(request, 'Vendor profile not found.')
+    if not vendor_partner:
+        messages.error(request, 'Vendor access required.')
         return redirect('business_partners:vendor_dashboard')
     
     # Get date range from request
@@ -575,7 +652,7 @@ def vendor_order_analytics(request):
     
     # Get vendor orders in date range
     vendor_orders = Order.objects.filter(
-        items__part__vendor=vendor_profile.business_partner,
+        items__part__vendor=vendor_partner,
         created_at__range=[date_from_dt, date_to_dt]
     ).distinct()
     
@@ -607,7 +684,8 @@ def vendor_order_analytics(request):
     
     context = {
         'title': 'Order Analytics',
-        'vendor_profile': vendor_profile,
+        'business_partner': vendor_partner,
+        'vendor_profile': getattr(vendor_partner, 'vendor_profile', None),
         'date_from': date_from,
         'date_to': date_to,
         'total_orders': vendor_orders.count(),
@@ -627,12 +705,13 @@ def vendor_order_analytics(request):
 
 
 @login_required
+@vendor_required
 def vendor_order_reports(request):
     """Generate and download order reports for vendors."""
-    vendor_profile = get_vendor_profile(request.user)
+    vendor_partner = get_vendor_context(request.user)
     
-    if not vendor_profile:
-        messages.error(request, 'Vendor profile not found.')
+    if not vendor_partner:
+        messages.error(request, 'Vendor access required.')
         return redirect('business_partners:vendor_dashboard')
     
     # Get filter parameters
@@ -648,7 +727,7 @@ def vendor_order_reports(request):
     
     # Get vendor orders based on filters
     vendor_orders = Order.objects.filter(
-        items__part__vendor=vendor_profile.business_partner
+        items__part__vendor=vendor_partner
     ).distinct()
     
     # Apply date filter
@@ -679,7 +758,7 @@ def vendor_order_reports(request):
         
         for order in vendor_orders:
             vendor_items_total = order.items.filter(
-                part__vendor=vendor_profile.business_partner
+                part__vendor=vendor_partner
             ).aggregate(total=Sum(F('quantity') * F('price')))['total'] or 0
             
             writer.writerow([
@@ -700,7 +779,8 @@ def vendor_order_reports(request):
         # Show report preview
         context = {
             'title': 'Order Reports',
-            'vendor_profile': vendor_profile,
+            'business_partner': vendor_partner,
+            'vendor_profile': getattr(vendor_partner, 'vendor_profile', None),
             'date_from': date_from,
             'date_to': date_to,
             'status': status,

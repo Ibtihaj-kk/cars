@@ -1,39 +1,94 @@
 {% extends 'vendors/base.html' %}
 {% load static %}
 {% load vendor_currency %}
+{% load math_filters %}
 
 {% block title %}Dashboard | CarSyncro{% endblock %}
 
 {% block content %}
 <!-- Approval Status Banner -->
 {% if not is_approved %}
-<div class="mb-6 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-4 shadow-sm">
+<div class="mb-6 {% if is_verification_expired %}bg-red-50 border-red-400{% else %}bg-yellow-50 border-yellow-400{% endif %} border-l-4 rounded-lg p-4 shadow-sm">
     <div class="flex items-start">
         <div class="flex-shrink-0">
+            {% if is_verification_expired %}
+            <i class="fas fa-clock text-red-400 text-lg"></i>
+            {% else %}
             <i class="fas fa-exclamation-triangle text-yellow-400 text-lg"></i>
+            {% endif %}
         </div>
         <div class="ml-3 flex-1">
             <div class="flex justify-between items-start">
                 <div>
-                    <h3 class="text-base font-semibold text-yellow-800">Application Under Review</h3>
-                    <div class="mt-1 text-sm text-yellow-700">
-                        <p>Your application is under review. You can access your dashboard, but some features may be
-                            limited until your account is approved.</p>
+                    <h3 class="text-base font-semibold {% if is_verification_expired %}text-red-800{% else %}text-yellow-800{% endif %}">
+                        {% if is_verification_expired %}
+                        Verification Period Expired
+                        {% else %}
+                        Verification Pending
+                        {% endif %}
+                    </h3>
+                    <div class="mt-1 text-sm {% if is_verification_expired %}text-red-700{% else %}text-yellow-700{% endif %}">
+                        {% if is_verification_expired %}
+                        <p>The 3-day verification period for your account has expired. Please contact support to complete your verification and avoid service interruption.</p>
+                        {% else %}
+                        <p>Your application is under review. You have a <strong>3-day verification window</strong> to be approved. 
+                           Time remaining: <strong>{{ remaining_time.days }}d {{ remaining_time.seconds|divide:3600|floatformat:0 }}h</strong>
+                        </p>
+                        {% endif %}
                     </div>
                 </div>
-                <button onclick="this.closest('.bg-yellow-50').style.display='none'"
-                    class="text-yellow-400 hover:text-yellow-600">
+                <button onclick="this.closest('.bg-yellow-50, .bg-red-50').style.display='none'"
+                    class="{% if is_verification_expired %}text-red-400 hover:text-red-600{% else %}text-yellow-400 hover:text-yellow-600{% endif %}">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="mt-3 flex space-x-3">
                 <a href="{% url 'business_partners:vendor_registration_status' %}"
-                    class="inline-flex items-center px-3 py-2 text-sm font-medium text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-md hover:bg-yellow-200 transition-colors">
+                    class="inline-flex items-center px-3 py-2 text-sm font-medium {% if is_verification_expired %}text-red-800 bg-red-100 border-red-300 hover:bg-red-200{% else %}text-yellow-800 bg-yellow-100 border-yellow-300 hover:bg-yellow-200{% endif %} border rounded-md transition-colors">
                     View Application Status <i class="fas fa-arrow-right ml-2"></i>
                 </a>
-                <button class="text-sm text-yellow-700 hover:text-yellow-800 underline">
+                <button class="text-sm {% if is_verification_expired %}text-red-700 hover:text-red-800{% else %}text-yellow-700 hover:text-yellow-800{% endif %} underline">
                     Learn more about vendor approval
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Email Verification Banner -->
+{% if not is_email_verified %}
+<div class="mb-6 bg-blue-50 border-blue-400 border-l-4 rounded-lg p-4 shadow-sm">
+    <div class="flex items-start">
+        <div class="flex-shrink-0">
+            <i class="fas fa-envelope-open-text text-blue-400 text-lg"></i>
+        </div>
+        <div class="ml-3 flex-1">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-base font-semibold text-blue-800">
+                        Email Verification Required
+                    </h3>
+                    <div class="mt-1 text-sm text-blue-700">
+                        <p>Your email address is not verified. Please check your inbox for a verification link to ensure you receive important updates and maintain account security.</p>
+                    </div>
+                </div>
+                <button onclick="this.closest('.bg-blue-50').style.display='none'"
+                    class="text-blue-400 hover:text-blue-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mt-3 flex space-x-3">
+                <form action="{% url 'business_partners:vendor_profile' %}" method="post" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" name="resend_verification"
+                        class="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-800 bg-blue-100 border-blue-300 hover:bg-blue-200 border rounded-md transition-colors">
+                        Resend Verification Email <i class="fas fa-paper-plane ml-2"></i>
+                    </button>
+                </form>
+                <a href="{% url 'business_partners:vendor_profile' %}" class="text-sm text-blue-700 hover:text-blue-800 underline">
+                    Update Email Address
+                </a>
             </div>
         </div>
     </div>
@@ -362,75 +417,70 @@
                     <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
                 </label>
             `;
-
-            // Drag and Drop events
-            div.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('text/plain', Array.from(listContainer.children).indexOf(div));
-                div.classList.add('opacity-50', 'scale-95');
-            });
-
-            div.addEventListener('dragend', () => {
-                div.classList.remove('opacity-50', 'scale-95');
-                const items = listContainer.querySelectorAll('.personalize-item');
-                items.forEach(item => item.classList.remove('border-black', 'bg-gray-100'));
-            });
-
-            div.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                div.classList.add('border-black', 'bg-gray-100');
-            });
-
-            div.addEventListener('dragleave', () => {
-                div.classList.remove('border-black', 'bg-gray-100');
-            });
-
-            div.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const sourceIndex = e.dataTransfer.getData('text/plain');
-                const targetIndex = Array.from(listContainer.children).indexOf(div);
-                
-                if (sourceIndex !== targetIndex) {
-                    const children = Array.from(listContainer.children);
-                    const movedItem = children[sourceIndex];
-                    if (sourceIndex < targetIndex) {
-                        div.after(movedItem);
-                    } else {
-                        div.before(movedItem);
-                    }
-                }
-                div.classList.remove('border-black', 'bg-gray-100');
-            });
-
             listContainer.appendChild(div);
         });
 
         document.getElementById('personalizeModal').classList.remove('hidden');
+        initDraggable();
     }
 
     function closePersonalizeModal() {
         document.getElementById('personalizeModal').classList.add('hidden');
     }
 
-    function savePersonalization() {
-        const listItems = document.querySelectorAll('.personalize-item');
-        const newConfig = [];
+    function initDraggable() {
+        const items = document.querySelectorAll('.personalize-item');
+        let dragSrcEl = null;
 
-        listItems.forEach(item => {
-            const checkbox = item.querySelector('.personalization-checkbox');
-            const label = item.querySelector('span').textContent;
-            newConfig.push({
-                id: item.dataset.id,
-                label: label,
-                visible: checkbox.checked
+        items.forEach(item => {
+            item.addEventListener('dragstart', function(e) {
+                dragSrcEl = this;
+                e.dataTransfer.effectAllowed = 'move';
+                this.classList.add('opacity-50');
+            });
+
+            item.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                return false;
+            });
+
+            item.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (dragSrcEl !== this) {
+                    const list = document.getElementById('personalizeList');
+                    const allItems = Array.from(list.children);
+                    const fromIndex = allItems.indexOf(dragSrcEl);
+                    const toIndex = allItems.indexOf(this);
+
+                    if (fromIndex < toIndex) {
+                        this.after(dragSrcEl);
+                    } else {
+                        this.before(dragSrcEl);
+                    }
+                }
+                return false;
+            });
+
+            item.addEventListener('dragend', function() {
+                this.classList.remove('opacity-50');
             });
         });
+    }
+
+    function savePersonalization() {
+        const listItems = document.querySelectorAll('.personalize-item');
+        const newConfig = Array.from(listItems).map(item => ({
+            id: item.dataset.id,
+            label: item.querySelector('span').innerText,
+            visible: item.querySelector('.personalization-checkbox').checked
+        }));
 
         localStorage.setItem('vendor_dashboard_tiles', JSON.stringify(newConfig));
         applyPersonalization();
         closePersonalizeModal();
     }
 
-    // Initialize
+    // Initial apply
     document.addEventListener('DOMContentLoaded', applyPersonalization);
 </script>
 {% endblock %}

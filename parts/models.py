@@ -161,7 +161,7 @@ class Part(models.Model):
     
     # VENDOR/ADMIN-ONLY: Plant
     plant = models.CharField(
-        max_length=10,
+        max_length=100,
         blank=True,
         null=True,
         help_text="Plant code"
@@ -169,7 +169,7 @@ class Part(models.Model):
     
     # VENDOR/ADMIN-ONLY: Storage Location
     storage_location = models.CharField(
-        max_length=10,
+        max_length=100,
         blank=True,
         null=True,
         help_text="Storage location code"
@@ -177,7 +177,7 @@ class Part(models.Model):
     
     # VENDOR/ADMIN-ONLY: Warehouse number
     warehouse_number = models.CharField(
-        max_length=10,
+        max_length=100,
         blank=True,
         null=True,
         help_text="Warehouse identification number"
@@ -951,15 +951,33 @@ class Part(models.Model):
                 is_part_owner = True
             
             # Check if user is associated with the vendor business partner
-            if self.vendor and hasattr(user, 'business_partners'):
-                try:
-                    business_partner = user.business_partners.first()
-                    if business_partner and business_partner == self.vendor:
-                        is_part_owner = True
-                except:
-                    pass
+            if self.vendor:
+                # Check primary owner
+                if hasattr(user, 'business_partners'):
+                    try:
+                        business_partner = user.business_partners.first()
+                        if business_partner and business_partner == self.vendor:
+                            is_part_owner = True
+                    except:
+                        pass
+                
+                # Check vendor employee
+                if not is_part_owner and hasattr(user, 'vendor_employee'):
+                    try:
+                        vendor_employee = user.vendor_employee
+                        if vendor_employee and vendor_employee.vendor == self.vendor and vendor_employee.is_active:
+                            # If they are an employee, check if they have access to this part's location
+                            employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+                            if employee_locations:
+                                if (self.plant in employee_locations or 
+                                    self.storage_location in employee_locations or 
+                                    self.warehouse_number in employee_locations):
+                                    is_part_owner = True
+                            # If no locations assigned, they have no specific access
+                    except:
+                        pass
             
-            # If user owns this part, return all fields
+            # If user owns this part (or is a permitted employee), return all fields
             if is_part_owner:
                 accessible_fields = self.get_vendor_admin_field_names()
             else:
@@ -1032,6 +1050,12 @@ class Part(models.Model):
                         # Format specific field types
                         if field_name in ['category', 'brand'] and value:
                             value = value.name
+                        elif field_name == 'plant':
+                            value = self.plant_name
+                        elif field_name == 'storage_location':
+                            value = self.storage_location_name
+                        elif field_name == 'warehouse_number':
+                            value = self.warehouse_name
                         elif field_name in ['price', 'moving_average_price'] and value:
                             value = f"${value:.2f}"
                         elif field_name in ['gross_weight', 'net_weight'] and value:
@@ -1055,7 +1079,55 @@ class Part(models.Model):
                     continue
         
         return result
-    
+
+    @property
+    def plant_name(self):
+        if not self.plant or not str(self.plant).strip():
+            return None
+        from django.apps import apps
+        try:
+            VendorLocation = apps.get_model('vendor_employees', 'VendorLocation')
+            val = str(self.plant).strip()
+            # Check if plant stores ID or name
+            if val.isdigit():
+                location = VendorLocation.objects.filter(id=int(val)).first()
+                return location.name if location else val
+            return val
+        except (ValueError, TypeError, LookupError, AttributeError):
+            return str(self.plant).strip()
+
+    @property
+    def storage_location_name(self):
+        if not self.storage_location or not str(self.storage_location).strip():
+            return None
+        from django.apps import apps
+        try:
+            StorageLocation = apps.get_model('vendor_employees', 'StorageLocation')
+            val = str(self.storage_location).strip()
+            # Check if storage_location stores ID or name
+            if val.isdigit():
+                location = StorageLocation.objects.filter(id=int(val)).first()
+                return location.name if location else val
+            return val
+        except (ValueError, TypeError, LookupError, AttributeError):
+            return str(self.storage_location).strip()
+
+    @property
+    def warehouse_name(self):
+        if not self.warehouse_number or not str(self.warehouse_number).strip():
+            return None
+        from django.apps import apps
+        try:
+            StorageLocation = apps.get_model('vendor_employees', 'StorageLocation')
+            val = str(self.warehouse_number).strip()
+            # Check if warehouse_number stores ID or name
+            if val.isdigit():
+                location = StorageLocation.objects.filter(id=int(val)).first()
+                return location.name if location else val
+            return val
+        except (ValueError, TypeError, LookupError, AttributeError):
+            return str(self.warehouse_number).strip()
+
     def can_user_edit(self, user):
         """
         Check if user can edit this part.

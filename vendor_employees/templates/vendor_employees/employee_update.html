@@ -1,0 +1,58 @@
+{% extends "vendors/base.html" %}
+
+{% block content %}
+<div class="p-6">
+    <div class="max-w-3xl mx-auto">
+        <div class="mb-8">
+            <div class="flex items-center gap-2 mb-1">
+                <a href="{% url 'vendor_employees:employee_list' %}" class="text-gray-400 hover:text-black transition-colors">
+                    <i class="fas fa-arrow-left text-sm"></i>
+                </a>
+                <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">Edit Member</h1>
+            </div>
+            <p class="text-gray-500">Update access level and status for <span class="font-bold text-gray-900">{{ employee.user.get_full_name|default:employee.user.email }}</span>.</p>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <form method="post" class="p-8 space-y-8">
+                {% csrf_token %}
+                
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="relative">
+                            <label for="{{ form.role.id_for_label }}" class="block text-sm font-bold text-gray-900 uppercase tracking-tight ml-1 mb-1">Access Role</label>
+                            {{ form.role }}
+                            <div class="absolute right-4 top-[42px] pointer-events-none text-gray-500">
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <label for="{{ form.locations.id_for_label }}" class="block text-sm font-bold text-gray-900 uppercase tracking-tight ml-1 mb-1">Plants/Locations</label>
+                            {{ form.locations }}
+                            <p class="mt-1.5 text-[10px] text-gray-500 font-bold uppercase tracking-tight ml-1">Hold Ctrl (Cmd on Mac) to select multiple locations.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center p-5 bg-gray-50 rounded-2xl border-2 border-gray-100 transition-all hover:bg-white group hover:border-black/10">
+                        <div class="flex items-center h-5">
+                            {{ form.is_active }}
+                        </div>
+                        <div class="ml-4 text-sm">
+                            <label for="{{ form.is_active.id_for_label }}" class="font-bold text-gray-900 cursor-pointer group-hover:text-black">Active Member</label>
+                            <p class="text-gray-500 font-bold text-xs mt-0.5 uppercase tracking-tight">Inactive members cannot log in to the dashboard.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-gray-50 flex items-center justify-end gap-3">
+                    <a href="{% url 'vendor_employees:employee_list' %}" class="px-6 py-2.5 text-sm font-bold text-gray-600 hover:text-black bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all">Cancel</a>
+                    <button type="submit" class="inline-flex items-center px-6 py-2.5 rounded-xl bg-black text-white text-sm font-bold hover:bg-gray-800 shadow-lg shadow-gray-200 transition-all transform hover:-translate-y-0.5">
+                        <i class="fas fa-save mr-2 text-xs"></i>
+                        Update Employee
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

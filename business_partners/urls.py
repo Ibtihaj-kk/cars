@@ -125,6 +125,18 @@ urlpatterns = [
          htmx_views.vendor_registration_submit_htmx, 
          name='vendor_registration_submit_htmx'),
     
+    path('htmx/inventory/delete/<int:part_id>/', 
+         htmx_views.vendor_delete_part_htmx, 
+         name='vendor_delete_part_htmx'),
+
+    path('htmx/get-storage-locations/', 
+         htmx_views.get_storage_locations, 
+         name='get_storage_locations'),
+    
+    path('htmx/get-warehouses/', 
+         htmx_views.get_warehouses, 
+         name='get_warehouses'),
+    
     # AJAX Endpoints
     path('ajax/validate-iban/', 
          views.validate_iban_ajax, 
@@ -257,6 +269,10 @@ urlpatterns = [
     path('vendor/parts/status/bulk/',
          vendor_inventory_views.vendor_parts_bulk_status_update,
          name='vendor_parts_bulk_status_update'),
+
+    path('vendor/parts/delete/bulk/',
+         vendor_inventory_views.vendor_parts_bulk_delete,
+         name='vendor_parts_bulk_delete'),
 
     path('vendor/parts/bulk-update/', 
          vendor_views.vendor_parts_bulk_update, 

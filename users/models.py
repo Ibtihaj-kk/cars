@@ -156,6 +156,20 @@ class User(AbstractUser):
     def is_client(self):
         """Check if the user is a client."""
         return self.role == UserRole.CLIENT
+
+    @property
+    def is_vendor_employee(self):
+        """Check if the user is a vendor employee."""
+        try:
+            return hasattr(self, 'vendor_employee') and self.vendor_employee is not None
+        except:
+            return False
+
+    @property
+    def requires_email_verification(self):
+        """Check if the user requires email verification."""
+        # Email verification only for main vendors and users, not for vendor employees
+        return not self.is_vendor_employee
     
     def generate_email_verification_token(self):
         """Generate a new email verification token."""

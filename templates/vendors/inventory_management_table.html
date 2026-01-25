@@ -11,23 +11,36 @@
             <button type="button" onclick="deselectAllParts()"
                 class="text-gray-300 hover:text-white text-xs underline">Clear Selection</button>
         </div>
-        <form id="bulk-status-form" method="POST" action="{% url 'business_partners:vendor_parts_bulk_status_update' %}"
-            class="flex items-center gap-2">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <div id="bulk-part-ids-container"></div>
-            <select name="status"
-                class="bg-gray-700 text-white text-sm rounded-lg px-3 py-1.5 border border-gray-600 focus:outline-none focus:border-white">
-                <option value="">Change Status To...</option>
-                <option value="published">Published</option>
-                <option value="draft">Stock</option>
-                <option value="archived">Archived</option>
-            </select>
-            <button type="submit"
-                class="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
-                <i class="fas fa-check"></i> Apply
-            </button>
-        </form>
+        <div id="bulk-actions-container" class="flex items-center gap-2">
+            <form id="bulk-status-form" method="POST" action="{% url 'business_partners:vendor_parts_bulk_status_update' %}"
+                class="flex items-center gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <div class="bulk-part-ids-container"></div>
+                <select name="status"
+                    class="bg-gray-700 text-white text-sm rounded-lg px-3 py-1.5 border border-gray-600 focus:outline-none focus:border-white">
+                    <option value="">Change Status To...</option>
+                    <option value="published">Published</option>
+                    <option value="draft">Stock</option>
+                    <option value="archived">Archived</option>
+                </select>
+                <button type="submit"
+                    class="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
+                    <i class="fas fa-check"></i> Apply
+                </button>
+            </form>
+
+            <form id="bulk-delete-form" method="POST" action="{% url 'business_partners:vendor_parts_bulk_delete' %}"
+                class="flex items-center gap-2 ml-4">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <div class="bulk-part-ids-container"></div>
+                <button type="submit"
+                    class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
+                    <i class="fas fa-trash"></i> Delete Selected
+                </button>
+            </form>
+        </div>
     </div>
 
     <div class="px-4 py-3 border-b border-gray-200 bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -89,7 +102,7 @@
                             class="w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black cursor-pointer">
                     </th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Product</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">PLant</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Plant</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Location</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Bin</th>
                     <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Available</th>
@@ -126,9 +139,9 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-xs">{% if part.plant %}{{ part.plant }}{% else %}--{% endif %}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-xs">{% if part.warehouse_number %}{{ part.warehouse_number }}{% else %}--{% endif %}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-xs">{% if part.storage_bin %}{{ part.storage_bin }}{% else %}--{% endif %}</td> 
+                    <td class="px-6 py-4 whitespace-nowrap text-xs">{{ part.plant_name|default:"--" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-xs">{{ part.warehouse_name|default:"--" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-xs">{{ part.storage_bin|default:"--" }}</td> 
                     <!-- <td class="px-6 py-4 whitespace-nowrap">
                         {% if part.plant or part.warehouse_number or part.storage_bin %}
                             <div class="text-xs font-medium text-gray-900">
@@ -376,9 +389,9 @@
 
     // Handle form submission
     document.getElementById('bulk-status-form').addEventListener('submit', function (e) {
-        const container = document.getElementById('bulk-part-ids-container');
-        const statusSelect = document.querySelector('[name="status"]');
+        const statusSelect = this.querySelector('[name="status"]');
         const checkboxes = document.querySelectorAll('.part-checkbox:checked');
+        const containers = document.querySelectorAll('.bulk-part-ids-container');
 
         // Validate status selection
         if (!statusSelect.value) {
@@ -394,21 +407,51 @@
             return false;
         }
 
-        // Clear previous hidden inputs
-        container.innerHTML = '';
-
-        // Add hidden inputs for each selected part
-        checkboxes.forEach(cb => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'part_ids';
-            input.value = cb.dataset.partId;
-            container.appendChild(input);
+        // Update all containers
+        containers.forEach(container => {
+            container.innerHTML = '';
+            checkboxes.forEach(cb => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'part_ids';
+                input.value = cb.dataset.partId;
+                container.appendChild(input);
+            });
         });
 
         // Confirm action
         const statusText = statusSelect.options[statusSelect.selectedIndex].text;
         if (!confirm(`Are you sure you want to change ${checkboxes.length} item(s) to "${statusText}"?`)) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    document.getElementById('bulk-delete-form').addEventListener('submit', function (e) {
+        const checkboxes = document.querySelectorAll('.part-checkbox:checked');
+        const containers = document.querySelectorAll('.bulk-part-ids-container');
+
+        // Validate at least one item selected
+        if (checkboxes.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one item.');
+            return false;
+        }
+
+        // Update all containers
+        containers.forEach(container => {
+            container.innerHTML = '';
+            checkboxes.forEach(cb => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'part_ids';
+                input.value = cb.dataset.partId;
+                container.appendChild(input);
+            });
+        });
+
+        // Confirm action
+        if (!confirm(`Are you sure you want to delete ${checkboxes.length} item(s)? This action cannot be undone.`)) {
             e.preventDefault();
             return false;
         }

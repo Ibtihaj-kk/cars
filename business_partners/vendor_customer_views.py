@@ -26,11 +26,25 @@ class VendorCustomerListView(LoginRequiredMixin, ListView):
             return User.objects.none()
 
         vendor_partner = vendor_profile.business_partner
+        
+        # Base filters
+        customer_filters = Q(orders__items__part__vendor=vendor_partner)
+        
+        # Location-based filtering for vendor employees
+        vendor_employee = getattr(user, 'vendor_employee', None)
+        if vendor_employee and vendor_employee.is_active:
+            employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+            if employee_locations:
+                customer_filters &= (
+                    Q(orders__items__part__plant__in=employee_locations) | 
+                    Q(orders__items__part__storage_location__in=employee_locations) | 
+                    Q(orders__items__part__warehouse_number__in=employee_locations)
+                )
+            else:
+                return User.objects.none()
 
-        # Get users who have ordered items from this vendor
-        qs = User.objects.filter(
-            orders__items__part__vendor=vendor_partner
-        ).distinct()
+        # Get users who have ordered items from this vendor with applied filters
+        qs = User.objects.filter(customer_filters).distinct()
 
         # Search
         search = self.request.GET.get('search')
@@ -187,14 +201,28 @@ class VendorCustomerDetailView(LoginRequiredMixin, DetailView):
         customer = get_object_or_404(User, pk=user_id)
         
         # Verify this customer belongs to the vendor
-        vendor_profile = get_vendor_profile(self.request.user)
+        user = self.request.user
+        vendor_profile = get_vendor_profile(user)
         if not vendor_profile:
             raise PermissionDenied
             
-        has_orders = Order.objects.filter(
-            customer=customer,
-            items__part__vendor=vendor_profile.business_partner
-        ).exists()
+        vendor_partner = vendor_profile.business_partner
+        order_filters = Q(customer=customer, items__part__vendor=vendor_partner)
+        
+        # Location-based filtering for vendor employees
+        vendor_employee = getattr(user, 'vendor_employee', None)
+        if vendor_employee and vendor_employee.is_active:
+            employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+            if employee_locations:
+                order_filters &= (
+                    Q(items__part__plant__in=employee_locations) | 
+                    Q(items__part__storage_location__in=employee_locations) | 
+                    Q(items__part__warehouse_number__in=employee_locations)
+                )
+            else:
+                raise PermissionDenied
+        
+        has_orders = Order.objects.filter(order_filters).exists()
         
         if not has_orders:
             raise PermissionDenied

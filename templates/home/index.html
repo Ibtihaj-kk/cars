@@ -253,7 +253,7 @@
                             class="flex items-center px-5 py-2.5 text-sm text-gray-600 hover:text-black hover:bg-gray-50 transition-colors font-medium">
                             <i class="fas fa-cog w-5 text-gray-400"></i> Settings
                         </a>
-                        {% elif user.vendor_profiles.exists or user.is_seller or user_has_vendor_access %}
+                        {% elif user_has_vendor_access %}
                         <a href="{% url 'business_partners:vendor_dashboard' %}"
                             class="flex items-center px-5 py-2.5 text-sm text-gray-600 hover:text-black hover:bg-gray-50 transition-colors font-medium">
                             <i class="fas fa-tachometer-alt w-5 text-gray-400"></i> Vendor Dashboard

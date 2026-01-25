@@ -64,6 +64,28 @@ class CatalogItem(models.Model):
         null=True,
         help_text="Engine specification (optional)"
     )
+
+    # Location fields for access control
+    plant = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Plant / City location"
+    )
+    
+    storage_location = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Storage location / Area"
+    )
+    
+    warehouse_number = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Warehouse identifier"
+    )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

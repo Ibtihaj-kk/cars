@@ -33,6 +33,8 @@ from io import StringIO
 import openpyxl
 
 from .models import BusinessPartner, VendorProfile, ReorderNotification
+from .permissions import get_vendor_profile
+from vendor_employees.utils import get_vendor_context
 
 
 def estimate_record_count(file_obj):
@@ -114,7 +116,7 @@ def should_process_synchronously(file_obj, max_sync_records=10000, max_sync_size
     return estimated_records <= max_sync_records
 
 
-def process_import_file_sync(import_file, business_partner, import_status, update_existing, validate_only, chunk_size=5000):
+def process_import_file_sync(import_file, business_partner, import_status, update_existing, validate_only, chunk_size=5000, user=None):
     """
     Synchronous version of process_import_file for small batches.
     Processes file immediately and returns results.
@@ -123,7 +125,7 @@ def process_import_file_sync(import_file, business_partner, import_status, updat
     
     # Create upload log for tracking
     upload_log = BulkUploadLog.objects.create(
-        user=business_partner.user if hasattr(business_partner, 'user') else None,
+        user=user or (business_partner.user if hasattr(business_partner, 'user') else None),
         file_name=getattr(import_file, 'name', 'import.csv'),
         file_size=import_file.size,
         status='processing',
@@ -139,7 +141,8 @@ def process_import_file_sync(import_file, business_partner, import_status, updat
             update_existing=update_existing,
             validate_only=validate_only,
             upload_log_id=upload_log.id,
-            chunk_size=chunk_size
+            chunk_size=chunk_size,
+            user=user
         )
         
         # Update upload log with results
@@ -194,23 +197,33 @@ def vendor_dashboard(request):
     """
     Main vendor dashboard with overview of parts, orders, and analytics.
     """
-    vendor_profile = get_vendor_profile(request.user)
+    business_partner = get_vendor_context(request.user)
     
-    # Check if vendor profile exists
-    if not vendor_profile:
-        messages.error(request, 'Vendor profile not found. Please contact support.')
-        return redirect('business_partners:vendor_registration_single')
-    
-    # Get vendor's business partner
-    business_partner = vendor_profile.business_partner
-    
-    # Check if business partner exists
+    # Check if vendor context exists (master or employee)
     if not business_partner:
-        messages.error(request, 'Business partner not found. Please contact support.')
+        messages.error(request, 'Vendor access not found. Please contact support.')
         return redirect('business_partners:vendor_registration_start')
+    
+    # Get vendor profile for approval status check
+    # Vendor masters have it directly, employees have it via business_partner
+    vendor_profile = getattr(business_partner, 'vendor_profile', None)
     
     # Get parts statistics
     parts_queryset = Part.objects.filter(vendor=business_partner)
+    
+    # Location-based filtering for vendor employees
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            parts_queryset = parts_queryset.filter(
+                Q(plant__in=employee_locations) | 
+                Q(storage_location__in=employee_locations) | 
+                Q(warehouse_number__in=employee_locations)
+            )
+        else:
+            parts_queryset = parts_queryset.none()
+
     total_parts = parts_queryset.count()
     active_parts = parts_queryset.filter(is_active=True).count()
     featured_parts = parts_queryset.filter(is_featured=True).count()
@@ -269,21 +282,32 @@ def vendor_dashboard(request):
         health_status = 'Poor'
     
     # Get recent reorder notifications
-    recent_notifications = ReorderNotification.objects.filter(
-        vendor=business_partner,
+    notifications_queryset = ReorderNotification.objects.filter(vendor=business_partner)
+    
+    # Apply location filtering to notifications if user is a vendor employee
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            notifications_queryset = notifications_queryset.filter(
+                Q(part__plant__in=employee_locations) | 
+                Q(part__storage_location__in=employee_locations) | 
+                Q(part__warehouse_number__in=employee_locations)
+            )
+        else:
+            notifications_queryset = notifications_queryset.none()
+
+    recent_notifications = notifications_queryset.filter(
         status__in=['pending', 'acknowledged']
     ).select_related('part').order_by('-created_at')[:5]
     
     # Get critical notifications count
-    critical_notifications = ReorderNotification.objects.filter(
-        vendor=business_partner,
+    critical_notifications = notifications_queryset.filter(
         priority='critical',
         status__in=['pending', 'acknowledged']
     ).count()
     
     # Get overdue notifications (older than 7 days)
-    overdue_notifications = ReorderNotification.objects.filter(
-        vendor=business_partner,
+    overdue_notifications = notifications_queryset.filter(
         status='pending',
         created_at__lt=timezone.now() - timedelta(days=7)
     ).count()
@@ -299,6 +323,18 @@ def vendor_dashboard(request):
         part__vendor=business_partner,
         order__status__in=['confirmed', 'processing', 'shipped', 'delivered']
     )
+    
+    # Location-based filtering for vendor employees (Orders and Sales)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            vendor_order_items = vendor_order_items.filter(
+                Q(part__plant__in=employee_locations) | 
+                Q(part__storage_location__in=employee_locations) | 
+                Q(part__warehouse_number__in=employee_locations)
+            )
+        else:
+            vendor_order_items = vendor_order_items.none()
     
     # Total orders count
     total_orders = vendor_order_items.values('order').distinct().count()
@@ -434,11 +470,21 @@ def vendor_dashboard(request):
     # Profile completion percentage
     profile_completion_percentage = vendor_profile.get_profile_completion_percentage()
 
+    # Verification status
+    verification_deadline = vendor_profile.get_verification_deadline()
+    remaining_time = vendor_profile.get_remaining_verification_time()
+    is_verification_expired = vendor_profile.is_verification_expired
+    is_email_verified = request.user.is_verified or not request.user.requires_email_verification
+
     context = {
         'vendor_profile': vendor_profile,
         'business_partner': business_partner,
         'wallet': wallet,
         'tax_payable': tax_payable,
+        'verification_deadline': verification_deadline,
+        'remaining_time': remaining_time,
+        'is_verification_expired': is_verification_expired,
+        'is_email_verified': is_email_verified,
         'stats': {
             'total_parts': total_parts,
             'active_parts': active_parts,
@@ -2180,6 +2226,19 @@ def vendor_parts_list(request):
     # Get all vendor's parts
     parts_queryset = Part.objects.filter(vendor=business_partner)
     
+    # Location-based filtering for vendor employees
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            parts_queryset = parts_queryset.filter(
+                Q(plant__in=employee_locations) | 
+                Q(storage_location__in=employee_locations) | 
+                Q(warehouse_number__in=employee_locations)
+            )
+        else:
+            parts_queryset = parts_queryset.none()
+    
     # Initialize search form
     search_form = VendorPartSearchForm(request.GET or None)
     
@@ -2320,13 +2379,13 @@ def vendor_part_create(request):
     business_partner = vendor_profile.business_partner
     
     if request.method == 'POST':
-        form = VendorPartForm(request.POST, request.FILES, vendor=business_partner)
+        form = VendorPartForm(request.POST, request.FILES, vendor=business_partner, user=request.user)
         if form.is_valid():
             part = form.save()
             messages.success(request, f'Part "{part.parts_number}" created successfully.')
             return redirect('business_partners:vendor_parts_list')
     else:
-        form = VendorPartForm(vendor=business_partner)
+        form = VendorPartForm(vendor=business_partner, user=request.user)
     
     context = {
         'form': form,
@@ -2353,13 +2412,13 @@ def vendor_part_edit(request, part_id):
     part = get_object_or_404(Part, id=part_id, vendor=business_partner)
     
     if request.method == 'POST':
-        form = VendorPartForm(request.POST, request.FILES, instance=part, vendor=business_partner)
+        form = VendorPartForm(request.POST, request.FILES, instance=part, vendor=business_partner, user=request.user)
         if form.is_valid():
             part = form.save()
             messages.success(request, f'Part "{part.parts_number}" updated successfully.')
             return redirect('business_partners:vendor_parts_list')
     else:
-        form = VendorPartForm(instance=part, vendor=business_partner)
+        form = VendorPartForm(instance=part, vendor=business_partner, user=request.user)
     
     context = {
         'form': form,
@@ -2444,6 +2503,19 @@ def vendor_parts_bulk_update(request):
         if form.is_valid() and part_ids:
             # Get selected parts that belong to this vendor
             parts = Part.objects.filter(id__in=part_ids, vendor=business_partner)
+            
+            # Location-based filtering for vendor employees
+            vendor_employee = getattr(request.user, 'vendor_employee', None)
+            if vendor_employee and vendor_employee.is_active:
+                employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+                if employee_locations:
+                    parts = parts.filter(
+                        Q(plant__in=employee_locations) | 
+                        Q(storage_location__in=employee_locations) | 
+                        Q(warehouse_number__in=employee_locations)
+                    )
+                else:
+                    parts = parts.none()
             
             if not parts.exists():
                 messages.error(request, 'No valid parts selected.')
@@ -3228,6 +3300,7 @@ def vendor_parts_import(request):
                             import_status,
                             update_existing,
                             validate_only=True,
+                            user=request.user
                         )
                         
                         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -3256,7 +3329,8 @@ def vendor_parts_import(request):
                     import_status=import_status,
                     update_existing=update_existing,
                     validate_only=False,
-                    chunk_size=chunk_size
+                    chunk_size=chunk_size,
+                    user=request.user
                 )
                 
                 # Store results in session for results page
@@ -3428,6 +3502,7 @@ def process_import_file(
     *,
     upload_log_id=None,
     chunk_size=5000,
+    user=None,
 ):
     """
     Process CSV or Excel import file and create/update parts with comprehensive validation.
@@ -3462,6 +3537,7 @@ def process_import_file(
         'brand_name',
         'manufacturer_part_number',
         'manufacturer_oem_number',
+        'plant',
     ]
     VALIDATION_FIELDS = set(REQUIRED_FIELDS)
     
@@ -3493,7 +3569,11 @@ def process_import_file(
         'Qty': 'quantity',
         'Stock': 'quantity',
         'Plant': 'plant',
+        'Storage Location': 'storage_location',
+        'Storage Loc': 'storage_location',
+        'Location': 'storage_location',
         'Warehouse': 'warehouse_number',
+        'Warehouse Number': 'warehouse_number',
         'Bin': 'storage_bin',
         'Safety Stock': 'safety_stock',
         'Reorder Point': 'reorder_point',
@@ -3517,6 +3597,8 @@ def process_import_file(
         'price': 'price',
         'moving_average_price': 'moving_average_price',
         'standard_price': 'standard_price',
+        'storage_location': 'storage_location',
+        'warehouse_number': 'warehouse_number',
     }
     
     NUMERIC_FIELDS = {
@@ -3545,9 +3627,9 @@ def process_import_file(
         'manufacturer_part_number': {'max_length': 40},
         'manufacturer_oem_number': {'max_length': 50},
         'material_type': {'max_length': 50},
-        'plant': {'max_length': 10},
-        'storage_location': {'max_length': 10},
-        'warehouse_number': {'max_length': 10},
+        'plant': {'max_length': 100},
+        'storage_location': {'max_length': 100},
+        'warehouse_number': {'max_length': 100},
         'storage_bin': {'max_length': 20},
         'material_group': {'max_length': 20},
         'division': {'max_length': 10},
@@ -3787,6 +3869,33 @@ def process_import_file(
             except Exception:
                 upload_log = None
 
+        # Pre-fetch locations for validation
+        vendor_employee = None
+        employee_locations_dict = {} # {plant_name_or_id: [storage_location_name_or_id, ...]}
+        
+        if user:
+            vendor_employee = getattr(user, 'vendor_employee', None)
+            if vendor_employee and vendor_employee.is_active:
+                from vendor_employees.models import VendorLocation, StorageLocation
+                assigned_locations = vendor_employee.locations.filter(is_active=True).prefetch_related('storage_locations')
+                for loc in assigned_locations:
+                    # Map by both ID and Name for flexible matching
+                    storage_locs = [str(sl.id) for sl in loc.storage_locations.filter(is_active=True)] + \
+                                  [sl.name for sl in loc.storage_locations.filter(is_active=True)]
+                    
+                    employee_locations_dict[str(loc.id)] = storage_locs
+                    employee_locations_dict[loc.name] = storage_locs
+            else:
+                # If not an employee, but a master vendor, we might still want to validate locations 
+                # belong to the business partner.
+                from vendor_employees.models import VendorLocation, StorageLocation
+                all_vendor_locations = VendorLocation.objects.filter(vendor=business_partner, is_active=True).prefetch_related('storage_locations')
+                for loc in all_vendor_locations:
+                    storage_locs = [str(sl.id) for sl in loc.storage_locations.filter(is_active=True)] + \
+                                  [sl.name for sl in loc.storage_locations.filter(is_active=True)]
+                    employee_locations_dict[str(loc.id)] = storage_locs
+                    employee_locations_dict[loc.name] = storage_locs
+
         def flush_buffer():
             if not buffered_rows or validate_only:
                 buffered_rows.clear()
@@ -3941,9 +4050,9 @@ def process_import_file(
                         mapped_field = FIELD_MAPPINGS.get(field_name, field_name)
                         validated_data[mapped_field] = coerced_value
                 
-                # Special validation for required fields
+                # Special validation for required fields missing from the file
                 for required_field in REQUIRED_FIELDS:
-                    if required_field not in row or not row[required_field]:
+                    if required_field not in row:
                         row_errors.append(f"Row {row_num}: {required_field} is required")
                         results['field_errors'][required_field] = results['field_errors'].get(required_field, 0) + 1
                 
@@ -3979,6 +4088,39 @@ def process_import_file(
                     else:
                         row_errors.append(f"Row {row_num}: Brand '{validated_data['brand_name']}' not found")
                         results['field_errors']['brand_name'] = results['field_errors'].get('brand_name', 0) + 1
+                
+                # Validate Plant and Storage Location assignments
+                if employee_locations_dict:
+                    plant_val = str(validated_data.get('plant', '')).strip()
+                    storage_loc_val = str(validated_data.get('storage_location', '')).strip()
+                    
+                    if plant_val:
+                        if plant_val not in employee_locations_dict:
+                            row_errors.append(f"Row {row_num}: Plant '{plant_val}' is not assigned to you")
+                        else:
+                            # Plant is valid, check storage location or warehouse number
+                            allowed_storage_locs = employee_locations_dict[plant_val]
+                            
+                            # Check if either storage_location OR warehouse_number matches assigned locations
+                            # (User mentioned warehouse_number/storage_location both are same)
+                            location_matched = False
+                            
+                            if storage_loc_val and storage_loc_val in allowed_storage_locs:
+                                location_matched = True
+                            
+                            warehouse_val = str(validated_data.get('warehouse_number', '')).strip()
+                            if not location_matched and warehouse_val and warehouse_val in allowed_storage_locs:
+                                location_matched = True
+                            
+                            # If neither matches and we have values, it's an error
+                            if (storage_loc_val or warehouse_val) and not location_matched:
+                                if storage_loc_val:
+                                    row_errors.append(f"Row {row_num}: Storage Location '{storage_loc_val}' is not assigned to you for Plant '{plant_val}'")
+                                if warehouse_val:
+                                    row_errors.append(f"Row {row_num}: Warehouse Number '{warehouse_val}' is not assigned to you for Plant '{plant_val}'")
+                elif user:
+                    # If user is provided but no locations found (e.g., employee with no assigned locations)
+                    row_errors.append(f"Row {row_num}: You do not have any locations assigned to perform this upload")
                 
                 # Business logic validations
                 if 'safety_stock' in validated_data and 'quantity' in validated_data:

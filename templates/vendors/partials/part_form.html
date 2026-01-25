@@ -1107,8 +1107,42 @@
 
         bindProfitMarginEvents();
 
+        function bindPlantLocationEvents() {
+            const plantSelect = document.getElementById('id_plant');
+            const storageLocationSelect = document.getElementById('id_storage_location');
+            const warehouseSelect = document.getElementById('id_warehouse_number');
+
+            if (plantSelect) {
+                plantSelect.addEventListener('change', function() {
+                    const plantId = this.value;
+                    if (plantId) {
+                        if (storageLocationSelect) {
+                            fetch(`{% url 'business_partners:get_storage_locations' %}?plant_id=${plantId}`)
+                                .then(response => response.text())
+                                .then(html => {
+                                    storageLocationSelect.innerHTML = html;
+                                });
+                        }
+                        if (warehouseSelect) {
+                            fetch(`{% url 'business_partners:get_warehouses' %}?plant_id=${plantId}`)
+                                .then(response => response.text())
+                                .then(html => {
+                                    warehouseSelect.innerHTML = html;
+                                });
+                        }
+                    } else {
+                        if (storageLocationSelect) storageLocationSelect.innerHTML = '<option value="">Select Storage Location</option>';
+                        if (warehouseSelect) warehouseSelect.innerHTML = '<option value="">Select Warehouse Number</option>';
+                    }
+                });
+            }
+        }
+
+        bindPlantLocationEvents();
+
         document.body.addEventListener('htmx:afterSwap', function () {
             bindProfitMarginEvents();
+            bindPlantLocationEvents();
         });
     </script>
 

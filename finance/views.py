@@ -10,6 +10,8 @@ from business_partners.models import BusinessPartner
 from decimal import Decimal
 from business_partners.utils import get_user_currency
 from parts.models import Order, OrderItem
+from vendor_employees.utils import get_vendor_context
+from vendor_employees.permissions import vendor_permission_required
 
 @login_required
 def user_wallet_view(request):
@@ -50,12 +52,13 @@ def transaction_detail_view(request, transaction_id):
     return render(request, 'user/finance/transaction_detail.html', context)
 
 @login_required
+@vendor_permission_required('finance', action='view')
 def vendor_wallet_view(request):
     """View for vendor's business wallet and transactions."""
-    # Find the BusinessPartner for this user
-    vendor = get_object_or_404(BusinessPartner, user=request.user)
+    # Find the BusinessPartner for this user (master or employee)
+    vendor = get_vendor_context(request.user)
     
-    if not vendor.is_vendor():
+    if not vendor:
         return redirect('users:user-dashboard')
         
     vendor_ct = ContentType.objects.get_for_model(vendor)
@@ -106,13 +109,12 @@ def vendor_wallet_view(request):
     return render(request, 'user/finance/vendor/wallet.html', context)
 
 @login_required
+@vendor_permission_required('finance', action='view')
 def vendor_transaction_detail_view(request, transaction_id):
-    """View for vendor transaction details."""
-    vendor = (
-        BusinessPartner.objects.filter(user=request.user, roles__role_type='vendor')
-        .distinct()
-        .first()
-    )
+    """View for vendor's business transaction details."""
+    # Find the BusinessPartner for this user (master or employee)
+    vendor = get_vendor_context(request.user)
+    
     if not vendor:
         return redirect('users:user-dashboard')
         
@@ -182,13 +184,11 @@ def vendor_transaction_detail_view(request, transaction_id):
     return render(request, 'user/finance/vendor/transaction_detail.html', context)
 
 @login_required
+@vendor_permission_required('finance', action='create')
 def submit_cod_settlement(request):
     """View for vendors to submit COD settlement proof."""
-    vendor = (
-        BusinessPartner.objects.filter(user=request.user, roles__role_type='vendor')
-        .distinct()
-        .first()
-    )
+    vendor = get_vendor_context(request.user)
+    
     if not vendor:
         return redirect('users:user-dashboard')
         

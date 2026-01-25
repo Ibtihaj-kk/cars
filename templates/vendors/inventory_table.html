@@ -26,6 +26,8 @@
                     <th class="px-4 py-4 font-medium hidden lg:table-cell">MPN</th>
                     <th class="px-4 py-4 font-medium hidden xl:table-cell">Make</th>
                     <th class="px-4 py-4 font-medium">Stock</th>
+                    <th class="px-4 py-4 font-medium hidden lg:table-cell">Plant</th>
+                    <th class="px-4 py-4 font-medium hidden lg:table-cell">Warehouse</th>
                     <th class="px-4 py-4 font-medium relative pr-8">Retail <span class="absolute top-2 right-2 text-[10px] font-extrabold text-gray-400">{% vendor_currency_symbol %}</span></th>
                     <th class="px-4 py-4 font-medium relative pr-8">Wholesale <span class="absolute top-2 right-2 text-[10px] font-extrabold text-gray-400">{% vendor_currency_symbol %}</span></th>
                     <th class="px-4 py-4 font-medium">Status</th>
@@ -84,6 +86,8 @@
                             {% endif %}
                         </div>
                     </td>
+                    <td class="px-4 py-4 font-mono text-gray-600 hidden lg:table-cell">{{ part.plant_name|default:"-" }}</td>
+                    <td class="px-4 py-4 font-mono text-gray-600 hidden lg:table-cell">{{ part.warehouse_name|default:"-" }}</td>
                     <td class="px-4 py-4 font-bold whitespace-nowrap">{% vendor_currency_part_field part 'standard_price' %}</td>
                     <td class="px-4 py-4 font-bold whitespace-nowrap text-gray-600">{% vendor_currency_part_field part 'price' %}</td>
                     <td class="px-4 py-4 whitespace-nowrap">
@@ -175,7 +179,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="10" class="px-4 py-8 text-center text-gray-500">
+                    <td colspan="13" class="px-4 py-8 text-center text-gray-500">
                         <i class="fas fa-box-open text-4xl text-gray-300 mb-4"></i>
                         <p class="text-lg font-medium">No inventory items found</p>
                         <p class="text-sm">Try adjusting your search or filter criteria</p>

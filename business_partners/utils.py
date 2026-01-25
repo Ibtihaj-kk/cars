@@ -42,6 +42,23 @@ def get_currency_for_country(country_name):
     return currency_code
 
 
+def get_business_partner_for_user(user, status='active'):
+    """
+    Helper function to get business partner for a user.
+    Returns the first active business partner or None if not found.
+    """
+    if not user or not user.is_authenticated:
+        return None
+    
+    try:
+        if status:
+            return BusinessPartner.objects.filter(user=user, status=status).first()
+        else:
+            return BusinessPartner.objects.filter(user=user).first()
+    except BusinessPartner.DoesNotExist:
+        return None
+
+
 def get_vendor_profile(user):
     """
     Get the vendor profile for a given user.

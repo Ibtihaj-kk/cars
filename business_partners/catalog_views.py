@@ -2,12 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db.models import Q
 import uuid
 
 from .decorators import vendor_required
 from .utils import get_vendor_profile
 from .catalog_models import CatalogItem, CatalogItemImage
 from parts.models import Category
+from vendor_employees.models import VendorLocation
 
 
 def _normalize_part(s: str) -> str:
@@ -51,9 +53,30 @@ def vendor_catalog_list(request):
     
     business_partner = vendor_profile.business_partner
     
-    # Get all catalog items for this vendor
+    # Base filter for the vendor
+    catalog_filters = Q(vendor=business_partner)
+    
+    # Location-based filtering for vendor employees
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            catalog_filters &= (
+                Q(plant__in=employee_locations) | 
+                Q(storage_location__in=employee_locations) | 
+                Q(warehouse_number__in=employee_locations)
+            )
+        else:
+            # If no locations assigned, they shouldn't see anything
+            return render(request, 'vendors/catalog_list.html', {
+                'catalog_items': [],
+                'page_obj': None,
+                'total_items': 0,
+            })
+    
+    # Get all catalog items for this vendor with applied filters
     catalog_items = CatalogItem.objects.filter(
-        vendor=business_partner
+        catalog_filters
     ).select_related('category').prefetch_related('images').order_by('-created_at')
     
     # Pagination
@@ -79,10 +102,25 @@ def vendor_catalog_detail(request, pk):
         return redirect('home')
 
     business_partner = vendor_profile.business_partner
+    
+    # Access control for vendor employees
+    catalog_filters = Q(pk=pk, vendor=business_partner)
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            catalog_filters &= (
+                Q(plant__in=employee_locations) | 
+                Q(storage_location__in=employee_locations) | 
+                Q(warehouse_number__in=employee_locations)
+            )
+        else:
+            messages.error(request, 'Access denied. No locations assigned.')
+            return redirect('business_partners:vendor_catalog_list')
+
     catalog_item = get_object_or_404(
         CatalogItem.objects.select_related('category').prefetch_related('images'),
-        pk=pk,
-        vendor=business_partner,
+        catalog_filters
     )
 
     return render(request, 'vendors/catalog_detail.html', {'catalog_item': catalog_item})
@@ -97,10 +135,25 @@ def vendor_catalog_edit(request, pk):
         return redirect('home')
 
     business_partner = vendor_profile.business_partner
+    
+    # Access control for vendor employees
+    catalog_filters = Q(pk=pk, vendor=business_partner)
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            catalog_filters &= (
+                Q(plant__in=employee_locations) | 
+                Q(storage_location__in=employee_locations) | 
+                Q(warehouse_number__in=employee_locations)
+            )
+        else:
+            messages.error(request, 'Access denied. No locations assigned.')
+            return redirect('business_partners:vendor_catalog_list')
+
     catalog_item = get_object_or_404(
         CatalogItem.objects.select_related('category').prefetch_related('images'),
-        pk=pk,
-        vendor=business_partner,
+        catalog_filters
     )
 
     if request.method == 'POST':
@@ -110,8 +163,25 @@ def vendor_catalog_edit(request, pk):
         year = request.POST.get('year', '').strip()
         trim = request.POST.get('trim', '').strip() or None
         engine = request.POST.get('engine', '').strip() or None
+        plant = request.POST.get('plant', '').strip() or None
+        storage_location = request.POST.get('storage_location', '').strip() or None
+        warehouse_number = request.POST.get('warehouse_number', '').strip() or None
 
         errors = []
+        # Location validation for vendor employees
+        vendor_employee = getattr(request.user, 'vendor_employee', None)
+        if vendor_employee and vendor_employee.is_active:
+            employee_locations = list(vendor_employee.locations.filter(is_active=True).values_list('name', flat=True))
+            if not employee_locations:
+                errors.append('Access denied. No locations assigned.')
+            else:
+                if not any([plant, storage_location, warehouse_number]):
+                    errors.append('At least one location field (Plant, Storage Location, or Warehouse) must be provided.')
+                else:
+                    provided_locations = [loc for loc in [plant, storage_location, warehouse_number] if loc]
+                    if not all(loc in employee_locations for loc in provided_locations):
+                        errors.append('You can only assign locations that are permitted for your account.')
+
         category = None
         if not category_id:
             errors.append('Category is required.')
@@ -143,6 +213,9 @@ def vendor_catalog_edit(request, pk):
             catalog_item.year = year
             catalog_item.trim = trim
             catalog_item.engine = engine
+            catalog_item.plant = plant
+            catalog_item.storage_location = storage_location
+            catalog_item.warehouse_number = warehouse_number
             catalog_item.part_number = _build_part_number(category, make, model, year)
             catalog_item.description = _build_description(category, make, model, year, trim, engine)
             catalog_item.save()
@@ -177,9 +250,26 @@ def vendor_catalog_add(request):
         year = request.POST.get('year', '').strip()
         trim = request.POST.get('trim', '').strip() or None
         engine = request.POST.get('engine', '').strip() or None
+        plant = request.POST.get('plant', '').strip() or None
+        storage_location = request.POST.get('storage_location', '').strip() or None
+        warehouse_number = request.POST.get('warehouse_number', '').strip() or None
         
         # Validation
         errors = []
+        # Location validation for vendor employees
+        vendor_employee = getattr(request.user, 'vendor_employee', None)
+        if vendor_employee and vendor_employee.is_active:
+            employee_locations = list(vendor_employee.locations.filter(is_active=True).values_list('name', flat=True))
+            if not employee_locations:
+                errors.append('Access denied. No locations assigned.')
+            else:
+                if not any([plant, storage_location, warehouse_number]):
+                    errors.append('At least one location field (Plant, Storage Location, or Warehouse) must be provided.')
+                else:
+                    provided_locations = [loc for loc in [plant, storage_location, warehouse_number] if loc]
+                    if not all(loc in employee_locations for loc in provided_locations):
+                        errors.append('You can only assign locations that are permitted for your account.')
+
         category = None
         if not category_id:
             errors.append('Category is required.')
@@ -205,7 +295,6 @@ def vendor_catalog_add(request):
             for error in errors:
                 messages.error(request, error)
         else:
-            # Create catalog item
             catalog_item = CatalogItem.objects.create(
                 vendor=business_partner,
                 category=category,
@@ -214,6 +303,9 @@ def vendor_catalog_add(request):
                 year=year,
                 trim=trim,
                 engine=engine,
+                plant=plant,
+                storage_location=storage_location,
+                warehouse_number=warehouse_number,
                 part_number=_build_part_number(category, make, model, year),
                 description=_build_description(category, make, model, year, trim, engine),
             )
@@ -241,10 +333,24 @@ def vendor_catalog_delete(request, pk):
     
     business_partner = vendor_profile.business_partner
     
+    # Access control for vendor employees
+    catalog_filters = Q(pk=pk, vendor=business_partner)
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            catalog_filters &= (
+                Q(plant__in=employee_locations) | 
+                Q(storage_location__in=employee_locations) | 
+                Q(warehouse_number__in=employee_locations)
+            )
+        else:
+            messages.error(request, 'Access denied. No locations assigned.')
+            return redirect('business_partners:vendor_catalog_list')
+
     catalog_item = get_object_or_404(
         CatalogItem,
-        pk=pk,
-        vendor=business_partner
+        catalog_filters
     )
     
     if request.method == 'POST':

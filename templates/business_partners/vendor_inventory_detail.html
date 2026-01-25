@@ -55,8 +55,12 @@
                     <p class="text-sm font-medium text-gray-900">{{ part.brand.name|default:"N/A" }}</p>
                 </div>
                 <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase">Plant</label>
+                    <p class="text-sm font-medium text-gray-900">{{ part.plant_name|default:"N/A" }}</p>
+                </div>
+                <div>
                     <label class="text-xs font-bold text-gray-500 uppercase">Warehouse</label>
-                    <p class="text-sm font-medium text-gray-900">{{ part.warehouse_number|default:"N/A" }}</p>
+                    <p class="text-sm font-medium text-gray-900">{{ part.warehouse_name|default:"N/A" }}</p>
                 </div>
                 <div>
                     <label class="text-xs font-bold text-gray-500 uppercase">Storage Bin</label>

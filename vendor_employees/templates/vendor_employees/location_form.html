@@ -1,0 +1,168 @@
+{% extends "vendors/base.html" %}
+
+{% block content %}
+<div class="p-6 max-w-7xl mx-auto">
+    <div class="mb-8">
+        <div class="flex items-center gap-2 mb-1">
+            <a href="{% url 'vendor_employees:location_list' %}" class="text-gray-400 hover:text-black transition-colors">
+                <i class="fas fa-arrow-left text-sm"></i>
+            </a>
+            <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">{{ title }}</h1>
+        </div>
+        <p class="text-gray-500">Provide details about this location.</p>
+    </div>
+
+    <div class="grid grid-cols-1 {% if is_edit %}lg:grid-cols-2{% endif %} gap-8">
+        <!-- Main Location Form -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 h-fit">
+            <h2 class="text-lg font-bold text-gray-900 tracking-tight mb-6">Plant Details</h2>
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="space-y-6">
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="block text-sm font-bold text-gray-900 uppercase tracking-tight ml-1 mb-1">
+                            Location Name
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <p class="mt-1.5 text-xs text-red-600 font-bold">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1.5 text-[10px] text-gray-500 font-bold uppercase tracking-tight ml-1">e.g., Warehouse A, Main Plant, Downtown Showroom</p>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.address.id_for_label }}" class="block text-sm font-bold text-gray-900 uppercase tracking-tight ml-1 mb-1">
+                            Full Address
+                        </label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                        <p class="mt-1.5 text-xs text-red-600 font-bold">{{ form.address.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex items-center p-5 bg-gray-50 rounded-2xl border-2 border-gray-100 transition-all hover:bg-white group hover:border-black/10">
+                        <div class="flex items-center h-5">
+                            {{ form.is_active }}
+                        </div>
+                        <div class="ml-4 text-sm">
+                            <label for="{{ form.is_active.id_for_label }}" class="font-bold text-gray-900 cursor-pointer group-hover:text-black">Active Location</label>
+                            <p class="text-gray-500 font-bold text-xs mt-0.5 uppercase tracking-tight">Only active locations can be assigned to new employees.</p>
+                        </div>
+                    </div>
+
+                    {% if not is_edit %}
+                    <div class="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-xl">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle text-blue-500"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-blue-700">
+                                    <span class="font-bold">Note:</span> Storage locations (e.g., Warehouse-I, Warehouse-II) can be added after saving this plant/location.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="mt-8 pt-8 border-t border-gray-100 flex items-center justify-end gap-3">
+                    <a href="{% url 'vendor_employees:location_list' %}" 
+                       class="px-6 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all">
+                        Cancel
+                    </a>
+                    <button type="submit" 
+                            class="px-8 py-2.5 rounded-xl bg-black text-white text-sm font-bold hover:bg-gray-800 shadow-sm transition-all">
+                        Save Location
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {% if is_edit %}
+        <!-- Storage Locations Column -->
+        <div class="space-y-8">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                <h2 class="text-lg font-bold text-gray-900 tracking-tight mb-6">Storage Locations</h2>
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="add_storage" value="true">
+                    
+                    <div class="space-y-4 mb-6">
+                        <div>
+                            <label for="{{ storage_form.name.id_for_label }}" class="block text-sm font-bold text-gray-900 uppercase tracking-tight ml-1 mb-1">
+                                Storage Name
+                            </label>
+                            {{ storage_form.name }}
+                            <p class="mt-1.5 text-[10px] text-gray-500 font-bold uppercase tracking-tight ml-1">e.g. Warehouse-I, Zone B</p>
+                            {% if storage_form.name.errors %}
+                            <p class="mt-1.5 text-xs text-red-600 font-bold">{{ storage_form.name.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ storage_form.description.id_for_label }}" class="block text-sm font-bold text-gray-900 uppercase tracking-tight ml-1 mb-1">
+                                Description
+                            </label>
+                            {{ storage_form.description }}
+                        </div>
+                        
+                        <div class="flex items-center p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-black/10 transition-all">
+                            <div class="flex items-center h-5">
+                                {{ storage_form.is_active }}
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="{{ storage_form.is_active.id_for_label }}" class="font-bold text-gray-900 cursor-pointer">Active Status</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="w-full py-3 rounded-xl bg-black text-white text-sm font-bold hover:bg-gray-800 shadow-sm transition-all flex items-center justify-center">
+                        <i class="fas fa-plus mr-2"></i> Add Storage Location
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-100">
+                    <h3 class="font-bold text-gray-900">Existing Storage Locations</h3>
+                </div>
+                {% if storage_locations %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-gray-50/80 text-[10px] text-gray-400 uppercase font-extrabold tracking-widest border-b border-gray-100">
+                                <th class="px-6 py-4">Name</th>
+                                <th class="px-6 py-4">Description</th>
+                                <th class="px-6 py-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            {% for storage in storage_locations %}
+                            <tr class="group hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4 font-bold text-gray-900">{{ storage.name }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-500">{{ storage.description|default:"-" }}</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold {% if storage.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                        {% if storage.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-8 text-center">
+                    <div class="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
+                        <i class="fas fa-box-open"></i>
+                    </div>
+                    <p class="text-gray-500 font-bold text-sm">No storage locations added yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

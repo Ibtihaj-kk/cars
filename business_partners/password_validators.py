@@ -64,13 +64,6 @@ class StrongPasswordValidator:
                 code='password_no_number',
             )
         
-        # Check for special characters
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-            raise ValidationError(
-                _("Password must contain at least one special character."),
-                code='password_no_special',
-            )
-        
         # Check for similarity to username/email
         if user:
             # Check username if it exists and is not None

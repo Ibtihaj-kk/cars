@@ -1,5 +1,6 @@
 {% load static %}
 {% load vendor_currency %}
+{% load vendor_employee_permissions %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -149,6 +150,8 @@
 
             <nav class="flex-1 overflow-y-auto py-6 px-4">
 
+                {% vendor_has_permission 'dashboard' as can_view_dashboard %}
+                {% if can_view_dashboard %}
                 <div class="mb-6">
                     <button type="button"
                         class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full"
@@ -165,7 +168,10 @@
                         </a>
                     </div>
                 </div>
+                {% endif %}
 
+                {% vendor_has_permission 'parts' as can_view_parts %}
+                {% if can_view_parts %}
                 <div class="mb-6">
                     <button type="button"
                         class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full"
@@ -182,12 +188,15 @@
                         </a>
                     </div>
                 </div>
+                {% endif %}
 
+                {% vendor_has_permission 'orders' as can_view_orders %}
+                {% if can_view_orders %}
                 <div class="mb-6">
                     <button type="button"
                         class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full"
                         onclick="toggleSidebarSection('sales')">
-                        <span>Sales</span>
+                        <span>Sales & CRM</span>
                         <i id="sidebar-section-icon-sales" class="fas fa-chevron-down text-[10px] text-gray-400"></i>
                     </button>
 
@@ -207,18 +216,7 @@
                             <i class="fas fa-chart-bar w-6 text-center"></i>
                             <span class="nav-text ml-3">Order Analytics</span>
                         </a>
-                    </div>
-                </div>
 
-                <div class="mb-6">
-                    <button type="button"
-                        class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full"
-                        onclick="toggleSidebarSection('users')">
-                        <span>CRM</span>
-                        <i id="sidebar-section-icon-users" class="fas fa-chevron-down text-[10px] text-gray-400"></i>
-                    </button>
-
-                    <div id="sidebar-section-users" class="space-y-1 hidden">
                         <a href="{% url 'business_partners:vendor_customers_list' %}"
                             class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
                             <i class="fas fa-users w-6 text-center"></i>
@@ -226,7 +224,10 @@
                         </a>
                     </div>
                 </div>
+                {% endif %}
 
+                {% vendor_has_permission 'finance' as can_view_finance %}
+                {% if can_view_finance %}
                 <div class="mb-6">
                     <button type="button"
                         class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full"
@@ -288,6 +289,47 @@
                         </a>
                     </div>
                 </div>
+                {% endif %}
+
+                {% vendor_has_permission 'employees' as can_view_employees %}
+                {% vendor_has_permission 'roles' as can_view_roles %}
+                {% vendor_has_permission 'locations' as can_view_locations %}
+                {% if can_view_employees or can_view_roles or can_view_locations %}
+                <div class="mb-6">
+                    <button type="button"
+                        class="section-label px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full"
+                        onclick="toggleSidebarSection('company_setup')">
+                        <span>Company Setup</span>
+                        <i id="sidebar-section-icon-company_setup" class="fas fa-chevron-down text-[10px] text-gray-400"></i>
+                    </button>
+
+                    <div id="sidebar-section-company_setup" class="space-y-1 hidden">
+                        {% if can_view_employees %}
+                        <a href="{% url 'vendor_employees:employee_list' %}"
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-users w-6 text-center"></i>
+                            <span class="nav-text ml-3">Employees</span>
+                        </a>
+                        {% endif %}
+                        
+                        {% if can_view_roles %}
+                        <a href="{% url 'vendor_employees:role_list' %}"
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-user-shield w-6 text-center"></i>
+                            <span class="nav-text ml-3">Employee Roles</span>
+                        </a>
+                        {% endif %}
+                        
+                        {% if can_view_locations %}
+                        <a href="{% url 'vendor_employees:location_list' %}"
+                            class="nav-link sidebar-link flex items-center px-4 py-2.5 text-gray-600 rounded-xl font-medium mb-1">
+                            <i class="fas fa-warehouse w-6 text-center"></i>
+                            <span class="nav-text ml-3">Employee Locations</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
             </nav>
 
             <!-- Sidebar Footer -->
@@ -489,7 +531,7 @@
         // ==========================================
         // 2. DESKTOP COLLAPSE LOGIC
         // ==========================================
-        const sidebarSectionKeys = ['main', 'parts', 'sales', 'users', 'finance'];
+        const sidebarSectionKeys = ['main', 'parts', 'sales', 'users', 'finance', 'company_setup'];
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');

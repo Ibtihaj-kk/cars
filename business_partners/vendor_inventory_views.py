@@ -21,6 +21,8 @@ import io
 from parts.models import Part, Inventory, InventoryTransaction, OrderItem, Brand, Category, PartFieldConfiguration
 from business_partners.models import VendorProfile, BusinessPartner
 from business_partners.permissions import get_vendor_profile, vendor_required
+from vendor_employees.utils import get_vendor_context
+from vendor_employees.permissions import vendor_permission_required
 from parts.forms import InventoryForm, PartForm
 from .forms import VendorPartForm
 from .catalog_models import CatalogItem
@@ -28,16 +30,18 @@ from .catalog_models import CatalogItem
 
 @login_required
 @vendor_required
+@vendor_permission_required('parts', action='view')
 def vendor_inventory_overview(request):
     """
     Overview page for vendor inventory features.
     """
-    vendor_profile = get_vendor_profile(request.user)
-    if not vendor_profile:
+    business_partner = get_vendor_context(request.user)
+    if not business_partner:
         messages.error(request, 'You do not have vendor access.')
         return redirect('home')
     
-    business_partner = vendor_profile.business_partner
+    # Get vendor profile for context if needed
+    vendor_profile = getattr(business_partner, 'vendor_profile', None)
     
     # Calculate statistics
     # 1. Order Amount (Total Revenue from confirmed/delivered orders)
@@ -45,6 +49,20 @@ def vendor_inventory_overview(request):
         part__vendor=business_partner,
         order__status__in=['confirmed', 'processing', 'shipped', 'delivered']
     )
+    
+    # Location-based filtering for vendor employees
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            location_filter = (
+                Q(part__plant__in=employee_locations) | 
+                Q(part__storage_location__in=employee_locations) | 
+                Q(part__warehouse_number__in=employee_locations)
+            )
+            order_items = order_items.filter(location_filter)
+        else:
+            order_items = order_items.none()
     
     total_revenue = order_items.aggregate(
         total=Sum(F('price') * F('quantity'))
@@ -79,6 +97,18 @@ def vendor_inventory_overview(request):
     
     # 4. Inventory Value (Current stock value)
     vendor_parts = Part.objects.filter(vendor=business_partner)
+    
+    # Location-based filtering for vendor employees
+    if vendor_employee and vendor_employee.is_active:
+        if employee_locations:
+            vendor_parts = vendor_parts.filter(
+                Q(plant__in=employee_locations) | 
+                Q(storage_location__in=employee_locations) | 
+                Q(warehouse_number__in=employee_locations)
+            )
+        else:
+            vendor_parts = vendor_parts.none()
+            
     inventory_value = vendor_parts.aggregate(
         total=Sum(F('standard_price') * F('quantity'))
     )['total'] or 0
@@ -115,6 +145,20 @@ def vendor_inventory_list(request):
     
     # Get all vendor parts with inventory data
     parts_queryset = Part.objects.filter(vendor=business_partner).select_related('inventory', 'category', 'brand')
+    
+    # Location-based filtering for vendor employees
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            parts_queryset = parts_queryset.filter(
+                Q(plant__in=employee_locations) | 
+                Q(storage_location__in=employee_locations) | 
+                Q(warehouse_number__in=employee_locations)
+            )
+        else:
+            # If an employee has no locations assigned, they shouldn't see anything
+            parts_queryset = parts_queryset.none()
     
     # Apply filters
     search_query = request.GET.get('search', '')
@@ -326,6 +370,20 @@ def vendor_inventory_detail(request, part_id):
     # Get the part and ensure it belongs to this vendor
     part = get_object_or_404(Part, id=part_id, vendor=business_partner)
     
+    # Location-based access control for vendor employees
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            if not (part.plant in employee_locations or 
+                    part.storage_location in employee_locations or 
+                    part.warehouse_number in employee_locations):
+                messages.error(request, "You don't have permission to view inventory for this location.")
+                return redirect('business_partners:vendor_inventory_list')
+        else:
+            messages.error(request, "You don't have access to any locations.")
+            return redirect('business_partners:vendor_inventory_list')
+    
     # Get or create inventory record
     inventory, created = Inventory.objects.get_or_create(
         part=part,
@@ -394,7 +452,21 @@ def vendor_inventory_update(request, part_id):
     
     # Get the part and ensure it belongs to this vendor
     part = get_object_or_404(Part, id=part_id, vendor=business_partner)
-    
+
+    # Location-based access control for vendor employees
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            if not (part.plant in employee_locations or 
+                    part.storage_location in employee_locations or 
+                    part.warehouse_number in employee_locations):
+                messages.error(request, "You don't have permission to update inventory for this location.")
+                return redirect('business_partners:vendor_inventory_list')
+        else:
+            messages.error(request, "You don't have access to any locations.")
+            return redirect('business_partners:vendor_inventory_list')
+
     # Get or create inventory record
     inventory, created = Inventory.objects.get_or_create(
         part=part,
@@ -1041,6 +1113,52 @@ def vendor_parts_bulk_status_update(request):
 
 @login_required
 @vendor_required
+@require_http_methods(["POST"])
+def vendor_parts_bulk_delete(request):
+    """
+    Bulk delete parts from inventory/catalog.
+    """
+    vendor_profile = get_vendor_profile(request.user)
+    if not vendor_profile:
+        messages.error(request, 'You do not have vendor access.')
+        return redirect('home')
+    
+    business_partner = vendor_profile.business_partner
+    part_ids = request.POST.getlist('part_ids')
+    
+    if not part_ids:
+        messages.error(request, 'No parts selected for deletion.')
+        return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('business_partners:vendor_inventory_list'))
+    
+    # Filter parts by business partner
+    parts_queryset = Part.objects.filter(id__in=part_ids, vendor=business_partner)
+    
+    # Location-based filtering for vendor employees
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            parts_queryset = parts_queryset.filter(
+                Q(plant__in=employee_locations) | 
+                Q(storage_location__in=employee_locations) | 
+                Q(warehouse_number__in=employee_locations)
+            )
+        else:
+            parts_queryset = parts_queryset.none()
+    
+    # Perform deletion
+    deleted_count, _ = parts_queryset.delete()
+    
+    if deleted_count > 0:
+        messages.success(request, f'Successfully deleted {deleted_count} item(s).')
+    else:
+        messages.warning(request, 'No items were deleted. You might not have permission for the selected items.')
+        
+    return redirect(request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('business_partners:vendor_inventory_list'))
+
+
+@login_required
+@vendor_required
 @require_http_methods(["DELETE"])
 def vendor_inventory_delete_htmx(request, part_id):
     """
@@ -1054,6 +1172,18 @@ def vendor_inventory_delete_htmx(request, part_id):
     
     # Get the part and ensure it belongs to this vendor
     part = get_object_or_404(Part, id=part_id, vendor=business_partner)
+    
+    # Location-based access control for vendor employees
+    vendor_employee = getattr(request.user, 'vendor_employee', None)
+    if vendor_employee and vendor_employee.is_active:
+        employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+        if employee_locations:
+            if not (part.plant in employee_locations or 
+                    part.storage_location in employee_locations or 
+                    part.warehouse_number in employee_locations):
+                return HttpResponse("Unauthorized: Location access denied", status=403)
+        else:
+            return HttpResponse("Unauthorized: No locations assigned", status=403)
     
     # Delete the part
     part.delete()

@@ -31,6 +31,11 @@ class EmailVerificationHandler:
             user: User instance to send verification to
             request: Optional HttpRequest for building absolute URLs
         """
+        # Skip if user doesn't require email verification (e.g., vendor employees)
+        if not getattr(user, 'requires_email_verification', True):
+            logger.info(f"Skipping verification email for {user.email} as they don't require it.")
+            return None
+
         try:
             # Generate verification token if not exists
             if not user.email_verification_token:
@@ -52,6 +57,7 @@ class EmailVerificationHandler:
             email_id = send_email(
                 email_type='verification',
                 to_email=user.email,
+                subject='Verify Your Email Address - CarSyncro',
                 template_name='email_verification',
                 context=context,
                 priority='high'
@@ -66,14 +72,23 @@ class EmailVerificationHandler:
     
     def _build_verification_url(self, user, request=None):
         """Build absolute verification URL."""
+        from django.urls import reverse
+        
+        # Use reverse to get the correct path based on URL configuration
+        # This automatically handles the 'api/users/' prefix from the root urls.py
+        try:
+            path = reverse('users:verify-email', kwargs={'token': user.email_verification_token})
+        except:
+            # Fallback if namespacing issues occur
+            path = f"/api/users/verify-email/{user.email_verification_token}/"
+        
         if request:
-            base_url = request.build_absolute_uri('/')
+            return request.build_absolute_uri(path)
         else:
             # Fallback to settings or default
             from django.conf import settings
             base_url = getattr(settings, 'SITE_URL', 'http://localhost:8000')
-        
-        return f"{base_url.rstrip('/')}/verify-email/{user.email_verification_token}/"
+            return f"{base_url.rstrip('/')}{path}"
     
     def check_verification_expiry(self):
         """
@@ -84,6 +99,8 @@ class EmailVerificationHandler:
         
         # Find users who haven't verified within 3 days
         expiry_time = timezone.now() - timedelta(days=3)
+        
+        # Get all users who are unverified and sent verification email > 3 days ago
         unverified_users = User.objects.filter(
             is_verified=False,
             email_verification_sent_at__lte=expiry_time,
@@ -91,6 +108,10 @@ class EmailVerificationHandler:
         )
         
         for user in unverified_users:
+            # Only block if user actually requires email verification
+            if not getattr(user, 'requires_email_verification', True):
+                continue
+
             try:
                 self._block_unverified_user(user)
                 blocked_count += 1
@@ -117,6 +138,7 @@ class EmailVerificationHandler:
         send_email(
             email_type='account_blocked',
             to_email=user.email,
+            subject='Account Suspended - Verification Required',
             template_name='account_blocked_unverified',
             context=context,
             priority='normal'
@@ -130,6 +152,10 @@ class EmailVerificationHandler:
             user: User instance
             request: Optional HttpRequest
         """
+        # Skip if user doesn't require email verification
+        if not getattr(user, 'requires_email_verification', True):
+            return None
+
         # Generate new token
         user.generate_email_verification_token()
         
@@ -189,6 +215,7 @@ class EmailVerificationHandler:
         send_email(
             email_type='welcome',
             to_email=user.email,
+            subject='Welcome to CarSyncro!',
             template_name='welcome_email',
             context=context,
             priority='normal'

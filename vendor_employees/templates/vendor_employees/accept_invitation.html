@@ -1,0 +1,99 @@
+{% extends "business_partners/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="flex justify-center mb-6">
+            <div class="h-16 w-16 bg-black rounded-2xl flex items-center justify-center shadow-xl shadow-black/10">
+                <i class="fas fa-car-side text-white text-3xl"></i>
+            </div>
+        </div>
+        <h1 class="text-center text-3xl font-extrabold text-gray-900 tracking-tight">CarSyncro</h1>
+        <h2 class="mt-4 text-center text-xl font-bold text-gray-600">
+            Join {{ vendor_name }}
+        </h2>
+        <p class="mt-2 text-center text-sm text-gray-500">
+            Complete your profile to access the vendor portal
+        </p>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-10 px-8 shadow-2xl shadow-gray-200/50 rounded-3xl border border-gray-100">
+            <form class="space-y-6" method="POST">
+                {% csrf_token %}
+                
+                <div class="bg-gray-50 border border-gray-100 p-4 rounded-2xl mb-8 flex items-center gap-3">
+                    <div class="h-10 w-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                        <i class="fas fa-envelope text-gray-400"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Registering for</p>
+                        <p class="text-sm font-bold text-gray-900">{{ user_email }}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-bold text-gray-900 uppercase tracking-tight ml-1 mb-1">
+                            First Name
+                        </label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                            <p class="mt-1.5 text-xs text-red-600 font-bold">{{ form.first_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-bold text-gray-900 uppercase tracking-tight ml-1 mb-1">
+                            Last Name
+                        </label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                            <p class="mt-1.5 text-xs text-red-600 font-bold">{{ form.last_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div>
+                    <label for="{{ form.password.id_for_label }}" class="block text-sm font-bold text-gray-900 uppercase tracking-tight ml-1 mb-1">
+                        Create Password
+                    </label>
+                    <div class="relative">
+                        {{ form.password }}
+                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
+                            <i class="fas fa-lock text-xs"></i>
+                        </div>
+                    </div>
+                    {% if form.password.errors %}
+                        <p class="mt-1.5 text-xs text-red-600 font-bold">{{ form.password.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.password_confirm.id_for_label }}" class="block text-sm font-bold text-gray-900 uppercase tracking-tight ml-1 mb-1">
+                        Confirm Password
+                    </label>
+                    <div class="relative">
+                        {{ form.password_confirm }}
+                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
+                            <i class="fas fa-check-circle text-xs"></i>
+                        </div>
+                    </div>
+                    {% if form.password_confirm.errors %}
+                        <p class="mt-1.5 text-xs text-red-600 font-bold">{{ form.password_confirm.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-2xl shadow-xl shadow-black/10 text-sm font-bold text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-black/5 transition-all transform hover:-translate-y-0.5 active:translate-y-0">
+                        Complete Setup
+                    </button>
+                </div>
+            </form>
+        </div>
+        <p class="mt-8 text-center text-xs text-gray-400">
+            By joining, you agree to CarSyncro's Terms of Service and Privacy Policy.
+        </p>
+    </div>
+</div>
+{% endblock %}

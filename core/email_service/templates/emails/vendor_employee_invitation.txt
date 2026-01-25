@@ -1,0 +1,15 @@
+Hello {{ first_name|default:"there" }},
+
+You have been invited to join {{ vendor_name }} as a team member on CarSyncro Vendor Portal.
+
+Your role will be: {{ role_name }}
+{% if location_name %}Assigned Location: {{ location_name }}{% endif %}
+
+To accept this invitation and set up your account, please visit the link below:
+
+{{ invitation_url }}
+
+If you were not expecting this invitation, you can safely ignore this email.
+
+Best regards,
+The CarSyncro Team

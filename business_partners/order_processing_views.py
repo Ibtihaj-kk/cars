@@ -35,6 +35,8 @@ def send_order_notification(order, action, user):
     pass
 
 
+from vendor_employees.utils import get_vendor_context
+
 class OrderProcessingDashboardView(LoginRequiredMixin, ListView):
     """Enhanced order processing dashboard with workflow management."""
     model = Order
@@ -56,13 +58,26 @@ class OrderProcessingDashboardView(LoginRequiredMixin, ListView):
             'status_history__changed_by'
         )
         
-        # Filter by vendor if user is a vendor
-        if hasattr(user, 'business_partner'):
-            vendor_profile = get_vendor_profile(user)
-            if vendor_profile:
-                queryset = queryset.filter(
-                    order_items__part__vendor=vendor_profile.business_partner
-                ).distinct()
+        # Filter by vendor if user is a vendor or vendor employee
+        business_partner = get_vendor_context(user)
+        if business_partner:
+            base_filters = Q(order_items__part__vendor=business_partner)
+            
+            # Location-based filtering for vendor employees
+            vendor_employee = getattr(user, 'vendor_employee', None)
+            if vendor_employee and vendor_employee.is_active:
+                employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+                if employee_locations:
+                    location_filter = (
+                        Q(order_items__part__plant__in=employee_locations) | 
+                        Q(order_items__part__storage_location__in=employee_locations) | 
+                        Q(order_items__part__warehouse_number__in=employee_locations)
+                    )
+                    base_filters &= location_filter
+                else:
+                    return Order.objects.none()
+            
+            queryset = queryset.filter(base_filters).distinct()
         
         # Apply filters from request
         status_filter = self.request.GET.get('status')
@@ -203,15 +218,28 @@ class OrderProcessingDetailView(LoginRequiredMixin, DetailView):
         order = super().get_object()
         user = self.request.user
         
-        # If user is a vendor, check if order contains their parts
-        if hasattr(user, 'business_partner'):
-            vendor_profile = get_vendor_profile(user)
-            if vendor_profile:
-                vendor_items = order.order_items.filter(
-                    part__vendor=vendor_profile.business_partner
-                )
-                if not vendor_items.exists():
-                    raise PermissionDenied("This order doesn't contain any of your parts.")
+        # If user is a vendor or vendor employee, check if order contains their parts
+        business_partner = get_vendor_context(user)
+        if business_partner:
+            base_filters = Q(part__vendor=business_partner)
+            
+            # Location-based filtering for vendor employees
+            vendor_employee = getattr(user, 'vendor_employee', None)
+            if vendor_employee and vendor_employee.is_active:
+                employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+                if employee_locations:
+                    location_filter = (
+                        Q(part__plant__in=employee_locations) | 
+                        Q(part__storage_location__in=employee_locations) | 
+                        Q(part__warehouse_number__in=employee_locations)
+                    )
+                    base_filters &= location_filter
+                else:
+                    raise PermissionDenied("You don't have access to any locations.")
+            
+            vendor_items = order.order_items.filter(base_filters)
+            if not vendor_items.exists():
+                raise PermissionDenied("This order doesn't contain any of your parts for your assigned locations.")
         
         return order
     
@@ -221,14 +249,27 @@ class OrderProcessingDetailView(LoginRequiredMixin, DetailView):
         
         context['title'] = f'Order #{order.order_number} Processing'
         
-        # Get vendor-specific items if user is vendor
+        # Get vendor-specific items if user is vendor or vendor employee
         user = self.request.user
-        if hasattr(user, 'business_partner'):
-            vendor_profile = get_vendor_profile(user)
-            if vendor_profile:
-                context['vendor_items'] = order.order_items.filter(
-                    part__vendor=vendor_profile.business_partner
-                ).select_related('part', 'part__brand')
+        business_partner = get_vendor_context(user)
+        if business_partner:
+            base_filters = Q(part__vendor=business_partner)
+            
+            # Location-based filtering for vendor employees
+            vendor_employee = getattr(user, 'vendor_employee', None)
+            if vendor_employee and vendor_employee.is_active:
+                employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+                if employee_locations:
+                    location_filter = (
+                        Q(part__plant__in=employee_locations) | 
+                        Q(part__storage_location__in=employee_locations) | 
+                        Q(part__warehouse_number__in=employee_locations)
+                    )
+                    base_filters &= location_filter
+            
+            context['vendor_items'] = order.order_items.filter(
+                base_filters
+            ).select_related('part', 'part__brand')
         
         # Stock availability check
         context['stock_status'] = self.check_stock_availability(order)
@@ -394,22 +435,40 @@ def process_order_action(request, order_id):
         order = get_object_or_404(Order, id=order_id)
         
         # Check permissions
-        if not request.user.is_staff and hasattr(request.user, 'business_partner'):
-            vendor_profile = get_vendor_profile(request.user)
-            if not vendor_profile:
+        if not request.user.is_staff:
+            business_partner = get_vendor_context(request.user)
+            if not business_partner:
                 return JsonResponse({
                     'success': False,
-                    'error': 'Vendor profile not found.'
+                    'error': 'Vendor access not found.'
                 })
             
-            # Check if order contains vendor's parts
-            vendor_items = order.order_items.filter(
-                part__vendor=vendor_profile.business_partner
-            )
+            # Base filters for items
+            base_filters = Q(part__vendor=business_partner)
+            
+            # Location-based filtering for vendor employees
+            vendor_employee = getattr(request.user, 'vendor_employee', None)
+            if vendor_employee and vendor_employee.is_active:
+                employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+                if employee_locations:
+                    location_filter = (
+                        Q(part__plant__in=employee_locations) | 
+                        Q(part__storage_location__in=employee_locations) | 
+                        Q(part__warehouse_number__in=employee_locations)
+                    )
+                    base_filters &= location_filter
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'You don\'t have access to any locations.'
+                    })
+            
+            # Check if order contains vendor's parts (filtered by location if employee)
+            vendor_items = order.order_items.filter(base_filters)
             if not vendor_items.exists():
                 return JsonResponse({
                     'success': False,
-                    'error': 'This order doesn\'t contain any of your parts.'
+                    'error': 'This order doesn\'t contain any of your parts for your assigned locations.'
                 })
         
         action = request.POST.get('action')

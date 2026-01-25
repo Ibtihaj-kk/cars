@@ -8,26 +8,12 @@ from django.shortcuts import redirect
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from rest_framework import permissions
+from django.db.models import Q
 from .models import BusinessPartner, VendorProfile
+from .utils import get_business_partner_for_user
+from vendor_employees.utils import get_vendor_context
 
 User = get_user_model()
-
-
-def get_business_partner_for_user(user, status='active'):
-    """
-    Helper function to get business partner for a user.
-    Returns the first active business partner or None if not found.
-    """
-    if not user or not user.is_authenticated:
-        return None
-    
-    try:
-        if status:
-            return BusinessPartner.objects.filter(user=user, status=status).first()
-        else:
-            return BusinessPartner.objects.filter(user=user).first()
-    except BusinessPartner.DoesNotExist:
-        return None
 
 
 class VendorRequiredMixin(UserPassesTestMixin):
@@ -48,12 +34,8 @@ class VendorRequiredMixin(UserPassesTestMixin):
         return self.has_vendor_access(user)
     
     def has_vendor_access(self, user):
-        """Check if user has vendor access."""
-        # Check if user has a business partner with vendor role
-        business_partner = get_business_partner_for_user(user)
-        if business_partner:
-            return business_partner.roles.filter(role_type='vendor').exists()
-        return False
+        """Check if user has vendor access (as master or employee)."""
+        return get_vendor_context(user) is not None
     
     def handle_no_permission(self):
         messages.error(self.request, "You don't have vendor access. Please apply for vendor status first.")
@@ -63,6 +45,7 @@ class VendorRequiredMixin(UserPassesTestMixin):
 class VendorPartOwnerMixin(VendorRequiredMixin):
     """
     Mixin to ensure vendor can only access their own parts.
+    Includes location-based check for vendor employees.
     """
     
     def get_object(self, queryset=None):
@@ -75,11 +58,23 @@ class VendorPartOwnerMixin(VendorRequiredMixin):
         
         # Check if vendor owns this part
         if hasattr(obj, 'vendor'):
-            business_partner = get_business_partner_for_user(self.request.user)
+            business_partner = get_vendor_context(self.request.user)
             if not business_partner:
                 raise PermissionDenied("Vendor access required.")
             if obj.vendor != business_partner:
                 raise PermissionDenied("You can only access your own parts.")
+            
+            # Location-based check for vendor employees
+            vendor_employee = getattr(self.request.user, 'vendor_employee', None)
+            if vendor_employee and vendor_employee.is_active:
+                employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+                if employee_locations:
+                    if not (obj.plant in employee_locations or 
+                            obj.storage_location in employee_locations or 
+                            obj.warehouse_number in employee_locations):
+                        raise PermissionDenied("You don't have permission to access this part's location.")
+                else:
+                    raise PermissionDenied("You don't have access to any locations.")
         
         return obj
 
@@ -96,11 +91,8 @@ def vendor_required(view_func):
         if user.is_staff or user.is_superuser:
             return True
         
-        # Check if user has vendor access
-        business_partner = get_business_partner_for_user(user)
-        if business_partner:
-            return business_partner.roles.filter(role_type='vendor').exists()
-        return False
+        # Check if user has vendor access (as master or employee)
+        return get_vendor_context(user) is not None
     
     return user_passes_test(check_vendor_permissions, login_url='business_partners:vendor_login')(view_func)
 
@@ -109,6 +101,7 @@ def vendor_part_owner_required(view_func):
     """
     Decorator for function-based views requiring vendor to own the part.
     This should be used with views that take a part_id parameter.
+    Includes location-based check for vendor employees.
     """
     def wrapper(request, part_id, *args, **kwargs):
         from parts.models import Part
@@ -123,13 +116,28 @@ def vendor_part_owner_required(view_func):
         
         # Check if vendor owns this part
         if hasattr(part, 'vendor') and part.vendor:
-            business_partner = get_business_partner_for_user(request.user)
+            business_partner = get_vendor_context(request.user)
             if not business_partner:
                 messages.error(request, "Vendor access required.")
                 return redirect('vendor_registration_step1')
+            
             if part.vendor != business_partner:
                 messages.error(request, "You can only access your own parts.")
                 return redirect('vendor_parts_list')
+            
+            # Location-based check for vendor employees
+            vendor_employee = getattr(request.user, 'vendor_employee', None)
+            if vendor_employee and vendor_employee.is_active:
+                employee_locations = vendor_employee.locations.filter(is_active=True).values_list('name', flat=True)
+                if employee_locations:
+                    if not (part.plant in employee_locations or 
+                            part.storage_location in employee_locations or 
+                            part.warehouse_number in employee_locations):
+                        messages.error(request, "You don't have permission to access this part's location.")
+                        return redirect('vendor_inventory_list')
+                else:
+                    messages.error(request, "You don't have access to any locations.")
+                    return redirect('vendor_inventory_list')
         
         return view_func(request, part_id, *args, **kwargs)
     
@@ -269,36 +277,25 @@ def get_vendor_profile(user):
     """
     Helper function to get vendor profile for a user.
     Returns None if user doesn't have vendor access.
-    Looks through all business partners to find one with a vendor profile.
+    Handles both vendor masters and vendor employees.
     """
     if not user or not user.is_authenticated:
         return None
     
-    # Get all business partners for this user that are vendors
-    # Include both active and approved vendors to fix redirect loop
-    business_partners = BusinessPartner.objects.filter(
-        user=user,
-        roles__role_type='vendor'
-    ).distinct()
-    
-    if not business_partners.exists():
-        return None
-    
-    # Look through all business partners to find one with a vendor profile
-    for business_partner in business_partners:
+    # Try getting vendor context (this handles both master and employee)
+    vendor = get_vendor_context(user)
+    if vendor:
         try:
-            vendor_profile = business_partner.vendor_profile
-            # Return the first vendor profile found
-            return vendor_profile
-        except VendorProfile.DoesNotExist:
-            continue
-    
+            return vendor.vendor_profile
+        except (VendorProfile.DoesNotExist, AttributeError):
+            return None
+            
     return None
 
 
 def user_has_vendor_access(user):
     """
-    Helper function to check if user has vendor access.
+    Helper function to check if user has vendor access (as master or employee).
     """
     if not user or not user.is_authenticated:
         return False
@@ -307,8 +304,5 @@ def user_has_vendor_access(user):
     if user.is_staff or user.is_superuser:
         return True
     
-    # Check if user has vendor access
-    business_partner = get_business_partner_for_user(user)
-    if business_partner:
-        return business_partner.roles.filter(role_type='vendor').exists()
-    return False
+    # Check if user has vendor access (as master or employee)
+    return get_vendor_context(user) is not None

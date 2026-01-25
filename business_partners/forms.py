@@ -16,6 +16,7 @@ from .permissions import get_vendor_profile
 from .catalog_models import CatalogItem
 from .widgets import VehicleVariantMultiSelectWidget, ProfitMarginCalculatorWidget, InventoryThresholdWidget
 from parts.models import Part, Category, Brand, PartFieldConfiguration
+from vendor_employees.models import VendorLocation, StorageLocation
 from django.contrib.auth import authenticate
 
 User = get_user_model()
@@ -641,6 +642,27 @@ class VendorPartForm(forms.ModelForm):
         help_text="Notify when stock falls below this level"
     )
 
+    plant = forms.ModelChoiceField(
+        queryset=VendorLocation.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Plant"
+    )
+
+    storage_location = forms.ModelChoiceField(
+        queryset=StorageLocation.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Storage Location"
+    )
+
+    warehouse_number = forms.ModelChoiceField(
+        queryset=StorageLocation.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Warehouse Number"
+    )
+
     class Meta:
         model = Part
         exclude = [
@@ -684,9 +706,6 @@ class VendorPartForm(forms.ModelForm):
             'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
             
             # Logistics
-            'plant': forms.TextInput(attrs={'class': 'form-control'}),
-            'storage_location': forms.TextInput(attrs={'class': 'form-control'}),
-            'warehouse_number': forms.TextInput(attrs={'class': 'form-control'}),
             'storage_bin': forms.TextInput(attrs={'class': 'form-control'}),
             'minimum_order_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
             'safety_stock': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
@@ -743,6 +762,7 @@ class VendorPartForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.vendor = kwargs.pop('vendor', None)
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
         # Apply dynamic configurations
@@ -777,6 +797,49 @@ class VendorPartForm(forms.ModelForm):
         if hasattr(self.fields['brand'], 'empty_label'):
             self.fields['brand'].empty_label = "Select Make"
         
+        # Populate plant and storage location based on vendor
+        if self.vendor:
+            location_qs = VendorLocation.objects.filter(vendor=self.vendor, is_active=True)
+            
+            # Filter locations for vendor employees
+            if self.user and not (self.user.is_staff or self.user.is_superuser):
+                vendor_employee = getattr(self.user, 'vendor_employee', None)
+                if vendor_employee and vendor_employee.is_active:
+                    location_qs = vendor_employee.locations.filter(is_active=True)
+            
+            self.fields['plant'].queryset = location_qs.order_by('name')
+            
+            # If plant is selected (from POST data or instance), filter storage locations
+            plant_id = None
+            if 'plant' in self.data:
+                try:
+                    plant_id = int(self.data.get('plant'))
+                except (ValueError, TypeError):
+                    pass
+            elif self.instance and self.instance.pk:
+                # Handle the case where the model field is a CharField but stores the ID as string
+                try:
+                    plant_id = int(self.instance.plant) if self.instance.plant and self.instance.plant.isdigit() else None
+                    if plant_id:
+                        self.initial['plant'] = plant_id
+                        
+                    storage_loc_id = int(self.instance.storage_location) if self.instance.storage_location and self.instance.storage_location.isdigit() else None
+                    if storage_loc_id:
+                        self.initial['storage_location'] = storage_loc_id
+                        
+                    warehouse_id = int(self.instance.warehouse_number) if self.instance.warehouse_number and self.instance.warehouse_number.isdigit() else None
+                    if warehouse_id:
+                        self.initial['warehouse_number'] = warehouse_id
+                except (ValueError, TypeError):
+                    pass
+            
+            if plant_id:
+                self.fields['storage_location'].queryset = StorageLocation.objects.filter(plant_id=plant_id, is_active=True).order_by('name')
+                self.fields['warehouse_number'].queryset = StorageLocation.objects.filter(plant_id=plant_id, is_active=True).order_by('name')
+            else:
+                self.fields['storage_location'].queryset = StorageLocation.objects.none()
+                self.fields['warehouse_number'].queryset = StorageLocation.objects.none()
+
         # Add help texts where needed
         self.fields['parts_number'].help_text = "Unique identifier for this part"
         self.fields['material_description'].help_text = "Short descriptive name"
@@ -791,6 +854,21 @@ class VendorPartForm(forms.ModelForm):
                 submitted_currency = self.cleaned_data.get('original_currency')
             if not submitted_currency and preferred_currency:
                 instance.original_currency = preferred_currency
+        
+        # Convert ModelChoiceField values to strings for CharFields in Part model
+        if hasattr(self, 'cleaned_data'):
+            plant = self.cleaned_data.get('plant')
+            if plant:
+                instance.plant = str(plant.id)
+            
+            storage_location = self.cleaned_data.get('storage_location')
+            if storage_location:
+                instance.storage_location = str(storage_location.id)
+
+            warehouse_number = self.cleaned_data.get('warehouse_number')
+            if warehouse_number:
+                instance.warehouse_number = str(warehouse_number.id)
+
         if commit:
             instance.save()
         return instance

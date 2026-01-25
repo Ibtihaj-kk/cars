@@ -100,7 +100,19 @@ class UserRegistrationView(generics.CreateAPIView):
     
     def send_verification_email(self, user):
         """Send verification email to the user using centralized email service."""
-        verification_url = f"{settings.FRONTEND_URL}/verify-email/{user.email_verification_token}/"
+        # Skip if user doesn't require email verification (e.g., vendor employees)
+        if not getattr(user, 'requires_email_verification', True):
+            return None
+
+        from django.urls import reverse
+        
+        # Build absolute URL using reverse and request or SITE_URL
+        try:
+            path = reverse('users:verify-email', kwargs={'token': user.email_verification_token})
+            verification_url = f"{settings.FRONTEND_URL}{path}"
+        except:
+            # Fallback
+            verification_url = f"{settings.FRONTEND_URL}/api/users/verify-email/{user.email_verification_token}/"
         
         try:
             from core.email_service.orchestrator import send_email
@@ -108,6 +120,7 @@ class UserRegistrationView(generics.CreateAPIView):
             email_id = send_email(
                 email_type='verification',
                 to_email=user.email,
+                subject='Verify Your Email Address - CarSyncro',
                 template_name='email_verification',
                 context={
                     'user_name': user.first_name or user.email,
@@ -184,12 +197,30 @@ class EmailVerificationView(generics.GenericAPIView):
     permission_classes = [AllowAny]
     
     def get(self, request, token, *args, **kwargs):
-        # In a real app, you would verify the token here
-        # For now, we'll just return success
+        """Handle email verification via GET request (clicking the link in email)."""
+        from core.email_service.handlers.verification_handler import EmailVerificationHandler
+        from django.shortcuts import redirect
+        from django.contrib import messages
+        from django.urls import reverse
         
-        return Response({
-            'message': 'Email verified successfully.'
-        }, status=status.HTTP_200_OK)
+        handler = EmailVerificationHandler()
+        user = handler.verify_email_token(token)
+        
+        if user:
+            messages.success(request, 'Your email has been successfully verified! You can now log in.')
+            
+            # Check if user is a vendor to redirect to vendor login
+            try:
+                if hasattr(user, 'vendor_profiles') and user.vendor_profiles.exists():
+                    return redirect('business_partners:vendor_login')
+            except:
+                pass
+                
+            return redirect('login')
+        else:
+            messages.error(request, 'The verification link is invalid or has expired.')
+            # Try to redirect to vendor login if possible, else default login
+            return redirect('login')
 
 
 class PasswordResetRequestView(generics.GenericAPIView):

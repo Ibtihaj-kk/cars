@@ -22,6 +22,7 @@ import io
 import base64
 from .models import BusinessPartner, VendorProfile
 from .permissions import get_vendor_profile
+from vendor_employees.utils import get_vendor_context
 from .forms import VendorLoginForm, VendorPasswordResetForm, Vendor2FAForm, VendorSettingsForm
 from .rate_limiting import rate_limit_operation
 from .audit_logger import VendorAuditLogger
@@ -37,19 +38,18 @@ class VendorLoginView(View):
     def get(self, request):
         # If user is already authenticated, redirect them away from login page
         if request.user.is_authenticated:
-            vendor_profile = get_vendor_profile(request.user)
-            if vendor_profile:
-                # Redirect to dashboard regardless of approval status
-                # Dashboard will show pending approval message if needed
+            vendor_context = get_vendor_context(request.user)
+            if vendor_context:
+                # Redirect to dashboard regardless of status
                 return redirect('business_partners:vendor_dashboard')
             else:
-                # Authenticated user but no vendor profile - redirect to dashboard or home
+                # Authenticated user but no vendor context - redirect to dashboard or home
                 # This prevents regular users from accessing vendor login
                 if request.user.is_staff or request.user.is_superuser:
                     return redirect('/admin/')
                 else:
                     # Regular authenticated user - redirect to main site or profile
-                    return redirect('/')
+                    return redirect('users:user-dashboard')
         
         # Not authenticated - show login form
         form = VendorLoginForm()
@@ -66,25 +66,29 @@ class VendorLoginView(View):
             user = authenticate(request, username=email, password=password)
             
             if user is not None:
-                vendor_profile = get_vendor_profile(user)
+                vendor_context = get_vendor_context(user)
                 
-                if vendor_profile is None:
-                    messages.error(request, 'No vendor profile found. Please complete your vendor registration.')
+                if vendor_context is None:
+                    messages.error(request, 'No vendor profile or employee record found. Please complete your vendor registration.')
                 else:
-                    # Allow login regardless of approval status
-                    # Check if 2FA is enabled
-                    if vendor_profile.two_factor_enabled:
+                    # Check for 2FA on the vendor profile if it exists
+                    # Vendor employees might not have 2FA settings on their own record yet
+                    # so we check the business partner's profile
+                    vendor_profile = getattr(vendor_context, 'vendor_profile', None)
+                    two_factor_enabled = vendor_profile.two_factor_enabled if vendor_profile else False
+                    
+                    if two_factor_enabled:
                         # Store user in session and redirect to 2FA verification
                         request.session['pre_2fa_user_id'] = user.id
                         return redirect('business_partners:vendor_2fa_verify')
                     else:
-                            # Use CentralizedAuthenticationService to establish secure session with all security flags
-                            from core.authentication import CentralizedAuthenticationService
-                            auth_service = CentralizedAuthenticationService()
-                            auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                            
-                            messages.success(request, f'Welcome back, {user.get_full_name() or user.email}!')
-                            return redirect('business_partners:vendor_dashboard')
+                        # Use CentralizedAuthenticationService to establish secure session with all security flags
+                        from core.authentication import CentralizedAuthenticationService
+                        auth_service = CentralizedAuthenticationService()
+                        auth_service.establish_secure_session(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                        
+                        messages.success(request, f'Welcome back, {user.get_full_name() or user.email}!')
+                        return redirect('business_partners:vendor_dashboard')
             else:
                 messages.error(request, 'Invalid email or password.')
         
@@ -432,12 +436,28 @@ def vendor_profile_settings_view(request):
 @login_required
 def vendor_profile_view(request):
     """Vendor profile view"""
-    # Handle profile picture upload if present
-    if request.method == 'POST' and request.FILES.get('profile_picture'):
-        request.user.profile_picture = request.FILES['profile_picture']
-        request.user.save()
-        messages.success(request, 'Profile picture updated successfully.')
-        return redirect('business_partners:vendor_profile')
+    # Handle profile actions
+    if request.method == 'POST':
+        # Handle resend verification email
+        if 'resend_verification' in request.POST:
+            from core.email_service.handlers.verification_handler import EmailVerificationHandler
+            handler = EmailVerificationHandler()
+            try:
+                handler.resend_verification_email(request.user, request)
+                messages.success(request, 'Verification email has been resent. Please check your inbox.')
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to resend verification email for {request.user.email}: {e}")
+                messages.error(request, 'Failed to resend verification email. Please try again later.')
+            return redirect('business_partners:vendor_profile')
+
+        # Handle profile picture upload if present
+        if request.FILES.get('profile_picture'):
+            request.user.profile_picture = request.FILES['profile_picture']
+            request.user.save()
+            messages.success(request, 'Profile picture updated successfully.')
+            return redirect('business_partners:vendor_profile')
         
     vendor_profile = get_vendor_profile(request.user)
     
